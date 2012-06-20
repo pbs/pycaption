@@ -780,15 +780,15 @@ class SCCReader(BaseReader):
                                 first = False
                         scc.append([start, None, captions, {}])
                         buffer = ''
-                        print captions
                     # clear screen
                     elif word == '942c':
-                        end = time[:-2] + str(int(time[-2:]) + frame_count)
-                        end = self.scctomicro(end)
-                        scc[-1][1] = end                    
+                        if scc:
+                            end = time[:-2] + str(int(time[-2:]) + frame_count)
+                            end = self.scctomicro(end)
+                            scc[-1][1] = end                    
                     else:
                         buffer += COMMANDS[word]
-                        print "got it?"
+                        
                     
                 elif word in SPECIAL_CHARS:
                     buffer += SPECIAL_CHARS[word]
