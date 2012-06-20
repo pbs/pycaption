@@ -735,9 +735,10 @@ class SCCReader(BaseReader):
     def read(self, content, lang='en'):
         inlines = content.splitlines()
         scc = []
+        buffer = ''
+        last_command = ''
         for line in inlines:
             if line == inlines[0]:
-                scc.append(line)
                 continue
             if line.strip() == '':
                 continue
@@ -745,27 +746,54 @@ class SCCReader(BaseReader):
             line = line.replace(';', ':')
             
             parts = line.split('	')
-            caption = ''
             time = parts[0]
-            scc.append("TIME: %s" % time)
+            frame_count = 0
             for word in parts[1].split(' '):
                 if word.strip() == '':
                     continue
+                frame_count += 1
                 if word in COMMANDS:
-                    caption += COMMANDS[word]
+                    if word == last_command:
+                        last_command = ''
+                        continue
+                    else:
+                        last_command = word
+                    # clear buffer
+                    if word == '94ae':
+                        buffer = ''
+                    # display buffer
+                    if word == '942f':
+                        start = time[:-2] + str(int(time[-2:]) + frame_count)
+                        start = self.scctomicro(start)
+                        try:
+                            if scc[-1][1] == None:
+                                scc[-1][1] = start
+                        except IndexError:
+                            pass
+                        caption = ' '.join(buffer.split())
+                        scc.append([start, None, [{'type': 'text', 'content': caption}], {}])
+                        buffer = ''
+                    # clear screen
+                    if word == '942c':
+                        end = time[:-2] + str(int(time[-2:]) + frame_count)
+                        end = self.scctomicro(end)
+                        scc[-1][1] = end
+                    
                 elif word in SPECIAL_CHARS:
-                    caption += SPECIAL_CHARS[word]
+                    buffer += SPECIAL_CHARS[word]
                 else:
                     byte1 = word[:2]
                     byte2 = word[2:]
                     if byte1 in CHARACTERS:
-                        caption += CHARACTERS[byte1]
+                        buffer += CHARACTERS[byte1]
                         if byte2 in CHARACTERS:
-                            caption += CHARACTERS[byte2]
+                            buffer += CHARACTERS[byte2]
                         else:
-                            caption -= CHARACTERS[byte1]
-            scc.append(' '.join(caption.split()))
-        return '\n'.join(scc)
-                        
-                        
-        
+                            buffer -= CHARACTERS[byte1]
+        return {'captions': {lang: scc}, 'styles': {}}
+
+    def scctomicro(self, stamp):
+        timesplit = stamp.split(':')
+        microseconds = int(timesplit[0]) * 3600000000 + int(timesplit[1]) * 60000000 \
+        + int(timesplit[2]) * 1000000 + (int(timesplit[3]) / 29.97 * 1000000)
+        return int(microseconds)
