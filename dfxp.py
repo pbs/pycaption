@@ -162,8 +162,7 @@ class DFXPWriter(BaseWriter):
                 p.string = text
                 div.append(p)
             body.append(div)
-        a = dfxp.prettify(formatter=None).split('\n')
-        return '\n'.join(a[1:])
+        return dfxp.prettify(formatter=None)
 
     def _recreate_text(self, caption):
         line = ''
