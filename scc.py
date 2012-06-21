@@ -671,10 +671,10 @@ SPECIAL_CHARS = {
     '9223': 'Ú',
     '92a4': 'Ü',
     '9225': 'ü',
-    '9226': '‘',
+    '9226': '',
     '92a7': '¡',
     '92a8': '*',
-    '9229': '’',
+    '9229': '',
     '922a': '—',
     '92ab': '©',
     '922c': '',
@@ -779,17 +779,15 @@ class SCCReader(BaseReader):
                         paint_on = True
                         pop_on = False
                         if paint:
-                            roll_rows += 1
-                            if roll_rows >= rollup:
-                                self.converttopycaps(paint, paint_time)
-                                paint = ''
-                                end = time[:-2] + str(int(time[-2:]) + frame_count)
-                                end = self.scctomicro(end)
-                                try:
-                                    self.scc[-1][1] = end
-                                except:
-                                    pass
-                                roll_rows = 0
+                            self.converttopycaps(paint, paint_time)
+                            paint = ''
+                            end = time[:-2] + str(int(time[-2:]) + frame_count)
+                            end = self.scctomicro(end)
+                            try:
+                                self.scc[-1][1] = end
+                            except:
+                                pass
+                        roll_rows = []
                         paint_time = time[:-2] + str(int(time[-2:]) + frame_count)
                         paint_time = self.scctomicro(paint_time)
                     # clear buffer
@@ -802,22 +800,23 @@ class SCCReader(BaseReader):
                         self.converttopycaps(buffer, start)
                         buffer = ''
                     # clear screen
-                    elif word in ['942c']:
+                    elif word in ['942c', '94ad']:
                         if paint:
-                            roll_rows += 1
-                            if roll_rows >= rollup:
-                                self.converttopycaps(paint, paint_time)
-                                paint = ''
-                                end = time[:-2] + str(int(time[-2:]) + frame_count)
-                                end = self.scctomicro(end)
-                                try:
-                                    self.scc[-1][1] = end
-                                except:
-                                    pass
-                                roll_rows = 0
-                        paint_time = time[:-2] + str(int(time[-2:]) + frame_count)
-                        paint_time = self.scctomicro(paint_time)
-                        if pop_on:
+                            if len(roll_rows) >= rollup:
+                                roll_rows.pop(0)
+                            roll_rows.append(paint)
+                            paint = ' '.join(roll_rows)
+                            self.converttopycaps(paint, paint_time)
+                            paint = ''
+                            end = time[:-2] + str(int(time[-2:]) + frame_count)
+                            end = self.scctomicro(end)
+                            try:
+                                self.scc[-1][1] = end
+                            except:
+                                pass
+                            paint_time = time[:-2] + str(int(time[-2:]) + frame_count)
+                            paint_time = self.scctomicro(paint_time)
+                        if pop_on and word == '942c':
                             if self.scc:
                                 end = time[:-2] + str(int(time[-2:]) + frame_count)
                                 end = self.scctomicro(end)
@@ -852,6 +851,10 @@ class SCCReader(BaseReader):
                             else:
                                 buffer = buffer[:-1]
         if paint:
+            if len(roll_rows) >= rollup:
+                roll_rows.pop(0)
+            roll_rows.append(paint)
+            paint = ' '.join(roll_rows)
             self.converttopycaps(paint, paint_time)
             paint = ''
             end = time[:-2] + str(int(time[-2:]) + frame_count)
@@ -860,7 +863,8 @@ class SCCReader(BaseReader):
                 self.scc[-1][1] = end
             except:
                 pass
-        print self.scc
+            paint_time = time[:-2] + str(int(time[-2:]) + frame_count)
+            paint_time = self.scctomicro(paint_time)
         return {'captions': {lang: self.scc}, 'styles': {}}
 
     def scctomicro(self, stamp):
@@ -878,7 +882,6 @@ class SCCReader(BaseReader):
         captions = []
         open_italic = False
         first = True
-        print buffer
         for element in buffer.split('<$>'):
             if element.strip() == '':
                 continue
@@ -911,7 +914,6 @@ class SCCReader(BaseReader):
                 if captions[a]['content']['italics'] == True:
                     if captions[a + 1]['type'] == 'break':
                         if captions[a + 2]['content']['italics'] == True:
-                            print 'best'
                             captions.pop(a)
                             captions.pop(a + 1)
                             deleted += 2
