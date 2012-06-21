@@ -1,13 +1,47 @@
 py-caption
-=========
+==========
 
 `py-caption` is a caption reading/writing module.
 
+Turn a caption into multiple caption outputs:
+
+    srt_caps = '''1
+    00:00:09,209 --> 00:00:12,312
+    ( clock ticking )
+    '''
+    
+    caps = SRTReader().read(srt_caps)
+    sami = SAMIWriter().write(caps)
+    dfxp = DFXPWriter().write(caps)
+    transcript = TranscriptWriter().write(caps)
+    
+Not sure what format the caption is in? Detect it:
+
+    if SRTReader().detect(caps):
+        sami = SAMIWriter().write(SRTReader().read(caps))
+    elif DFXPReader().detect(caps):
+        sami = SAMIWriter().write(DFXPReader().read(caps))
+    elif SCCReader().detect(caps):
+        sami = SAMIWriter().write(SCCReader().read(caps))
 
 
+Supported Formats
+-----------------
 
-Usage :: python
----------------
+Read:
+ - SCC
+ - SRT
+ - SAMI
+ - DFXP
+
+Write:
+ - Transcript
+ - SRT
+ - SAMI
+ - DFXP
+
+Python Usage
+------------
 
 After installing nltk, the appropriate Punkt tokenizer info must be downloaded.    
 
