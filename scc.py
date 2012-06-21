@@ -793,6 +793,8 @@ class SCCReader(BaseReader):
                             else:   
                                 captions.append({'type': 'text', 'content': ' '.join(element.split())})
                                 first = False
+                        if open_italic == True:
+                            captions.append({'type': 'style', 'start': False, 'content': {'italics': True}}) 
                         scc.append([start, None, captions, {}])
                         buffer = ''
                     # clear screen
