@@ -1,4 +1,5 @@
 from pycaption import BaseReader, BaseWriter
+import datetime
 
 class SRTReader(BaseReader):
     def read(self, content, lang='en'):
