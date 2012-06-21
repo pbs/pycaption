@@ -743,9 +743,17 @@ class SCCReader(BaseReader):
         self.pop_on = False
         self.paint_on = False
         self.frame_count = 0
-        
+        self.simulate_roll_up = False
 
-    def read(self, content, lang='en'):
+    def detect(self, content):
+        inlines = content.splitlines()
+        if inlines[0] == 'Scenarist_SCC V1.0':
+            return True
+        else:
+            return False
+
+    def read(self, content, lang='en', simulate_roll_up=False):
+        self.simulate_roll_up = simulate_roll_up
         # split lines
         inlines = content.splitlines()
 
@@ -966,6 +974,9 @@ class SCCReader(BaseReader):
             self.scc.append([start, 0, captions, {}])
 
     def roll_up(self):
+        if self.simulate_roll_up == False:
+            self.roll_rows = []
+
         # if rows already filled, drop the top one
         if len(self.roll_rows) >= self.roll_rows_expected:
             self.roll_rows.pop(0)

@@ -8,123 +8,16 @@ import logging
 # change cssutils default logging
 cssutils.log.setLevel(logging.FATAL)
 
-
-# SAMI parser, made from modified html parser
-class SAMICleaner(HTMLParser):
-    def __init__(self, *args, **kw):
-        HTMLParser.__init__(self, *args, **kw)
-        self.sami = ''
-        self.line = ''
-        self.styles = {}
-        self.queue = deque()
-        self.langs = {}
-
-    # override the parser's handling of starttags
-    def handle_starttag(self, tag, attrs):
-        # treat divs as spans
-        if tag == 'div':
-            tag = 'span'
-        # figure out the caption language of P tags
-        if tag == 'p':
-            lang = None
-            for attr in attrs:
-                a, b = attr
-                # if lang is an attribute of the tag
-                if a.lower() == 'lang':
-                    lang = b[:2]
-                # if the P tag has a class, try and find the language
-                elif a.lower() == 'class':
-                    if '.%s' % b.lower() in self.styles:
-                        lang = self.styles['.%s' % b.lower()]['lang']
-            # if no language detected, set it as "none"
-            if not lang:
-                lang = 'None'
-            attrs.append(('lang', lang))
-            self.langs[lang] = 1
-        # clean-up line breaks
-        if tag == 'br':
-            self.sami += "<br/>"
-        # add tag to queue
-        else:
-            # if already in queue, first close tags off in LIFO order
-            while tag in self.queue:
-                closer = self.queue.pop()
-                self.sami = self.sami + "</%s>" % closer
-            # open new tag in queue
-            self.queue.append(tag)
-            # add tag with attributes
-            for attr in attrs:
-                a, b = attr
-                tag += ' %s="%s"' % (a.lower(), b)
-            self.sami += "<%s>" % tag
-
-    # override the parser's handling of endtags
-    def handle_endtag(self, tag):
-        # treat divs as spans
-        if tag == 'div':
-            tag = 'span'
-        # close off tags in LIFO order, but only if a matching starting tag in queue
-        while tag in self.queue:
-            closing_tag = self.queue.pop()
-            self.sami += "</%s>" % closing_tag
-
-    # override the parser's handling of data
-    def handle_data(self, data):
-        self.sami += data.lstrip()
-
-    # override the parser's feed function
-    def feed(self, data):
-        # try to find style tag in SAMI
-        try:
-            self.styles = self._css_to_dfxp(BeautifulSoup(data).find('style').get_text())
-        except:
-            self.styles = []
-        # fix erroneous italics tags
-        data = data.replace('<i/>', '<i>')
-        # clean the SAMI
-        HTMLParser.feed(self, data)
-        # close any tags that remain in the queue
-        while self.queue != deque([]):
-            closing_tag = self.queue.pop()
-            self.sami += "</%s>" % closing_tag
-        return self.sami, self.styles, self.langs
-
-    # parse into DFXP format the SAMI's stylesheet
-    def _css_to_dfxp(self, css):
-        # parse via cssutils modules
-        sheet = cssutils.parseString(css)
-        dfxp_styles = {}
-
-        for rule in sheet:
-            lang = None
-            not_empty = False
-            new_style = {}
-            # keep any style attributes that are needed
-            for prop in rule.style:
-                if prop.name == 'text-align':
-                    new_style['text-align'] = prop.value
-                    not_empty = True
-                if prop.name == 'font-family':
-                    new_style['font-family'] = prop.value
-                    not_empty = True
-                if prop.name == 'font-size':
-                    new_style['font-size'] = prop.value
-                    not_empty = True
-                if prop.name == 'color':
-                    new_style['color'] = prop.value
-                    not_empty = True
-                if prop.name == 'lang':
-                    new_style['lang'] = prop.value
-                    lang = prop.value
-                    not_empty = True
-            if not_empty:
-                dfxp_styles[rule.selectorText.lower()] = {'style': new_style, 'lang': '%s' % lang}
-        return dfxp_styles
-
 class SAMIReader(BaseReader):
     def __init__(self, *args, **kw):
         self.line = []
-        
+
+    def detect(self, content):
+        if '<sami' in content.lower():
+            return True
+        else:
+            return False
+
     def read(self, content):
         content, doc_styles, doc_langs = SAMICleaner().feed(content)
         sami_soup = BeautifulSoup(content)
@@ -326,3 +219,116 @@ class SAMIWriter(BaseWriter):
                         line = line.rstrip() + '</span> '
                         open_span = False
         return line.rstrip()
+        
+
+# SAMI parser, made from modified html parser
+class SAMICleaner(HTMLParser):
+    def __init__(self, *args, **kw):
+        HTMLParser.__init__(self, *args, **kw)
+        self.sami = ''
+        self.line = ''
+        self.styles = {}
+        self.queue = deque()
+        self.langs = {}
+
+    # override the parser's handling of starttags
+    def handle_starttag(self, tag, attrs):
+        # treat divs as spans
+        if tag == 'div':
+            tag = 'span'
+        # figure out the caption language of P tags
+        if tag == 'p':
+            lang = None
+            for attr in attrs:
+                a, b = attr
+                # if lang is an attribute of the tag
+                if a.lower() == 'lang':
+                    lang = b[:2]
+                # if the P tag has a class, try and find the language
+                elif a.lower() == 'class':
+                    if '.%s' % b.lower() in self.styles:
+                        lang = self.styles['.%s' % b.lower()]['lang']
+            # if no language detected, set it as "none"
+            if not lang:
+                lang = 'None'
+            attrs.append(('lang', lang))
+            self.langs[lang] = 1
+        # clean-up line breaks
+        if tag == 'br':
+            self.sami += "<br/>"
+        # add tag to queue
+        else:
+            # if already in queue, first close tags off in LIFO order
+            while tag in self.queue:
+                closer = self.queue.pop()
+                self.sami = self.sami + "</%s>" % closer
+            # open new tag in queue
+            self.queue.append(tag)
+            # add tag with attributes
+            for attr in attrs:
+                a, b = attr
+                tag += ' %s="%s"' % (a.lower(), b)
+            self.sami += "<%s>" % tag
+
+    # override the parser's handling of endtags
+    def handle_endtag(self, tag):
+        # treat divs as spans
+        if tag == 'div':
+            tag = 'span'
+        # close off tags in LIFO order, but only if a matching starting tag in queue
+        while tag in self.queue:
+            closing_tag = self.queue.pop()
+            self.sami += "</%s>" % closing_tag
+
+    # override the parser's handling of data
+    def handle_data(self, data):
+        self.sami += data.lstrip()
+
+    # override the parser's feed function
+    def feed(self, data):
+        # try to find style tag in SAMI
+        try:
+            self.styles = self._css_to_dfxp(BeautifulSoup(data).find('style').get_text())
+        except:
+            self.styles = []
+        # fix erroneous italics tags
+        data = data.replace('<i/>', '<i>')
+        # clean the SAMI
+        HTMLParser.feed(self, data)
+        # close any tags that remain in the queue
+        while self.queue != deque([]):
+            closing_tag = self.queue.pop()
+            self.sami += "</%s>" % closing_tag
+        return self.sami, self.styles, self.langs
+
+    # parse into DFXP format the SAMI's stylesheet
+    def _css_to_dfxp(self, css):
+        # parse via cssutils modules
+        sheet = cssutils.parseString(css)
+        dfxp_styles = {}
+
+        for rule in sheet:
+            lang = None
+            not_empty = False
+            new_style = {}
+            # keep any style attributes that are needed
+            for prop in rule.style:
+                if prop.name == 'text-align':
+                    new_style['text-align'] = prop.value
+                    not_empty = True
+                if prop.name == 'font-family':
+                    new_style['font-family'] = prop.value
+                    not_empty = True
+                if prop.name == 'font-size':
+                    new_style['font-size'] = prop.value
+                    not_empty = True
+                if prop.name == 'color':
+                    new_style['color'] = prop.value
+                    not_empty = True
+                if prop.name == 'lang':
+                    new_style['lang'] = prop.value
+                    lang = prop.value
+                    not_empty = True
+            if not_empty:
+                dfxp_styles[rule.selectorText.lower()] = {'style': new_style, 'lang': '%s' % lang}
+        return dfxp_styles

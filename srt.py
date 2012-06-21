@@ -2,6 +2,13 @@ from pycaption import BaseReader, BaseWriter
 import datetime
 
 class SRTReader(BaseReader):
+    def detect(self, content):
+        inlines = content.splitlines()
+        if inlines[0].isdigit() and '-->' in inlines[1]:
+            return True
+        else:
+            return False
+            
     def read(self, content, lang='en'):
         inlines = content.splitlines()
         i = 0

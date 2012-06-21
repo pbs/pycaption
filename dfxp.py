@@ -6,6 +6,12 @@ class DFXPReader(BaseReader):
     def __init__(self, *args, **kw):
         self.line = []
 
+    def detect(self, content):
+        if '</tt>' in content.lower():
+            return True
+        else:
+            return False
+
     def read(self, content):
         dfxp_soup = BeautifulSoup(content)
         captions = {'captions': {}, 'styles': {}}
