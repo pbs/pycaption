@@ -1,19 +1,22 @@
 py-caption
 ==========
 
-`py-caption` is a caption reading/writing module.
+`py-caption` is a caption reading/writing module. Use one of the given Readers to read content into an intermediary format known as CCG (Closed Caption Generic), and then use one of the Writers to output the CCG into captions of your desired format.
 
 Turn a caption into multiple caption outputs:
 
     srt_caps = '''1
     00:00:09,209 --> 00:00:12,312
-    ( clock ticking )
+    This is an example SRT file,
+    which, while extremely short,
+    is still a valid SRT file.
     '''
     
-    caps = SRTReader().read(srt_caps)
-    sami = SAMIWriter().write(caps)
-    dfxp = DFXPWriter().write(caps)
-    transcript = TranscriptWriter().write(caps)
+    converter = CaptionConverter()
+    converter.read(srt_caps)
+    converter.write(SAMIWriter())
+    converter.write(DFXPWriter())
+    converter.write(TranscriptWriter())
     
 Not sure what format the caption is in? Detect it:
 
@@ -23,7 +26,6 @@ Not sure what format the caption is in? Detect it:
         sami = SAMIWriter().write(DFXPReader().read(caps))
     elif SCCReader().detect(caps):
         sami = SAMIWriter().write(SCCReader().read(caps))
-
 
 Supported Formats
 -----------------
@@ -40,6 +42,7 @@ Write:
  - SAMI
  - DFXP
 
+See the [examples folder][1] for example captions that currently can be read correctly.
 
 Python Usage
 ------------ 
@@ -119,7 +122,7 @@ Scalability
 
 Different readers and writers are easy to add if you would like to:
  - Read/Write a previously unsupported format
- - Rad/Write a supported format different
+ - Read/Write a supported format in a different way (more styling?)
  
 Simply follow the format of a current Reader or Writer, and edit to your heart's desire.
 
@@ -140,10 +143,10 @@ From python, run this code:
 PyCaps Format:
 ------------------
 
-The different Readers will return the captions in Closed Caption Generic format.
-The Writers will be expecting captions in Closed Caption Generic format as well.
+The different Readers will return the captions in Closed Caption Generic (CCG) format.
+The Writers will be expecting captions in CCG format as well.
 
-Closed Caption Generic format:
+CCG format:
 
     {
         "captions": {
@@ -154,7 +157,7 @@ Closed Caption Generic format:
         }
     }
 
-Example Closed Caption Generic json:
+Example CCG json:
 
     {
         "captions": {
@@ -207,36 +210,58 @@ Example Closed Caption Generic json:
     }
 
 
-Accepted styling
-----------------
+SAMI Reader / Writer :: [spec][2]
+--------------------
+
+Supported Styling:
+ - text-align
+ - italics
+ - font-size
+ - font-family
+ - color
  
-SAMI:
+If the SAMI file is not valid XML (e.g. unclosed tags), will still attempt to read it.
+
+
+DFXP Reader / Writer :: [spec][3]
+--------------------
+
+Supported Styling:
  - text-align
  - italics
  - font-size
  - font-family
  - color
 
-DFXP:
- - text-align
- - italics
- - font-size
- - font-family
- - color
 
-SCC:
- - italics
- 
-Transcript:
+SRT Reader / Writer :: [spec][4]
+-------------------
+
+Supported Styling:
  - None
+ 
 
-SRT:
+SCC Reader :: [spec][5]
+----------
+
+Supported Styling:
+ - italics
+
+
+Transcript Writer
+-----------------
+Supported Styling:
  - None
 
 
 License
 -------
 
-This module is Copyright 2012 PBS.org and is available under the [Apache License, Version 2.0][1].
+This module is Copyright 2012 PBS.org and is available under the [Apache License, Version 2.0][6].
 
-[1]: http://www.apache.org/licenses/LICENSE-2.0
+[1]: https://github.com/pbs/pycaption/blob/master/examples/
+[2]: http://msdn.microsoft.com/en-us/library/ms971327.aspx
+[3]: http://www.w3.org/TR/ttaf1-dfxp/
+[4]: http://matroska.org/technical/specs/subtitles/srt.html
+[5]: http://www.theneitherworld.com/mcpoodle/SCC_TOOLS/DOCS/SCC_FORMAT.HTML
+[6]: http://www.apache.org/licenses/LICENSE-2.0
