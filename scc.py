@@ -732,18 +732,23 @@ SPECIAL_CHARS = {
 }
 
 class SCCReader(BaseReader):
+    def __init__(self, *args, **kw):
+        self.scc = []
+        
     def read(self, content, lang='en'):
         inlines = content.splitlines()
-        scc = []
         buffer = ''
+        paint = ''
         last_command = ''
+        roll_rows = 0
+        pop_on = paint_on = False
         for line in inlines:
             if line == inlines[0]:
                 continue
             if line.strip() == '':
                 continue
                 
-            line = line.replace(';', ':')
+            line = line.replace(';', ':').lower()
             
             parts = line.split('	')
             time = parts[0]
@@ -758,70 +763,159 @@ class SCCReader(BaseReader):
                         continue
                     else:
                         last_command = word
+                    if word == '9420':
+                        pop_on = True
+                        paint_on = False
+                    elif word in ['9429', '9425', '9426', '94a7']: 
+                        if word == '9429':
+                            rollup = 1
+                        elif word == '9425':
+                            rollup = 2
+                        elif word == '9426':
+                            rollup = 3
+                        elif word == '94a7':
+                            rollup = 4
+                        
+                        paint_on = True
+                        pop_on = False
+                        if paint:
+                            roll_rows += 1
+                            if roll_rows >= rollup:
+                                self.converttopycaps(paint, paint_time)
+                                paint = ''
+                                end = time[:-2] + str(int(time[-2:]) + frame_count)
+                                end = self.scctomicro(end)
+                                try:
+                                    self.scc[-1][1] = end
+                                except:
+                                    pass
+                                roll_rows = 0
+                        paint_time = time[:-2] + str(int(time[-2:]) + frame_count)
+                        paint_time = self.scctomicro(paint_time)
                     # clear buffer
-                    if word == '94ae':
+                    elif word == '94ae':
                         buffer = ''
                     # display buffer
-                    elif word == '942f':
+                    elif word == '942f' and buffer:
                         start = time[:-2] + str(int(time[-2:]) + frame_count)
                         start = self.scctomicro(start)
-                        try:
-                            if scc[-1][1] == None:
-                                scc[-1][1] = start
-                        except IndexError:
-                            pass
-                        captions = []
-                        open_italic = False
-                        first = True
-                        for element in buffer.split('<$>'):
-                            if element.strip() == '':
-                                continue
-                            elif element == '{break}':
-                                if first == True:
-                                    continue
-                                if open_italic == True:
-                                    captions.append({'type': 'style', 'start': False, 'content': {'italics': True}}) 
-                                    open_italic = False
-                                captions.append({'type': 'break', 'content': ''})
-                            elif element == '{italic}':
-                                captions.append({'type': 'style', 'start': True, 'content': {'italics': True}})
-                                open_italic = True
-                                first = False
-                            elif element == '{end-italic}':
-                                captions.append({'type': 'style', 'start': False, 'content': {'italics': True}}) 
-                                open_italic = first = False
-                            else:   
-                                captions.append({'type': 'text', 'content': ' '.join(element.split())})
-                                first = False
-                        if open_italic == True:
-                            captions.append({'type': 'style', 'start': False, 'content': {'italics': True}}) 
-                        scc.append([start, None, captions, {}])
+                        self.converttopycaps(buffer, start)
                         buffer = ''
                     # clear screen
-                    elif word == '942c':
-                        if scc:
-                            end = time[:-2] + str(int(time[-2:]) + frame_count)
-                            end = self.scctomicro(end)
-                            scc[-1][1] = end                    
+                    elif word in ['942c']:
+                        if paint:
+                            roll_rows += 1
+                            if roll_rows >= rollup:
+                                self.converttopycaps(paint, paint_time)
+                                paint = ''
+                                end = time[:-2] + str(int(time[-2:]) + frame_count)
+                                end = self.scctomicro(end)
+                                try:
+                                    self.scc[-1][1] = end
+                                except:
+                                    pass
+                                roll_rows = 0
+                        paint_time = time[:-2] + str(int(time[-2:]) + frame_count)
+                        paint_time = self.scctomicro(paint_time)
+                        if pop_on:
+                            if self.scc:
+                                end = time[:-2] + str(int(time[-2:]) + frame_count)
+                                end = self.scctomicro(end)
+                                self.scc[-1][1] = end               
                     else:
-                        buffer += COMMANDS[word]
-                        
-                    
+                        if paint_on:
+                            paint += COMMANDS[word]
+                        else:
+                            buffer += COMMANDS[word]
+
                 elif word in SPECIAL_CHARS:
-                    buffer += SPECIAL_CHARS[word]
+                    if paint_on:
+                        paint += SPECIAL_CHARS[word]
+                    else:
+                        buffer += SPECIAL_CHARS[word]
                 else:
                     byte1 = word[:2]
                     byte2 = word[2:]
                     if byte1 in CHARACTERS:
-                        buffer += CHARACTERS[byte1]
-                        if byte2 in CHARACTERS:
-                            buffer += CHARACTERS[byte2]
+                        if paint_on:
+                            paint += CHARACTERS[byte1]
                         else:
-                            buffer -= CHARACTERS[byte1]
-        return {'captions': {lang: scc}, 'styles': {}}
+                            buffer += CHARACTERS[byte1]
+                        if byte2 in CHARACTERS:                            
+                            if paint_on:
+                                paint += CHARACTERS[byte2]
+                            else:
+                                buffer += CHARACTERS[byte2]
+                        else:
+                            if paint_on:
+                                paint -= CHARACTERS[byte1]
+                            else:
+                                buffer = buffer[:-1]
+        if paint:
+            self.converttopycaps(paint, paint_time)
+            paint = ''
+            end = time[:-2] + str(int(time[-2:]) + frame_count)
+            end = self.scctomicro(end)
+            try:
+                self.scc[-1][1] = end
+            except:
+                pass
+        print self.scc
+        return {'captions': {lang: self.scc}, 'styles': {}}
 
     def scctomicro(self, stamp):
         timesplit = stamp.split(':')
         microseconds = int(timesplit[0]) * 3600000000 + int(timesplit[1]) * 60000000 \
         + int(timesplit[2]) * 1000000 + (int(timesplit[3]) / 29.97 * 1000000)
         return int(microseconds)
+
+    def converttopycaps(self, buffer, start):
+        try:
+            if self.scc[-1][1] == 0:
+                self.scc[-1][1] = start
+        except IndexError:
+            pass
+        captions = []
+        open_italic = False
+        first = True
+        print buffer
+        for element in buffer.split('<$>'):
+            if element.strip() == '':
+                continue
+            elif element == '{break}':
+                if first == True:
+                    continue
+                if captions[-1]['type'] == 'break':
+                    continue
+                if open_italic == True:
+                    captions.append({'type': 'style', 'start': False, 'content': {'italics': True}}) 
+                    open_italic = False
+                captions.append({'type': 'break', 'content': ''})
+            elif element == '{italic}':
+                captions.append({'type': 'style', 'start': True, 'content': {'italics': True}})
+                open_italic = True
+                first = False
+            elif element == '{end-italic}':
+                if open_italic == True:
+                    captions.append({'type': 'style', 'start': False, 'content': {'italics': True}}) 
+                open_italic = first = False
+            else:   
+                captions.append({'type': 'text', 'content': ' '.join(element.split())})
+                first = False
+        if open_italic == True:
+            captions.append({'type': 'style', 'start': False, 'content': {'italics': True}})
+        deleted = 0
+        for a in range(0, len(captions)):
+            a -= deleted
+            try:
+                if captions[a]['content']['italics'] == True:
+                    if captions[a + 1]['type'] == 'break':
+                        if captions[a + 2]['content']['italics'] == True:
+                            print 'best'
+                            captions.pop(a)
+                            captions.pop(a + 1)
+                            deleted += 2
+            except:
+                pass        
+        if captions:
+            self.scc.append([start, 0, captions, {}])
