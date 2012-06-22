@@ -1,7 +1,7 @@
 class CaptionConverter():
     def __init__(self, captions=[]):
         self.captions = captions
-    
+
     def read(self, content, caption_reader):
         try:
             self.captions = caption_reader.read(content)
@@ -15,6 +15,7 @@ class CaptionConverter():
         except AttributeError, e:
             raise Exception(e)
 
+
 class BaseReader():
     def detect(self, content):
         if content:
@@ -24,6 +25,7 @@ class BaseReader():
 
     def read(self, content):
         return {'captions': {'en': []}, 'styles': {}}
+
 
 class BaseWriter():
     def write(self, content):
