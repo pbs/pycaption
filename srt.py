@@ -53,8 +53,9 @@ class SRTReader(BaseReader):
 
 class SRTWriter(BaseWriter):
     def write(self, captions):
-        srt = ''
+        srts = []
         for lang in captions['captions']:
+            srt = ''
             count = 1
             srt += '\n"%s" SRT Captions\n' % lang
             for sub in captions['captions'][lang]:
@@ -70,4 +71,5 @@ class SRTWriter(BaseWriter):
                         srt += '\n'
                 srt += '\n\n'
                 count += 1
-        return srt[:-2]
+            srts.append(srt[:-1])
+        return 'MULTI-LANGUAGE SRT'.join(srts)
