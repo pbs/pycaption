@@ -127,19 +127,6 @@ Different readers and writers are easy to add if you would like to:
 Simply follow the format of a current Reader or Writer, and edit to your heart's desire.
 
 
-Transcript Usage
-----------------
-
-The transcript writer uses natural sentence boundary detection algorithms to create the transcript.
-
-To use the transcript writer, the appropriate Punkt tokenizer info must be downloaded.
-
-From python, run this code:
-
-    import nltk
-    nltk.download()
-
-
 PyCaps Format:
 ------------------
 
@@ -213,18 +200,22 @@ Example CCG json:
 SAMI Reader / Writer :: [spec][2]
 --------------------
 
+Microsoft Synchronized Accessible Media Interchange. Supports multiple languages.
+
 Supported Styling:
  - text-align
  - italics
  - font-size
  - font-family
  - color
- 
+
 If the SAMI file is not valid XML (e.g. unclosed tags), will still attempt to read it.
 
 
 DFXP Reader / Writer :: [spec][3]
 --------------------
+
+The W3 standard. Supports multiple languages.
 
 Supported Styling:
  - text-align
@@ -237,29 +228,55 @@ Supported Styling:
 SRT Reader / Writer :: [spec][4]
 -------------------
 
+SubRip captions. If given multiple languages to write, will output all joined together by a 'MULTI-LANGUAGE SRT' line.
+
 Supported Styling:
  - None
- 
+
+Assumes input language is english. To change:
+
+    pycaps = SRTReader().read(srt_content, lang='fr')
+
 
 SCC Reader :: [spec][5]
 ----------
 
+Scenarist Closed Caption format. Assumes Channel 1 input.
+
 Supported Styling:
  - italics
+
+By default, the SCC Reader does not simulate roll-up captions. To enable roll-ups:
+
+    pycaps = SCCReader().read(scc_content, simulate_roll_ups=True)
+
+Also, assumes input language is english. To change:
+
+    pycaps = SCCReader().read(scc_content, lang='fr')
 
 
 Transcript Writer
 -----------------
+
+Text stripped of styling, arranged in sentences.
+
 Supported Styling:
  - None
 
+The transcript writer uses natural sentence boundary detection algorithms to create the transcript.
+
+To use the transcript writer, the appropriate Punkt tokenizer info must be downloaded. From python, run this code:
+
+    import nltk
+    nltk.download()
+    
 
 License
 -------
 
 This module is Copyright 2012 PBS.org and is available under the [Apache License, Version 2.0][6].
 
-[1]: https://github.com/pbs/pycaption/blob/master/examples/
+[1]: https://github.com/pbs/pycaption/tree/master/examples/
 [2]: http://msdn.microsoft.com/en-us/library/ms971327.aspx
 [3]: http://www.w3.org/TR/ttaf1-dfxp/
 [4]: http://matroska.org/technical/specs/subtitles/srt.html
