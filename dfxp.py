@@ -71,7 +71,7 @@ class DFXPReader(BaseReader):
             attrs = 'style="%s"' % attrs
         return captions
 
-    def dfxptomicro(self.stamp):
+    def dfxptomicro(self, stamp):
         timesplit = stamp.split(':')
         secsplit = timesplit[2].split('.')
         microseconds = (int(timesplit[0]) * 3600000000 +

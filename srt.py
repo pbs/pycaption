@@ -21,9 +21,10 @@ class SRTReader(BaseReader):
 
             current_line = start_line + 1
             while current_line < (len(inlines) + 1):
-                if inlines[current_line].isdigit():
-                    break
-                else:
+                try: 
+                    if int(inlines[current_line]):
+                        break
+                except:
                     current_line += 1
 
             timing = inlines[start_line + 1].split('-->')
