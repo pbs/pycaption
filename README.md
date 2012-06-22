@@ -13,7 +13,7 @@ Turn a caption into multiple caption outputs:
     '''
     
     converter = CaptionConverter()
-    converter.read(srt_caps)
+    converter.read(srt_caps, SRTReader())
     converter.write(SAMIWriter())
     converter.write(DFXPWriter())
     converter.write(TranscriptWriter())
@@ -49,8 +49,7 @@ Python Usage
 
 Example: Convert from SAMI to DFXP
 
-    from pycaption.sami import SAMIReader
-    from pycaption.dfxp import DFXPWriter
+    from pycaption import SAMIReader, DFXPWriter
     
     sami = '''<SAMI><HEAD><TITLE>NOVA3213</TITLE><STYLE TYPE="text/css">
     <!--
@@ -248,7 +247,7 @@ Supported Styling:
 
 By default, the SCC Reader does not simulate roll-up captions. To enable roll-ups:
 
-    pycaps = SCCReader().read(scc_content, simulate_roll_ups=True)
+    pycaps = SCCReader().read(scc_content, simulate_roll_up=True)
 
 Also, assumes input language is english. To change:
 
