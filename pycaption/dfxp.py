@@ -1,4 +1,4 @@
-import datetime
+from datetime import timedelta
 from bs4 import BeautifulSoup
 from pycaption import BaseReader, BaseWriter
 
@@ -152,35 +152,20 @@ class DFXPReader(BaseReader):
 
 
 class DFXPWriter(BaseWriter):
+    def __init__(self, *args, **kw):
+        self.p_style = False
+        self.open_span = False
+
     def write(self, captions):
         dfxp = BeautifulSoup(dfxp_base, 'xml')
         dfxp.find('tt')['xml:lang'] = "en"
-        p_style = False
 
         for style, content in captions['styles'].items():
             if content['style'] != {}:
-                dfxp_style = dfxp.new_tag('style', id="%s" % style)
-                if style == 'p':
-                    p_style = True
-                if 'text-align' in content['style']:
-                    dfxp_style['tts:textAlign'] = (
-                        content['style']['text-align'])
-                if 'font-family' in content['style']:
-                    dfxp_style['tts:fontfamily'] = (
-                        content['style']['font-family'])
-                if 'font-size' in content['style']:
-                    dfxp_style['tts:fontsize'] = content['style']['font-size']
-                if 'color' in content['style']:
-                    dfxp_style['tts:color'] = content['style']['color']
-                if 'text-align' in content['style']:
-                    dfxp_style['tts:textAlign'] = (
-                        content['style']['text-align'])
-                if dfxp_style != dfxp.new_tag('style', id="%s" % style):
-                    dfxp.find('styling').append(dfxp_style)
+                dfxp = self._recreate_style(style, content, dfxp)
 
         body = dfxp.find('body')
-
-        if p_style:
+        if self.p_style:
             body['id'] = 'p'
 
         for lang in captions['captions']:
@@ -188,40 +173,62 @@ class DFXPWriter(BaseWriter):
             div['xml:lang'] = '%s' % lang
 
             for sub in captions['captions'][lang]:
-                start = '0' + str(datetime.timedelta(
-                    milliseconds=(int(sub[0] / 1000))))[:11]
-                end = '0' + str(datetime.timedelta(
-                    milliseconds=(int(sub[1] / 1000))))[:11]
-                text = self._recreate_text(sub[2])
-
-                p = dfxp.new_tag("p", begin=start, end=end)
-                if 'id' in sub[3]:
-                    if dfxp.find("style", {"id": '#%s' % sub[3]['id']}):
-                        p['id'] = '#%s' % sub[3]['id']
-                elif 'class' in sub[3]:
-                    if dfxp.find("style", {"id": '.%s' % sub[3]['class']}):
-                        p['id'] = '.%s' % sub[3]['class']
-                elif 'italics' in sub[3]:
-                    p['tts:fontStyle'] = "italic"
-                elif 'text-align' in sub[3]:
-                    p['tts:textAlign'] = sub[3]['text-align']
-                elif 'font-family' in sub[3]:
-                    p['tts:fontfamily'] = sub[3]['font-family']
-                elif 'font-size' in sub[3]:
-                    p['tts:fontsize'] = sub[3]['font-size']
-                elif 'color' in sub[3]:
-                    p['tts:color'] = sub[3]['color']
-
-                p.string = text
+                p = self._recreate_p_tag(sub, dfxp)
                 div.append(p)
 
             body.append(div)
 
         return dfxp.prettify(formatter=None)
 
+    def _recreate_style(self, style, content, dfxp):
+        dfxp_style = dfxp.new_tag('style', id="%s" % style)
+
+        if style == 'p':
+            self.p_style = True
+
+        if 'text-align' in content['style']:
+            dfxp_style['tts:textAlign'] = content['style']['text-align']
+        if 'font-family' in content['style']:
+            dfxp_style['tts:fontfamily'] = content['style']['font-family']
+        if 'font-size' in content['style']:
+            dfxp_style['tts:fontsize'] = content['style']['font-size']
+        if 'color' in content['style']:
+            dfxp_style['tts:color'] = content['style']['color']
+        if 'text-align' in content['style']:
+            dfxp_style['tts:textAlign'] = content['style']['text-align']
+
+        if dfxp_style != dfxp.new_tag('style', id="%s" % style):
+            dfxp.find('styling').append(dfxp_style)
+
+        return dfxp
+
+    def _recreate_p_tag(self, sub, dfxp):
+        start = '0' + str(timedelta(milliseconds=(int(sub[0] / 1000))))[:11]
+        end = '0' + str(timedelta(milliseconds=(int(sub[1] / 1000))))[:11]
+        p = dfxp.new_tag("p", begin=start, end=end)
+        p.string = self._recreate_text(sub[2])
+
+        if 'id' in sub[3]:
+            if dfxp.find("style", {"id": '#%s' % sub[3]['id']}):
+                p['id'] = '#%s' % sub[3]['id']
+        elif 'class' in sub[3]:
+            if dfxp.find("style", {"id": '.%s' % sub[3]['class']}):
+                p['id'] = '.%s' % sub[3]['class']
+        elif 'italics' in sub[3]:
+            p['tts:fontStyle'] = "italic"
+        elif 'text-align' in sub[3]:
+            p['tts:textAlign'] = sub[3]['text-align']
+        elif 'font-family' in sub[3]:
+            p['tts:fontfamily'] = sub[3]['font-family']
+        elif 'font-size' in sub[3]:
+            p['tts:fontsize'] = sub[3]['font-size']
+        elif 'color' in sub[3]:
+            p['tts:color'] = sub[3]['color']
+
+        return p
+
     def _recreate_text(self, caption):
         line = ''
-        open_span = False
 
         for element in caption:
             if element['type'] == 'text':
@@ -231,26 +238,33 @@ class DFXPWriter(BaseWriter):
                 line = line.rstrip() + '<br/>\n    '
 
             elif element['type'] == 'style':
-                if element['start']:
-                    styles = ''
-                    if 'italics' in element['content']:
-                        styles += ' tts:fontStyle="italic"'
-                    if 'text-align' in element['content']:
-                        styles += (' tts:textAlign="%s"' %
-                            element['content']['text-align'])
-                    if 'font-family' in element['content']:
-                        styles += (' tts:fontfamily="%s"' %
-                            element['content']['font-family'])
-                    if 'font-size' in element['content']:
-                        styles += (' tts:fontsize="%s"' %
-                            element['content']['font-size'])
-                    if 'color' in element['content']:
-                        styles += (' tts:color="%s"' %
-                            element['content']['color'])
-                    if styles:
-                        line += '<span%s>' % styles
-                        open_span = True
-                elif open_span:
-                    line = line.rstrip() + '</span> '
+                line = self._recreate_span(line, element)
 
         return line.rstrip()
+
+    def _recreate_span(self, line, element):
+        if element['start']:
+            styles = ''
+            if 'italics' in element['content']:
+                styles += ' tts:fontStyle="italic"'
+            if 'text-align' in element['content']:
+                styles += (' tts:textAlign="%s"' %
+                    element['content']['text-align'])
+            if 'font-family' in element['content']:
+                styles += (' tts:fontfamily="%s"' %
+                    element['content']['font-family'])
+            if 'font-size' in element['content']:
+                styles += (' tts:fontsize="%s"' %
+                    element['content']['font-size'])
+            if 'color' in element['content']:
+                styles += (' tts:color="%s"' %
+                    element['content']['color'])
+            if styles:
+                line += '<span%s>' % styles
+                self.open_span = True
+
+        elif self.open_span:
+            line = line.rstrip() + '</span> '
+            self.open_span = False
+
+        return line
