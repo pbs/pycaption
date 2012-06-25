@@ -106,7 +106,7 @@ class SAMIReader(BaseReader):
             for a in tag.contents:
                 self._translate_tag(a)
 
-    # convert attributes from CSS to DFXP
+    # convert attributes from CSS
     def _translate_attrs(self, tag):
         attrs = {}
         css_attrs = tag.attrs
@@ -218,7 +218,7 @@ class SAMIWriter(BaseWriter):
 
     def _recreate_p_lang(self, p, sub, lang, captions):
         try:
-            if 'lang' in captions['styles']['.%s' % sub[3]['class']]['style']:
+            if 'lang' in captions['styles']['.%s' % sub[3]['class']]:
                 p['class'] = sub[3]['class']
         except KeyError:
             p['lang'] = "%s" % lang
@@ -228,9 +228,9 @@ class SAMIWriter(BaseWriter):
     def _recreate_stylesheet(self, captions):
         stylesheet = '<!--'
 
-        for style, content in captions['styles'].items():
-            if content['style'] != {}:
-                stylesheet += self._recreate_style(style, content['style'])
+        for style, content in captions.items():
+            if content != {}:
+                stylesheet += self._recreate_style(style, content)
 
         return stylesheet + '   --!>'
 
@@ -313,27 +313,17 @@ class SAMIParser(HTMLParser):
 
         # figure out the caption language of P tags
         if tag == 'p':
-            lang = None
-
-            for attr in attrs:
-                a, b = attr
-                # if lang is an attribute of the tag
-                if a.lower() == 'lang':
-                    lang = b[:2]
-                # if the P tag has a class, try and find the language
-                elif a.lower() == 'class':
-                    if '.%s' % b.lower() in self.styles:
-                        lang = self.styles['.%s' % b.lower()]['lang']
+            lang = self._find_lang(attrs)
+            
             # if no language detected, set it as "none"
             if not lang:
-                lang = 'None'
+                lang = 'unknown'
             attrs.append(('lang', lang))
             self.langs[lang] = 1
 
         # clean-up line breaks
         if tag == 'br':
             self.sami += "<br/>"
-
         # add tag to queue
         else:
             # if already in queue, first close tags off in LIFO order
@@ -367,9 +357,9 @@ class SAMIParser(HTMLParser):
     def feed(self, data):
         # try to find style tag in SAMI
         try:
-            self.styles = self._css_to_dfxp(
+            self.styles = self._css_parse(
                 BeautifulSoup(data).find('style').get_text())
-        except:
+        except AttributeError:
             self.styles = []
         # fix erroneous italics tags
         data = data.replace('<i/>', '<i>')
@@ -382,11 +372,11 @@ class SAMIParser(HTMLParser):
 
         return self.sami, self.styles, self.langs
 
-    # parse into DFXP format the SAMI's stylesheet
-    def _css_to_dfxp(self, css):
+    # parse the SAMI's stylesheet
+    def _css_parse(self, css):
         # parse via cssutils modules
         sheet = parseString(css)
-        dfxp_styles = {}
+        style_sheet = {}
 
         for rule in sheet:
             lang = None
@@ -408,10 +398,23 @@ class SAMIParser(HTMLParser):
                     not_empty = True
                 if prop.name == 'lang':
                     new_style['lang'] = prop.value
-                    lang = prop.value
                     not_empty = True
             if not_empty:
-                dfxp_styles[rule.selectorText.lower()] = {
-                    'style': new_style,
-                    'lang': '%s' % lang}
-        return dfxp_styles
+                style_sheet[rule.selectorText.lower()] = new_style
+
+        return style_sheet
+
+    def _find_lang(self, attrs):
+        for attr in attrs:
+            a, b = attr
+            # if lang is an attribute of the tag
+            if a.lower() == 'lang':
+                return b[:2]
+            # if the P tag has a class, try and find the language
+            elif a.lower() == 'class':
+                try:
+                    return self.styles['.%s' % b.lower()]['lang']
+                except:
+                    pass
+
+        return None
