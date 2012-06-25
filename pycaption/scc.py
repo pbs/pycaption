@@ -759,155 +759,155 @@ class SCCReader(BaseReader):
 
         # loop through each line
         for line in inlines:
-            # ignore blank lines and first line in file
-            if line == inlines[0] or line.strip() == '':
-                continue
-
-            # split line in timestamp and words
-            parts = line.lower().split('	')
-            self.time = parts[0]
-            self.frame_count = 0
-
-            # loop through each word
-            for word in parts[1].split(' '):
-                # ignore empty results
-                if word.strip() == '':
-                    continue
-
-                # count frames for timing
-                self.frame_count += 1
-
-                # first check if word is a command
-                if word in COMMANDS:
-                    # ensure we don't accidentally use the same command twice
-                    if word == self.last_command:
-                        self.last_command = ''
-                        continue
-                    else:
-                        self.last_command = word
-
-                    # if command is pop_up
-                    if word == '9420':
-                        self.pop_on = True
-                        self.paint_on = False
-
-                    # if command is paint_on / roll_up
-                    elif word in ['9429', '9425', '9426', '94a7']:
-                        self.paint_on = True
-                        self.pop_on = False
-
-                        # count how many lines are expected
-                        if word == '9429':
-                            self.roll_rows_expected = 1
-                        elif word == '9425':
-                            self.roll_rows_expected = 2
-                        elif word == '9426':
-                            self.roll_rows_expected = 3
-                        elif word == '94a7':
-                            self.roll_rows_expected = 4
-
-                        # if content is in the queue, turn it into a caption
-                        if self.paint_buffer:
-                            # convert and empty buffer
-                            self.converttopycaps(self.paint_buffer,
-                                                 self.paint_time)
-                            self.paint_buffer = ''
-
-                        # set rows to empty, configure start time for caption
-                        self.roll_rows = []
-                        self.paint_time = self.scctomicro(
-                            self.time[:-2] +
-                            str(int(self.time[-2:]) +
-                            self.frame_count))
-
-                    # clear pop_on buffer
-                    elif word == '94ae':
-                        self.pop_buffer = ''
-
-                    # display pop_on buffer
-                    elif word == '942f' and self.pop_buffer:
-                        # configure timestamp, convert and empty buffer
-                        self.pop_time = self.scctomicro(
-                            self.time[:-2] +
-                            str(int(self.time[-2:]) +
-                            self.frame_count))
-                        self.converttopycaps(self.pop_buffer, self.pop_time)
-                        self.pop_buffer = ''
-
-                    # clear screen or roll up captions
-                    elif word in ['942c', '94ad']:
-                        # if clear screen / carriage return,
-                        # display paint_on buffer
-                        if self.paint_buffer:
-                            self.roll_up()
-
-                            # if clear screen, empty rows
-                            if word == '942c':
-                                self.roll_rows = []
-
-                        # clear screen
-                        elif word == '942c':
-                            # attempt to add proper end time to last caption
-                            if self.scc:
-                                last_time = self.scctomicro(
-                                    self.time[:-2] +
-                                    str(int(self.time[-2:]) +
-                                    self.frame_count))
-                                self.scc[-1][1] = last_time
-
-                    # if command not one of the aforementioned, add to buffer
-                    else:
-                        if self.paint_on:
-                            self.paint_buffer += COMMANDS[word]
-                        else:
-                            self.pop_buffer += COMMANDS[word]
-
-                # second, check if word is a special character
-                elif word in SPECIAL_CHARS:
-                    # if so, add to buffer
-                    if self.paint_on:
-                        self.paint_buffer += SPECIAL_CHARS[word]
-                    else:
-                        self.pop_buffer += SPECIAL_CHARS[word]
-
-                # third, try to convert word into 2 characters
-                else:
-                    # split word into the 2 bytes
-                    byte1 = word[:2]
-                    byte2 = word[2:]
-
-                    # check to see if the first byte is a recognized character
-                    if byte1 in CHARACTERS:
-                        # if so, add to buffer
-                        if self.paint_on:
-                            self.paint_buffer += CHARACTERS[byte1]
-                        else:
-                            self.pop_buffer += CHARACTERS[byte1]
-
-                        # only check for byte2 if byte1 was recognized
-                        if byte2 in CHARACTERS:
-                            # if recognized, add to buffer
-                            if self.paint_on:
-                                self.paint_buffer += CHARACTERS[byte2]
-                            else:
-                                self.pop_buffer += CHARACTERS[byte2]
+            self._translate_line(line, inlines)
 
         # after converting lines, see if anything is left in paint_buffer
         if self.paint_buffer:
-            self.roll_up()
+            self._roll_up()
+
         return {'captions': {lang: self.scc}, 'styles': {}}
 
+    def _translate_line(self, line, inlines):
+        # ignore blank lines and first line in file
+        if line == inlines[0] or line.strip() == '':
+            return
+
+        # split line in timestamp and words
+        parts = line.lower().split('	')
+        self.time = parts[0]
+        self.frame_count = 0
+
+        # loop through each word
+        for word in parts[1].split(' '):
+            # ignore empty results
+            if word.strip() != '':
+                self._translate_word(word)
+
+    def _translate_word(self, word):
+        # count frames for timing
+        self.frame_count += 1
+
+        # first check if word is a command
+        if word in COMMANDS:
+            self._translate_command(word)
+
+        # second, check if word is a special character
+        elif word in SPECIAL_CHARS:
+            # if so, add to buffer
+            if self.paint_on:
+                self.paint_buffer += SPECIAL_CHARS[word]
+            else:
+                self.pop_buffer += SPECIAL_CHARS[word]
+
+        # third, try to convert word into 2 characters
+        else:
+            self._translate_characters(word)
+
+    def _translate_command(self, word):
+        # ensure we don't accidentally use the same command twice
+        if word == self.last_command:
+            self.last_command = ''
+            return
+        else:
+            self.last_command = word
+
+        # if command is pop_up
+        if word == '9420':
+            self.pop_on = True
+            self.paint_on = False
+
+        # if command is paint_on / _roll_up
+        elif word in ['9429', '9425', '9426', '94a7']:
+            self.paint_on = True
+            self.pop_on = False
+
+            # count how many lines are expected
+            if word == '9429':
+                self.roll_rows_expected = 1
+            elif word == '9425':
+                self.roll_rows_expected = 2
+            elif word == '9426':
+                self.roll_rows_expected = 3
+            elif word == '94a7':
+                self.roll_rows_expected = 4
+
+            # if content is in the queue, turn it into a caption
+            if self.paint_buffer:
+                # convert and empty buffer
+                self._convert_to_pycaps(self.paint_buffer, self.paint_time)
+                self.paint_buffer = ''
+
+            # set rows to empty, configure start time for caption
+            self.roll_rows = []
+            self.paint_time = self._translate_time(self.time[:-2] +
+                                                   str(int(self.time[-2:]) +
+                                                   self.frame_count))
+
+        # clear pop_on buffer
+        elif word == '94ae':
+            self.pop_buffer = ''
+
+        # display pop_on buffer
+        elif word == '942f' and self.pop_buffer:
+            # configure timestamp, convert and empty buffer
+            self.pop_time = self._translate_time(self.time[:-2] +
+                                                 str(int(self.time[-2:]) +
+                                                 self.frame_count))
+            self._convert_to_pycaps(self.pop_buffer, self.pop_time)
+            self.pop_buffer = ''
+
+        # roll up captions
+        elif word == '94ad':
+            # display paint_on buffer
+            if self.paint_buffer:
+                self._roll_up()
+
+        # clear screen
+        elif word == '942c':
+            self.roll_rows = []
+
+            # attempt to add proper end time to last caption
+            if self.scc:
+                last_time = self._translate_time(self.time[:-2] +
+                                                 str(int(self.time[-2:]) +
+                                                 self.frame_count))
+                self.scc[-1][1] = last_time
+
+        # if command not one of the aforementioned, add to buffer
+        else:
+            if self.paint_on:
+                self.paint_buffer += COMMANDS[word]
+            else:
+                self.pop_buffer += COMMANDS[word]
+
+    def _translate_characters(self, word):
+        # split word into the 2 bytes
+        byte1 = word[:2]
+        byte2 = word[2:]
+
+        # check to see if the the bytes are recognized characters
+        if byte1 not in CHARACTERS or byte2 not in CHARACTERS:
+            return
+
+        # if so, add to buffer
+        if self.paint_on:
+            self.paint_buffer += CHARACTERS[byte1] + CHARACTERS[byte2]
+        else:
+            self.pop_buffer += CHARACTERS[byte1] + CHARACTERS[byte2]
+
     # convert SCC timestamp into total microseconds
-    def scctomicro(self, stamp):
-        # change format and split
+    def _translate_time(self, stamp):
         timesplit = stamp.replace(';', ':').split(':')
 
-        # convert with math into total microseconds and return result
-        return int(timesplit[0]) * 3600000000 + int(timesplit[1]) * 60000000 \
-        + int(timesplit[2]) * 1000000 + (int(timesplit[3]) / 29.97 * 1000000)
+        microseconds = (int(timesplit[0]) * 3600000000 +
+                        int(timesplit[1]) * 60000000 +
+                        int(timesplit[2]) * 1000000 +
+                        (int(timesplit[3]) / 29.97 * 1000000))
+
+        return microseconds
 
     # convert buffer into proper PyCaps format
-    def converttopycaps(self, buffer, start):
+    def _convert_to_pycaps(self, buffer, start):
         # check to see if previous caption needs an end-time
         if self.scc and self.scc[-1][1] == 0:
             self.scc[-1][1] = start
@@ -925,51 +925,30 @@ class SCCReader(BaseReader):
 
             # handle line breaks
             elif element == '{break}':
-                # if break appears at start of caption, skip break
-                if first_element == True:
-                    continue
-                # if the last caption was a break, skip this break
-                elif captions[-1]['type'] == 'break':
-                    continue
-                # close any open italics
-                elif open_italic == True:
-                    captions.append({
-                        'type': 'style',
-                        'start': False,
-                        'content': {'italics': True}})
-                    open_italic = False
-
-                # add line break
-                captions.append({'type': 'break', 'content': ''})
+                captions, open_italic = self._translate_break(captions,
+                                                              first_element,
+                                                              open_italic)
 
             # handle open italics
             elif element == '{italic}':
                 # add italics
-                captions.append({
-                    'type': 'style',
-                    'start': True,
-                    'content': {'italics': True}})
+                captions.append({'type': 'style', 'start': True,
+                                 'content': {'italics': True}})
                 # open italics, no longer first element
                 open_italic = True
                 first_element = False
 
             # handle clone italics
-            elif element == '{end-italic}':
-                # only close an open tag
-                if open_italic == True:
-                    captions.append({
-                        'type': 'style',
-                        'start': False,
-                        'content': {'italics': True}})
-                # clone italics, no longer first element
-                open_italic = first_element = False
+            elif element == '{end-italic}' and open_italic:
+                captions.append({'type': 'style', 'start': False,
+                                 'content': {'italics': True}})
+                open_italic = False
 
             # handle text
             else:
                 # add text
-                captions.append({
-                    'type': 'text',
-                    'content': ' '.join(element.split())})
+                captions.append({'type': 'text',
+                                 'content': ' '.join(element.split())})
                 # no longer first element
                 first_element = False
 
@@ -985,20 +964,42 @@ class SCCReader(BaseReader):
         for a in range(0, len(captions)):
             a -= deleted
             try:
-                if captions[a]['content']['italics'] == True:
-                    if captions[a + 1]['type'] == 'break':
-                        if captions[a + 2]['content']['italics'] == True:
-                            captions.pop(a)
-                            captions.pop(a + 1)
-                            deleted += 2
-            except:
+                captions, deleted = self._remove_italics(captions, deleted, a)
+            except (TypeError, IndexError):
                 pass
 
         # only add captions to list if content inside exists
         if captions:
             self.scc.append([start, 0, captions, {}])
 
-    def roll_up(self):
+    def _translate_break(self, captions, first_element, open_italic):
+        # if break appears at start of caption, skip break
+        if first_element == True:
+            return captions, open_italic
+        # if the last caption was a break, skip this break
+        elif captions[-1]['type'] == 'break':
+            return captions, open_italic
+        # close any open italics
+        elif open_italic == True:
+            captions.append({'type': 'style', 'start': False,
+                             'content': {'italics': True}})
+            open_italic = False
+
+        # add line break
+        captions.append({'type': 'break', 'content': ''})
+
+        return captions, open_italic
+
+    def _remove_italics(self, captions, deleted, a):
+        if (captions[a]['content']['italics'] and
+            captions[a + 1]['type'] == 'break' and
+            captions[a + 2]['content']['italics']):
+                captions.pop(a)
+                captions.pop(a + 1)
+                deleted += 2
+        return captions, deleted
+
+    def _roll_up(self):
         if self.simulate_roll_up == False:
             self.roll_rows = []
 
@@ -1011,11 +1012,11 @@ class SCCReader(BaseReader):
         self.paint_buffer = ' '.join(self.roll_rows)
 
         # convert buffer and empty
-        self.converttopycaps(self.paint_buffer, self.paint_time)
+        self._convert_to_pycaps(self.paint_buffer, self.paint_time)
         self.paint_buffer = ''
 
         # configure time
-        self.paint_time = self.scctomicro(
+        self.paint_time = self._translate_time(
             self.time[:-2] +
             str(int(self.time[-2:]) +
             self.frame_count))
@@ -1023,5 +1024,5 @@ class SCCReader(BaseReader):
         # try to insert the proper ending time for the previous caption
         try:
             self.scc[-1][1] = self.paint_time
-        except:
+        except IndexError:
             pass
