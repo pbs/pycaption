@@ -1,12 +1,14 @@
-import logging
+from logging import FATAL
 from collections import deque
 from HTMLParser import HTMLParser
-import cssutils
+
+from cssutils import parseString, log
 from bs4 import BeautifulSoup
+
 from pycaption import BaseReader, BaseWriter
 
 # change cssutils default logging
-cssutils.log.setLevel(logging.FATAL)
+log.setLevel(FATAL)
 
 sami_base = '''
 <sami>
@@ -28,81 +30,84 @@ class SAMIReader(BaseReader):
             return False
 
     def read(self, content):
-        content, doc_styles, doc_langs = SAMICleaner().feed(content)
+        content, doc_styles, doc_langs = SAMIParser().feed(content)
         sami_soup = BeautifulSoup(content)
         captions = {'captions': {}, 'styles': doc_styles}
 
         for language in doc_langs:
-            subdata = []
-
-            for p in sami_soup.select('p[lang|=%s]' % language):
-                milliseconds = int(p.parent['start'])
-                start = milliseconds * 1000
-                end = 0
-
-                if subdata != [] and subdata[-1][1] == 0:
-                    subdata[-1][1] = milliseconds * 1000
-
-                if p.get_text() not in [u'\n', '\r', '']:
-                    self.line = []
-                    self._translate_tag(p)
-                    text = self.line
-                    styles = self._conv_attrs(p)
-                    subdata += [[start, end, text, styles]]
-
-            if subdata[-1][1] == 0:
-                subdata[-1][1] = (milliseconds + 4000) * 1000
-            captions['captions'][language] = subdata
+            lang_captions = self._translate_lang(language, sami_soup)
+            captions['captions'][language] = lang_captions
 
         return captions
 
+    def _translate_lang(self, language, sami_soup):
+        subdata = []
+        for p in sami_soup.select('p[lang|=%s]' % language):
+            milliseconds = int(p.parent['start'])
+            start = milliseconds * 1000
+            end = 0
+
+            if subdata != [] and subdata[-1][1] == 0:
+                subdata[-1][1] = milliseconds * 1000
+
+            if p.get_text() not in [u'\n', '\r', '']:
+                self.line = []
+                self._translate_tag(p)
+                text = self.line
+                styles = self._translate_attrs(p)
+                subdata += [[start, end, text, styles]]
+
+        if subdata[-1][1] == 0:
+            subdata[-1][1] = (milliseconds + 4000) * 1000
+
+        return subdata
+
     def _translate_tag(self, tag):
+        # check to see if tag is just a string
         try:
-            # convert line breaks
-            if tag.name == 'br':
-                self.line.append({'type': 'break', 'content': ''})
-            # convert italics
-            elif tag.name == 'i':
-                self.line.append({
-                    'type': 'style',
-                    'start': True,
-                    'content': {'italics': True}})
-                # recursively call function for any children elements
-                for a in tag.contents:
-                    self._translate_tag(a)
-                self.line.append({
-                    'type': 'style',
-                    'start': False,
-                    'content': {'italics': True}})
-            elif tag.name == 'span':
-                # convert tag attributes
-                args = self._conv_attrs(tag)
-                # only include span tag if attributes returned
-                if args != '':
-                    self.line.append({
-                        'type': 'style',
-                        'start': True,
-                        'content':  args})
-                    # recursively call function for any children elements
-                    for a in tag.contents:
-                        self._translate_tag(a)
-                    self.line.append({
-                        'type': 'style',
-                        'start': False,
-                        'content': args})
-                else:
-                    for a in tag.contents:
-                        self._translate_tag(a)
-            else:
-                # recursively call function for any children elements
-                for a in tag.contents:
-                    self._translate_tag(a)
-        # if no more tags found, strip text
+            tag_name = tag.name
         except AttributeError:
+            # if no more tags found, strip text
             self.line.append({'type': 'text', 'content': '%s' % tag.strip()})
+            return
+
+        # convert line breaks
+        if tag.name == 'br':
+            self.line.append({'type': 'break', 'content': ''})
+        # convert italics
+        elif tag.name == 'i':
+            self.line.append({'type': 'style', 'start': True,
+                              'content': {'italics': True}})
+            # recursively call function for any children elements
+            for a in tag.contents:
+                self._translate_tag(a)
+            self.line.append({'type': 'style', 'start': False,
+                              'content': {'italics': True}})
+        elif tag.name == 'span':
+            self._translate_span(tag)
+        else:
+            # recursively call function for any children elements
+            for a in tag.contents:
+                self._translate_tag(a)
+
+    def _translate_span(self, tag):
+        # convert tag attributes
+        args = self._translate_attrs(tag)
+        # only include span tag if attributes returned
+        if args != '':
+            self.line.append({'type': 'style', 'start': True,
+                              'content':  args})
+            # recursively call function for any children elements
+            for a in tag.contents:
+                self._translate_tag(a)
+            self.line.append({'type': 'style', 'start': False,
+                              'content': args})
+        else:
+            for a in tag.contents:
+                self._translate_tag(a)
 
     # convert attributes from CSS to DFXP
-    def _conv_attrs(self, tag):
+    def _translate_attrs(self, tag):
         attrs = {}
         css_attrs = tag.attrs
 
@@ -113,16 +118,21 @@ class SAMIReader(BaseReader):
                 attrs['class'] = css_attrs[arg][0].lower()
             elif arg == "style":
                 styles = css_attrs[arg].split(';')
-                for style in styles:
-                    style = style.split(':')
-                    if style[0] == 'text-align':
-                        attrs['text-align'] = style[1].strip()
-                    elif style[0] == 'font-family':
-                        attrs['font-family'] = style[1].strip()
-                    elif style[0] == 'font-size':
-                        attrs['font-size'] = style[1].strip()
-                    elif style[0] == 'color':
-                        attrs['color'] = style[1].strip()
+                attrs = self._translate_style(attrs, styles)
+
+        return attrs
+
+    def _translate_style(self, attrs, styles):
+        for style in styles:
+            style = style.split(':')
+            if style[0] == 'text-align':
+                attrs['text-align'] = style[1].strip()
+            elif style[0] == 'font-family':
+                attrs['font-family'] = style[1].strip()
+            elif style[0] == 'font-size':
+                attrs['font-size'] = style[1].strip()
+            elif style[0] == 'color':
+                attrs['color'] = style[1].strip()
 
         return attrs
 
@@ -273,7 +283,7 @@ class SAMIWriter(BaseWriter):
 
 
 # SAMI parser, made from modified html parser
-class SAMICleaner(HTMLParser):
+class SAMIParser(HTMLParser):
     def __init__(self, *args, **kw):
         HTMLParser.__init__(self, *args, **kw)
         self.sami = ''
@@ -362,7 +372,7 @@ class SAMICleaner(HTMLParser):
     # parse into DFXP format the SAMI's stylesheet
     def _css_to_dfxp(self, css):
         # parse via cssutils modules
-        sheet = cssutils.parseString(css)
+        sheet = parseString(css)
         dfxp_styles = {}
 
         for rule in sheet:
