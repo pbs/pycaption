@@ -138,113 +138,120 @@ class SAMIReader(BaseReader):
 
 
 class SAMIWriter(BaseWriter):
+    def __init__(self, *args, **kw):
+        self.open_span = False
+        self.last_time = None
+
     def write(self, captions):
         sami = BeautifulSoup(sami_base, "xml")
-        sami_style = '<!--'
-
-        for style, content in captions['styles'].items():
-            if content['style'] != {}:
-                sami_style += '\n    %s {\n    ' % style
-                if 'text-align' in content['style']:
-                    sami_style += ' text-align: %s;\n    ' % \
-                        content['style']['text-align']
-                if 'font-family' in content['style']:
-                    sami_style += ' font-family: %s;\n    ' % \
-                        content['style']['font-family']
-                if 'font-size' in content['style']:
-                    sami_style += ' font-size: %s;\n    ' % \
-                        content['style']['font-size']
-                if 'color' in content['style']:
-                    sami_style += ' color: %s;\n    ' % \
-                        content['style']['color']
-                if 'lang' in content['style']:
-                    sami_style += ' lang: %s;\n    ' % \
-                        content['style']['lang']
-                sami_style += '}\n'
-
-        sami_style += '   --!>'
-        sami.find('style').append(sami_style)
-        last_time = None
-        primary_lang = captions['captions'].keys()[0]
-        body = sami.find('body')
-
-        for sub in captions['captions'][primary_lang]:
-            time = sub[0] / 1000
-
-            if last_time and time != last_time:
-                sync = sami.new_tag("sync", start="%s" % last_time)
-                p = sami.new_tag("p")
-                try:
-                    if 'lang' in captions['styles']['.%s' % \
-                        sub[3]['class']]['style']:
-                            p['class'] = sub[3]['class']
-                except:
-                    p['lang'] = "%s" % primary_lang
-                p.string = '&nbsp;'
-                sync.append(p)
-                body.append(sync)
-
-            last_time = sub[1] / 1000
-
-            sync = sami.new_tag("sync", start="%s" % time)
-            p = sami.new_tag("p")
-            try:
-                if 'lang' in captions['styles']['.%s' % \
-                    sub[3]['class']]['style']:
-                        p['class'] = sub[3]['class']
-            except:
-                p['lang'] = "%s" % primary_lang
-            p.string = self._recreate_text(sub[2])
-            sync.append(p)
-            body.append(sync)
+        stylesheet = self._recreate_stylesheet(captions)
+        sami.find('style').append(stylesheet)
+        primary = None
 
         for lang in captions['captions']:
-            last_time = None
+            self.last_time = None
+            if not primary:
+                primary = lang
+            for sub in captions['captions'][lang]:
+                sami = self._recreate_p_tag(sub, sami, lang, primary, captions)
 
-            if lang != primary_lang:
-                for sub in captions['captions'][lang]:
-                    time = sub[0] / 1000
-
-                    if last_time and time != last_time:
-                        sync = sami.find("sync", start="%s" % last_time)
-
-                        if sync == None:
-                            def earlier_samis(start):
-                                return int(start) < last_time
-                            last_sync = sami.find_all(
-                                "sync", start=earlier_samis)[-1]
-                            sync = sami.new_tag(
-                                "sync", start="%s" % last_time)
-                            last_sync.insert_after(sync)
-
-                        p = sami.new_tag("p")
-                        try:
-                            if 'lang' in captions['styles']['.%s' % \
-                                sub[3]['class']]['style']:
-                                    p['class'] = sub[3]['class']
-                        except:
-                            p['lang'] = "%s" % primary_lang
-                        p.string = '&nbsp;'
-                        sync.append(p)
-
-                    last_time = sub[1] / 1000
-
-                    sync = sami.find("sync", start="%s" % time)
-                    p = sami.new_tag("p")
-                    try:
-                        if 'lang' in captions['styles']['.%s' % \
-                            sub[3]['class']]['style']:
-                                p['class'] = sub[3]['class']
-                    except:
-                        p['lang'] = "%s" % primary_lang
-                    p.string = self._recreate_text(sub[2])
-                    sync.append(p)
         a = sami.prettify(formatter=None).split('\n')
         return '\n'.join(a[1:])
 
+    def _recreate_p_tag(self, sub, sami, lang, primary, captions):
+        time = sub[0] / 1000
+
+        if self.last_time and time != self.last_time:
+            sami = self._recreate_blank_tag(sami, sub, lang, primary, captions)
+
+        self.last_time = sub[1] / 1000
+
+        sami, sync = self._recreate_sync(sami, lang, primary, time)
+
+        p = sami.new_tag("p")
+        p = self._recreate_p_lang(p, sub, lang, captions)
+        p.string = self._recreate_text(sub[2])
+
+        sync.append(p)
+
+        return sami
+
+    def _recreate_sync(self, sami, lang, primary, time):
+        if lang == primary:
+            sync = sami.new_tag("sync", start="%s" % time)
+            sami.body.append(sync)
+        else:
+            sync = sami.find("sync", start="%s" % time)
+            if sync == None:
+                sami, sync = self._find_closest_sync(sami, time)
+
+        return sami, sync
+
+    def _find_closest_sync(self, sami, time):
+        sync = sami.new_tag("sync", start="%s" % time)
+
+        def earlier_syncs(start):
+            return int(start) < time
+        earlier = sami.find_all("sync", start=earlier_syncs)
+        if earlier:
+            last_sync = earlier[-1]
+            last_sync.insert_after(sync)
+        else:
+            def later_syncs(start):
+                return int(start) > time
+            later = sami.find_all("sync", start=later_syncs)
+            if later:
+                last_sync = later[0]
+                last_sync.insert_before(sync)
+        return sami, sync
+
+    def _recreate_blank_tag(self, sami, sub, lang, primary, captions):
+        sami, sync = self._recreate_sync(sami, lang, primary, self.last_time)
+
+        p = sami.new_tag("p")
+        p = self._recreate_p_lang(p, sub, lang, captions)
+        p.string = '&nbsp;'
+
+        sync.append(p)
+
+        return sami
+
+    def _recreate_p_lang(self, p, sub, lang, captions):
+        try:
+            if 'lang' in captions['styles']['.%s' % sub[3]['class']]['style']:
+                p['class'] = sub[3]['class']
+        except KeyError:
+            p['lang'] = "%s" % lang
+
+        return p
+
+    def _recreate_stylesheet(self, captions):
+        stylesheet = '<!--'
+
+        for style, content in captions['styles'].items():
+            if content['style'] != {}:
+                stylesheet += self._recreate_style(style, content['style'])
+
+        return stylesheet + '   --!>'
+
+    def _recreate_style(self, style, content):
+        sami_style = '\n    %s {\n    ' % style
+
+        if 'text-align' in content:
+            sami_style += ' text-align: %s;\n    ' % content['text-align']
+        if 'font-family' in content:
+            sami_style += ' font-family: %s;\n    ' % content['font-family']
+        if 'font-size' in content:
+            sami_style += ' font-size: %s;\n    ' % content['font-size']
+        if 'color' in content:
+            sami_style += ' color: %s;\n    ' % content['color']
+        if 'lang' in content:
+            sami_style += ' lang: %s;\n    ' % content['lang']
+
+        return sami_style + '}\n'
+
     def _recreate_text(self, caption):
         line = ''
-        open_span = False
 
         for element in caption:
             if element['type'] == 'text':
@@ -252,34 +259,40 @@ class SAMIWriter(BaseWriter):
             elif element['type'] == 'break':
                 line = line.rstrip() + '<br/>\n    '
             elif element['type'] == 'style':
-                if element['start']:
-                    if 'italics' in element['content']:
-                        line += '<i>'
-                    else:
-                        style = ''
-                        if 'text-align' in element['content']:
-                            style += 'text-align:%s;' % \
-                                element['content']['text-align']
-                        if 'font-family' in element['content']:
-                            style += 'font-family:%s;' % \
-                                element['content']['font-family']
-                        if 'font-size' in element['content']:
-                            style += 'font-size:%s;' % \
-                                element['content']['font-size']
-                        if 'color' in element['content']:
-                            style += 'color:%s;' % \
-                                element['content']['color']
-                        if style:
-                            line += '<span style="%s">' % style
-                            open_span = True
-                else:
-                    if 'italics' in element['content']:
-                        line = line.rstrip() + '</i> '
-                    elif open_span == True:
-                        line = line.rstrip() + '</span> '
-                        open_span = False
+                line = self._recreate_line_style(line, element)
 
         return line.rstrip()
+
+    def _recreate_line_style(self, line, element):
+        if element['start']:
+            if 'italics' in element['content']:
+                line += '<i>'
+            else:
+                line = self._recreate_span(line, element['content'])
+        else:
+            if 'italics' in element['content']:
+                line = line.rstrip() + '</i> '
+            elif self.open_span == True:
+                line = line.rstrip() + '</span> '
+                self.open_span = False
+
+        return line
+
+    def _recreate_span(self, line, element):
+        style = ''
+        if 'text-align' in element:
+            style += 'text-align:%s;' % element['text-align']
+        if 'font-family' in element:
+            style += 'font-family:%s;' % element['font-family']
+        if 'font-size' in element:
+            style += 'font-size:%s;' % element['font-size']
+        if 'color' in element:
+            style += 'color:%s;' % element['color']
+        if style:
+            line += '<span style="%s">' % style
+            self.open_span = True
+
+        return line
 
 
 # SAMI parser, made from modified html parser
