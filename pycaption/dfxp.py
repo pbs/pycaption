@@ -43,12 +43,12 @@ class DFXPReader(BaseReader):
         return subdata
 
     def _translate_style(self, style):
-        new_style = {'lang': 'None', 'style': {}}
+        new_style = {}
         for arg in style.attrs:
             if arg == "tts:fontstyle" and style.attrs[arg] == "italic":
-                new_style['style']['italics'] = True
+                new_style['italics'] = True
             if arg == "tts:textalign":
-                new_style['style']['text-align'] = style.attrs[arg]
+                new_style['text-align'] = style.attrs[arg]
         return new_style
 
     def _translate_p_tag(self, p_tag):
@@ -161,7 +161,7 @@ class DFXPWriter(BaseWriter):
         dfxp.find('tt')['xml:lang'] = "en"
 
         for style, content in captions['styles'].items():
-            if content['style'] != {}:
+            if content != {}:
                 dfxp = self._recreate_style(style, content, dfxp)
 
         body = dfxp.find('body')
@@ -186,16 +186,16 @@ class DFXPWriter(BaseWriter):
         if style == 'p':
             self.p_style = True
 
-        if 'text-align' in content['style']:
-            dfxp_style['tts:textAlign'] = content['style']['text-align']
-        if 'font-family' in content['style']:
-            dfxp_style['tts:fontfamily'] = content['style']['font-family']
-        if 'font-size' in content['style']:
-            dfxp_style['tts:fontsize'] = content['style']['font-size']
-        if 'color' in content['style']:
-            dfxp_style['tts:color'] = content['style']['color']
-        if 'text-align' in content['style']:
-            dfxp_style['tts:textAlign'] = content['style']['text-align']
+        if 'text-align' in content:
+            dfxp_style['tts:textAlign'] = content['text-align']
+        if 'font-family' in content:
+            dfxp_style['tts:fontfamily'] = content['font-family']
+        if 'font-size' in content:
+            dfxp_style['tts:fontsize'] = content['font-size']
+        if 'color' in content:
+            dfxp_style['tts:color'] = content['color']
+        if 'text-align' in content:
+            dfxp_style['tts:textAlign'] = content['text-align']
 
         if dfxp_style != dfxp.new_tag('style', id="%s" % style):
             dfxp.find('styling').append(dfxp_style)

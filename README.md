@@ -175,22 +175,16 @@ Example CCG json:
                     }
                 ]
             ]
-        }
+        },
         "styles": {
                 ".encc": {
-                    "lang": "en-US",
-                    "style": {
-                        "lang": "en-US"
-                    }
+                    "lang": "en-US"
                 },
                 "p": {
-                    "lang": "None",
-                    "style": {
-                        "color": "#fff",
-                        "font-size": "10pt",
-                        "font-family": "Arial",
-                        "text-align": "center"
-                    }
+                    "color": "#fff",
+                    "font-size": "10pt",
+                    "font-family": "Arial",
+                    "text-align": "center"
                 }
         }
     }
