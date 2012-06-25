@@ -19,38 +19,44 @@ class SRTReader(BaseReader):
             if not inlines[start_line].isdigit():
                 break
 
-            current_line = start_line + 1
-            while current_line < (len(inlines) + 1):
-                try:
-                    if int(inlines[current_line]):
-                        break
-                except:
-                    current_line += 1
+            end_line = self._find_text_line(start_line, inlines)
 
             timing = inlines[start_line + 1].split('-->')
-            start = self.srttomicro(timing[0].strip(' \r\n'))
-            end = self.srttomicro(timing[1].strip(' \r\n'))
+            start = self._srttomicro(timing[0].strip(' \r\n'))
+            end = self._srttomicro(timing[1].strip(' \r\n'))
             text = []
-            first = True
-            for line in inlines[start_line + 2:current_line - 1]:
-                if not first:
-                    text += [{'type': 'break', 'content': ''}]
+
+            for line in inlines[start_line + 2:end_line - 1]:
                 text += [{'type': 'text', 'content': line}]
-                first = False
+                text += [{'type': 'break', 'content': ''}]
+            text.pop()  # remove last line break from end of caption list
 
             subdata += [[start, end, text, {}]]
-            start_line = current_line
+            start_line = end_line
 
         return {'captions': {lang: subdata}, 'styles': {}}
 
-    def srttomicro(self, stamp):
+    def _srttomicro(self, stamp):
         timesplit = stamp.split(':')
         secsplit = timesplit[2].split(',')
         microseconds = (int(timesplit[0]) * 3600000000 +
                         int(timesplit[1]) * 60000000 +
                         int(secsplit[0]) * 1000000 +
                         int(secsplit[1]) * 1000)
+
         return microseconds
+
+    def _find_text_line(self, start_line, inlines):
+        end_line = start_line + 1
+
+        while end_line < (len(inlines) + 1):
+            try:
+                int(inlines[end_line])
+                break
+            except (ValueError, IndexError):
+                end_line += 1
+
+        return end_line
 
 
 class SRTWriter(BaseWriter):
@@ -66,6 +72,7 @@ class SRTWriter(BaseWriter):
         srt = ''
         count = 1
         srt += '"%s" SRT Captions\n' % lang
+
         for sub in captions['captions'][lang]:
             srt += '%s\n' % count
             start = '0' + str(timedelta(milliseconds=(int(sub[0] / 1000))))
@@ -76,6 +83,7 @@ class SRTWriter(BaseWriter):
                 srt = self._recreate_line(srt, line)
             srt += '\n\n'
             count += 1
+
         return srt[:-1]
 
     def _recreate_line(self, srt, line):
