@@ -10,11 +10,15 @@ class TranscriptWriter(BaseWriter):
             lang_transcript = '* %s Transcript *\n' % lang.upper()
 
             for sub in captions['captions'][lang]:
-                for line in sub[2]:
-                    if line['type'] == 'text':
-                        lang_transcript += '%s ' % line['content']
+                lang_transcript = self._strip_text(sub[2], lang_transcript)
 
             lang_transcript = '\n'.join(nltk.sent_tokenize(lang_transcript))
             transcripts.append(lang_transcript)
 
         return '\n'.join(transcripts)
+
+    def _strip_text(self, elements, lang_transcript):
+        for line in elements:
+            if line['type'] == 'text':
+                lang_transcript += '%s ' % line['content']
+        return lang_transcript
