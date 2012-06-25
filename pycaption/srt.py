@@ -1,4 +1,4 @@
-import datetime
+from datetime import timedelta
 from pycaption import BaseReader, BaseWriter
 
 
@@ -21,7 +21,7 @@ class SRTReader(BaseReader):
 
             current_line = start_line + 1
             while current_line < (len(inlines) + 1):
-                try: 
+                try:
                     if int(inlines[current_line]):
                         break
                 except:
@@ -56,24 +56,32 @@ class SRTReader(BaseReader):
 class SRTWriter(BaseWriter):
     def write(self, captions):
         srts = []
+
         for lang in captions['captions']:
-            srt = ''
-            count = 1
-            srt += '\n"%s" SRT Captions\n' % lang
-            for sub in captions['captions'][lang]:
-                srt += '%s\n' % count
-                start = '0' + str(datetime.timedelta(milliseconds=(
-                    int(sub[0] / 1000))))[:11]
-                end = '0' + str(datetime.timedelta(milliseconds=(
-                    int(sub[1] / 1000))))[:11]
-                timestamp = '%s --> %s\n' % (start, end)
-                srt += timestamp.replace('.', ',')
-                for line in sub[2]:
-                    if line['type'] == 'text':
-                        srt += '%s ' % line['content']
-                    elif line['type'] == 'break':
-                        srt += '\n'
-                srt += '\n\n'
-                count += 1
-            srts.append(srt[:-1])
-        return 'MULTI-LANGUAGE SRT'.join(srts)
+            srts.append(self._recreate_lang(lang, captions))
+
+        return 'MULTI-LANGUAGE SRT\n'.join(srts)
+
+    def _recreate_lang(self, lang, captions):
+        srt = ''
+        count = 1
+        srt += '"%s" SRT Captions\n' % lang
+        for sub in captions['captions'][lang]:
+            srt += '%s\n' % count
+            start = '0' + str(timedelta(milliseconds=(int(sub[0] / 1000))))
+            end = '0' + str(timedelta(milliseconds=(int(sub[1] / 1000))))
+            timestamp = '%s --> %s\n' % (start[:12], end[:12])
+            srt += timestamp.replace('.', ',')
+            for line in sub[2]:
+                srt = self._recreate_line(srt, line)
+            srt += '\n\n'
+            count += 1
+        return srt[:-1]
+
+    def _recreate_line(self, srt, line):
+        if line['type'] == 'text':
+            return srt + '%s ' % line['content']
+        elif line['type'] == 'break':
+            return srt + '\n'
+        else:
+            return srt
