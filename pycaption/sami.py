@@ -314,7 +314,7 @@ class SAMIParser(HTMLParser):
         # figure out the caption language of P tags
         if tag == 'p':
             lang = self._find_lang(attrs)
-            
+
             # if no language detected, set it as "none"
             if not lang:
                 lang = 'unknown'
