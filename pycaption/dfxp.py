@@ -28,50 +28,55 @@ class DFXPReader(BaseReader):
         captions = {'captions': {}, 'styles': {}}
 
         for div in dfxp_soup.find_all('div'):
-            lang = div['xml:lang']
-            subdata = []
-
-            for p_tag in div.find_all('p'):
-                start = self.dfxptomicro(p_tag['begin'])
-                end = self.dfxptomicro(p_tag['end'])
-                self.line = []
-                self._translate_tag(p_tag)
-                text = self.line
-                styles = {}
-                attrs = p_tag.attrs
-                for arg in attrs:
-                    if arg == "id":
-                        styles['id'] = attrs[arg]
-                    elif arg == "class":
-                        styles['class'] = attrs[arg]
-                    elif arg == "tts:fontstyle" and attrs[arg] == "italic":
-                        styles['italics'] = True
-                    elif arg == "tts:textalign":
-                        styles['align'] = attrs[arg]
-                    elif arg == 'tts:fontfamily':
-                        styles['font-family'] = attrs[arg]
-                    elif arg == 'tts:fontsize':
-                        styles['font-size'] = attrs[arg]
-                    elif arg == 'tts:color':
-                        styles['color'] = attrs[arg]
-                subdata += [[start, end, text, styles]]
-            captions['captions'][lang] = subdata
+            captions['captions'][div['xml:lang']] = self._translate_div(div)
 
         for style in dfxp_soup.find_all('style'):
-            captions['styles'][style['id']] = {'lang': 'None', 'style': {}}
-            styles = []
-            for arg in style.attrs:
-                if arg == "tts:fontstyle" and style.attrs[arg] == "italic":
-                    captions['styles'][style['id']]['style']['italics'] = True
-                if arg == "tts:textalign":
-                    captions['styles'][style['id']]['style']['text-align'] = \
-                        style.attrs[arg]
+            captions['styles'][style['id']] = self._translate_style(style)
 
-        if attrs != '':
-            attrs = 'style="%s"' % attrs
         return captions
 
-    def dfxptomicro(self, stamp):
+    def _translate_div(self, div):
+        subdata = []
+        for p_tag in div.find_all('p'):
+            p_data = self._translate_p_tag(p_tag)
+            subdata += [p_data]
+        return subdata
+
+    def _translate_style(self, style):
+        new_style = {'lang': 'None', 'style': {}}
+        for arg in style.attrs:
+            if arg == "tts:fontstyle" and style.attrs[arg] == "italic":
+                new_style['style']['italics'] = True
+            if arg == "tts:textalign":
+                new_style['style']['text-align'] = style.attrs[arg]
+        return new_style
+
+    def _translate_p_tag(self, p_tag):
+        start = self._translate_time(p_tag['begin'])
+        end = self._translate_time(p_tag['end'])
+        self.line = []
+        self._translate_tag(p_tag)
+        text = self.line
+        styles = {}
+        attrs = p_tag.attrs
+        for arg in attrs:
+            if arg == "id":
+                styles['id'] = attrs[arg]
+            elif arg == "class":
+                styles['class'] = attrs[arg]
+            elif arg == "tts:fontstyle" and attrs[arg] == "italic":
+                styles['italics'] = True
+            elif arg == "tts:textalign":
+                styles['align'] = attrs[arg]
+            elif arg == 'tts:fontfamily':
+                styles['font-family'] = attrs[arg]
+            elif arg == 'tts:fontsize':
+                styles['font-size'] = attrs[arg]
+            elif arg == 'tts:color':
+                styles['color'] = attrs[arg]
+        return [start, end, text, styles]
+
+    def _translate_time(self, stamp):
         timesplit = stamp.split(':')
         secsplit = timesplit[2].split('.')
         microseconds = (int(timesplit[0]) * 3600000000 +
@@ -81,43 +86,51 @@ class DFXPReader(BaseReader):
         return microseconds
 
     def _translate_tag(self, tag):
+        # ensure that tag is not just text
         try:
-            # convert line breaks
-            if tag.name == 'br':
-                self.line.append({'type': 'break', 'content': ''})
-            # convert italics
-            elif tag.name == 'span':
-                # convert tag attributes
-                args = self._conv_attrs(tag)
-                # only include span tag if attributes returned
-                if args != '':
-                    self.line.append({
-                        'type': 'style',
-                        'start': True,
-                        'content': args})
-                    # recursively call function for any children elements
-                    for a in tag.contents:
-                        self._translate_tag(a)
-                    self.line.append({
-                        'type': 'style',
-                        'start': False,
-                        'content': args})
-                else:
-                    for a in tag.contents:
-                        self._translate_tag(a)
-            else:
-                # recursively call function for any children elements
-                for a in tag.contents:
-                    self._translate_tag(a)
+            tag_name = tag.name
         # if no more tags found, strip text
         except AttributeError:
             if tag.strip() != '':
                 self.line.append({
                     'type': 'text',
                     'content': '%s' % tag.strip()})
+            return
+
+        # convert line breaks
+        if tag_name == 'br':
+            self.line.append({'type': 'break', 'content': ''})
+        # convert italics
+        elif tag_name == 'span':
+            # convert span
+            self._translate_span(tag)
+        else:
+            # recursively call function for any children elements
+            for a in tag.contents:
+                self._translate_tag(a)
+
+    def _translate_span(self, tag):
+        # convert tag attributes
+        args = self._translate_attrs(tag)
+        # only include span tag if attributes returned
+        if args != '':
+            self.line.append({
+                'type': 'style',
+                'start': True,
+                'content': args})
+            # recursively call function for any children elements
+            for a in tag.contents:
+                self._translate_tag(a)
+            self.line.append({
+                'type': 'style',
+                'start': False,
+                'content': args})
+        else:
+            for a in tag.contents:
+                self._translate_tag(a)
 
     # convert attributes from CSS to DFXP
-    def _conv_attrs(self, tag):
+    def _translate_attrs(self, tag):
         attrs = {}
         css_attrs = tag.attrs
         for arg in css_attrs:
@@ -150,18 +163,18 @@ class DFXPWriter(BaseWriter):
                 if style == 'p':
                     p_style = True
                 if 'text-align' in content['style']:
-                    dfxp_style['tts:textAlign'] = \
-                        content['style']['text-align']
+                    dfxp_style['tts:textAlign'] = (
+                        content['style']['text-align'])
                 if 'font-family' in content['style']:
-                    dfxp_style['tts:fontfamily'] = \
-                        content['style']['font-family']
+                    dfxp_style['tts:fontfamily'] = (
+                        content['style']['font-family'])
                 if 'font-size' in content['style']:
                     dfxp_style['tts:fontsize'] = content['style']['font-size']
                 if 'color' in content['style']:
                     dfxp_style['tts:color'] = content['style']['color']
                 if 'text-align' in content['style']:
-                    dfxp_style['tts:textAlign'] = \
-                        content['style']['text-align']
+                    dfxp_style['tts:textAlign'] = (
+                        content['style']['text-align'])
                 if dfxp_style != dfxp.new_tag('style', id="%s" % style):
                     dfxp.find('styling').append(dfxp_style)
 
@@ -223,17 +236,17 @@ class DFXPWriter(BaseWriter):
                     if 'italics' in element['content']:
                         styles += ' tts:fontStyle="italic"'
                     if 'text-align' in element['content']:
-                        styles += ' tts:textAlign="%s"' % \
-                            element['content']['text-align']
+                        styles += (' tts:textAlign="%s"' %
+                            element['content']['text-align'])
                     if 'font-family' in element['content']:
-                        styles += ' tts:fontfamily="%s"' % \
-                            element['content']['font-family']
+                        styles += (' tts:fontfamily="%s"' %
+                            element['content']['font-family'])
                     if 'font-size' in element['content']:
-                        styles += ' tts:fontsize="%s"' % \
-                            element['content']['font-size']
+                        styles += (' tts:fontsize="%s"' %
+                            element['content']['font-size'])
                     if 'color' in element['content']:
-                        styles += ' tts:color="%s"' % \
-                            element['content']['color']
+                        styles += (' tts:color="%s"' %
+                            element['content']['color'])
                     if styles:
                         line += '<span%s>' % styles
                         open_span = True
