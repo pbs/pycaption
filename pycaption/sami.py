@@ -1,9 +1,11 @@
 from logging import FATAL
 from collections import deque
 from HTMLParser import HTMLParser
+from htmlentitydefs import name2codepoint
 
 from cssutils import parseString, log
 from bs4 import BeautifulSoup
+import re
 
 from pycaption import BaseReader, BaseWriter
 
@@ -50,7 +52,7 @@ class SAMIReader(BaseReader):
             if subdata != [] and subdata[-1][1] == 0:
                 subdata[-1][1] = milliseconds * 1000
 
-            if p.get_text() not in [u'\n', '\r', '']:
+            if p.get_text().strip():
                 self.line = []
                 self._translate_tag(p)
                 text = self.line
@@ -106,22 +108,21 @@ class SAMIReader(BaseReader):
             for a in tag.contents:
                 self._translate_tag(a)
 
-    # convert attributes from CSS
     def _translate_attrs(self, tag):
         attrs = {}
         css_attrs = tag.attrs
 
-        for arg in css_attrs:
-            if arg == "id":
-                attrs['id'] = css_attrs[arg].lower()
-            elif arg == "class":
-                attrs['class'] = css_attrs[arg][0].lower()
-            elif arg == "style":
-                styles = css_attrs[arg].split(';')
-                attrs = self._translate_style(attrs, styles)
+        if 'class' in css_attrs:
+            attrs['class'] = css_attrs['class'][0].lower()
+        if 'id' in css_attrs:
+            attrs['class'] = css_attrs['id'].lower()
+        if 'style' in css_attrs:
+            styles = css_attrs['style'].split(';')
+            attrs.update(self._translate_style(attrs, styles))
 
         return attrs
 
+    # convert attributes from CSS
     def _translate_style(self, attrs, styles):
         for style in styles:
             style = style.split(':')
@@ -131,6 +132,10 @@ class SAMIReader(BaseReader):
                 attrs['font-family'] = style[1].strip()
             elif style[0] == 'font-size':
                 attrs['font-size'] = style[1].strip()
+            elif style[0] == 'font-style' and style[1].strip() == 'italic':
+                attrs['italics'] = True
+            elif style[0] == 'lang':
+                attrs['lang'] = style[1].strip()
             elif style[0] == 'color':
                 attrs['color'] = style[1].strip()
 
@@ -169,7 +174,14 @@ class SAMIWriter(BaseWriter):
         sami, sync = self._recreate_sync(sami, lang, primary, time)
 
         p = sami.new_tag("p")
-        p = self._recreate_p_lang(p, sub, lang, captions)
+
+        style = ''
+        for a, b in self._recreate_style(sub[3]).items():
+            style += '%s:%s;' % (a, b)
+        if style:
+            p['style'] = style
+
+        p['class'] = self._recreate_p_lang(p, sub, lang, captions)
         p.string = self._recreate_text(sub[2])
 
         sync.append(p)
@@ -209,7 +221,7 @@ class SAMIWriter(BaseWriter):
         sami, sync = self._recreate_sync(sami, lang, primary, self.last_time)
 
         p = sami.new_tag("p")
-        p = self._recreate_p_lang(p, sub, lang, captions)
+        p['class'] = self._recreate_p_lang(p, sub, lang, captions)
         p.string = '&nbsp;'
 
         sync.append(p)
@@ -218,35 +230,36 @@ class SAMIWriter(BaseWriter):
 
     def _recreate_p_lang(self, p, sub, lang, captions):
         try:
-            if 'lang' in captions['styles']['.%s' % sub[3]['class']]:
-                p['class'] = sub[3]['class']
+            if 'lang' in captions['styles'][sub[3]['class']]:
+                return sub[3]['class']
         except KeyError:
-            p['lang'] = "%s" % lang
-
-        return p
+            pass
+        return lang
 
     def _recreate_stylesheet(self, captions):
         stylesheet = '<!--'
 
-        for style, content in captions.items():
+        for style, content in captions['styles'].items():
             if content != {}:
-                stylesheet += self._recreate_style(style, content)
+                stylesheet += self._recreate_style_tag(style, content)
+
+        for lang in captions['captions'].keys():
+            if 'lang: %s' % lang not in stylesheet:
+                stylesheet += '\n    .%s {\n     lang: %s;\n    }\n' % (lang,
+                                                                        lang)
 
         return stylesheet + '   --!>'
 
-    def _recreate_style(self, style, content):
-        sami_style = '\n    %s {\n    ' % style
+    def _recreate_style_tag(self, style, content):
+        if style not in ['p', 'sync', 'span']:
+            element = '.'
+        else:
+            element = ''
 
-        if 'text-align' in content:
-            sami_style += ' text-align: %s;\n    ' % content['text-align']
-        if 'font-family' in content:
-            sami_style += ' font-family: %s;\n    ' % content['font-family']
-        if 'font-size' in content:
-            sami_style += ' font-size: %s;\n    ' % content['font-size']
-        if 'color' in content:
-            sami_style += ' color: %s;\n    ' % content['color']
-        if 'lang' in content:
-            sami_style += ' lang: %s;\n    ' % content['lang']
+        sami_style = '\n    %s%s {\n    ' % (element, style)
+
+        for a, b in self._recreate_style(content).items():
+            sami_style += ' %s: %s;\n    ' % (a, b)
 
         return sami_style + '}\n'
 
@@ -265,35 +278,51 @@ class SAMIWriter(BaseWriter):
 
     def _recreate_line_style(self, line, element):
         if element['start']:
-            if 'italics' in element['content']:
-                line += '<i>'
-            else:
-                line = self._recreate_span(line, element['content'])
+            if self.open_span == True:
+                 line = line.rstrip() + '</span> '
+            line = self._recreate_span(line, element['content'])
         else:
-            if 'italics' in element['content']:
-                line = line.rstrip() + '</i> '
-            elif self.open_span == True:
+            if self.open_span == True:
                 line = line.rstrip() + '</span> '
                 self.open_span = False
 
         return line
 
-    def _recreate_span(self, line, element):
+    def _recreate_span(self, line, content):
         style = ''
-        if 'text-align' in element:
-            style += 'text-align:%s;' % element['text-align']
-        if 'font-family' in element:
-            style += 'font-family:%s;' % element['font-family']
-        if 'font-size' in element:
-            style += 'font-size:%s;' % element['font-size']
-        if 'color' in element:
-            style += 'color:%s;' % element['color']
-        if style:
-            line += '<span style="%s">' % style
+        class_ = ''
+        if 'class' in content:
+            class_ += ' class="%s"' % content['class']
+
+        for a, b in self._recreate_style(content).items():
+            style += '%s:%s;' % (a, b)
+
+        if style or class_:
+            if style:
+                style = ' style="%s"' % style
+            line += '<span%s%s>' % (class_, style)
             self.open_span = True
 
         return line
 
+    def _recreate_style(self, content):
+        sami_style = {}
+
+        if 'text-align' in content:
+            sami_style['text-align'] = content['text-align']
+        if 'italics' in content:
+            sami_style['font-style'] = 'italic'
+        if 'font-family' in content:
+            sami_style['font-family'] = content['font-family']
+        if 'font-size' in content:
+            sami_style['font-size'] = content['font-size']
+        if 'color' in content:
+            sami_style['color'] = content['color']
+        if 'lang' in content:
+            sami_style['lang'] = content['lang']
+
+        return sami_style
+        
 
 # SAMI parser, made from modified html parser
 class SAMIParser(HTMLParser):
@@ -310,6 +339,10 @@ class SAMIParser(HTMLParser):
         # treat divs as spans
         if tag == 'div':
             tag = 'span'
+        
+        if tag == 'i':
+            tag = 'span'
+            attrs = [('style', 'font-style:italic;')]
 
         # figure out the caption language of P tags
         if tag == 'p':
@@ -341,17 +374,20 @@ class SAMIParser(HTMLParser):
     # override the parser's handling of endtags
     def handle_endtag(self, tag):
         # treat divs as spans
-        if tag == 'div':
+        if tag == 'div' or tag == 'i':
             tag = 'span'
 
         # close off tags in LIFO order, if matching starting tag in queue
         while tag in self.queue:
             closing_tag = self.queue.pop()
             self.sami += "</%s>" % closing_tag
+            
+    def handle_entityref(self, name):
+        self.sami += unichr(name2codepoint[name])
 
     # override the parser's handling of data
     def handle_data(self, data):
-        self.sami += data.lstrip()
+        self.sami += self.decode_unicode_references(data.lstrip())
 
     # override the parser's feed function
     def feed(self, data):
@@ -382,6 +418,9 @@ class SAMIParser(HTMLParser):
             lang = None
             not_empty = False
             new_style = {}
+            selector = rule.selectorText.lower()
+            if selector[0] in ['#', '.']:
+                selector = selector[1:]
             # keep any style attributes that are needed
             for prop in rule.style:
                 if prop.name == 'text-align':
@@ -400,7 +439,7 @@ class SAMIParser(HTMLParser):
                     new_style['lang'] = prop.value
                     not_empty = True
             if not_empty:
-                style_sheet[rule.selectorText.lower()] = new_style
+                style_sheet[selector] = new_style
 
         return style_sheet
 
@@ -411,10 +450,21 @@ class SAMIParser(HTMLParser):
             if a.lower() == 'lang':
                 return b[:2]
             # if the P tag has a class, try and find the language
-            elif a.lower() == 'class':
+            if a.lower() == 'class':
                 try:
-                    return self.styles['.%s' % b.lower()]['lang']
+                    return self.styles[b.lower()]['lang']
                 except:
                     pass
 
         return None
+
+    def _callback(self, matches):
+        id = matches.group(1)
+        try:
+            return unichr(int(id))
+        except:
+            return id
+
+    def decode_unicode_references(self, data):
+        return re.sub("&#(\d+)(;|(?=\s))", self._callback, data)
+
