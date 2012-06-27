@@ -141,7 +141,7 @@ class DFXPWriter(BaseWriter):
         self.p_style = False
         self.open_span = False
 
-    def write(self, captions):
+    def write(self, captions, force=''):
         dfxp = BeautifulSoup(dfxp_base, 'xml')
         dfxp.find('tt')['xml:lang'] = "en"
 
@@ -150,6 +150,10 @@ class DFXPWriter(BaseWriter):
                 dfxp = self._recreate_styling_tag(style, content, dfxp)
 
         body = dfxp.find('body')
+
+        if force:
+            captions['captions'] = self._force_language(force,
+                                                        captions['captions'])
 
         for lang in captions['captions']:
             div = dfxp.new_tag('div')
@@ -162,6 +166,16 @@ class DFXPWriter(BaseWriter):
             body.append(div)
 
         return unicode(dfxp.prettify(formatter=None))
+
+    # force the DFXP to only have one language, trying to match on "force"
+    def _force_language(self, force, captions):
+        for lang in captions.keys():
+            if force in lang:
+                return {lang: captions[lang]}
+            elif len(captions) > 1:
+                del captions[lang]
+
+        return captions
 
     def _recreate_styling_tag(self, style, content, dfxp):
         dfxp_style = dfxp.new_tag('style', id="%s" % style)
