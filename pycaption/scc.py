@@ -640,7 +640,7 @@ CHARACTERS = {
     '79': 'y',
     '7a': 'z',
     'fb': 'ç',
-    '7c': '',
+    '7c': '÷',
     'fd': 'Ñ',
     'fe': 'ñ',
     '7f': '',
@@ -655,7 +655,7 @@ SPECIAL_CHARS = {
     '91b4': '™',
     '91b5': '¢',
     '91b6': '£',
-    '9137': u"\u266A",
+    '9137': '♪',
     '9138': 'à',
     '91b9': ' ',
     '91ba': 'è',
@@ -670,13 +670,13 @@ SPECIAL_CHARS = {
     '9223': 'Ú',
     '92a4': 'Ü',
     '9225': 'ü',
-    '9226': '',
+    '9226': '‘',
     '92a7': '¡',
     '92a8': '*',
-    '9229': '',
+    '9229': '’',
     '922a': '—',
     '92ab': '©',
-    '922c': '',
+    '922c': '℠',
     '92ad': '•',
     '92ae': '“',
     '922f': '”',
@@ -724,10 +724,10 @@ SPECIAL_CHARS = {
     '13b9': 'å',
     '13ba': 'Ø',
     '133b': 'ø',
-    '13bc': '',
-    '133d': '',
-    '133e': '',
-    '13bf': '',
+    '13bc': '┌',
+    '133d': '┐',
+    '133e': '└',
+    '13bf': '┘',
 }
 
 
@@ -764,6 +764,7 @@ class SCCReader(BaseReader):
         # after converting lines, see if anything is left in paint_buffer
         if self.paint_buffer:
             self._roll_up()
+            #self.scc[-1][1] = self.scc[-1][0] + 4000000
 
         return {'captions': {lang: self.scc}, 'styles': {}}
 
@@ -866,8 +867,11 @@ class SCCReader(BaseReader):
         elif word == '942c':
             self.roll_rows = []
 
+            if self.paint_buffer:
+                self._roll_up()
+
             # attempt to add proper end time to last caption
-            if self.scc:
+            if self.scc and self.scc[-1][1] == 0:
                 last_time = self._translate_time(self.time[:-2] +
                                                  str(int(self.time[-2:]) +
                                                  self.frame_count))
@@ -897,12 +901,17 @@ class SCCReader(BaseReader):
 
     # convert SCC timestamp into total microseconds
     def _translate_time(self, stamp):
+        if ';' in stamp:
+            frames_per_second = 30.00
+        else:
+            frames_per_second = 29.97
+
         timesplit = stamp.replace(';', ':').split(':')
 
         microseconds = (int(timesplit[0]) * 3600000000 +
                         int(timesplit[1]) * 60000000 +
                         int(timesplit[2]) * 1000000 +
-                        (int(timesplit[3]) / 29.97 * 1000000))
+                        (int(timesplit[3]) / frames_per_second * 1000000))
 
         return microseconds
 
