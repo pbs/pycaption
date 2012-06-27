@@ -279,7 +279,7 @@ class SAMIWriter(BaseWriter):
     def _recreate_line_style(self, line, element):
         if element['start']:
             if self.open_span == True:
-                 line = line.rstrip() + '</span> '
+                line = line.rstrip() + '</span> '
             line = self._recreate_span(line, element['content'])
         else:
             if self.open_span == True:
@@ -322,7 +322,7 @@ class SAMIWriter(BaseWriter):
             sami_style['lang'] = content['lang']
 
         return sami_style
-        
+
 
 # SAMI parser, made from modified html parser
 class SAMIParser(HTMLParser):
@@ -339,7 +339,7 @@ class SAMIParser(HTMLParser):
         # treat divs as spans
         if tag == 'div':
             tag = 'span'
-        
+
         if tag == 'i':
             tag = 'span'
             attrs = [('style', 'font-style:italic;')]
@@ -381,7 +381,7 @@ class SAMIParser(HTMLParser):
         while tag in self.queue:
             closing_tag = self.queue.pop()
             self.sami += "</%s>" % closing_tag
-            
+
     def handle_entityref(self, name):
         self.sami += unichr(name2codepoint[name])
 
@@ -467,4 +467,3 @@ class SAMIParser(HTMLParser):
 
     def decode_unicode_references(self, data):
         return re.sub("&#(\d+)(;|(?=\s))", self._callback, data)
-
