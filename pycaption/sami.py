@@ -1,6 +1,6 @@
 from logging import FATAL
 from collections import deque
-from HTMLParser import HTMLParser
+from HTMLParser import HTMLParser, HTMLParseError
 from htmlentitydefs import name2codepoint
 
 from cssutils import parseString, log
@@ -8,6 +8,9 @@ from bs4 import BeautifulSoup
 import re
 
 from pycaption import BaseReader, BaseWriter
+
+# add apos entity
+name2codepoint['apos'] = '\''
 
 # change cssutils default logging
 log.setLevel(FATAL)
@@ -40,12 +43,16 @@ class SAMIReader(BaseReader):
             lang_captions = self._translate_lang(language, sami_soup)
             captions['captions'][language] = lang_captions
 
-        return captions
+        for caption_list in captions['captions'].values():
+            if caption_list != []:
+                return captions
+
+        raise SAMIReaderError("Empty Caption File")
 
     def _translate_lang(self, language, sami_soup):
         subdata = []
         for p in sami_soup.select('p[lang|=%s]' % language):
-            milliseconds = int(p.parent['start'])
+            milliseconds = int(float(p.parent['start']))
             start = milliseconds * 1000
             end = 0
 
@@ -59,7 +66,7 @@ class SAMIReader(BaseReader):
                 styles = self._translate_attrs(p)
                 subdata += [[start, end, text, styles]]
 
-        if subdata[-1][1] == 0:
+        if subdata and subdata[-1][1] == 0:
             subdata[-1][1] = (milliseconds + 4000) * 1000
 
         return subdata
@@ -324,7 +331,6 @@ class SAMIWriter(BaseWriter):
         return sami_style
 
 
-# SAMI parser, made from modified html parser
 class SAMIParser(HTMLParser):
     def __init__(self, *args, **kw):
         HTMLParser.__init__(self, *args, **kw)
@@ -333,9 +339,12 @@ class SAMIParser(HTMLParser):
         self.styles = {}
         self.queue = deque()
         self.langs = {}
+        self.last_element = ''
 
     # override the parser's handling of starttags
     def handle_starttag(self, tag, attrs):
+        self.last_element = tag
+            
         # treat divs as spans
         if tag == 'div':
             tag = 'span'
@@ -377,30 +386,66 @@ class SAMIParser(HTMLParser):
         if tag == 'div' or tag == 'i':
             tag = 'span'
 
+        # handle incorrectly formatted sync/p tags
+        if tag in ['p', 'sync'] and tag == self.last_element:
+            return
+
         # close off tags in LIFO order, if matching starting tag in queue
         while tag in self.queue:
             closing_tag = self.queue.pop()
             self.sami += "</%s>" % closing_tag
 
     def handle_entityref(self, name):
-        self.sami += unichr(name2codepoint[name])
+        if name in ['gt', 'lt']:
+            self.sami += '&%s;' % name
+        else:
+            try:
+                self.sami += unichr(name2codepoint[name])
+            except:
+                self.sami += '&%s' % name
+
+        self.last_element = ''
+
+    def handle_charref(self, name):
+        if name[0] == 'x':
+            self.sami += unichr(int(name[1:], 16))
+        else:
+            self.sami += unichr(int(name))
 
     # override the parser's handling of data
     def handle_data(self, data):
-        self.sami += self.decode_unicode_references(data.lstrip())
+        self.sami += data.lstrip()
+        self.last_element = ''
 
     # override the parser's feed function
     def feed(self, data):
+        no_cc = 'no closed captioning available'
+        
+        if '<html' in data.lower():
+            raise SAMIReaderError('SAMI File seems to be an HTML file.')
+        elif no_cc in data.lower():
+            raise SAMIReaderError('SAMI File contains "%s"' % no_cc)
+
         # try to find style tag in SAMI
         try:
+            # prevent BS4 error with huge SAMI files with unclosed tags
+            index = data.lower().find("</head>")
+
             self.styles = self._css_parse(
-                BeautifulSoup(data).find('style').get_text())
+                BeautifulSoup(data[:index]).find('style').get_text())
         except AttributeError:
-            self.styles = []
+            self.styles = {}
+
         # fix erroneous italics tags
         data = data.replace('<i/>', '<i>')
-        # clean the SAMI
-        HTMLParser.feed(self, data)
+        
+        # fix awkward tags found in some SAMIs
+        data = data.replace(';>', '>')
+        try:
+            HTMLParser.feed(self, data)
+        except HTMLParseError as e:
+            raise SAMIReaderError(e)
+
         # close any tags that remain in the queue
         while self.queue != deque([]):
             closing_tag = self.queue.pop()
@@ -458,12 +503,6 @@ class SAMIParser(HTMLParser):
 
         return None
 
-    def _callback(self, matches):
-        id = matches.group(1)
-        try:
-            return unichr(int(id))
-        except:
-            return id
 
-    def decode_unicode_references(self, data):
-        return re.sub("&#(\d+)(;|(?=\s))", self._callback, data)
+class SAMIReaderError(Exception):
+    pass
