@@ -7,7 +7,7 @@ README_PATH = os.path.join(os.path.abspath(os.path.dirname(__file__)),
 
 dependencies = [
     'nltk',
-    'beautifulsoup',
+    'beautifulsoup4',
     'cssutils'
 ]
 
