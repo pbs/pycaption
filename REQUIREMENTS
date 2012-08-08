@@ -1,3 +1,4 @@
 nltk
 beautifulsoup
 cssutils
+lxml
