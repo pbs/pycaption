@@ -15,11 +15,14 @@ dependencies = [
 setup(
     name='pycaption',
     version='0.1',
-    description='Multi-language caption reader/writer',
+    description='Closed caption converter',
     author='Joe Norton',
     author_email='joey@nortoncrew.com',
     url='https://github.com/pbs/pycaption',
     install_requires = dependencies,
     packages = find_packages(),
     include_package_data=True,
+    classifiers=[
+        'Topic :: Multimedia :: Video',
+    ],
 )
