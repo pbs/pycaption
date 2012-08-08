@@ -252,6 +252,8 @@ Also, assumes input language is english. To change:
 
     pycaps = SCCReader().read(scc_content, lang='fr')
 
+The SCC Reader handles both dropframe and non-dropframe captions, and will auto-detect which format the captions are in.
+
 
 Transcript Writer
 -----------------
