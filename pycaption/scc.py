@@ -744,6 +744,7 @@ class SCCReader(BaseReader):
         self.paint_on = False
         self.frame_count = 0
         self.simulate_roll_up = False
+        self.offset = 0
 
     def detect(self, content):
         inlines = content.splitlines()
@@ -752,8 +753,9 @@ class SCCReader(BaseReader):
         else:
             return False
 
-    def read(self, content, lang='en', simulate_roll_up=False):
+    def read(self, content, lang='en', simulate_roll_up=False, offset=0):
         self.simulate_roll_up = simulate_roll_up
+        self.offset = offset * 1000000
         # split lines
         inlines = content.splitlines()
 
@@ -764,7 +766,6 @@ class SCCReader(BaseReader):
         # after converting lines, see if anything is left in paint_buffer
         if self.paint_buffer:
             self._roll_up()
-            #self.scc[-1][1] = self.scc[-1][0] + 4000000
 
         return {'captions': {lang: self.scc}, 'styles': {}}
 
@@ -911,7 +912,11 @@ class SCCReader(BaseReader):
         microseconds = (int(timesplit[0]) * 3600000000 +
                         int(timesplit[1]) * 60000000 +
                         int(timesplit[2]) * 1000000 +
-                        (int(timesplit[3]) / frames_per_second * 1000000))
+                        (int(timesplit[3]) / frames_per_second * 1000000) -
+                        self.offset)
+
+        if microseconds < 0:
+            microseconds = 0
 
         return microseconds
 

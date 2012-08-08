@@ -252,6 +252,10 @@ Also, assumes input language is english. To change:
 
     pycaps = SCCReader().read(scc_content, lang='fr')
 
+Now has the option of specifying an offset (measured in seconds) for the timestamp. For example, if the SCC file is 45 seconds ahead of the video:
+
+    pycaps = SCCReader().read(scc_content, offset=45)
+
 The SCC Reader handles both dropframe and non-dropframe captions, and will auto-detect which format the captions are in.
 
 
