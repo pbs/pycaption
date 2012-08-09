@@ -1,8 +1,13 @@
-import nltk
+import nltk.data
+import os
 from pycaption import BaseWriter
 
 
 class TranscriptWriter(BaseWriter):
+    def __init__(self, *args, **kw):
+        self.nltk = nltk.data.load('file:%s/english.pickle' %
+                                   os.path.dirname(__file__))
+
     def write(self, captions):
         transcripts = []
 
@@ -12,7 +17,7 @@ class TranscriptWriter(BaseWriter):
             for sub in captions['captions'][lang]:
                 lang_transcript = self._strip_text(sub[2], lang_transcript)
 
-            lang_transcript = '\n'.join(nltk.sent_tokenize(lang_transcript))
+            lang_transcript = '\n'.join(self.nltk.tokenize(lang_transcript))
             transcripts.append(lang_transcript)
 
         return '\n'.join(transcripts)

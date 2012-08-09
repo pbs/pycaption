@@ -268,11 +268,6 @@ Supported Styling:
  - None
 
 The transcript writer uses natural sentence boundary detection algorithms to create the transcript.
-
-To use the transcript writer, the appropriate Punkt tokenizer info must be downloaded. From python, run this code:
-
-    import nltk
-    nltk.download()
     
 
 License
