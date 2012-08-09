@@ -71,7 +71,6 @@ class SRTWriter(BaseWriter):
     def _recreate_lang(self, lang, captions):
         srt = ''
         count = 1
-        srt += '"%s" SRT Captions\n' % lang
 
         for sub in captions['captions'][lang]:
             srt += '%s\n' % count
