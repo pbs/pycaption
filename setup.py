@@ -9,7 +9,8 @@ dependencies = [
     'nltk',
     'beautifulsoup4',
     'lxml',
-    'cssutils'
+    'cssutils',
+    'numpy'
 ]
 
 setup(

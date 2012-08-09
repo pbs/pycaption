@@ -2,3 +2,4 @@ nltk
 beautifulsoup
 cssutils
 lxml
+numpy
