@@ -10,7 +10,8 @@ import re
 from pycaption import BaseReader, BaseWriter
 
 # add apos entity
-name2codepoint['apos'] = 0x0027
+sami_name2codepoint = name2codepoint.copy()
+sami_name2codepoint['apos'] = 0x0027
 
 # change cssutils default logging
 log.setLevel(FATAL)
@@ -400,7 +401,7 @@ class SAMIParser(HTMLParser):
             self.sami += '&%s;' % name
         else:
             try:
-                self.sami += unichr(name2codepoint[name])
+                self.sami += unichr(sami_name2codepoint[name])
             except:
                 self.sami += '&%s' % name
 
