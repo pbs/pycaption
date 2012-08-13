@@ -10,7 +10,7 @@ import re
 from pycaption import BaseReader, BaseWriter
 
 # add apos entity
-name2codepoint['apos'] = '\''
+name2codepoint['apos'] = 0x0027
 
 # change cssutils default logging
 log.setLevel(FATAL)
