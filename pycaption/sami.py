@@ -9,10 +9,6 @@ import re
 
 from pycaption import BaseReader, BaseWriter
 
-# add apos entity
-sami_name2codepoint = name2codepoint.copy()
-sami_name2codepoint['apos'] = 0x0027
-
 # change cssutils default logging
 log.setLevel(FATAL)
 
@@ -341,6 +337,8 @@ class SAMIParser(HTMLParser):
         self.queue = deque()
         self.langs = {}
         self.last_element = ''
+        self.name2codepoint = name2codepoint.copy()
+        self.name2codepoint['apos'] = 0x0027
 
     # override the parser's handling of starttags
     def handle_starttag(self, tag, attrs):
@@ -401,8 +399,8 @@ class SAMIParser(HTMLParser):
             self.sami += '&%s;' % name
         else:
             try:
-                self.sami += unichr(sami_name2codepoint[name])
-            except:
+                self.sami += unichr(self.name2codepoint[name])
+            except (KeyError, ValueError):
                 self.sami += '&%s' % name
 
         self.last_element = ''
@@ -499,7 +497,7 @@ class SAMIParser(HTMLParser):
             if a.lower() == 'class':
                 try:
                     return self.styles[b.lower()]['lang']
-                except:
+                except KeyError:
                     pass
 
         return None
