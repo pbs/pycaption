@@ -33,7 +33,10 @@ class DFXPReader(BaseReader):
             captions['captions'][lang] = self._translate_div(div)
 
         for style in dfxp_soup.find_all('style'):
-            captions['styles'][style['id']] = self._translate_style(style)
+            id = style.attrs.get('id')
+            if not id:
+                id = style.attrs.get('xml:id')
+            captions['styles'][id] = self._translate_style(style)
 
         return captions
 
