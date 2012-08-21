@@ -67,7 +67,7 @@ class DFXPReader(BaseReader):
         timesplit = stamp.split(':')
         secsplit = timesplit[2].split('.')
         if len(timesplit) > 3:
-            secsplit[1] = int((timesplit[3] / 30) * 100)
+            secsplit.append(int((timesplit[3] / 30) * 100))
         microseconds = (int(timesplit[0]) * 3600000000 +
                         int(timesplit[1]) * 60000000 +
                         int(secsplit[0]) * 1000000 +
