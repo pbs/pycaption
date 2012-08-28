@@ -38,6 +38,8 @@ class DFXPReader(BaseReader):
                 id = style.attrs.get('xml:id')
             captions['styles'][id] = self._translate_style(style)
 
+        captions = self._combine_matching_captions(captions)
+
         return captions
 
     def _translate_div(self, div):
@@ -140,6 +142,21 @@ class DFXPReader(BaseReader):
             elif arg == "tts:color":
                 attrs['color'] = dfxp_attrs[arg]
         return attrs
+
+    def _combine_matching_captions(self, captions):
+        for lang in captions['captions']:
+            new_caps = [captions['captions'][lang][0]]
+
+            for sub in captions['captions'][lang][1:]:
+                if sub[0] == new_caps[-1][0] and sub[1] == new_caps[-1][1]:
+                    new_caps[-1][2].append({'type': 'break', 'content': ''})
+                    new_caps[-1][2] += sub[2]
+                else:
+                    new_caps.append(sub)
+
+            captions['captions'][lang] = new_caps
+
+        return captions
 
 
 class DFXPWriter(BaseWriter):
