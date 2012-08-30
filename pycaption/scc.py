@@ -775,12 +775,14 @@ class SCCReader(BaseReader):
             return
 
         # split line in timestamp and words
-        parts = line.lower().split('	')
-        self.time = parts[0]
+        r = re.compile("([0-9:]*)([\s\t]*)((.)*)")
+        parts = r.findall(line.lower())
+
+        self.time = parts[0][0]
         self.frame_count = 0
 
         # loop through each word
-        for word in parts[1].split(' '):
+        for word in parts[0][2].split(' '):
             # ignore empty results
             if word.strip() != '':
                 self._translate_word(word)
