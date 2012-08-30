@@ -9,7 +9,7 @@ pycaption
 """
 
 __title__ = 'pycaption'
-__version__ = '0.2.2'
+__version__ = '0.2.3'
 __author__ = 'Joe Norton'
 __license__ = 'Apache 2.0'
 __copyright__ = 'Copyright 2012 PBS'
