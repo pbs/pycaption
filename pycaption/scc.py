@@ -777,7 +777,7 @@ class SCCReader(BaseReader):
             return
 
         # split line in timestamp and words
-        r = re.compile("([0-9:]*)([\s\t]*)((.)*)")
+        r = re.compile("([0-9:;]*)([\s\t]*)((.)*)")
         parts = r.findall(line.lower())
 
         self.time = parts[0][0]
