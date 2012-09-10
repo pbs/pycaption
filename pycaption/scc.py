@@ -665,7 +665,10 @@ SPECIAL_CHARS = {
     '91bc': 'ê',
     '913d': 'î',
     '913e': 'ô',
-    '91bf': 'û',
+    '91bf': 'û'
+}
+
+EXTENDED_CHARS = {
     '9220': 'Á',
     '92a1': 'É',
     '92a2': 'Ó',
@@ -799,23 +802,51 @@ class SCCReader(BaseReader):
 
         # second, check if word is a special character
         elif word in SPECIAL_CHARS:
-            # if so, add to buffer
-            if self.paint_on:
-                self.paint_buffer += SPECIAL_CHARS[word]
-            else:
-                self.pop_buffer += SPECIAL_CHARS[word]
+            self._translate_special_char(word)
+        
+        elif word in EXTENDED_CHARS:
+            self._translate_extended_char(word)
 
         # third, try to convert word into 2 characters
         else:
             self._translate_characters(word)
 
-    def _translate_command(self, word):
+    def _handle_double_command(self, word):
         # ensure we don't accidentally use the same command twice
         if word == self.last_command:
             self.last_command = ''
-            return
+            return True
         else:
             self.last_command = word
+            return False
+
+    def _translate_special_char(self, word):
+        if self._handle_double_command(word):
+            return
+
+        # add to buffer
+        if self.paint_on:
+            self.paint_buffer += SPECIAL_CHARS[word]
+        else:
+            self.pop_buffer += SPECIAL_CHARS[word]
+
+    def _translate_extended_char(self, word):
+        if self._handle_double_command(word):
+            return
+
+        # add to buffer
+        if self.paint_on:
+            if self.paint_buffer:
+                self.paint_buffer = self.paint_buffer[:-1]
+            self.paint_buffer += EXTENDED_CHARS[word]
+        else:
+            if self.pop_buffer:
+                self.pop_buffer = self.pop_buffer[:-1]
+            self.pop_buffer += EXTENDED_CHARS[word]
+
+    def _translate_command(self, word):
+        if self._handle_double_command(word):
+            return
 
         # if command is pop_up
         if word == '9420':
