@@ -252,7 +252,7 @@ class SAMIWriter(BaseWriter):
                 stylesheet += '\n    .%s {\n     lang: %s;\n    }\n' % (lang,
                                                                         lang)
 
-        return stylesheet + '   --!>'
+        return stylesheet + '   -->'
 
     def _recreate_style_tag(self, style, content):
         if style not in ['p', 'sync', 'span']:
@@ -343,7 +343,7 @@ class SAMIParser(HTMLParser):
     # override the parser's handling of starttags
     def handle_starttag(self, tag, attrs):
         self.last_element = tag
-            
+
         # treat divs as spans
         if tag == 'div':
             tag = 'span'
@@ -419,7 +419,7 @@ class SAMIParser(HTMLParser):
     # override the parser's feed function
     def feed(self, data):
         no_cc = 'no closed captioning available'
-        
+
         if '<html' in data.lower():
             raise SAMIReaderError('SAMI File seems to be an HTML file.')
         elif no_cc in data.lower():
@@ -437,7 +437,7 @@ class SAMIParser(HTMLParser):
 
         # fix erroneous italics tags
         data = data.replace('<i/>', '<i>')
-        
+
         # fix awkward tags found in some SAMIs
         data = data.replace(';>', '>')
         try:
