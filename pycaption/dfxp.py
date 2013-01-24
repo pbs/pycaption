@@ -1,6 +1,6 @@
 from datetime import timedelta
 from bs4 import BeautifulSoup
-from pycaption import BaseReader, BaseWriter
+from pycaption import BaseReader, BaseWriter, Captions, Caption, Style
 
 
 dfxp_base = '''
@@ -26,28 +26,29 @@ class DFXPReader(BaseReader):
 
     def read(self, content):
         dfxp_soup = BeautifulSoup(content)
-        captions = {'captions': {}, 'styles': {}}
+        captions = Captions()
 
+        # Each div represents all the captions for a single language.
         for div in dfxp_soup.find_all('div'):
             lang = div.attrs.get('xml:lang', 'en')
-            captions['captions'][lang] = self._translate_div(div)
+            captions.captions[lang] = self._translate_div(div)
 
         for style in dfxp_soup.find_all('style'):
             id = style.attrs.get('id')
             if not id:
                 id = style.attrs.get('xml:id')
-            captions['styles'][id] = self._translate_style(style)
+            captions.styles[id] = self._translate_style(style)
 
         captions = self._combine_matching_captions(captions)
 
         return captions
 
     def _translate_div(self, div):
-        subdata = []
+        captions = []
+        # Each <p> represents a single caption
         for p_tag in div.find_all('p'):
-            p_data = self._translate_p_tag(p_tag)
-            subdata += [p_data]
-        return subdata
+            captions.append(self._translate_p_tag(p_tag))
+        return captions
 
     def _translate_p_tag(self, p_tag):
         start, end = self._find_times(p_tag)
@@ -56,7 +57,12 @@ class DFXPReader(BaseReader):
         text = self.line
         styles = self._translate_style(p_tag)
 
-        return [start, end, text, styles]
+        caption = Caption()
+        caption.start = start
+        caption.end = end
+        caption.nodes = text
+        caption.styles = styles
+        return caption
 
     def _find_times(self, p_tag):
         start = self._translate_time(p_tag['begin'])
@@ -143,18 +149,19 @@ class DFXPReader(BaseReader):
                 attrs['color'] = dfxp_attrs[arg]
         return attrs
 
+    # Merge together captions that have the same start/end times.
     def _combine_matching_captions(self, captions):
-        for lang in captions['captions']:
-            new_caps = [captions['captions'][lang][0]]
+        for lang in captions.captions:
+            new_caps = [captions.captions[lang][0]]
 
-            for sub in captions['captions'][lang][1:]:
-                if sub[0] == new_caps[-1][0] and sub[1] == new_caps[-1][1]:
-                    new_caps[-1][2].append({'type': 'break', 'content': ''})
-                    new_caps[-1][2] += sub[2]
+            for sub in captions.captions[lang][1:]:
+                if sub.start == new_caps[-1].start and sub.end == new_caps.end:
+                    new_caps[-1].nodes.append({'type': 'break', 'content': ''})
+                    new_caps[-1].nodes.extend(sub.nodes)
                 else:
                     new_caps.append(sub)
 
-            captions['captions'][lang] = new_caps
+            captions.captions[lang] = new_caps
 
         return captions
 
@@ -168,21 +175,24 @@ class DFXPWriter(BaseWriter):
         dfxp = BeautifulSoup(dfxp_base, 'xml')
         dfxp.find('tt')['xml:lang'] = "en"
 
-        for style, content in captions['styles'].items():
-            if content != {}:
-                dfxp = self._recreate_styling_tag(style, content, dfxp)
+        for style_id in captions.styles:
+            style = captions.styles[style_id]
+            # TODO: fix comparison for empty style.
+            if style != {}:
+                dfxp = self._recreate_styling_tag(style_id, style, dfxp)
 
         body = dfxp.find('body')
 
+        # TODO: Don't mutate the existing captions object.
         if force:
-            captions['captions'] = self._force_language(force,
-                                                        captions['captions'])
+            captions.captions = self._force_language(force,
+                                                     captions.captions)
 
-        for lang in captions['captions']:
+        for lang in captions.captions:
             div = dfxp.new_tag('div')
             div['xml:lang'] = '%s' % lang
 
-            for sub in captions['captions'][lang]:
+            for sub in captions.captions[lang]:
                 p = self._recreate_p_tag(sub, dfxp)
                 div.append(p)
 
@@ -192,11 +202,11 @@ class DFXPWriter(BaseWriter):
 
     # force the DFXP to only have one language, trying to match on "force"
     def _force_language(self, force, captions):
-        for lang in captions.keys():
-            if force in lang:
-                return {lang: captions[lang]}
-            elif len(captions) > 1:
-                del captions[lang]
+        for lang in captions.captions:
+            if force == lang:
+                return {lang: captions.captions[lang]}
+            elif len(captions.captions) > 1:
+                del captions.captions[lang]
 
         return captions
 
@@ -212,15 +222,15 @@ class DFXPWriter(BaseWriter):
         return dfxp
 
     def _recreate_p_tag(self, sub, dfxp):
-        start = '0' + str(timedelta(milliseconds=(int(sub[0] / 1000))))[:11]
-        end = '0' + str(timedelta(milliseconds=(int(sub[1] / 1000))))[:11]
+        start = '0' + str(timedelta(milliseconds=(int(sub.start / 1000))))[:11]
+        end = '0' + str(timedelta(milliseconds=(int(sub.end / 1000))))[:11]
         p = dfxp.new_tag("p", begin=start, end=end)
-        p.string = self._recreate_text(sub[2], dfxp)
+        p.string = self._recreate_text(sub.nodes, dfxp)
 
         if dfxp.find("style", {"id": "p"}):
             p['style'] = 'p'
 
-        p.attrs.update(self._recreate_style(sub[3], dfxp))
+        p.attrs.update(self._recreate_style(sub.style, dfxp))
 
         return p
 
@@ -259,6 +269,10 @@ class DFXPWriter(BaseWriter):
         return line
 
     def _recreate_style(self, content, dfxp):
+        # TODO: remove this, implement styling properly.
+        if content is None:
+          return {}
+
         dfxp_style = {}
 
         if 'class' in content:

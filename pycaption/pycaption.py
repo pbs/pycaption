@@ -1,4 +1,6 @@
-class CaptionConverter():
+from collections import defaultdict
+
+class CaptionConverter(object):
     def __init__(self, captions=[]):
         self.captions = captions
 
@@ -16,7 +18,7 @@ class CaptionConverter():
             raise Exception(e)
 
 
-class BaseReader():
+class BaseReader(object):
     def detect(self, content):
         if content:
             return True
@@ -24,9 +26,32 @@ class BaseReader():
             return False
 
     def read(self, content):
-        return {'captions': {'en': []}, 'styles': {}}
+        return Captions()
 
 
-class BaseWriter():
+class BaseWriter(object):
     def write(self, content):
         return content
+
+class Style(object):
+    def __init__(self):
+        pass
+
+class Caption(object):
+    def __init__(self):
+        self.start = 0
+        self.end = 0
+        self.nodes = []
+        self.style = {}
+
+class Captions(object):
+    def __init__(self):
+        self.styles = {}
+
+        # Captions by language.
+        # TODO: default empty 'en' value?
+        self.captions = defaultdict(list)
+
+
+    
+

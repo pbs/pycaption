@@ -19,3 +19,4 @@ from .sami import SAMIReader, SAMIWriter
 from .srt import SRTReader, SRTWriter
 from .scc import SCCReader
 from .transcript import TranscriptWriter
+from .webvtt import WebVTTWriter
