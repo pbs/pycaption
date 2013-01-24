@@ -1,6 +1,6 @@
 from datetime import timedelta
 from bs4 import BeautifulSoup
-from pycaption import BaseReader, BaseWriter, Captions, Caption, Style
+from pycaption import BaseReader, BaseWriter, Captions, Caption, Style, CaptionData, CaptionDataType
 
 
 dfxp_base = '''
@@ -16,7 +16,7 @@ dfxp_base = '''
 
 class DFXPReader(BaseReader):
     def __init__(self, *args, **kw):
-        self.line = []
+        self.nodes = []
 
     def detect(self, content):
         if '</tt>' in content.lower():
@@ -52,15 +52,14 @@ class DFXPReader(BaseReader):
 
     def _translate_p_tag(self, p_tag):
         start, end = self._find_times(p_tag)
-        self.line = []
+        self.nodes = []
         self._translate_tag(p_tag)
-        text = self.line
         styles = self._translate_style(p_tag)
 
         caption = Caption()
         caption.start = start
         caption.end = end
-        caption.nodes = text
+        caption.nodes = self.nodes
         caption.styles = styles
         return caption
 
@@ -93,14 +92,14 @@ class DFXPReader(BaseReader):
         # if no more tags found, strip text
         except AttributeError:
             if tag.strip() != '':
-                self.line.append({
-                    'type': 'text',
-                    'content': '%s' % tag.strip()})
+                node = CaptionData(CaptionDataType.TEXT)
+                node.content = '%s' % tag.strip()
+                self.nodes.append(node)
             return
 
         # convert line breaks
         if tag_name == 'br':
-            self.line.append({'type': 'break', 'content': ''})
+            self.nodes.append(CaptionData(CaptionDataType.BREAK))
         # convert italics
         elif tag_name == 'span':
             # convert span
@@ -115,17 +114,18 @@ class DFXPReader(BaseReader):
         args = self._translate_style(tag)
         # only include span tag if attributes returned
         if args != '':
-            self.line.append({
-                'type': 'style',
-                'start': True,
-                'content': args})
+            node = CaptionData(CaptionDataType.STYLE)
+            node.start = True
+            node.content = args
+            self.nodes.append(node)
+
             # recursively call function for any children elements
             for a in tag.contents:
                 self._translate_tag(a)
-            self.line.append({
-                'type': 'style',
-                'start': False,
-                'content': args})
+            node = CaptionData(CaptionDataType.STYLE)
+            node.start = False
+            node.content = args
+            self.nodes.append(node)
         else:
             for a in tag.contents:
                 self._translate_tag(a)
@@ -156,7 +156,7 @@ class DFXPReader(BaseReader):
 
             for sub in captions.captions[lang][1:]:
                 if sub.start == new_caps[-1].start and sub.end == new_caps.end:
-                    new_caps[-1].nodes.append({'type': 'break', 'content': ''})
+                    new_caps[-1].nodes.append(CaptionData(CaptionDataType.BREAK))
                     new_caps[-1].nodes.extend(sub.nodes)
                 else:
                     new_caps.append(sub)
@@ -237,23 +237,23 @@ class DFXPWriter(BaseWriter):
     def _recreate_text(self, caption, dfxp):
         line = ''
 
-        for element in caption:
-            if element['type'] == 'text':
-                line += element['content'] + ' '
+        for data in caption:
+            if data.type == CaptionDataType.TEXT:
+                line += data.content + ' '
 
-            elif element['type'] == 'break':
+            elif data.type == CaptionDataType.BREAK:
                 line = line.rstrip() + '<br/>\n    '
 
-            elif element['type'] == 'style':
-                line = self._recreate_span(line, element, dfxp)
+            elif data.type == CaptionDataType.STYLE:
+                line = self._recreate_span(line, data, dfxp)
 
         return line.rstrip()
 
-    def _recreate_span(self, line, element, dfxp):
-        if element['start']:
+    def _recreate_span(self, line, data, dfxp):
+        if data.start:
             styles = ''
 
-            for a, b in self._recreate_style(element['content'], dfxp).items():
+            for a, b in self._recreate_style(data.content, dfxp).items():
                 styles += ' %s="%s"' % (a, b)
 
             if styles:
@@ -269,10 +269,6 @@ class DFXPWriter(BaseWriter):
         return line
 
     def _recreate_style(self, content, dfxp):
-        # TODO: remove this, implement styling properly.
-        if content is None:
-          return {}
-
         dfxp_style = {}
 
         if 'class' in content:

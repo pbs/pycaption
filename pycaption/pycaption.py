@@ -37,6 +37,20 @@ class Style(object):
     def __init__(self):
         pass
 
+class CaptionDataType(object):
+    TEXT = 1
+    STYLE = 2
+    BREAK = 3
+
+class CaptionData(object):
+    def __init__(self, type):
+        self.type = type
+
+        if self.type == CaptionDataType.TEXT:
+          self.content = ''
+        else:
+          self.content = None
+      
 class Caption(object):
     def __init__(self):
         self.start = 0

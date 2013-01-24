@@ -1,5 +1,5 @@
 from datetime import timedelta
-from pycaption import BaseReader, BaseWriter
+from pycaption import BaseReader, BaseWriter, CaptionDataType
 
 
 class WebVTTWriter(BaseWriter):
@@ -11,7 +11,7 @@ class WebVTTWriter(BaseWriter):
     def write(self, captions):
         output = self.HEADER
 
-        if not captions['captions']:
+        if not captions.captions:
             return
 
         # TODO: styles. These go into a separate CSS file, which doesn't
@@ -19,13 +19,15 @@ class WebVTTWriter(BaseWriter):
 
         # WebVTT's language support seems to be a bit crazy, so let's just
         # support a single one for now.
-        for sub in captions['captions'][captions['captions'].keys()[0]]:
-            self._write_sub(output, sub)
-            output += '\n\n'
+        lang = captions.captions.keys()[0]
+        for sub in captions.captions[lang]:
+            output += self._write_sub(sub)
+            output += '\n'
 
         return output.encode("UTF-8")
 
     def _timestamp(self, ts):
+        ts = float(ts)/1000000
         hours = int(ts)/60/60
         minutes = int(ts)/60 - hours*60
         seconds = ts - hours*60*60 - minutes*60
@@ -36,16 +38,30 @@ class WebVTTWriter(BaseWriter):
         else:
           return "%02.3f" % (seconds,)
 
-    def _write_sub(self, output, sub):
-        # TODO: Need to make these into real objects :-(
-        start = self._timestamp(sub[0])
-        end = self._timestamp(sub[1])
+    def _write_sub(self, sub):
+        start = self._timestamp(sub.start)
+        end = self._timestamp(sub.end)
 
-        output += "%s --> %s\n" % (start, end)
+        output = "%s --> %s\n" % (start, end)
         # TODO: Figure out what 'sub[2]' actually contains, and munge
         # as appropriate.
         # And turn this fucker into real objects, this sucks.
-        print sub[2]
-        output += sub[2]
-        output += '\n\n'
+        output += self._convert_nodes(sub.nodes)
+        output += '\n'
+
+        return output
+
+    def _convert_nodes(self, nodes):
+        s = ''
+        for node in nodes:
+            if node.type == CaptionDataType.TEXT:
+              s += node.content
+            elif node.type == CaptionDataType.STYLE:
+              # TODO: Ignoring style so far.
+              pass
+            elif node.type == CaptionDataType.BREAK:
+              s += '\n'
+
+        return s
+
 
