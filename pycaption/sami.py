@@ -34,14 +34,16 @@ class SAMIReader(BaseReader):
     def read(self, content):
         content, doc_styles, doc_langs = SAMIParser().feed(content)
         sami_soup = BeautifulSoup(content)
-        captions = {'captions': {}, 'styles': doc_styles}
+        captions = Captions()
+        captions.styles = doc_styles
 
         for language in doc_langs:
             lang_captions = self._translate_lang(language, sami_soup)
-            captions['captions'][language] = lang_captions
+            captions.captions[language] = lang_captions
 
-        for caption_list in captions['captions'].values():
-            if caption_list != []:
+        # TODO: rename some of these classes, they're confusing.
+        for caption in captions.captions.values():
+            if not caption.is_empty():
                 return captions
 
         raise SAMIReaderError("Empty Caption File")

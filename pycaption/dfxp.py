@@ -1,6 +1,6 @@
 from datetime import timedelta
 from bs4 import BeautifulSoup
-from pycaption import BaseReader, BaseWriter, Captions, Caption, Style, CaptionData, CaptionDataType
+from pycaption import BaseReader, BaseWriter, CaptionSet, Caption, Style, CaptionData
 
 
 dfxp_base = '''
@@ -26,18 +26,18 @@ class DFXPReader(BaseReader):
 
     def read(self, content):
         dfxp_soup = BeautifulSoup(content)
-        captions = Captions()
+        captions = CaptionSet()
 
         # Each div represents all the captions for a single language.
         for div in dfxp_soup.find_all('div'):
             lang = div.attrs.get('xml:lang', 'en')
-            captions.captions[lang] = self._translate_div(div)
+            captions.set_captions(lang, self._translate_div(div))
 
         for style in dfxp_soup.find_all('style'):
             id = style.attrs.get('id')
             if not id:
                 id = style.attrs.get('xml:id')
-            captions.styles[id] = self._translate_style(style)
+            captions.add_style(id, self._translate_style(style))
 
         captions = self._combine_matching_captions(captions)
 
@@ -92,14 +92,13 @@ class DFXPReader(BaseReader):
         # if no more tags found, strip text
         except AttributeError:
             if tag.strip() != '':
-                node = CaptionData(CaptionDataType.TEXT)
-                node.content = '%s' % tag.strip()
+                node = CaptionData.create_text(tag.strip())
                 self.nodes.append(node)
             return
 
         # convert line breaks
         if tag_name == 'br':
-            self.nodes.append(CaptionData(CaptionDataType.BREAK))
+            self.nodes.append(CaptionData.create_break())
         # convert italics
         elif tag_name == 'span':
             # convert span
@@ -114,7 +113,7 @@ class DFXPReader(BaseReader):
         args = self._translate_style(tag)
         # only include span tag if attributes returned
         if args != '':
-            node = CaptionData(CaptionDataType.STYLE)
+            node = CaptionData.create_style(True, args)
             node.start = True
             node.content = args
             self.nodes.append(node)
@@ -122,7 +121,7 @@ class DFXPReader(BaseReader):
             # recursively call function for any children elements
             for a in tag.contents:
                 self._translate_tag(a)
-            node = CaptionData(CaptionDataType.STYLE)
+            node = CaptionData.create_style(False, args)
             node.start = False
             node.content = args
             self.nodes.append(node)
@@ -150,20 +149,21 @@ class DFXPReader(BaseReader):
         return attrs
 
     # Merge together captions that have the same start/end times.
-    def _combine_matching_captions(self, captions):
-        for lang in captions.captions:
-            new_caps = [captions.captions[lang][0]]
+    def _combine_matching_captions(self, captionset):
+        for lang in captionset.get_languages():
+            captions = captionset.get_captions(lang)
+            new_caps = captions[:1]
 
-            for sub in captions.captions[lang][1:]:
-                if sub.start == new_caps[-1].start and sub.end == new_caps.end:
-                    new_caps[-1].nodes.append(CaptionData(CaptionDataType.BREAK))
-                    new_caps[-1].nodes.extend(sub.nodes)
+            for caption in captions[1:]:
+                if caption.start == new_caps[-1].start and caption.end == new_caps.end:
+                    new_caps[-1].nodes.append(CaptionData.create_break())
+                    new_caps[-1].nodes.extend(caption.nodes)
                 else:
-                    new_caps.append(sub)
+                    new_caps.append(caption)
 
-            captions.captions[lang] = new_caps
+            captionset.set_captions(lang, new_caps)
 
-        return captions
+        return captionset
 
 
 class DFXPWriter(BaseWriter):
@@ -175,24 +175,23 @@ class DFXPWriter(BaseWriter):
         dfxp = BeautifulSoup(dfxp_base, 'xml')
         dfxp.find('tt')['xml:lang'] = "en"
 
-        for style_id in captions.styles:
-            style = captions.styles[style_id]
+        for style_id, style in captions.get_styles():
             # TODO: fix comparison for empty style.
             if style != {}:
                 dfxp = self._recreate_styling_tag(style_id, style, dfxp)
 
         body = dfxp.find('body')
 
-        # TODO: Don't mutate the existing captions object.
         if force:
-            captions.captions = self._force_language(force,
-                                                     captions.captions)
+            langs = [self._force_language(force, captions.get_languages())]
+        else:
+            langs = captions.get_languages()
 
-        for lang in captions.captions:
+        for lang in langs:
             div = dfxp.new_tag('div')
             div['xml:lang'] = '%s' % lang
 
-            for sub in captions.captions[lang]:
+            for sub in captions.get_captions(lang):
                 p = self._recreate_p_tag(sub, dfxp)
                 div.append(p)
 
@@ -201,14 +200,12 @@ class DFXPWriter(BaseWriter):
         return unicode(dfxp.prettify(formatter=None))
 
     # force the DFXP to only have one language, trying to match on "force"
-    def _force_language(self, force, captions):
-        for lang in captions.captions:
+    def _force_language(self, force, langs):
+        for lang in langs:
             if force == lang:
-                return {lang: captions.captions[lang]}
-            elif len(captions.captions) > 1:
-                del captions.captions[lang]
+                return lang
 
-        return captions
+        return langs[-1]
 
     def _recreate_styling_tag(self, style, content, dfxp):
         dfxp_style = dfxp.new_tag('style', id="%s" % style)
@@ -238,13 +235,13 @@ class DFXPWriter(BaseWriter):
         line = ''
 
         for data in caption:
-            if data.type == CaptionDataType.TEXT:
+            if data.type == CaptionData.TEXT:
                 line += data.content + ' '
 
-            elif data.type == CaptionDataType.BREAK:
+            elif data.type == CaptionData.BREAK:
                 line = line.rstrip() + '<br/>\n    '
 
-            elif data.type == CaptionDataType.STYLE:
+            elif data.type == CaptionData.STYLE:
                 line = self._recreate_span(line, data, dfxp)
 
         return line.rstrip()

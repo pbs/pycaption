@@ -1,5 +1,5 @@
 from datetime import timedelta
-from pycaption import BaseReader, BaseWriter, CaptionDataType
+from pycaption import BaseReader, BaseWriter, CaptionData
 
 
 class WebVTTWriter(BaseWriter):
@@ -8,19 +8,21 @@ class WebVTTWriter(BaseWriter):
     def __init__(self, *args, **kw):
         pass
 
-    def write(self, captions):
+    def write(self, captionset):
         output = self.HEADER
 
-        if not captions.captions:
+        if captionset.is_empty():
             return
 
         # TODO: styles. These go into a separate CSS file, which doesn't
-        # really fit the API here.
+        # really fit the API here. Figure that out.
+        # Though some style stuff can be done in-line.
+        # This format is a little bit crazy.
 
         # WebVTT's language support seems to be a bit crazy, so let's just
         # support a single one for now.
-        lang = captions.captions.keys()[0]
-        for sub in captions.captions[lang]:
+        lang = captionset.get_languages()[0]
+        for sub in captionset.get_captions(lang):
             output += self._write_sub(sub)
             output += '\n'
 
@@ -43,9 +45,6 @@ class WebVTTWriter(BaseWriter):
         end = self._timestamp(sub.end)
 
         output = "%s --> %s\n" % (start, end)
-        # TODO: Figure out what 'sub[2]' actually contains, and munge
-        # as appropriate.
-        # And turn this fucker into real objects, this sucks.
         output += self._convert_nodes(sub.nodes)
         output += '\n'
 
@@ -54,12 +53,12 @@ class WebVTTWriter(BaseWriter):
     def _convert_nodes(self, nodes):
         s = ''
         for node in nodes:
-            if node.type == CaptionDataType.TEXT:
+            if node.type == CaptionData.TEXT:
               s += node.content
-            elif node.type == CaptionDataType.STYLE:
+            elif node.type == CaptionData.STYLE:
               # TODO: Ignoring style so far.
               pass
-            elif node.type == CaptionDataType.BREAK:
+            elif node.type == CaptionData.BREAK:
               s += '\n'
 
         return s
