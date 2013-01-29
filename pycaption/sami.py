@@ -39,11 +39,10 @@ class SAMIReader(BaseReader):
 
         for language in doc_langs:
             lang_captions = self._translate_lang(language, sami_soup)
-            captions.captions[language] = lang_captions
+            captions.set_captions(language) = lang_captions
 
-        # TODO: rename some of these classes, they're confusing.
-        for caption in captions.captions.values():
-            if not caption.is_empty():
+        for lang in captions.get_languages():
+            if not captions.get_captions(lang).is_empty():
                 return captions
 
         raise SAMIReaderError("Empty Caption File")
@@ -55,18 +54,24 @@ class SAMIReader(BaseReader):
             start = milliseconds * 1000
             end = 0
 
-            if subdata != [] and subdata[-1][1] == 0:
-                subdata[-1][1] = milliseconds * 1000
+            if subdata != [] and subdata[-1].end == 0:
+                subdata[-1].end = milliseconds * 1000
 
             if p.get_text().strip():
                 self.line = []
                 self._translate_tag(p)
                 text = self.line
                 styles = self._translate_attrs(p)
-                subdata += [[start, end, text, styles]]
+                caption = Caption()
+                caption.start = start
+                caption.end = end
+                caption.nodes = text
+                caption.style = styles
+                subdata.append(caption)
 
-        if subdata and subdata[-1][1] == 0:
-            subdata[-1][1] = (milliseconds + 4000) * 1000
+        if subdata and subdata[-1].end == 0:
+            # Arbitrarily make this last 4 seconds. Not ideal...
+            subdata[-1].end = (milliseconds + 4000) * 1000
 
         return subdata
 
@@ -76,21 +81,19 @@ class SAMIReader(BaseReader):
             tag_name = tag.name
         except AttributeError:
             # if no more tags found, strip text
-            self.line.append({'type': 'text', 'content': '%s' % tag.strip()})
+            self.line.append(ContentData.create_text(tag.strip()))
             return
 
         # convert line breaks
         if tag.name == 'br':
-            self.line.append({'type': 'break', 'content': ''})
+            self.line.append(ContentData.create_break())
         # convert italics
         elif tag.name == 'i':
-            self.line.append({'type': 'style', 'start': True,
-                              'content': {'italics': True}})
+            self.line.append(ContentData.create_style(True, {'italics': True}))
             # recursively call function for any children elements
             for a in tag.contents:
                 self._translate_tag(a)
-            self.line.append({'type': 'style', 'start': False,
-                              'content': {'italics': True}})
+            self.line.append(ContentData.create_style(False, {'italics': True}))
         elif tag.name == 'span':
             self._translate_span(tag)
         else:
@@ -103,13 +106,13 @@ class SAMIReader(BaseReader):
         args = self._translate_attrs(tag)
         # only include span tag if attributes returned
         if args != '':
-            self.line.append({'type': 'style', 'start': True,
-                              'content':  args})
+            node = ContentData.create_style(True, args)
+            self.line.append(node)
             # recursively call function for any children elements
             for a in tag.contents:
                 self._translate_tag(a)
-            self.line.append({'type': 'style', 'start': False,
-                              'content': args})
+            node = ContentData.create_style(True, args)
+            self.line.append(node)
         else:
             for a in tag.contents:
                 self._translate_tag(a)
@@ -159,36 +162,36 @@ class SAMIWriter(BaseWriter):
         sami.find('style').append(stylesheet)
         primary = None
 
-        for lang in captions['captions']:
+        for lang in captions.get_languages():
             self.last_time = None
-            if not primary:
+            if primary is None:
                 primary = lang
-            for sub in captions['captions'][lang]:
+            for sub in captions.get_captions(lang):
                 sami = self._recreate_p_tag(sub, sami, lang, primary, captions)
 
         a = sami.prettify(formatter=None).split('\n')
         return '\n'.join(a[1:])
 
     def _recreate_p_tag(self, sub, sami, lang, primary, captions):
-        time = sub[0] / 1000
+        time = sub.start / 1000
 
         if self.last_time and time != self.last_time:
             sami = self._recreate_blank_tag(sami, sub, lang, primary, captions)
 
-        self.last_time = sub[1] / 1000
+        self.last_time = sub.end / 1000
 
         sami, sync = self._recreate_sync(sami, lang, primary, time)
 
         p = sami.new_tag("p")
 
         style = ''
-        for a, b in self._recreate_style(sub[3]).items():
+        for a, b in self._recreate_style(sub.style).items():
             style += '%s:%s;' % (a, b)
         if style:
             p['style'] = style
 
         p['class'] = self._recreate_p_lang(p, sub, lang, captions)
-        p.string = self._recreate_text(sub[2])
+        p.string = self._recreate_text(sub.nodes)
 
         sync.append(p)
 
@@ -236,8 +239,8 @@ class SAMIWriter(BaseWriter):
 
     def _recreate_p_lang(self, p, sub, lang, captions):
         try:
-            if 'lang' in captions['styles'][sub[3]['class']]:
-                return sub[3]['class']
+            if 'lang' in captions['styles'][sub.style['class']]:
+                return sub.style['class']
         except KeyError:
             pass
         return lang
@@ -273,17 +276,17 @@ class SAMIWriter(BaseWriter):
         line = ''
 
         for element in caption:
-            if element['type'] == 'text':
-                line += element['content'] + ' '
-            elif element['type'] == 'break':
+            if element.type == ContentData.TEXT:
+                line += element.content + ' '
+            elif element.type == ContentData.BREAK:
                 line = line.rstrip() + '<br/>\n    '
-            elif element['type'] == 'style':
+            elif element.type == ContentData.STYLE:
                 line = self._recreate_line_style(line, element)
 
         return line.rstrip()
 
     def _recreate_line_style(self, line, element):
-        if element['start']:
+        if element.start:
             if self.open_span == True:
                 line = line.rstrip() + '</span> '
             line = self._recreate_span(line, element['content'])
