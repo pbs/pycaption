@@ -34,11 +34,11 @@ class WebVTTWriter(BaseWriter):
         minutes = int(ts)/60 - hours*60
         seconds = ts - hours*60*60 - minutes*60
         if hours:
-          return "%02d:%02d:%02.3f" % (hours, minutes, seconds)
+          return "%02d:%02d:%06.3f" % (hours, minutes, seconds)
         elif minutes:
-          return "%02d:%02.3f" % (minutes, seconds)
+          return "%02d:%06.3f" % (minutes, seconds)
         else:
-          return "%02.3f" % (seconds,)
+          return "%06.3f" % (seconds,)
 
     def _write_sub(self, sub):
         start = self._timestamp(sub.start)
