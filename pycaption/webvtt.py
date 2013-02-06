@@ -44,14 +44,14 @@ class WebVTTWriter(BaseWriter):
         start = self._timestamp(sub.start)
         end = self._timestamp(sub.end)
 
-        output = "%s --> %s\n" % (start, end)
+        output = u"%s --> %s\n" % (start, end)
         output += self._convert_nodes(sub.nodes)
-        output += '\n'
+        output += u'\n'
 
         return output
 
     def _convert_nodes(self, nodes):
-        s = ''
+        s = u''
         for node in nodes:
             if node.type == CaptionData.TEXT:
               s += node.content
@@ -59,7 +59,7 @@ class WebVTTWriter(BaseWriter):
               # TODO: Ignoring style so far.
               pass
             elif node.type == CaptionData.BREAK:
-              s += '\n'
+              s += u'\n'
 
         return s
 

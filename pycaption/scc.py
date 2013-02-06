@@ -3,7 +3,7 @@
 
 import re
 
-from pycaption import BaseReader
+from pycaption import BaseReader, Caption, CaptionSet, CaptionData
 
 COMMANDS = {
     '9420': '',
@@ -764,19 +764,21 @@ class SCCReader(BaseReader):
         # split lines
         inlines = content.splitlines()
 
-        # loop through each line
-        for line in inlines:
-            self._translate_line(line, inlines)
+        # loop through each line except the first
+        for line in inlines[1:]:
+            self._translate_line(line)
 
         # after converting lines, see if anything is left in paint_buffer
         if self.paint_buffer:
             self._roll_up()
 
-        return {'captions': {lang: self.scc}, 'styles': {}}
+        captions = CaptionSet()
+        captions.set_captions(lang, self.scc)
+        return captions
 
-    def _translate_line(self, line, inlines):
-        # ignore blank lines and first line in file
-        if line == inlines[0] or line.strip() == '':
+    def _translate_line(self, line):
+        # ignore blank lines
+        if line.strip() == '':
             return
 
         # split line in timestamp and words
@@ -871,7 +873,7 @@ class SCCReader(BaseReader):
             # if content is in the queue, turn it into a caption
             if self.paint_buffer:
                 # convert and empty buffer
-                self._convert_to_pycaps(self.paint_buffer, self.paint_time)
+                self._convert_to_caption(self.paint_buffer, self.paint_time)
                 self.paint_buffer = ''
 
             # set rows to empty, configure start time for caption
@@ -890,7 +892,7 @@ class SCCReader(BaseReader):
             self.pop_time = self._translate_time(self.time[:-2] +
                                                  str(int(self.time[-2:]) +
                                                  self.frame_count))
-            self._convert_to_pycaps(self.pop_buffer, self.pop_time)
+            self._convert_to_caption(self.pop_buffer, self.pop_time)
             self.pop_buffer = ''
 
         # roll up captions
@@ -907,11 +909,11 @@ class SCCReader(BaseReader):
                 self._roll_up()
 
             # attempt to add proper end time to last caption
-            if self.scc and self.scc[-1][1] == 0:
+            if self.scc and self.scc[-1].end == 0:
                 last_time = self._translate_time(self.time[:-2] +
                                                  str(int(self.time[-2:]) +
                                                  self.frame_count))
-                self.scc[-1][1] = last_time
+                self.scc[-1].end = last_time
 
         # if command not one of the aforementioned, add to buffer
         else:
@@ -956,15 +958,17 @@ class SCCReader(BaseReader):
         return microseconds
 
     # convert buffer into proper PyCaps format
-    def _convert_to_pycaps(self, buffer, start):
+    def _convert_to_caption(self, buffer, start):
         # check to see if previous caption needs an end-time
-        if self.scc and self.scc[-1][1] == 0:
-            self.scc[-1][1] = start
+        if self.scc and self.scc[-1].end == 0:
+            self.scc[-1].end = start
 
         # initial variables
-        captions = []
-        open_italic = False
-        first_element = True
+        caption = Caption()
+        caption.start = start
+        caption.end = 0 # Not yet known; filled in later
+        self.open_italic = False
+        self.first_element = True
 
         # split into elements (e.g. break, italics, text)
         for element in buffer.split('<$>'):
@@ -974,79 +978,66 @@ class SCCReader(BaseReader):
 
             # handle line breaks
             elif element == '{break}':
-                captions, open_italic = self._translate_break(captions,
-                                                              first_element,
-                                                              open_italic)
+                self._translate_break(caption)
 
             # handle open italics
             elif element == '{italic}':
                 # add italics
-                captions.append({'type': 'style', 'start': True,
-                                 'content': {'italics': True}})
+                caption.nodes.append(CaptionData.create_style(True, {'italics': True}))
                 # open italics, no longer first element
-                open_italic = True
-                first_element = False
+                self.open_italic = True
+                self.first_element = False
 
             # handle clone italics
-            elif element == '{end-italic}' and open_italic:
-                captions.append({'type': 'style', 'start': False,
-                                 'content': {'italics': True}})
-                open_italic = False
+            elif element == '{end-italic}' and self.open_italic:
+                caption.nodes.append(CaptionData.create_style(False, {'italics': True}))
+                self.open_italic = False
 
             # handle text
             else:
                 # add text
-                captions.append({'type': 'text',
-                                 'content': ' '.join(element.split())})
+                caption.nodes.append(CaptionData.create_text(' '.join(element.decode("utf-8").split())))
                 # no longer first element
-                first_element = False
+                self.first_element = False
 
         # close any open italics left over
-        if open_italic == True:
-            captions.append({
-                'type': 'style',
-                'start': False,
-                'content': {'italics': True}})
+        if self.open_italic == True:
+            caption.nodes.append(CaptionData.create_style(False, {'italics': True}))
 
-        # loop through and remove extraneous italics tags in the same caption
-        deleted = 0
-        for a in range(0, len(captions)):
-            a -= deleted
-            try:
-                captions, deleted = self._remove_italics(captions, deleted, a)
-            except (TypeError, IndexError):
-                pass
+        # remove extraneous italics tags in the same caption
+        self._remove_italics(caption)
 
         # only add captions to list if content inside exists
-        if captions:
-            self.scc.append([start, 0, captions, {}])
+        if caption.nodes:
+            self.scc.append(caption)
 
-    def _translate_break(self, captions, first_element, open_italic):
+    def _translate_break(self, caption):
         # if break appears at start of caption, skip break
-        if first_element == True:
-            return captions, open_italic
+        if self.first_element == True:
+            return
         # if the last caption was a break, skip this break
-        elif captions[-1]['type'] == 'break':
-            return captions, open_italic
+        elif caption.nodes[-1].type == CaptionData.BREAK:
+            return
         # close any open italics
-        elif open_italic == True:
-            captions.append({'type': 'style', 'start': False,
-                             'content': {'italics': True}})
-            open_italic = False
+        elif self.open_italic == True:
+            caption.nodes.append(CaptionData.create_style(False, {'italics': True}))
+            self.open_italic = False
 
         # add line break
-        captions.append({'type': 'break', 'content': ''})
+        caption.nodes.append(CaptionData.create_break())
 
-        return captions, open_italic
-
-    def _remove_italics(self, captions, deleted, a):
-        if (captions[a]['content']['italics'] and
-            captions[a + 1]['type'] == 'break' and
-            captions[a + 2]['content']['italics']):
-                captions.pop(a)
-                captions.pop(a + 1)
-                deleted += 2
-        return captions, deleted
+    def _remove_italics(self, caption):
+        i = 0
+        length = max(0, len(caption.nodes) - 2)
+        while i < length:
+          if (caption.nodes[i].type == CaptionData.STYLE and caption.nodes[i].content['italics'] and
+            caption.nodes[i + 1].type == CaptionData.BREAK and
+            caption.nodes[i + 2].type == CaptionData.STYLE and caption.nodes[i + 2].content['italics']):
+              # Remove the two italics style nodes
+              caption.nodes.pop(i)
+              caption.nodes.pop(i+1)
+              length -= 2
+          i += 1
 
     def _roll_up(self):
         if self.simulate_roll_up == False:
@@ -1061,7 +1052,7 @@ class SCCReader(BaseReader):
         self.paint_buffer = ' '.join(self.roll_rows)
 
         # convert buffer and empty
-        self._convert_to_pycaps(self.paint_buffer, self.paint_time)
+        self._convert_to_caption(self.paint_buffer, self.paint_time)
         self.paint_buffer = ''
 
         # configure time

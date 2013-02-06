@@ -39,7 +39,7 @@ class SAMIReader(BaseReader):
 
         for language in doc_langs:
             lang_captions = self._translate_lang(language, sami_soup)
-            captions.set_captions(language) = lang_captions
+            captions.set_captions(language, lang_captions)
 
         for lang in captions.get_languages():
             if not captions.get_captions(lang).is_empty():
