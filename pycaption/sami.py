@@ -111,7 +111,7 @@ class SAMIReader(BaseReader):
             # recursively call function for any children elements
             for a in tag.contents:
                 self._translate_tag(a)
-            node = CaptionData.create_style(True, args)
+            node = CaptionData.create_style(False, args)
             self.line.append(node)
         else:
             for a in tag.contents:
