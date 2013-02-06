@@ -1,5 +1,5 @@
 from datetime import timedelta
-from pycaption import BaseReader, BaseWriter
+from pycaption import BaseReader, BaseWriter, Caption, CaptionSet, CaptionData
 
 
 class SRTReader(BaseReader):
@@ -11,6 +11,7 @@ class SRTReader(BaseReader):
             return False
 
     def read(self, content, lang='en'):
+        captions = CaptionSet()
         inlines = content.splitlines()
         start_line = 0
         subdata = []
@@ -19,22 +20,24 @@ class SRTReader(BaseReader):
             if not inlines[start_line].isdigit():
                 break
 
+            caption = Caption()
+
             end_line = self._find_text_line(start_line, inlines)
 
             timing = inlines[start_line + 1].split('-->')
-            start = self._srttomicro(timing[0].strip(' \r\n'))
-            end = self._srttomicro(timing[1].strip(' \r\n'))
-            text = []
+            caption.start = self._srttomicro(timing[0].strip(' \r\n'))
+            caption.end = self._srttomicro(timing[1].strip(' \r\n'))
 
             for line in inlines[start_line + 2:end_line - 1]:
-                text += [{'type': 'text', 'content': line}]
-                text += [{'type': 'break', 'content': ''}]
-            text.pop()  # remove last line break from end of caption list
+                caption.nodes.append(CaptionData.create_text(line))
+                caption.nodes.append(CaptionData.create_break())
+            caption.nodes.pop()  # remove last line break from end of caption list
 
-            subdata += [[start, end, text, {}]]
+            subdata.append(caption)
             start_line = end_line
 
-        return {'captions': {lang: subdata}, 'styles': {}}
+        captions.set_captions(lang, subdata)
+        return captions
 
     def _srttomicro(self, stamp):
         timesplit = stamp.split(':')
@@ -63,32 +66,32 @@ class SRTWriter(BaseWriter):
     def write(self, captions):
         srts = []
 
-        for lang in captions['captions']:
-            srts.append(self._recreate_lang(lang, captions))
+        for lang in captions.get_languages():
+            srts.append(self._recreate_lang(captions.get_captions(lang)))
 
         return 'MULTI-LANGUAGE SRT\n'.join(srts)
 
-    def _recreate_lang(self, lang, captions):
+    def _recreate_lang(self, captions):
         srt = ''
         count = 1
 
-        for sub in captions['captions'][lang]:
+        for sub in captions:
             srt += '%s\n' % count
-            start = '0' + str(timedelta(milliseconds=(int(sub[0] / 1000))))
-            end = '0' + str(timedelta(milliseconds=(int(sub[1] / 1000))))
+            start = '0' + str(timedelta(milliseconds=(int(sub.start / 1000))))
+            end = '0' + str(timedelta(milliseconds=(int(sub.end / 1000))))
             timestamp = '%s --> %s\n' % (start[:12], end[:12])
             srt += timestamp.replace('.', ',')
-            for line in sub[2]:
-                srt = self._recreate_line(srt, line)
+            for node in sub.nodes:
+                srt = self._recreate_line(srt, node)
             srt += '\n\n'
             count += 1
 
         return srt[:-1]
 
     def _recreate_line(self, srt, line):
-        if line['type'] == 'text':
-            return srt + '%s ' % line['content']
-        elif line['type'] == 'break':
+        if line.type == CaptionData.TEXT:
+            return srt + '%s ' % line.content
+        elif line.type == CaptionData.BREAK:
             return srt + '\n'
         else:
             return srt
