@@ -105,6 +105,9 @@ class CaptionSet(object):
     def get_styles(self):
         return self._styles.items()
 
+    def set_styles(self, styles):
+        self._styles = styles
+
     def is_empty(self):
         return all([len(captions) == 0 for captions in self._captions.values()])
 

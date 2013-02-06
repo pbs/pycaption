@@ -7,7 +7,7 @@ from cssutils import parseString, log
 from bs4 import BeautifulSoup
 import re
 
-from pycaption import BaseReader, BaseWriter
+from pycaption import BaseReader, BaseWriter, CaptionSet, Caption, CaptionData
 
 # change cssutils default logging
 log.setLevel(FATAL)
@@ -34,15 +34,15 @@ class SAMIReader(BaseReader):
     def read(self, content):
         content, doc_styles, doc_langs = SAMIParser().feed(content)
         sami_soup = BeautifulSoup(content)
-        captions = Captions()
-        captions.styles = doc_styles
+        captions = CaptionSet()
+        captions.set_styles(doc_styles)
 
         for language in doc_langs:
             lang_captions = self._translate_lang(language, sami_soup)
             captions.set_captions(language, lang_captions)
 
         for lang in captions.get_languages():
-            if not captions.get_captions(lang).is_empty():
+            if captions.get_captions(lang):
                 return captions
 
         raise SAMIReaderError("Empty Caption File")
@@ -81,19 +81,19 @@ class SAMIReader(BaseReader):
             tag_name = tag.name
         except AttributeError:
             # if no more tags found, strip text
-            self.line.append(ContentData.create_text(tag.strip()))
+            self.line.append(CaptionData.create_text(tag.strip()))
             return
 
         # convert line breaks
         if tag.name == 'br':
-            self.line.append(ContentData.create_break())
+            self.line.append(CaptionData.create_break())
         # convert italics
         elif tag.name == 'i':
-            self.line.append(ContentData.create_style(True, {'italics': True}))
+            self.line.append(CaptionData.create_style(True, {'italics': True}))
             # recursively call function for any children elements
             for a in tag.contents:
                 self._translate_tag(a)
-            self.line.append(ContentData.create_style(False, {'italics': True}))
+            self.line.append(CaptionData.create_style(False, {'italics': True}))
         elif tag.name == 'span':
             self._translate_span(tag)
         else:
@@ -106,12 +106,12 @@ class SAMIReader(BaseReader):
         args = self._translate_attrs(tag)
         # only include span tag if attributes returned
         if args != '':
-            node = ContentData.create_style(True, args)
+            node = CaptionData.create_style(True, args)
             self.line.append(node)
             # recursively call function for any children elements
             for a in tag.contents:
                 self._translate_tag(a)
-            node = ContentData.create_style(True, args)
+            node = CaptionData.create_style(True, args)
             self.line.append(node)
         else:
             for a in tag.contents:
