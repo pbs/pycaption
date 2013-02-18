@@ -27,8 +27,7 @@ class SRTReader(BaseReader):
             text = []
 
             for line in inlines[start_line + 2:end_line - 1]:
-                unicode_line = line.decode('utf-8')
-                text += [{'type': 'text', 'content': unicode_line}]
+                text += [{'type': 'text', 'content': line}]
                 text += [{'type': 'break', 'content': ''}]
             text.pop()  # remove last line break from end of caption list
 
