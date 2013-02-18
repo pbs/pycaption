@@ -803,7 +803,7 @@ class SCCReader(BaseReader):
         # second, check if word is a special character
         elif word in SPECIAL_CHARS:
             self._translate_special_char(word)
-        
+
         elif word in EXTENDED_CHARS:
             self._translate_extended_char(word)
 
@@ -995,9 +995,10 @@ class SCCReader(BaseReader):
 
             # handle text
             else:
+                unicode_element = ' '.join(element.split()).decode('utf-8')
                 # add text
                 captions.append({'type': 'text',
-                                 'content': ' '.join(element.split())})
+                                 'content': unicode_element})
                 # no longer first element
                 first_element = False
 
