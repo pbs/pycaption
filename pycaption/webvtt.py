@@ -11,7 +11,7 @@ class WebVTTWriter(BaseWriter):
         output = self.HEADER
 
         if captionset.is_empty():
-            return
+            return output.encode("UTF-8")
 
         # TODO: styles. These go into a separate CSS file, which doesn't
         # really fit the API here. Figure that out.
