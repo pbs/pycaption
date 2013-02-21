@@ -1,6 +1,6 @@
 from datetime import timedelta
 from bs4 import BeautifulSoup
-from pycaption import BaseReader, BaseWriter, CaptionSet, Caption, Style, CaptionData
+from pycaption import BaseReader, BaseWriter, CaptionSet, Caption, CaptionData
 
 
 dfxp_base = '''

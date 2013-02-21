@@ -26,7 +26,7 @@ class BaseReader(object):
             return False
 
     def read(self, content):
-        return Captions()
+        return CaptionSet()
 
 
 class BaseWriter(object):

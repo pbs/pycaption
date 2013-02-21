@@ -5,7 +5,6 @@ from htmlentitydefs import name2codepoint
 
 from cssutils import parseString, log
 from bs4 import BeautifulSoup
-import re
 
 from pycaption import BaseReader, BaseWriter, CaptionSet, Caption, CaptionData
 
@@ -276,11 +275,11 @@ class SAMIWriter(BaseWriter):
         line = ''
 
         for element in caption:
-            if element.type == ContentData.TEXT:
+            if element.type == CaptionData.TEXT:
                 line += element.content + ' '
-            elif element.type == ContentData.BREAK:
+            elif element.type == CaptionData.BREAK:
                 line = line.rstrip() + '<br/>\n    '
-            elif element.type == ContentData.STYLE:
+            elif element.type == CaptionData.STYLE:
                 line = self._recreate_line_style(line, element)
 
         return line.rstrip()

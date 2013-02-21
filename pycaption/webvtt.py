@@ -1,5 +1,4 @@
-from datetime import timedelta
-from pycaption import BaseReader, BaseWriter, CaptionData
+from pycaption import BaseWriter, CaptionData
 
 
 class WebVTTWriter(BaseWriter):
