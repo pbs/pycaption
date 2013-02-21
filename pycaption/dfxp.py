@@ -197,7 +197,7 @@ class DFXPWriter(BaseWriter):
 
             body.append(div)
 
-        return unicode(dfxp.prettify(formatter=None))
+        return dfxp.prettify(formatter=None).encode("UTF-8")
 
     # force the DFXP to only have one language, trying to match on "force"
     def _force_language(self, force, langs):
