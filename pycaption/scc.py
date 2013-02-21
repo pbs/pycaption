@@ -1063,6 +1063,6 @@ class SCCReader(BaseReader):
 
         # try to insert the proper ending time for the previous caption
         try:
-            self.scc[-1][1] = self.paint_time
+            self.scc[-1].end = self.paint_time
         except IndexError:
             pass
