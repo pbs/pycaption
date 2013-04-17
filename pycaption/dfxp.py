@@ -71,6 +71,8 @@ class DFXPReader(BaseReader):
 
     def _translate_time(self, stamp):
         timesplit = stamp.split(':')
+        if not '.' in timesplit[2]:
+            timesplit[2] = timesplit[2] + '.000'
         secsplit = timesplit[2].split('.')
         if len(timesplit) > 3:
             secsplit.append((int(timesplit[3]) / 30) * 100)
