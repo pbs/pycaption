@@ -1,6 +1,8 @@
 py-caption
 ==========
 
+[![Build Status](https://travis-ci.org/pbs/pycaption.png?branch=master)](https://travis-ci.org/pbs/pycaption)
+
 `py-caption` is a caption reading/writing module. Use one of the given Readers to read content into an intermediary format known as PCC (PBS Common Captions), and then use one of the Writers to output the PCC into captions of your desired format.
 
 Turn a caption into multiple caption outputs:
@@ -11,13 +13,13 @@ Turn a caption into multiple caption outputs:
     which, while extremely short,
     is still a valid SRT file.
     '''
-    
+
     converter = CaptionConverter()
     converter.read(srt_caps, SRTReader())
     print converter.write(SAMIWriter())
     print converter.write(DFXPWriter())
     print converter.write(TranscriptWriter())
-    
+
 Not sure what format the caption is in? Detect it:
 
     caps = '''1
@@ -49,7 +51,7 @@ Write:
 See the [examples folder][1] for example captions that currently can be read correctly.
 
 Python Usage
------------- 
+------------
 
 Example: Convert from SAMI to DFXP
 
@@ -67,10 +69,10 @@ Example: Convert from SAMI to DFXP
         font-weight: normal;
         font-style: normal;
         color: #ffffff; }
-    
+
     .ENCC {Name: English; lang: en-US; SAMI_Type: CC;}
     .FRCC {Name: French; lang: fr-cc; SAMI_Type: CC;}
-    
+
     --></STYLE></HEAD><BODY>
     <SYNC start="9209"><P class="ENCC">
            ( clock ticking )
@@ -85,7 +87,7 @@ Example: Convert from SAMI to DFXP
     </P><P class="FRCC">
            FRENCH LINE 2?
     </P></SYNC>'''
-    
+
     print DFXPWriter().write(SAMIReader().read(sami))
 
 
@@ -127,7 +129,7 @@ Scalability
 Different readers and writers are easy to add if you would like to:
  - Read/Write a previously unsupported format
  - Read/Write a supported format in a different way (more styling?)
- 
+
 Simply follow the format of a current Reader or Writer, and edit to your heart's desire.
 
 
@@ -268,7 +270,7 @@ Supported Styling:
  - None
 
 The transcript writer uses natural sentence boundary detection algorithms to create the transcript.
-    
+
 
 License
 -------
