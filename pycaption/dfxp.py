@@ -214,8 +214,8 @@ class DFXPWriter(BaseWriter):
         return dfxp
 
     def _recreate_p_tag(self, sub, dfxp):
-        start = '0' + str(timedelta(milliseconds=(int(sub[0] / 1000))))[:11]
-        end = '0' + str(timedelta(milliseconds=(int(sub[1] / 1000))))[:11]
+        start = self._format_timestamp(sub[0])
+        end = self._format_timestamp(sub[1])
         p = dfxp.new_tag("p", begin=start, end=end)
         p.string = self._recreate_text(sub[2], dfxp)
 
@@ -278,3 +278,12 @@ class DFXPWriter(BaseWriter):
             dfxp_style['tts:color'] = content['color']
 
         return dfxp_style
+
+    def _format_timestamp(self, value):
+        datetime_value = timedelta(milliseconds=(int(value / 1000)))
+
+        str_value = str(datetime_value)[:11]
+        if not datetime_value.microseconds:
+            str_value += '.000'
+
+        return '0' + str_value
