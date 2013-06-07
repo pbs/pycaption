@@ -5,7 +5,6 @@ from htmlentitydefs import name2codepoint
 
 from cssutils import parseString, log
 from bs4 import BeautifulSoup
-import re
 
 from pycaption import BaseReader, BaseWriter
 
@@ -71,7 +70,7 @@ class SAMIReader(BaseReader):
     def _translate_tag(self, tag):
         # check to see if tag is just a string
         try:
-            tag_name = tag.name
+            tag.name
         except AttributeError:
             # if no more tags found, strip text
             self.line.append({'type': 'text', 'content': '%s' % tag.strip()})
@@ -198,7 +197,7 @@ class SAMIWriter(BaseWriter):
             sami.body.append(sync)
         else:
             sync = sami.find("sync", start="%s" % time)
-            if sync == None:
+            if sync is None:
                 sami, sync = self._find_closest_sync(sami, time)
 
         return sami, sync
@@ -282,11 +281,11 @@ class SAMIWriter(BaseWriter):
 
     def _recreate_line_style(self, line, element):
         if element['start']:
-            if self.open_span == True:
+            if self.open_span:
                 line = line.rstrip() + '</span> '
             line = self._recreate_span(line, element['content'])
         else:
-            if self.open_span == True:
+            if self.open_span:
                 line = line.rstrip() + '</span> '
                 self.open_span = False
 
@@ -459,7 +458,6 @@ class SAMIParser(HTMLParser):
         style_sheet = {}
 
         for rule in sheet:
-            lang = None
             not_empty = False
             new_style = {}
             selector = rule.selectorText.lower()
