@@ -123,8 +123,8 @@ Which will output the following:
     </tt>
 
 
-Scalability
------------
+Extensibility
+-------------
 
 Different readers and writers are easy to add if you would like to:
  - Read/Write a previously unsupported format

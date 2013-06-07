@@ -18,6 +18,7 @@ setup(
     name='pycaption',
     version='0.2.8',
     description='Closed caption converter',
+    long_description=open(README_PATH).read(),
     author='Joe Norton',
     author_email='joey@nortoncrew.com',
     url='https://github.com/pbs/pycaption',
