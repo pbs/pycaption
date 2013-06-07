@@ -85,7 +85,7 @@ class SAMIWriterTestCase(unittest.TestCase):
     def setUp(self):
         self.captions = SAMIReader().read(SAMPLE_SAMI)
 
-    def selfAssertSAMIEquals(self, first, second):
+    def assertSAMIEquals(self, first, second):
         first_soup = BeautifulSoup(first)
         second_soup = BeautifulSoup(second)
 
@@ -95,7 +95,7 @@ class SAMIWriterTestCase(unittest.TestCase):
 
     def test_write(self):
         results = SAMIWriter().write(self.captions)
-        self.selfAssertSAMIEquals(SAMPLE_SAMI, results)
+        self.assertSAMIEquals(SAMPLE_SAMI, results)
 
 
 def _extract_sami_captions(soup):

@@ -1,6 +1,6 @@
-from datetime import timedelta
 from bs4 import BeautifulSoup
 from pycaption import BaseReader, BaseWriter
+from .util import format_timestamp
 
 
 dfxp_base = '''
@@ -214,8 +214,8 @@ class DFXPWriter(BaseWriter):
         return dfxp
 
     def _recreate_p_tag(self, sub, dfxp):
-        start = self._format_timestamp(sub[0])
-        end = self._format_timestamp(sub[1])
+        start = format_timestamp(sub[0])
+        end = format_timestamp(sub[1])
         p = dfxp.new_tag("p", begin=start, end=end)
         p.string = self._recreate_text(sub[2], dfxp)
 
@@ -278,12 +278,3 @@ class DFXPWriter(BaseWriter):
             dfxp_style['tts:color'] = content['color']
 
         return dfxp_style
-
-    def _format_timestamp(self, value):
-        datetime_value = timedelta(milliseconds=(int(value / 1000)))
-
-        str_value = str(datetime_value)[:11]
-        if not datetime_value.microseconds:
-            str_value += '.000'
-
-        return '0' + str_value

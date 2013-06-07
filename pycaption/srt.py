@@ -1,5 +1,5 @@
-from datetime import timedelta
 from pycaption import BaseReader, BaseWriter
+from .util import format_timestamp
 
 
 class SRTReader(BaseReader):
@@ -76,12 +76,15 @@ class SRTWriter(BaseWriter):
 
         for sub in captions['captions'][lang]:
             srt += '%s\n' % count
-            start = '0' + str(timedelta(milliseconds=(int(sub[0] / 1000))))
-            end = '0' + str(timedelta(milliseconds=(int(sub[1] / 1000))))
+
+            start = format_timestamp(sub[0], msec_separator=',')
+            end = format_timestamp(sub[1], msec_separator=',')
             timestamp = '%s --> %s\n' % (start[:12], end[:12])
-            srt += timestamp.replace('.', ',')
+
+            srt += timestamp
             for line in sub[2]:
                 srt = self._recreate_line(srt, line)
+
             srt += '\n\n'
             count += 1
 

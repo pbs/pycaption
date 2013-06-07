@@ -63,11 +63,11 @@ class DFXPWriterTestCase(unittest.TestCase):
     def setUp(self):
         self.captions = DFXPReader().read(SAMPLE_DFXP)
 
-    def selfAssertXMLEquals(self, first, second):
+    def assertXMLEquals(self, first, second):
         first_soup = BeautifulSoup(first)
         second_soup = BeautifulSoup(second)
         self.assertEquals(first_soup, second_soup)
 
     def test_write(self):
         results = DFXPWriter().write(self.captions)
-        self.selfAssertXMLEquals(SAMPLE_DFXP, results)
+        self.assertXMLEquals(SAMPLE_DFXP, results)
