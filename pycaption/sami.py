@@ -475,7 +475,7 @@ class SAMIParser(HTMLParser):
                     new_style['font-size'] = prop.value
                     not_empty = True
                 if prop.name == 'color':
-                    new_style['color'] = prop.value
+                    new_style['color'] = _3digit_to_6digit_color(prop.value)
                     not_empty = True
                 if prop.name == 'lang':
                     new_style['lang'] = prop.value
@@ -503,3 +503,13 @@ class SAMIParser(HTMLParser):
 
 class SAMIReaderError(Exception):
     pass
+
+
+def _3digit_to_6digit_color(value):
+    """
+    Convert a 3-digit color code into a 6-digit one.
+    """
+    if len(value) == 7:
+        return value
+
+    return "#%s%s%s" % (value[1] * 2, value[2] * 2, value[3] * 2)

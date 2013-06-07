@@ -19,7 +19,7 @@ P { margin-left:  1pt;
     font-family: Arial;
     font-weight: normal;
     font-style: normal;
-    color: #ffffff; }
+    color: #ffeedd; }
 
 .ENCC {Name: English; lang: en-US; SAMI_Type: CC;}
 
@@ -66,6 +66,18 @@ class SAMIReaderTestCase(unittest.TestCase):
 
         self.assertEquals(9209000, paragraph[0])
         self.assertEquals(12312000, paragraph[1])
+
+    def test_6digit_color_code_from_6digit_input(self):
+        captions = SAMIReader().read(SAMPLE_SAMI)
+        p_style = captions["styles"]["p"]
+
+        self.assertEquals("#ffeedd", p_style['color'])
+
+    def test_6digit_color_code_from_3digit_input(self):
+        captions = SAMIReader().read(SAMPLE_SAMI.replace("#ffeedd", "#fed"))
+        p_style = captions["styles"]["p"]
+
+        self.assertEquals("#ffeedd", p_style['color'])
 
 
 class SAMIWriterTestCase(unittest.TestCase):
