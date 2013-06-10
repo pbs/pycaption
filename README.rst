@@ -1,11 +1,16 @@
 py-caption
 ==========
 
-[![Build Status](https://travis-ci.org/pbs/pycaption.png?branch=master)](https://travis-ci.org/pbs/pycaption)
+|Build Status|
 
-`py-caption` is a caption reading/writing module. Use one of the given Readers to read content into an intermediary format known as PCC (PBS Common Captions), and then use one of the Writers to output the PCC into captions of your desired format.
+``py-caption`` is a caption reading/writing module. Use one of the given
+Readers to read content into an intermediary format known as PCC (PBS
+Common Captions), and then use one of the Writers to output the PCC into
+captions of your desired format.
 
 Turn a caption into multiple caption outputs:
+
+::
 
     srt_caps = '''1
     00:00:09,209 --> 00:00:12,312
@@ -22,6 +27,8 @@ Turn a caption into multiple caption outputs:
 
 Not sure what format the caption is in? Detect it:
 
+::
+
     caps = '''1
     00:00:01,500 --> 00:00:12,345
     Small caption'''
@@ -36,30 +43,26 @@ Not sure what format the caption is in? Detect it:
 Supported Formats
 -----------------
 
-Read:
- - SCC
- - SAMI
- - SRT
- - DFXP
+Read: - SCC - SAMI - SRT - DFXP
 
-Write:
- - DFXP
- - SAMI
- - SRT
- - Transcript
+Write: - DFXP - SAMI - SRT - Transcript
 
-See the [examples folder][1] for example captions that currently can be read correctly.
+See the `examples
+folder <https://github.com/pbs/pycaption/tree/master/examples/>`__ for
+example captions that currently can be read correctly.
 
 Python Usage
 ------------
 
 Example: Convert from SAMI to DFXP
 
+::
+
     from pycaption import SAMIReader, DFXPWriter
 
     sami = '''<SAMI><HEAD><TITLE>NOVA3213</TITLE><STYLE TYPE="text/css">
     <!--
-    P {	margin-left:  1pt;
+    P { margin-left:  1pt;
         margin-right: 1pt;
         margin-bottom: 2pt;
         margin-top: 2pt;
@@ -90,8 +93,9 @@ Example: Convert from SAMI to DFXP
 
     print DFXPWriter().write(SAMIReader().read(sami))
 
-
 Which will output the following:
+
+::
 
     <?xml version="1.0" encoding="utf-8"?>
     <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling">
@@ -122,24 +126,26 @@ Which will output the following:
      </body>
     </tt>
 
-
 Extensibility
 -------------
 
-Different readers and writers are easy to add if you would like to:
- - Read/Write a previously unsupported format
- - Read/Write a supported format in a different way (more styling?)
+Different readers and writers are easy to add if you would like to: -
+Read/Write a previously unsupported format - Read/Write a supported
+format in a different way (more styling?)
 
-Simply follow the format of a current Reader or Writer, and edit to your heart's desire.
-
+Simply follow the format of a current Reader or Writer, and edit to your
+heart's desire.
 
 PyCaps Format:
-------------------
+--------------
 
-The different Readers will return the captions in PBS Common Captions (PCC) format.
-The Writers will be expecting captions in PCC format as well.
+The different Readers will return the captions in PBS Common Captions
+(PCC) format. The Writers will be expecting captions in PCC format as
+well.
 
 PCC format:
+
+::
 
     {
         "captions": {
@@ -151,6 +157,8 @@ PCC format:
     }
 
 Example PCC json:
+
+::
 
     {
         "captions": {
@@ -196,90 +204,86 @@ Example PCC json:
         }
     }
 
+SAMI Reader / Writer :: `spec <http://msdn.microsoft.com/en-us/library/ms971327.aspx>`__
+----------------------------------------------------------------------------------------
 
-SAMI Reader / Writer :: [spec][2]
---------------------
+Microsoft Synchronized Accessible Media Interchange. Supports multiple
+languages.
 
-Microsoft Synchronized Accessible Media Interchange. Supports multiple languages.
+Supported Styling: - text-align - italics - font-size - font-family -
+color
 
-Supported Styling:
- - text-align
- - italics
- - font-size
- - font-family
- - color
+If the SAMI file is not valid XML (e.g. unclosed tags), will still
+attempt to read it.
 
-If the SAMI file is not valid XML (e.g. unclosed tags), will still attempt to read it.
-
-
-DFXP Reader / Writer :: [spec][3]
---------------------
+DFXP Reader / Writer :: `spec <http://www.w3.org/TR/ttaf1-dfxp/>`__
+-------------------------------------------------------------------
 
 The W3 standard. Supports multiple languages.
 
-Supported Styling:
- - text-align
- - italics
- - font-size
- - font-family
- - color
+Supported Styling: - text-align - italics - font-size - font-family -
+color
 
+SRT Reader / Writer :: `spec <http://matroska.org/technical/specs/subtitles/srt.html>`__
+----------------------------------------------------------------------------------------
 
-SRT Reader / Writer :: [spec][4]
--------------------
+SubRip captions. If given multiple languages to write, will output all
+joined together by a 'MULTI-LANGUAGE SRT' line.
 
-SubRip captions. If given multiple languages to write, will output all joined together by a 'MULTI-LANGUAGE SRT' line.
-
-Supported Styling:
- - None
+Supported Styling: - None
 
 Assumes input language is english. To change:
 
+::
+
     pycaps = SRTReader().read(srt_content, lang='fr')
 
-
-SCC Reader :: [spec][5]
-----------
+SCC Reader :: `spec <http://www.theneitherworld.com/mcpoodle/SCC_TOOLS/DOCS/SCC_FORMAT.HTML>`__
+-----------------------------------------------------------------------------------------------
 
 Scenarist Closed Caption format. Assumes Channel 1 input.
 
-Supported Styling:
- - italics
+Supported Styling: - italics
 
-By default, the SCC Reader does not simulate roll-up captions. To enable roll-ups:
+By default, the SCC Reader does not simulate roll-up captions. To enable
+roll-ups:
+
+::
 
     pycaps = SCCReader().read(scc_content, simulate_roll_up=True)
 
 Also, assumes input language is english. To change:
 
+::
+
     pycaps = SCCReader().read(scc_content, lang='fr')
 
-Now has the option of specifying an offset (measured in seconds) for the timestamp. For example, if the SCC file is 45 seconds ahead of the video:
+Now has the option of specifying an offset (measured in seconds) for the
+timestamp. For example, if the SCC file is 45 seconds ahead of the
+video:
+
+::
 
     pycaps = SCCReader().read(scc_content, offset=45)
 
-The SCC Reader handles both dropframe and non-dropframe captions, and will auto-detect which format the captions are in.
-
+The SCC Reader handles both dropframe and non-dropframe captions, and
+will auto-detect which format the captions are in.
 
 Transcript Writer
 -----------------
 
 Text stripped of styling, arranged in sentences.
 
-Supported Styling:
- - None
+Supported Styling: - None
 
-The transcript writer uses natural sentence boundary detection algorithms to create the transcript.
-
+The transcript writer uses natural sentence boundary detection
+algorithms to create the transcript.
 
 License
 -------
 
-This module is Copyright 2012 PBS.org and is available under the [Apache License, Version 2.0][6].
+This module is Copyright 2012 PBS.org and is available under the `Apache
+License, Version 2.0 <http://www.apache.org/licenses/LICENSE-2.0>`__.
 
-[1]: https://github.com/pbs/pycaption/tree/master/examples/
-[2]: http://msdn.microsoft.com/en-us/library/ms971327.aspx
-[3]: http://www.w3.org/TR/ttaf1-dfxp/
-[4]: http://matroska.org/technical/specs/subtitles/srt.html
-[5]: http://www.theneitherworld.com/mcpoodle/SCC_TOOLS/DOCS/SCC_FORMAT.HTML
-[6]: http://www.apache.org/licenses/LICENSE-2.0
+.. |Build Status| image:: https://travis-ci.org/pbs/pycaption.png?branch=master
+   :target: https://travis-ci.org/pbs/pycaption

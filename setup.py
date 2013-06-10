@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 
 README_PATH = os.path.join(
     os.path.abspath(os.path.dirname(__file__)),
-    'README.md')
+    'README.rst')
 
 dependencies = [
     'nltk',
