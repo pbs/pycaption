@@ -3,7 +3,7 @@ py-caption
 
 |Build Status|
 
-``py-caption`` is a caption reading/writing module. Use one of the given
+``pycaption`` is a caption reading/writing module. Use one of the given
 Readers to read content into an intermediary format known as PCC (PBS
 Common Captions), and then use one of the Writers to output the PCC into
 captions of your desired format.
