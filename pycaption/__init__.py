@@ -8,7 +8,7 @@ pycaption
 """
 
 __title__ = 'pycaption'
-__version__ = '0.2.8'
+__version__ = '0.2.9'
 __author__ = 'Joe Norton'
 __license__ = 'Apache 2.0'
 __copyright__ = 'Copyright 2012 PBS'
@@ -19,3 +19,10 @@ from .sami import SAMIReader, SAMIWriter
 from .srt import SRTReader, SRTWriter
 from .scc import SCCReader
 from .transcript import TranscriptWriter
+
+
+__all__ = [
+    'CaptionConverter', 'DFXPReader', 'DFXPWriter',
+    'SAMIReader', 'SAMIWriter', 'SRTReader', 'SRTWriter',
+    'SCCReader', 'TranscriptWriter'
+]
