@@ -20,10 +20,10 @@ class SAMIReaderTestCase(unittest.TestCase):
 
     def test_proper_timestamps(self):
         captions = SAMIReader().read(SAMPLE_SAMI)
-        paragraph = captions["captions"]["en-US"][0]
+        paragraph = captions["captions"]["en-US"][2]
 
-        self.assertEquals(9209000, paragraph[0])
-        self.assertEquals(12312000, paragraph[1])
+        self.assertEquals(17000000, paragraph[0])
+        self.assertEquals(18752000, paragraph[1])
 
     def test_6digit_color_code_from_6digit_input(self):
         captions = SAMIReader().read(SAMPLE_SAMI)

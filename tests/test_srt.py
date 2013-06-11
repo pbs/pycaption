@@ -3,6 +3,7 @@ import unittest
 from pycaption import SRTReader, SRTWriter
 
 from .samples import SAMPLE_SRT
+from .mixins import SRTTestingMixIn
 
 
 class SRTReaderTestCase(unittest.TestCase):
@@ -18,26 +19,17 @@ class SRTReaderTestCase(unittest.TestCase):
 
     def test_proper_timestamps(self):
         captions = SRTReader().read(SAMPLE_SRT)
-        paragraph = captions["captions"]["en"][0]
+        paragraph = captions["captions"]["en"][2]
 
-        self.assertEquals(9209000, paragraph[0])
-        self.assertEquals(12312000, paragraph[1])
+        self.assertEquals(17000000, paragraph[0])
+        self.assertEquals(18752000, paragraph[1])
 
 
-class SRTWriterTestCase(unittest.TestCase):
+class SRTWriterTestCase(unittest.TestCase, SRTTestingMixIn):
 
     def setUp(self):
         self.captions = SRTReader().read(SAMPLE_SRT)
 
-    def assertSRTEquals(self, first, second):
-        first_items = _extract_srt_captions(first)
-        second_items = _extract_srt_captions(second)
-        self.assertEquals(first_items, second_items)
-
     def test_write(self):
         results = SRTWriter().write(self.captions)
         self.assertSRTEquals(SAMPLE_SRT, results)
-
-
-def _extract_srt_captions(data):
-    return tuple(line.strip() for line in data.splitlines())

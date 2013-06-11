@@ -21,28 +21,28 @@ P { margin-left:  1pt;
 </P></SYNC>
 <SYNC start="12312"><P class="ENCC">&nbsp;</P></SYNC>
 <SYNC start="14848"><P class="ENCC">
-              MAN:<br/>
-         When we think<br/>
+    MAN:<br/>
+    When we think<br/>
     of E equals m c-squared,
 </P></SYNC>
-<SYNC start="17350"><P class="ENCC">
-we have this vision of Einstein
+<SYNC start="17000"><P class="ENCC">
+    we have this vision of Einstein
 </P></SYNC>
 <SYNC start="18752"><P class="ENCC">
-     as an old, wrinkly man<br/>
-        with white hair.
+    as an old, wrinkly man<br/>
+    with white hair.
 </P></SYNC>
 <SYNC start="20887"><P class="ENCC">
-             MAN 2:<br/>
+    MAN 2:<br/>
     E equals m c-squared is<br/>
-   not about an old Einstein.
+    not about an old Einstein.
 </P></SYNC>
-<SYNC start="30764"><P class="ENCC">
-             MAN 2:<br/>
-    It's all about...
+<SYNC start="26760"><P class="ENCC">
+    MAN 2:<br/>
+    It's all about an eternal Einstein.
 </P></SYNC>
-<SYNC start="40152"><P class="ENCC">
-    &lt;LAUGHING AND WHOOPS!&gt;
+<SYNC start="32200"><P class="ENCC">
+    &lt;LAUGHING &amp; WHOOPS!&gt;
 </P></SYNC>
 </BODY></SAMI>
 """
@@ -79,8 +79,8 @@ MAN 2:
 It's all about an eternal Einstein.
 
 7
-00:00:32,200 --> 00:00:39,439
-<LAUGHING AND WHOOPS!>
+00:00:32,200 --> 00:00:36,200
+<LAUGHING & WHOOPS!>
 """
 
 
@@ -90,26 +90,38 @@ SAMPLE_DFXP = """
     xmlns:tts="http://www.w3.org/ns/ttml#styling">
  <head>
   <styling>
-   <style id="p" tts:color="#ffffff" tts:fontfamily="Arial"
+   <style id="p" tts:color="#ffeedd" tts:fontfamily="Arial"
           tts:fontsize="10pt" tts:textAlign="center"/>
   </styling>
  </head>
  <body>
   <div xml:lang="en-US">
-   <p begin="00:00:02.268" end="00:00:05.000" style="p">
-    ♫Every day, when you're<br/>
-    walking down the street♫
+   <p begin="00:00:09.209" end="00:00:12.312" style="p">
+    ( clock ticking )
    </p>
-   <p begin="00:00:05.000" end="00:00:09.909" style="p">
-    ♫Everybody that you meet<br/>
-    has an original point of view♫
+   <p begin="00:00:14.848" end="00:00:17.000" style="p">
+    MAN:<br/>
+    When we think<br/>
+    of E equals m c-squared,
    </p>
-   <p begin="00:00:09.909" end="00:00:11.578" style="p">
-    (laughing)
+   <p begin="00:00:17.000" end="00:00:18.752" style="p">
+    we have this vision of Einstein
    </p>
-   <p begin="00:00:11.578" end="00:00:13.780" style="p">
-    ♫And I say, hey♫<br/>
-    Hey!
+   <p begin="00:00:18.752" end="00:00:20.887" style="p">
+    as an old, wrinkly man<br/>
+    with white hair.
+   </p>
+   <p begin="00:00:20.887" end="00:00:26.760" style="p">
+    MAN 2:<br/>
+    E equals m c-squared is<br/>
+    not about an old Einstein.
+   </p>
+   <p begin="00:00:26.760" end="00:00:32.200" style="p">
+    MAN 2:<br/>
+    It's all about an eternal Einstein.
+   </p>
+   <p begin="00:00:32.200" end="00:00:36.200" style="p">
+    &lt;LAUGHING &amp; WHOOPS!&gt;
    </p>
   </div>
  </body>

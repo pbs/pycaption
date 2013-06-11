@@ -413,7 +413,7 @@ class SAMIParser(HTMLParser):
 
     # override the parser's handling of data
     def handle_data(self, data):
-        self.sami += data.lstrip()
+        self.sami += data
         self.last_element = ''
 
     # override the parser's feed function

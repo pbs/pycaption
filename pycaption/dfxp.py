@@ -1,4 +1,7 @@
+from xml.sax.saxutils import escape
+
 from bs4 import BeautifulSoup
+
 from pycaption import BaseReader, BaseWriter
 from .util import format_timestamp
 
@@ -231,7 +234,7 @@ class DFXPWriter(BaseWriter):
 
         for element in caption:
             if element['type'] == 'text':
-                line += element['content'] + ' '
+                line += escape(element['content']) + ' '
 
             elif element['type'] == 'break':
                 line = line.rstrip() + '<br/>\n    '
