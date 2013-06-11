@@ -1,9 +1,8 @@
 import unittest
 
-from pycaption import DFXPReader, DFXPWriter
+from pycaption import DFXPReader
 
 from .samples import SAMPLE_DFXP
-from .mixins import XMLTestingMixIn
 
 
 class DFXPReaderTestCase(unittest.TestCase):
@@ -23,13 +22,3 @@ class DFXPReaderTestCase(unittest.TestCase):
 
         self.assertEquals(17000000, paragraph[0])
         self.assertEquals(18752000, paragraph[1])
-
-
-class DFXPWriterTestCase(unittest.TestCase, XMLTestingMixIn):
-
-    def setUp(self):
-        self.captions = DFXPReader().read(SAMPLE_DFXP)
-
-    def test_write(self):
-        results = DFXPWriter().write(self.captions)
-        self.assertXMLEquals(SAMPLE_DFXP, results)

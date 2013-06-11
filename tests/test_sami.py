@@ -1,8 +1,6 @@
 import unittest
 
-from bs4 import BeautifulSoup
-
-from pycaption import SAMIReader, SAMIWriter
+from pycaption import SAMIReader
 
 from .samples import SAMPLE_SAMI
 
@@ -36,31 +34,3 @@ class SAMIReaderTestCase(unittest.TestCase):
         p_style = captions["styles"]["p"]
 
         self.assertEquals("#ffeedd", p_style['color'])
-
-
-class SAMIWriterTestCase(unittest.TestCase):
-
-    def setUp(self):
-        self.captions = SAMIReader().read(SAMPLE_SAMI)
-
-    def assertSAMIEquals(self, first, second):
-        first_soup = BeautifulSoup(first)
-        second_soup = BeautifulSoup(second)
-
-        first_items = _extract_sami_captions(first_soup)
-        second_items = _extract_sami_captions(second_soup)
-        self.assertEquals(first_items, second_items)
-
-    def test_write(self):
-        results = SAMIWriter().write(self.captions)
-        self.assertSAMIEquals(SAMPLE_SAMI, results)
-
-
-def _extract_sami_captions(soup):
-    return tuple(
-        (caption.attrs['start'], _normalize_caption_text(caption.p.text))
-        for caption in soup.select('sync'))
-
-
-def _normalize_caption_text(value):
-    return value.strip().replace(' ', '')

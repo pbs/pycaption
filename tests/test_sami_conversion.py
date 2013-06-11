@@ -1,15 +1,22 @@
 import unittest
 
-from pycaption import SAMIReader, SRTWriter, DFXPWriter
+from pycaption import SAMIReader, SAMIWriter, SRTWriter, DFXPWriter
 
 from .samples import SAMPLE_SAMI, SAMPLE_SRT, SAMPLE_DFXP
-from .mixins import SRTTestingMixIn, XMLTestingMixIn
+from .mixins import SRTTestingMixIn, XMLTestingMixIn, SAMITestingMixIn
 
 
 class SAMIConversionTestCase(unittest.TestCase):
 
     def setUp(self):
         self.captions = SAMIReader().read(SAMPLE_SAMI)
+
+
+class SAMItoSAMITestCase(SAMIConversionTestCase, SAMITestingMixIn):
+
+    def test_sami_to_dfxp_conversion(self):
+        results = SAMIWriter().write(self.captions)
+        self.assertSAMIEquals(SAMPLE_SAMI, results)
 
 
 class SAMItoSRTTestCase(SAMIConversionTestCase, SRTTestingMixIn):
