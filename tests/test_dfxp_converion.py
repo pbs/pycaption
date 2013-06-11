@@ -3,7 +3,7 @@ import unittest
 from pycaption import DFXPReader, DFXPWriter, SRTWriter, SAMIWriter
 
 from .samples import SAMPLE_SAMI, SAMPLE_SRT, SAMPLE_DFXP
-from .mixins import SRTTestingMixIn, SAMITestingMixIn, XMLTestingMixIn
+from .mixins import SRTTestingMixIn, SAMITestingMixIn, DFXPTestingMixIn
 
 
 class DFXPConversionTestCase(unittest.TestCase):
@@ -12,11 +12,11 @@ class DFXPConversionTestCase(unittest.TestCase):
         self.captions = DFXPReader().read(SAMPLE_DFXP)
 
 
-class DFXPWriterTestCase(DFXPConversionTestCase, XMLTestingMixIn):
+class DFXPtoDFXPTestCase(DFXPConversionTestCase, DFXPTestingMixIn):
 
-    def test_write(self):
+    def test_dfxp_to_dfxp_conversion(self):
         results = DFXPWriter().write(self.captions)
-        self.assertXMLEquals(SAMPLE_DFXP, results)
+        self.assertDFXPEquals(SAMPLE_DFXP, results)
 
 
 class DFXPtoSRTTestCase(DFXPConversionTestCase, SRTTestingMixIn):
@@ -28,6 +28,6 @@ class DFXPtoSRTTestCase(DFXPConversionTestCase, SRTTestingMixIn):
 
 class DFXPtoSAMITestCase(DFXPConversionTestCase, SAMITestingMixIn):
 
-    def test_to_sami_conversion(self):
+    def test_dfxp_to_sami_conversion(self):
         results = SAMIWriter().write(self.captions)
         self.assertSAMIEquals(SAMPLE_SAMI, results)

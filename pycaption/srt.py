@@ -10,7 +10,7 @@ class SRTReader(BaseReader):
         else:
             return False
 
-    def read(self, content, lang='en'):
+    def read(self, content, lang='en-US'):
         inlines = content.splitlines()
         start_line = 0
         subdata = []

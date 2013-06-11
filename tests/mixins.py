@@ -18,14 +18,27 @@ class SRTTestingMixIn(object):
         self.assertEquals(first_items, second_items)
 
 
-class XMLTestingMixIn(object):
+class DFXPTestingMixIn(object):
     """
-    Provide specialized test case capabilities for asserting on XML content.
+    Provide specialized test case capabilities for asserting on DFXP content.
     """
 
-    def assertXMLEquals(self, first, second):
+    def _remove_styling(self, soup):
+        for style in soup('styling'):
+            style.extract()
+
+        for paragraph in soup('p'):
+            if 'style' in paragraph.attrs:
+                del paragraph.attrs['style']
+
+    def assertDFXPEquals(self, first, second, ignore_styling=False):
         first_soup = BeautifulSoup(first)
         second_soup = BeautifulSoup(second)
+
+        if ignore_styling:
+            self._remove_styling(first_soup)
+            self._remove_styling(second_soup)
+
         self.assertEquals(first_soup, second_soup)
 
 
