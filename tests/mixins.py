@@ -47,13 +47,9 @@ class SAMITestingMixIn(object):
     Provide specialized test case capabilities for asserting on SAMI content.
     """
 
-    def _normalize_sami_caption_text(self, text):
-        return text.strip().replace(' ', '-')
-
     def _extract_sami_captions(self, soup):
         return tuple(
-            (caption.attrs['start'],
-             self._normalize_sami_caption_text(caption.p.text))
+            (caption.attrs['start'], caption.p.text.strip())
             for caption in soup.select('sync'))
 
     def assertSAMIEquals(self, first, second):
