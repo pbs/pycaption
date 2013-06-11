@@ -1,42 +1,10 @@
-# -*- coding: utf-8 -*-
 import unittest
 
 from bs4 import BeautifulSoup
 
 from pycaption import DFXPReader, DFXPWriter
 
-
-SAMPLE_DFXP = """
-<?xml version="1.0" encoding="utf-8"?>
-<tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml"
-    xmlns:tts="http://www.w3.org/ns/ttml#styling">
- <head>
-  <styling>
-   <style id="p" tts:color="#ffffff" tts:fontfamily="Arial"
-          tts:fontsize="10pt" tts:textAlign="center"/>
-  </styling>
- </head>
- <body>
-  <div xml:lang="en-US">
-   <p begin="00:00:02.268" end="00:00:05.000" style="p">
-    ♫Every day, when you're<br/>
-    walking down the street♫
-   </p>
-   <p begin="00:00:05.000" end="00:00:09.909" style="p">
-    ♫Everybody that you meet<br/>
-    has an original point of view♫
-   </p>
-   <p begin="00:00:09.909" end="00:00:11.578" style="p">
-    (laughing)
-   </p>
-   <p begin="00:00:11.578" end="00:00:13.780" style="p">
-    ♫And I say, hey♫<br/>
-    Hey!
-   </p>
-  </div>
- </body>
-</tt>
-"""
+from .samples import SAMPLE_DFXP
 
 
 class DFXPReaderTestCase(unittest.TestCase):

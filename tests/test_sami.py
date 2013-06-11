@@ -1,52 +1,10 @@
-
-# -*- coding: utf-8 -*-
 import unittest
 
 from bs4 import BeautifulSoup
 
 from pycaption import SAMIReader, SAMIWriter
 
-
-SAMPLE_SAMI = """
-<SAMI><HEAD><TITLE>NOVA3213</TITLE><STYLE TYPE="text/css">
-<!--
-P { margin-left:  1pt;
-    margin-right: 1pt;
-    margin-bottom: 2pt;
-    margin-top: 2pt;
-    text-align: center;
-    font-size: 10pt;
-    font-family: Arial;
-    font-weight: normal;
-    font-style: normal;
-    color: #ffeedd; }
-
-.ENCC {Name: English; lang: en-US; SAMI_Type: CC;}
-
---></STYLE></HEAD><BODY>
-<SYNC start="9209"><P class="ENCC">
-       ( clock ticking )
-</P></SYNC>
-<SYNC start="12312"><P class="ENCC">&nbsp;</P></SYNC>
-<SYNC start="14848"><P class="ENCC">
-              MAN:<br/>
-         When we think<br/>
-    of E equals m c-squared,
-</P></SYNC>
-<SYNC start="17350"><P class="ENCC">
-we have this vision of Einstein
-</P></SYNC>
-<SYNC start="18752"><P class="ENCC">
-     as an old, wrinkly man<br/>
-        with white hair.
-</P></SYNC>
-<SYNC start="20887"><P class="ENCC">
-             MAN 2:<br/>
-    E equals m c-squared is<br/>
-   not about an old Einstein.
-</P></SYNC>
-</BODY></SAMI>
-"""
+from .samples import SAMPLE_SAMI
 
 
 class SAMIReaderTestCase(unittest.TestCase):
@@ -58,7 +16,7 @@ class SAMIReaderTestCase(unittest.TestCase):
         captions = SAMIReader().read(SAMPLE_SAMI)
 
         self.assertEquals(set(["captions", "styles"]), set(captions.keys()))
-        self.assertEquals(5, len(captions["captions"]["en-US"]))
+        self.assertEquals(7, len(captions["captions"]["en-US"]))
 
     def test_proper_timestamps(self):
         captions = SAMIReader().read(SAMPLE_SAMI)

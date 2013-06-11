@@ -2,6 +2,7 @@ from logging import FATAL
 from collections import deque
 from HTMLParser import HTMLParser, HTMLParseError
 from htmlentitydefs import name2codepoint
+from xml.sax.saxutils import escape
 
 from cssutils import parseString, log
 from bs4 import BeautifulSoup
@@ -271,7 +272,7 @@ class SAMIWriter(BaseWriter):
 
         for element in caption:
             if element['type'] == 'text':
-                line += element['content'] + ' '
+                line += escape(element['content']) + ' '
             elif element['type'] == 'break':
                 line = line.rstrip() + '<br/>\n    '
             elif element['type'] == 'style':

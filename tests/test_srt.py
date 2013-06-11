@@ -1,34 +1,8 @@
-
 import unittest
 
 from pycaption import SRTReader, SRTWriter
 
-
-SAMPLE_SRT = """1
-00:00:09,209 --> 00:00:12,312
-( clock ticking )
-
-2
-00:00:14,848 --> 00:00:17,000
-MAN:
-When we think
-of E equals m c-squared,
-
-3
-00:00:17,000 --> 00:00:18,752
-we have this vision of Einstein
-
-4
-00:00:18,752 --> 00:00:20,887
-as an old, wrinkly man
-with white hair.
-
-5
-00:00:20,887 --> 00:00:26,760
-MAN 2:
-E equals m c-squared is
-not about an old Einstein.
-"""
+from .samples import SAMPLE_SRT
 
 
 class SRTReaderTestCase(unittest.TestCase):
@@ -40,7 +14,7 @@ class SRTReaderTestCase(unittest.TestCase):
         captions = SRTReader().read(SAMPLE_SRT)
 
         self.assertEquals(set(["captions", "styles"]), set(captions.keys()))
-        self.assertEquals(5, len(captions["captions"]["en"]))
+        self.assertEquals(7, len(captions["captions"]["en"]))
 
     def test_proper_timestamps(self):
         captions = SRTReader().read(SAMPLE_SRT)
