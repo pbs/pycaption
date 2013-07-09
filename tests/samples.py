@@ -23,7 +23,7 @@ P { margin-left:  1pt;
 <SYNC start="14848"><P class="ENCC">
     MAN:<br/>
     When we think<br/>
-    of E equals m c-squared,
+    of "E equals m c-squared",
 </P></SYNC>
 <SYNC start="17000"><P class="ENCC">
     we have this vision of Einstein
@@ -56,7 +56,7 @@ SAMPLE_SRT = """1
 00:00:14,848 --> 00:00:17,000
 MAN:
 When we think
-of E equals m c-squared,
+of "E equals m c-squared",
 
 3
 00:00:17,000 --> 00:00:18,752
@@ -102,7 +102,7 @@ SAMPLE_DFXP = """
    <p begin="00:00:14.848" end="00:00:17.000" style="p">
     MAN:<br/>
     When we think<br/>
-    of E equals m c-squared,
+    of "E equals m c-squared",
    </p>
    <p begin="00:00:17.000" end="00:00:18.752" style="p">
     we have this vision of Einstein
