@@ -7,11 +7,11 @@ README_PATH = os.path.join(
     'README.rst')
 
 dependencies = [
-    'nltk',
-    'beautifulsoup4',
-    'lxml',
-    'cssutils',
-    'numpy'
+    'nltk==2.0.4',
+    'beautifulsoup4==4.2.1',
+    'lxml==3.2.3',
+    'cssutils==0.9.10',
+    'numpy==1.7.1'
 ]
 
 setup(
