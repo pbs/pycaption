@@ -1,6 +1,8 @@
-import nltk.data
 import os
-from pycaption import BaseWriter, CaptionData
+
+import nltk.data
+
+from pycaption import BaseWriter, CaptionNode
 
 
 class TranscriptWriter(BaseWriter):
@@ -14,8 +16,8 @@ class TranscriptWriter(BaseWriter):
         for lang in captions.get_languages():
             lang_transcript = '* %s Transcript *\n' % lang.upper()
 
-            for sub in captions.get_captions(lang):
-                lang_transcript = self._strip_text(sub.nodes, lang_transcript)
+            for caption in captions.get_captions(lang):
+                lang_transcript = self._strip_text(caption.nodes, lang_transcript)
 
             lang_transcript = '\n'.join(self.nltk.tokenize(lang_transcript))
             transcripts.append(lang_transcript)
@@ -24,6 +26,6 @@ class TranscriptWriter(BaseWriter):
 
     def _strip_text(self, elements, lang_transcript):
         for el in elements:
-            if el.type == CaptionData.TEXT:
+            if el.type == CaptionNode.TEXT:
                 lang_transcript += el.content
         return lang_transcript
