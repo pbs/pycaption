@@ -4,8 +4,8 @@ py-caption
 |Build Status|
 
 ``pycaption`` is a caption reading/writing module. Use one of the given
-Readers to read content into an intermediary format known as PCC (PBS
-Common Captions), and then use one of the Writers to output the PCC into
+Readers to read content into a CaptionSet object,
+and then use one of the Writers to output the CaptionSet into
 captions of your desired format.
 
 Turn a caption into multiple caption outputs:
@@ -43,9 +43,9 @@ Not sure what format the caption is in? Detect it:
 Supported Formats
 -----------------
 
-Read: - SCC - SAMI - SRT - DFXP
+Read: - DFXP/TTML - SAMI - SCC - SRT - WebVTT
 
-Write: - DFXP - SAMI - SRT - Transcript
+Write: - DFXP/TTML - SAMI - SRT - Transcript - WebVTT
 
 See the `examples
 folder <https://github.com/pbs/pycaption/tree/master/examples/>`__ for
@@ -136,74 +136,6 @@ format in a different way (more styling?)
 Simply follow the format of a current Reader or Writer, and edit to your
 heart's desire.
 
-PyCaps Format:
---------------
-
-The different Readers will return the captions in PBS Common Captions
-(PCC) format. The Writers will be expecting captions in PCC format as
-well.
-
-PCC format:
-
-::
-
-    {
-        "captions": {
-            lang: list of captions
-        }
-        "styles":{
-            style: styling
-        }
-    }
-
-Example PCC json:
-
-::
-
-    {
-        "captions": {
-            "en": [
-                [
-                    9209000,
-                    12312000,
-                    [
-                        {"type": "text", "content": "Line 1"},
-                        {"type": "break"},
-                        {"type": "style", "start": True, "content": {"italics": True}},
-                        {"type": "text", "content": "Line 2"},
-                        {"type": "style", "start": False, "content": {"italics": True}}
-                    ],
-                    {
-                        "class": "encc",
-                        "text-align": "right"
-                    }
-                ],
-                [
-                    14556000,
-                    18993000,
-                    [
-                        {"type": "text", "content": "Line 3, all by itself"}
-                    ],
-                    {
-                        "class": "encc",
-                        "italics": True
-                    }
-                ]
-            ]
-        },
-        "styles": {
-                "encc": {
-                    "lang": "en-US"
-                },
-                "p": {
-                    "color": "#fff",
-                    "font-size": "10pt",
-                    "font-family": "Arial",
-                    "text-align": "center"
-                }
-        }
-    }
-
 SAMI Reader / Writer :: `spec <http://msdn.microsoft.com/en-us/library/ms971327.aspx>`__
 ----------------------------------------------------------------------------------------
 
@@ -216,7 +148,7 @@ color
 If the SAMI file is not valid XML (e.g. unclosed tags), will still
 attempt to read it.
 
-DFXP Reader / Writer :: `spec <http://www.w3.org/TR/ttaf1-dfxp/>`__
+DFXP/TTML Reader / Writer :: `spec <http://www.w3.org/TR/ttaf1-dfxp/>`__
 -------------------------------------------------------------------
 
 The W3 standard. Supports multiple languages.
@@ -278,6 +210,14 @@ Supported Styling: - None
 
 The transcript writer uses natural sentence boundary detection
 algorithms to create the transcript.
+
+WebVTT Reader / Writer `spec <http://dev.w3.org/html5/webvtt/>`__
+-----------------------------------------------------------------
+
+Web Video Text Tracks format.
+
+Supported Styling - None (yet)
+
 
 License
 -------
