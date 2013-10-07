@@ -23,7 +23,7 @@ Turn a caption into multiple caption outputs:
     converter.read(srt_caps, SRTReader())
     print converter.write(SAMIWriter())
     print converter.write(DFXPWriter())
-    print converter.write(TranscriptWriter())
+    print converter.write(pycaption.transcript.TranscriptWriter())
 
 Not sure what format the caption is in? Detect it:
 

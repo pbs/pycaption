@@ -18,11 +18,9 @@ from .dfxp import DFXPWriter, DFXPReader
 from .sami import SAMIReader, SAMIWriter
 from .srt import SRTReader, SRTWriter
 from .scc import SCCReader
-from .transcript import TranscriptWriter
 
 
 __all__ = [
     'CaptionConverter', 'DFXPReader', 'DFXPWriter',
-    'SAMIReader', 'SAMIWriter', 'SRTReader', 'SRTWriter',
-    'SCCReader', 'TranscriptWriter'
+    'SAMIReader', 'SAMIWriter', 'SRTReader', 'SRTWriter', 'SCCReader'
 ]
