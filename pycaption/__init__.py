@@ -8,7 +8,7 @@ pycaption
 """
 
 __title__ = 'pycaption'
-__version__ = '0.2.10'
+__version__ = '0.2.12'
 __author__ = 'Joe Norton'
 __license__ = 'Apache 2.0'
 __copyright__ = 'Copyright 2012 PBS'
@@ -18,9 +18,11 @@ from .dfxp import DFXPWriter, DFXPReader
 from .sami import SAMIReader, SAMIWriter
 from .srt import SRTReader, SRTWriter
 from .scc import SCCReader
+from .webvtt import WebVTTReader, WebVTTWriter
 
 
 __all__ = [
     'CaptionConverter', 'DFXPReader', 'DFXPWriter',
-    'SAMIReader', 'SAMIWriter', 'SRTReader', 'SRTWriter', 'SCCReader'
+    'SAMIReader', 'SAMIWriter', 'SRTReader', 'SRTWriter', 
+    'SCCReader', 'WebVTTReader', 'WebVTTWriter'
 ]
