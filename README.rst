@@ -29,6 +29,20 @@ Not sure what format the caption is in? Detect it:
 
 ::
 
+    from pycaption import detect_format
+
+    caps = '''1
+    00:00:01,500 --> 00:00:12,345
+    Small caption'''
+
+    reader = detect_format(caps)
+    if reader:
+        print SAMIWriter().write(reader().read(caps))
+
+Or if you expect to have only a subset of the supported input formats:
+
+::
+
     caps = '''1
     00:00:01,500 --> 00:00:12,345
     Small caption'''

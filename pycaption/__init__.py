@@ -23,6 +23,24 @@ from .webvtt import WebVTTReader, WebVTTWriter
 
 __all__ = [
     'CaptionConverter', 'DFXPReader', 'DFXPWriter',
-    'SAMIReader', 'SAMIWriter', 'SRTReader', 'SRTWriter', 
-    'SCCReader', 'WebVTTReader', 'WebVTTWriter'
+    'SAMIReader', 'SAMIWriter', 'SRTReader', 'SRTWriter',
+    'SCCReader', 'WebVTTReader', 'WebVTTWriter',
+    'detect_format'
 ]
+
+
+SUPPORTED_READERS = (
+    DFXPReader, WebVTTReader, SAMIReader, SRTReader, SCCReader)
+
+
+def detect_format(caps):
+    """
+    Detect the format of the provided caption string.
+
+    :returns: the reader class for the detected format.
+    """
+    for reader in SUPPORTED_READERS:
+        if reader().detect(caps):
+            return reader
+
+    return None
