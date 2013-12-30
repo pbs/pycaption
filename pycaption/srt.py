@@ -57,14 +57,12 @@ class SRTReader(BaseReader):
     def _find_text_line(self, start_line, lines):
         end_line = start_line + 1
 
-        while end_line < (len(lines) + 1):
-            try:
-                int(lines[end_line])
-                break
-            except (ValueError, IndexError):
-                end_line += 1
+        while end_line < len(lines):
+            if lines[end_line].strip() == "":
+                return end_line + 1    
+            end_line += 1
 
-        return end_line
+        return end_line + 1
 
 
 class SRTWriter(BaseWriter):
