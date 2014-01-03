@@ -30,4 +30,8 @@ class SRTtoDFXPTestCase(SRTConversionTestCase, DFXPTestingMixIn):
 
     def test_srt_to_dfxp_conversion(self):
         results = DFXPWriter().write(self.captions)
-        self.assertDFXPEquals(SAMPLE_DFXP, results, ignore_styling=True)
+        self.assertDFXPEquals(
+            SAMPLE_DFXP,
+            results,
+            ignore_styling=True,
+            ignore_spans=True)

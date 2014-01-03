@@ -31,13 +31,30 @@ class DFXPTestingMixIn(object):
             if 'style' in paragraph.attrs:
                 del paragraph.attrs['style']
 
-    def assertDFXPEquals(self, first, second, ignore_styling=False):
+    def _remove_spans(self, soup):
+        for span in soup('span'):
+            span.unwrap()
+
+    def _trim_text(self, soup):
+        for paragraph in soup('p'):
+            paragraph.string = paragraph.text.strip()
+
+    def assertDFXPEquals(self, first, second,
+                         ignore_styling=False,
+                         ignore_spans=False):
         first_soup = BeautifulSoup(first)
         second_soup = BeautifulSoup(second)
 
         if ignore_styling:
             self._remove_styling(first_soup)
             self._remove_styling(second_soup)
+
+        if ignore_spans:
+            self._remove_spans(first_soup)
+            self._remove_spans(second_soup)
+
+        self._trim_text(first_soup)
+        self._trim_text(second_soup)
 
         self.assertEquals(first_soup, second_soup)
 

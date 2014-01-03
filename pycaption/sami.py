@@ -89,8 +89,8 @@ class SAMIReader(BaseReader):
             # recursively call function for any children elements
             for a in tag.contents:
                 self._translate_tag(a)
-            self.line.append({'type': 'style', 'start': False,
-                              'content': {'italics': True}})
+            self.line.append(
+                CaptionNode.create_style(False, {'italics': True}))
         elif tag.name == 'span':
             self._translate_span(tag)
         else:
@@ -284,7 +284,7 @@ class SAMIWriter(BaseWriter):
         if node.start:
             if self.open_span == True:
                 line = line.rstrip() + '</span> '
-            line = self._recreate_span(line, node['content'])
+            line = self._recreate_span(line, node.content)
         else:
             if self.open_span == True:
                 line = line.rstrip() + '</span> '

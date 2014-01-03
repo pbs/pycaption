@@ -26,7 +26,7 @@ P { margin-left:  1pt;
     of "E equals m c-squared",
 </P></SYNC>
 <SYNC start="17000"><P class="ENCC">
-    we have this vision of Einstein
+  <SPAN Style="text-align:right;">we have this vision of Einstein</SPAN>
 </P></SYNC>
 <SYNC start="18752"><P class="ENCC">
     as an old, wrinkly man<br/>
@@ -105,7 +105,7 @@ SAMPLE_DFXP = """
     of "E equals m c-squared",
    </p>
    <p begin="00:00:17.000" end="00:00:18.752" style="p">
-    we have this vision of Einstein
+    <span tts:textalign="right">we have this vision of Einstein</span>
    </p>
    <p begin="00:00:18.752" end="00:00:20.887" style="p">
     as an old, wrinkly man<br/>
