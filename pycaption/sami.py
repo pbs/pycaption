@@ -4,7 +4,7 @@ from HTMLParser import HTMLParser, HTMLParseError
 from logging import FATAL
 from xml.sax.saxutils import escape
 
-from cssutils import parseString, log
+from cssutils import parseString, log, css as cssutils_css
 from bs4 import BeautifulSoup, NavigableString
 
 from pycaption import BaseReader, BaseWriter, CaptionSet, Caption, CaptionNode
@@ -475,7 +475,9 @@ class SAMIParser(HTMLParser):
                     new_style['font-size'] = prop.value
                     not_empty = True
                 if prop.name == 'color':
-                    new_style['color'] = _3digit_to_6digit_color(prop.value)
+                    cv = cssutils_css.ColorValue(prop.value)
+                    # Code for RGB to hex conversion comes from http://bit.ly/1kwfBnQ
+                    new_style['color'] = "#%02x%02x%02x" % (cv.red, cv.green, cv.blue)
                     not_empty = True
                 if prop.name == 'lang':
                     new_style['lang'] = prop.value
