@@ -83,6 +83,34 @@ It's all about an eternal Einstein.
 <LAUGHING & WHOOPS!>
 """
 
+SAMPLE_SRT_NUMERIC = """35
+00:00:32,290 --> 00:00:32,890
+TO  FIND  HIM.            IF
+
+36
+00:00:32,990 --> 00:00:33,590
+YOU  HAVE  ANY  INFORMATION
+
+37
+00:00:33,690 --> 00:00:34,290
+THAT  CAN  HELP,  CALL  THE
+
+38
+00:00:34,390 --> 00:00:35,020
+STOPPERS  LINE.          THAT
+
+39
+00:00:35,120 --> 00:00:35,760
+NUMBER  IS  662-429-84-77.
+
+40
+00:00:35,860 --> 00:00:36,360
+STD  OUT
+
+41
+00:00:36,460 --> 00:02:11,500
+3
+"""
 
 SAMPLE_DFXP = """
 <?xml version="1.0" encoding="utf-8"?>
@@ -125,5 +153,4 @@ SAMPLE_DFXP = """
    </p>
   </div>
  </body>
-</tt>
-"""
+</tt>"""
