@@ -2,7 +2,7 @@ import unittest
 
 from pycaption import SRTReader
 
-from .samples import SAMPLE_SRT
+from .samples import SAMPLE_SRT, SAMPLE_SRT_NUMERIC
 
 
 class SRTReaderTestCase(unittest.TestCase):
@@ -21,3 +21,7 @@ class SRTReaderTestCase(unittest.TestCase):
 
         self.assertEquals(17000000, paragraph.start)
         self.assertEquals(18752000, paragraph.end)
+
+    def test_numeric_captions(self):
+        captions = SRTReader().read(SAMPLE_SRT_NUMERIC)
+        self.assertEquals(7, len(captions.get_captions("en-US")))
