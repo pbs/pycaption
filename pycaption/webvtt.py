@@ -43,7 +43,8 @@ class WebVTTReader(SRTReader):
                     open_note = False
             else:
                 if line == '':
-                    # skip blank lines in excess of 1, and blank lines at start of file
+                    # skip blank lines in excess of 1, and blank lines at start
+                    # of file
                     if new_lines and not last_line_blank:
                         last_line_blank = True
                         new_lines.append(line)
@@ -66,7 +67,8 @@ class WebVTTReader(SRTReader):
                         end = '00:%s' % end
 
                     new_lines.append('%s --> %s' % (start, end))
-                elif line[0].isdigit() and (not new_lines or new_lines[-1] == ''):
+                elif (line[0].isdigit()
+                        and (not new_lines or new_lines[-1] == '')):
                     new_lines.append(line)
                 else:
                     # remove cue payload styles
@@ -132,5 +134,3 @@ class WebVTTWriter(BaseWriter):
                 s += u'\n'
 
         return s
-
-

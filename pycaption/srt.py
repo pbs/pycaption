@@ -31,8 +31,8 @@ class SRTReader(BaseReader):
             for line in lines[start_line + 2:end_line - 1]:
                 # skip extra blank lines
                 if not caption.nodes or line != '':
-                  caption.nodes.append(CaptionNode.create_text(line))
-                  caption.nodes.append(CaptionNode.create_break())
+                    caption.nodes.append(CaptionNode.create_text(line))
+                    caption.nodes.append(CaptionNode.create_break())
 
             # remove last line break from end of caption list
             caption.nodes.pop()
@@ -60,7 +60,7 @@ class SRTReader(BaseReader):
 
         while end_line < len(lines):
             if lines[end_line].strip() == "":
-                return end_line + 1    
+                return end_line + 1
             end_line += 1
 
         return end_line + 1
@@ -71,7 +71,9 @@ class SRTWriter(BaseWriter):
         srt_captions = []
 
         for lang in captions.get_languages():
-            srt_captions.append(self._recreate_lang(captions.get_captions(lang)))
+            srt_captions.append(
+                self._recreate_lang(captions.get_captions(lang))
+            )
 
         caption_content = 'MULTI-LANGUAGE SRT\n'.join(srt_captions)
         return self.force_byte_string(caption_content)
@@ -94,7 +96,7 @@ class SRTWriter(BaseWriter):
             srt += '\n\n'
             count += 1
 
-        return srt[:-1] # remove unwanted newline at end of file
+        return srt[:-1]  # remove unwanted newline at end of file
 
     def _recreate_line(self, srt, line):
         if line.type == CaptionNode.TEXT:
