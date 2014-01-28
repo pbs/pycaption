@@ -26,6 +26,7 @@ class DFXPReader(BaseReader):
             return False
 
     def read(self, content):
+        content = self.force_byte_string(content)
         dfxp_soup = BeautifulSoup(content)
         captions = CaptionSet()
 
@@ -193,7 +194,8 @@ class DFXPWriter(BaseWriter):
 
             body.append(div)
 
-        return dfxp.prettify(formatter=None).encode("UTF-8")
+        caption_content = dfxp.prettify(formatter=None)
+        return self.force_byte_string(caption_content)
 
     # force the DFXP to only have one language, trying to match on "force"
     def _force_language(self, force, langs):

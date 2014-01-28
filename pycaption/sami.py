@@ -32,6 +32,7 @@ class SAMIReader(BaseReader):
             return False
 
     def read(self, content):
+        content = self.force_byte_string(content)
         content, doc_styles, doc_langs = SAMIParser().feed(content)
         sami_soup = BeautifulSoup(content)
         captions = CaptionSet()
@@ -167,7 +168,8 @@ class SAMIWriter(BaseWriter):
                 sami = self._recreate_p_tag(caption, sami, lang, primary, captions)
 
         a = sami.prettify(formatter=None).split('\n')
-        return '\n'.join(a[1:])
+        caption_content = '\n'.join(a[1:])
+        return self.force_byte_string(caption_content)
 
     def _recreate_p_tag(self, caption, sami, lang, primary, captions):
         time = caption.start / 1000

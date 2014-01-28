@@ -30,10 +30,26 @@ class BaseReader(object):
     def read(self, content):
         return CaptionSet()
 
+    def force_byte_string(self, content):
+        try:
+            return content.encode('UTF-8')
+        except UnicodeEncodeError:
+            raise RuntimeError('Invalid content encoding')
+        except UnicodeDecodeError:
+            return content
+
 
 class BaseWriter(object):
     def write(self, content):
         return content
+
+    def force_byte_string(self, content):
+        try:
+            return content.encode('UTF-8')
+        except UnicodeEncodeError:
+            raise RuntimeError('Invalid content encoding')
+        except UnicodeDecodeError:
+            return content
 
 
 class Style(object):
