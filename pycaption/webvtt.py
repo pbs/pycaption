@@ -10,10 +10,11 @@ class WebVTTReader(SRTReader):
 
     def read(self, content, lang='en-US'):
 
-        # TODO: styles. Currently, we clean the WebVTT file to look like an SRT file;
-        # longterm, it makes sense to parse the styles.
-        # When we parse styles, it may make sense t
+        # TODO: styles. Currently, we clean the WebVTT file to look like an SRT
+        # file; longterm, it makes sense to parse the styles.  When we parse
+        # styles, it may make sense t
 
+        content = self.force_byte_string(content)
         cleaned_content = self._clean(content)
         return super(WebVTTReader, self).read(cleaned_content)
 
@@ -42,7 +43,8 @@ class WebVTTReader(SRTReader):
                     open_note = False
             else:
                 if line == '':
-                    # skip blank lines in excess of 1, and blank lines at start of file
+                    # skip blank lines in excess of 1, and blank lines at start
+                    # of file
                     if new_lines and not last_line_blank:
                         last_line_blank = True
                         new_lines.append(line)
@@ -65,7 +67,8 @@ class WebVTTReader(SRTReader):
                         end = '00:%s' % end
 
                     new_lines.append('%s --> %s' % (start, end))
-                elif line[0].isdigit() and (not new_lines or new_lines[-1] == ''):
+                elif (line[0].isdigit()
+                        and (not new_lines or new_lines[-1] == '')):
                     new_lines.append(line)
                 else:
                     # remove cue payload styles
@@ -84,12 +87,11 @@ class WebVTTWriter(BaseWriter):
         output = self.HEADER
 
         if caption_set.is_empty():
-            return output.encode("UTF-8")
+            return self.force_byte_string(output)
 
-        # TODO: styles. These go into a separate CSS file, which doesn't
-        # really fit the API here. Figure that out.
-        # Though some style stuff can be done in-line.
-        # This format is a little bit crazy.
+        # TODO: styles. These go into a separate CSS file, which doesn't really
+        # fit the API here. Figure that out.  Though some style stuff can be
+        # done in-line.  This format is a little bit crazy.
 
         # WebVTT's language support seems to be a bit crazy, so let's just
         # support a single one for now.
@@ -98,7 +100,7 @@ class WebVTTWriter(BaseWriter):
             output += self._write_caption(caption)
             output += '\n'
 
-        return output.encode("UTF-8")
+        return self.force_byte_string(output)
 
     def _timestamp(self, ts):
         ts = float(ts)/1000000
@@ -132,5 +134,3 @@ class WebVTTWriter(BaseWriter):
                 s += u'\n'
 
         return s
-
-

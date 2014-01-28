@@ -1,6 +1,5 @@
-from xml.sax.saxutils import escape
-
 from bs4 import BeautifulSoup, NavigableString
+from xml.sax.saxutils import escape
 
 from pycaption import BaseReader, BaseWriter, CaptionSet, Caption, CaptionNode
 
@@ -26,6 +25,7 @@ class DFXPReader(BaseReader):
             return False
 
     def read(self, content):
+        content = self.force_byte_string(content)
         dfxp_soup = BeautifulSoup(content)
         captions = CaptionSet()
 
@@ -152,7 +152,8 @@ class DFXPReader(BaseReader):
             new_caps = captions[:1]
 
             for caption in captions[1:]:
-                if caption.start == new_caps[-1].start and caption.end == new_caps[-1].end:
+                if (caption.start == new_caps[-1].start
+                        and caption.end == new_caps[-1].end):
                     new_caps[-1].nodes.append(CaptionNode.create_break())
                     new_caps[-1].nodes.extend(caption.nodes)
                 else:
@@ -193,7 +194,8 @@ class DFXPWriter(BaseWriter):
 
             body.append(div)
 
-        return dfxp.prettify(formatter=None).encode("UTF-8")
+        caption_content = dfxp.prettify(formatter=None)
+        return self.force_byte_string(caption_content)
 
     # force the DFXP to only have one language, trying to match on "force"
     def _force_language(self, force, langs):
@@ -246,7 +248,8 @@ class DFXPWriter(BaseWriter):
         if node.start:
             styles = ''
 
-            for style, value in self._recreate_style(node.content, dfxp).items():
+            content_with_style = self._recreate_style(node.content, dfxp)
+            for style, value in content_with_style.items():
                 styles += ' %s="%s"' % (style, value)
 
             if styles:

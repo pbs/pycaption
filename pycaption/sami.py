@@ -32,6 +32,7 @@ class SAMIReader(BaseReader):
             return False
 
     def read(self, content):
+        content = self.force_byte_string(content)
         content, doc_styles, doc_langs = SAMIParser().feed(content)
         sami_soup = BeautifulSoup(content)
         captions = CaptionSet()
@@ -164,16 +165,19 @@ class SAMIWriter(BaseWriter):
             if primary is None:
                 primary = lang
             for caption in captions.get_captions(lang):
-                sami = self._recreate_p_tag(caption, sami, lang, primary, captions)
+                sami = self._recreate_p_tag(
+                    caption, sami, lang, primary, captions)
 
         a = sami.prettify(formatter=None).split('\n')
-        return '\n'.join(a[1:])
+        caption_content = '\n'.join(a[1:])
+        return self.force_byte_string(caption_content)
 
     def _recreate_p_tag(self, caption, sami, lang, primary, captions):
         time = caption.start / 1000
 
         if self.last_time and time != self.last_time:
-            sami = self._recreate_blank_tag(sami, caption, lang, primary, captions)
+            sami = self._recreate_blank_tag(
+                sami, caption, lang, primary, captions)
 
         self.last_time = caption.end / 1000
 
@@ -183,7 +187,7 @@ class SAMIWriter(BaseWriter):
 
         p_style = ''
         for attr, value in self._recreate_style(caption.style).items():
-          p_style += '%s:%s;' % (attr, value)
+            p_style += '%s:%s;' % (attr, value)
         if p_style:
             p['p_style'] = p_style
 
@@ -282,11 +286,11 @@ class SAMIWriter(BaseWriter):
 
     def _recreate_line_style(self, line, node):
         if node.start:
-            if self.open_span == True:
+            if self.open_span:
                 line = line.rstrip() + '</span> '
             line = self._recreate_span(line, node.content)
         else:
-            if self.open_span == True:
+            if self.open_span:
                 line = line.rstrip() + '</span> '
                 self.open_span = False
 
@@ -476,8 +480,10 @@ class SAMIParser(HTMLParser):
                     not_empty = True
                 if prop.name == 'color':
                     cv = cssutils_css.ColorValue(prop.value)
-                    # Code for RGB to hex conversion comes from http://bit.ly/1kwfBnQ
-                    new_style['color'] = "#%02x%02x%02x" % (cv.red, cv.green, cv.blue)
+                    # Code for RGB to hex conversion comes from
+                    # http://bit.ly/1kwfBnQ
+                    new_style['color'] = "#%02x%02x%02x" % (
+                        cv.red, cv.green, cv.blue)
                     not_empty = True
                 if prop.name == 'lang':
                     new_style['lang'] = prop.value
@@ -504,4 +510,3 @@ class SAMIParser(HTMLParser):
 
 class SAMIReaderError(Exception):
     pass
-

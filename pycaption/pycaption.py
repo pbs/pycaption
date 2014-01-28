@@ -30,10 +30,26 @@ class BaseReader(object):
     def read(self, content):
         return CaptionSet()
 
+    def force_byte_string(self, content):
+        try:
+            return content.encode('UTF-8')
+        except UnicodeEncodeError:
+            raise RuntimeError('Invalid content encoding')
+        except UnicodeDecodeError:
+            return content
+
 
 class BaseWriter(object):
     def write(self, content):
         return content
+
+    def force_byte_string(self, content):
+        try:
+            return content.encode('UTF-8')
+        except UnicodeEncodeError:
+            raise RuntimeError('Invalid content encoding')
+        except UnicodeDecodeError:
+            return content
 
 
 class Style(object):
@@ -89,30 +105,31 @@ class Caption(object):
         return len(self.nodes) == 0
 
     def format_start(self, msec_separator=None):
-      """
-      Format the start time value in milliseconds into a string value suitable
-      for some of the supported output formats (ex. SRT, DFXP).
-      """
-      return self._format_timestamp(self.start, msec_separator)
+        """
+        Format the start time value in milliseconds into a string
+        value suitable for some of the supported output formats (ex.
+        SRT, DFXP).
+        """
+        return self._format_timestamp(self.start, msec_separator)
 
     def format_end(self, msec_separator=None):
-      """
-      Format the end time value in milliseconds into a string value suitable
-      for some of the supported output formats (ex. SRT, DFXP).
-      """
-      return self._format_timestamp(self.end, msec_separator)
+        """
+        Format the end time value in milliseconds into a string value suitable
+        for some of the supported output formats (ex. SRT, DFXP).
+        """
+        return self._format_timestamp(self.end, msec_separator)
 
     def _format_timestamp(self, value, msec_separator=None):
-      datetime_value = timedelta(milliseconds=(int(value / 1000)))
+        datetime_value = timedelta(milliseconds=(int(value / 1000)))
 
-      str_value = str(datetime_value)[:11]
-      if not datetime_value.microseconds:
-        str_value += '.000'
+        str_value = str(datetime_value)[:11]
+        if not datetime_value.microseconds:
+            str_value += '.000'
 
-      if msec_separator is not None:
-        str_value = str_value.replace(".", msec_separator)
+        if msec_separator is not None:
+            str_value = str_value.replace(".", msec_separator)
 
-      return '0' + str_value
+        return '0' + str_value
 
 
 class CaptionSet(object):
@@ -148,23 +165,24 @@ class CaptionSet(object):
         self._styles = styles
 
     def is_empty(self):
-        return all([len(captions) == 0 for captions in self._captions.values()])
+        return all(
+            [len(captions) == 0 for captions in self._captions.values()]
+        )
 
     def adjust_caption_timing(self, offset=0, rate_skew=1.0):
-      """
-      Adjust the timing according to offset and rate_skew.
-      Skew is applied first, then offset.
+        """
+        Adjust the timing according to offset and rate_skew.
+        Skew is applied first, then offset.
 
-      e.g. if skew == 1.1, and offset is 5, a caption originally displayed from 10-11 seconds
-      would instead be at 16-17.1
-      """
-      for lang in self.get_languages():
-        captions = self.get_captions(lang)
-        out_captions = []
-        for caption in captions:
-          caption.start = caption.start * rate_skew + offset
-          caption.end = caption.end * rate_skew + offset
-          if caption.start >= 0:
-            out_captions.append(caption)
-        self.set_captions(lang, out_captions)
-
+        e.g. if skew == 1.1, and offset is 5, a caption originally
+        displayed from 10-11 seconds would instead be at 16-17.1
+        """
+        for lang in self.get_languages():
+            captions = self.get_captions(lang)
+            out_captions = []
+            for caption in captions:
+                caption.start = caption.start * rate_skew + offset
+                caption.end = caption.end * rate_skew + offset
+                if caption.start >= 0:
+                    out_captions.append(caption)
+            self.set_captions(lang, out_captions)
