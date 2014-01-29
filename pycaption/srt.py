@@ -16,7 +16,7 @@ class SRTReader(BaseReader):
         captions = []
 
         while start_line < len(lines):
-            if not lines[start_line].isdigit():
+            if not lines[start_line].strip().isdigit():
                 break
 
             caption = Caption()
