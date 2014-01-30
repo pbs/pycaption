@@ -150,13 +150,13 @@ class CaptionSet(object):
         return self._captions.keys()
 
     def get_captions(self, lang):
-        return self._captions[lang]
+        return self._captions.get(lang, [])
 
     def add_style(self, id, style):
         self._styles[id] = style
 
     def get_style(self, style):
-        return self._styles.get(style)
+        return self._styles.get(style, [])
 
     def get_styles(self):
         return self._styles.items()
