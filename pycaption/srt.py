@@ -60,7 +60,10 @@ class SRTReader(BaseReader):
         while end_line < (len(lines) + 1):
             try:
                 int(lines[end_line])
-                break
+                if "-->" in lines[end_line - 1]:
+                    end_line += 1
+                else:
+                    break
             except (ValueError, IndexError):
                 end_line += 1
 
