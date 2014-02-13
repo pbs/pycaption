@@ -940,17 +940,22 @@ class SCCReader(BaseReader):
     # convert SCC timestamp into total microseconds
     def _translate_time(self, stamp):
         if ';' in stamp:
-            frames_per_second = 30.00
+            # Drop-frame timebase runs at the same rate as wall clock
+            seconds_per_timestamp_second = 1.0
         else:
-            frames_per_second = 29.97
+            # Non-drop-frame timebase runs "slow"
+            # 1 second of timecode is longer than an actual second (1.001s)
+            seconds_per_timestamp_second = 1001.0 / 1000.0
 
         timesplit = stamp.replace(';', ':').split(':')
 
-        microseconds = (int(timesplit[0]) * 3600000000 +
-                        int(timesplit[1]) * 60000000 +
-                        int(timesplit[2]) * 1000000 +
-                        (int(timesplit[3]) / frames_per_second * 1000000) -
-                        self.offset)
+        timestamp_seconds = (int(timesplit[0]) * 3600 +
+                             int(timesplit[1]) * 60 +
+                             int(timesplit[2]) +
+                             int(timesplit[3]) / 30.0)
+
+        seconds = timestamp_seconds * seconds_per_timestamp_second
+        microseconds = seconds * 1000 * 1000 - self.offset
 
         if microseconds < 0:
             microseconds = 0
