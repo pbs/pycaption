@@ -2,8 +2,11 @@
 # -*- coding: utf-8 -*-
 
 import re
+import math
+import string
+import textwrap
 
-from pycaption import BaseReader, Caption, CaptionSet, CaptionNode
+from pycaption import BaseReader, BaseWriter, Caption, CaptionSet, CaptionNode
 
 COMMANDS = {
     '9420': u'',
@@ -735,6 +738,8 @@ EXTENDED_CHARS = {
     '13bf': u'┘',
 }
 
+HEADER = 'Scenarist_SCC V1.0'
+
 
 class SCCReader(BaseReader):
     def __init__(self, *args, **kw):
@@ -753,7 +758,7 @@ class SCCReader(BaseReader):
 
     def detect(self, content):
         lines = content.splitlines()
-        if lines[0] == 'Scenarist_SCC V1.0':
+        if lines[0] == HEADER:
             return True
         else:
             return False
@@ -1066,3 +1071,130 @@ class SCCReader(BaseReader):
             self.scc[-1].end = self.paint_time
         except IndexError:
             pass
+
+# Cursor positioning codes
+PAC_HIGH_BYTE_BY_ROW = ['xx','91','91','92','92','15','15','16','16','97','97','10','13','13','94','94']
+PAC_LOW_BYTE_BY_ROW = ['xx','d0','70','d0','70','d0','70','d0','70','d0','70','d0','d0','70','d0','70']
+
+# Inverted character lookup
+CHARACTER_TO_CODE = {character: code for code, character in CHARACTERS.iteritems()}
+CHARACTER_TO_CODE.update({character: code for code, character in EXTENDED_CHARS.iteritems()})
+CHARACTER_TO_CODE.update({character: code for code, character in SPECIAL_CHARS.iteritems()})
+
+# Time to transmit a single codeword = 1 second / 29.97
+MICROSECONDS_PER_CODEWORD = 1000.0 * 1000.0 / (30.0 * 1000.0 / 1001.0)
+
+class SCCWriter(BaseWriter):
+
+    def __init__(self, *args, **kw):
+        pass
+
+    def write(self, caption_set):
+        output = HEADER + '\n\n'
+
+        if caption_set.is_empty():
+            return self.force_byte_string(output)
+
+        # Only support one language.
+        lang = caption_set.get_languages()[0]
+        captions = caption_set.get_captions(lang)
+
+        # PASS 1: compute codes for each caption
+        codes = [(self._text_to_code(caption), caption.start, caption.end)
+                 for caption in captions]
+
+        # PASS 2:
+        # Advance start times so as to have time to write to the pop-on
+        # buffer; possibly remove the previous clear-screen command
+        for index, (code, start, end) in enumerate(codes):
+            code_words = len(code) / 5 + 8
+            code_time_microseconds = code_words * MICROSECONDS_PER_CODEWORD
+            code_start = start - code_time_microseconds
+            if index == 0:
+                continue
+            previous_code, previous_start, previous_end = codes[index-1]
+            if previous_end + 3 * MICROSECONDS_PER_CODEWORD >= code_start:
+                codes[index-1] = (previous_code, previous_start, None)
+            codes[index] = (code, code_start, end)
+
+        # PASS 3:
+        # Write captions.
+        for (code, start, end) in codes:
+            output += ('%s\t' % self._format_timestamp(start))
+            output += '94ae 94ae 9420 9420 '
+            output += code
+            output += '942c 942c 942f 942f\n\n'
+            if end != None:
+                output += '%s\t942c 942c\n\n' % self._format_timestamp(end)
+   
+        return self.force_byte_string(output)
+
+
+    # Wrap lines at 32 chars
+    def _layout_line(self, caption):
+        def caption_node_to_text(caption_node):
+            if caption_node.type == CaptionNode.TEXT:
+                return caption_node.content
+            elif caption_node.type == CaptionNode.BREAK:
+                return '\n'
+        caption_text = ''.join([caption_node_to_text(node)
+                                for node in caption.nodes])
+        inner_lines = string.split(caption_text, '\n')
+        inner_lines_laid_out = [textwrap.fill(x, 32) for x in inner_lines]
+        return '\n'.join(inner_lines_laid_out)
+
+    def _maybe_align(self, code): 
+        # Finish a half-word with a no-op so we can move to a full word
+        if len(code) % 5 == 2:
+            code += '80 '
+        return code
+
+    def _maybe_space(self, code):
+        if len(code) % 5 == 4:
+            code += ' '
+        return code
+
+    def _print_character(self, code, char):
+        char_code = CHARACTER_TO_CODE[char]
+        if char_code == None:
+            char_code = '91b6' # Use £ as "unknown character" symbol
+        if len(char_code) == 2:
+            return code + char_code
+        elif len(char_code) == 4:
+            return self._maybe_align(code) + char_code
+        else:
+            # This should not happen!
+            return code
+
+    def _text_to_code(self, s):
+        code = ''
+        lines = string.split(self._layout_line(s), '\n')
+        for row, line in enumerate(lines):
+            row = 16 - len(lines) + row
+            # Move cursor to column 0 of the destination row
+            for _ in range(2):
+                code += ('%s%s ' % (PAC_HIGH_BYTE_BY_ROW[row],
+                                    PAC_LOW_BYTE_BY_ROW[row]))
+            # Print the line using the SCC encoding
+            for index, char in enumerate(line):
+                code = self._print_character(code, char) 
+                code = self._maybe_space(code)
+            code = self._maybe_align(code)
+        return code
+
+    def _format_timestamp(self, microseconds):
+        seconds_float = microseconds / 1000.0 / 1000.0
+        # Convert to non-drop-frame timecode
+        seconds_float *= 1000.0 / 1001.0
+        hours = math.floor(seconds_float / 3600) 
+        seconds_float -= hours * 3600
+        minutes = math.floor(seconds_float / 60)
+        seconds_float -= minutes * 60
+        seconds = math.floor(seconds_float)
+        seconds_float -= seconds
+        frames = math.floor(seconds_float * 30)
+        return '%02d:%02d:%02d:%02d' % (hours, minutes, seconds, frames)
+
+
+
+
