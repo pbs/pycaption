@@ -119,6 +119,19 @@ class Caption(object):
         """
         return self._format_timestamp(self.end, msec_separator)
 
+    def get_text(self):
+        """
+        Get the text of the caption.
+        """
+        def get_text_for_node(node):
+            if node.type == CaptionNode.TEXT:
+                return node.content
+            if node.type == CaptionNode.BREAK:
+                return '\n'
+            return ''
+        text_nodes = [get_text_for_node(node) for node in self.nodes]
+        return ''.join(text_nodes).strip()
+
     def _format_timestamp(self, value, msec_separator=None):
         datetime_value = timedelta(milliseconds=(int(value / 1000)))
 

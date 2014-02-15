@@ -763,7 +763,7 @@ class SCCReader(BaseReader):
         else:
             return False
 
-    def read(self, content, lang='en', simulate_roll_up=False, offset=0):
+    def read(self, content, lang='en-US', simulate_roll_up=False, offset=0):
         self.simulate_roll_up = simulate_roll_up
         self.offset = offset * 1000000
         # split lines
@@ -1078,8 +1078,8 @@ PAC_LOW_BYTE_BY_ROW = ['xx','d0','70','d0','70','d0','70','d0','70','d0','70','d
 
 # Inverted character lookup
 CHARACTER_TO_CODE = {character: code for code, character in CHARACTERS.iteritems()}
-CHARACTER_TO_CODE.update({character: code for code, character in EXTENDED_CHARS.iteritems()})
-CHARACTER_TO_CODE.update({character: code for code, character in SPECIAL_CHARS.iteritems()})
+SPECIAL_OR_EXTENDED_CHAR_TO_CODE = {character: code for code, character in EXTENDED_CHARS.iteritems()}
+SPECIAL_OR_EXTENDED_CHAR_TO_CODE.update({character: code for code, character in SPECIAL_CHARS.iteritems()})
 
 # Time to transmit a single codeword = 1 second / 29.97
 MICROSECONDS_PER_CODEWORD = 1000.0 * 1000.0 / (30.0 * 1000.0 / 1001.0)
@@ -1134,7 +1134,7 @@ class SCCWriter(BaseWriter):
     def _layout_line(self, caption):
         def caption_node_to_text(caption_node):
             if caption_node.type == CaptionNode.TEXT:
-                return caption_node.content
+                return unicode(caption_node.content, encoding='utf-8')
             elif caption_node.type == CaptionNode.BREAK:
                 return '\n'
         caption_text = ''.join([caption_node_to_text(node)
@@ -1155,9 +1155,14 @@ class SCCWriter(BaseWriter):
         return code
 
     def _print_character(self, code, char):
-        char_code = CHARACTER_TO_CODE[char]
-        if char_code == None:
-            char_code = '91b6' # Use £ as "unknown character" symbol
+        try:
+            char_code = CHARACTER_TO_CODE[char]
+        except KeyError:
+            try:
+                char_code = SPECIAL_OR_EXTENDED_CHAR_TO_CODE[char]
+            except KeyError:
+                char_code = '91b6' # Use £ as "unknown character" symbol
+
         if len(char_code) == 2:
             return code + char_code
         elif len(char_code) == 4:
