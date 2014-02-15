@@ -17,14 +17,14 @@ from .pycaption import CaptionConverter
 from .dfxp import DFXPWriter, DFXPReader
 from .sami import SAMIReader, SAMIWriter
 from .srt import SRTReader, SRTWriter
-from .scc import SCCReader
+from .scc import SCCReader, SCCWriter
 from .webvtt import WebVTTReader, WebVTTWriter
 
 
 __all__ = [
     'CaptionConverter', 'DFXPReader', 'DFXPWriter',
     'SAMIReader', 'SAMIWriter', 'SRTReader', 'SRTWriter',
-    'SCCReader', 'WebVTTReader', 'WebVTTWriter',
+    'SCCReader', 'SCCWriter', 'WebVTTReader', 'WebVTTWriter',
     'detect_format'
 ]
 
