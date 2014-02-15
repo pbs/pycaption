@@ -35,9 +35,10 @@ class SRTReader(BaseReader):
                     caption.nodes.append(CaptionNode.create_break())
 
             # remove last line break from end of caption list
-            caption.nodes.pop()
+            if len(caption.nodes):
+                caption.nodes.pop()
+                captions.append(caption)
 
-            captions.append(caption)
             start_line = end_line
 
         caption_set.set_captions(lang, captions)
