@@ -1,12 +1,12 @@
 import unittest
 
-from pycaption import SAMIReader, SAMIWriter, SRTWriter, DFXPWriter
+from pycaption import (
+    SAMIReader, SAMIWriter, SRTWriter, DFXPWriter, WebVTTWriter)
 
 from .samples import (
     SAMPLE_SAMI, SAMPLE_SRT, SAMPLE_DFXP,
     SAMPLE_SAMI_UTF8, SAMPLE_SRT_UTF8, SAMPLE_DFXP_UTF8,
-    SAMPLE_SAMI_UNICODE, SAMPLE_DFXP_UNICODE
-)
+    SAMPLE_SAMI_UNICODE, SAMPLE_DFXP_UNICODE, SAMPLE_WEBVTT)
 from .mixins import SRTTestingMixIn, DFXPTestingMixIn, SAMITestingMixIn
 
 
@@ -61,6 +61,17 @@ class SAMItoDFXPTestCase(SAMIConversionTestCase, DFXPTestingMixIn):
     def test_sami_to_dfxp_unicode_conversion(self):
         results = DFXPWriter().write(self.captions_unicode)
         self.assertDFXPEquals(SAMPLE_DFXP_UNICODE, results)
+
+
+class SAMItoWebVTTTestCase(SAMIConversionTestCase, SRTTestingMixIn):
+
+    def test_srt_to_webvtt_conversion(self):
+        results = WebVTTWriter().write(self.captions_utf8)
+        self.assertSRTEquals(SAMPLE_WEBVTT, results)
+
+    def test_srt_to_webvtt_unicode_conversion(self):
+        results = WebVTTWriter().write(self.captions_unicode)
+        self.assertSRTEquals(SAMPLE_WEBVTT, results)
 
 
 class SAMIWithMissingLanguage(unittest.TestCase, SAMITestingMixIn):

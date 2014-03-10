@@ -7,7 +7,7 @@ from pycaption import (
 from .samples import (
     SAMPLE_SRT, SAMPLE_SRT_UTF8, SAMPLE_SRT_UNICODE, SAMPLE_SCC
 )
-from .mixins import CaptionSetTestingMixIn 
+from .mixins import CaptionSetTestingMixIn
 
 # This is quite fuzzy at the moment.
 TOLERANCE_MICROSECONDS = 600 * 1000

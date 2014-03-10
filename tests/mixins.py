@@ -1,6 +1,7 @@
 from bs4 import BeautifulSoup
 import re
 
+
 class SRTTestingMixIn(object):
     """
     Provide specialized test case capabilities for asserting on SRT content.
@@ -17,9 +18,11 @@ class SRTTestingMixIn(object):
         second_items = self._extract_srt_captions(second)
         self.assertEquals(first_items, second_items)
 
+
 class CaptionSetTestingMixIn(object):
 
-    def assertCaptionSetAlmostEquals(self, first, second, tolerance_microseconds):
+    def assertCaptionSetAlmostEquals(self, first, second,
+                                     tolerance_microseconds):
         """
         Assert that two caption sets have equal text except for newlines,
         and differences in timing that are less than tolerance_microseconds.
@@ -46,7 +49,7 @@ class CaptionSetTestingMixIn(object):
             (caption_1.start, caption_2.start)
             for caption_1, caption_2 in zip(captions_1, captions_2)
             if not close_enough(caption_1.start, caption_2.start)
-        ] 
+        ]
         self.assertEquals(start_differences, [])
 
         end_differences = [
@@ -55,7 +58,6 @@ class CaptionSetTestingMixIn(object):
             if not close_enough(caption_1.end, caption_2.end)
         ]
         self.assertEquals(end_differences, [])
-
 
 
 class DFXPTestingMixIn(object):

@@ -78,7 +78,7 @@ class WebVTTReader(SRTReader):
 
 
 class WebVTTWriter(BaseWriter):
-    HEADER = u'WEBVTT\n\n'
+    HEADER = 'WEBVTT\n\n'
 
     def __init__(self, *args, **kw):
         pass
@@ -116,14 +116,14 @@ class WebVTTWriter(BaseWriter):
         start = self._timestamp(sub.start)
         end = self._timestamp(sub.end)
 
-        output = u"%s --> %s\n" % (start, end)
+        output = "%s --> %s\n" % (start, end)
         output += self._convert_nodes(sub.nodes)
-        output += u'\n'
+        output += '\n'
 
         return output
 
     def _convert_nodes(self, nodes):
-        s = u''
+        s = ''
         for node in nodes:
             if node.type == CaptionNode.TEXT:
                 s += node.content
@@ -131,6 +131,6 @@ class WebVTTWriter(BaseWriter):
                 # TODO: Ignoring style so far.
                 pass
             elif node.type == CaptionNode.BREAK:
-                s += u'\n'
+                s += '\n'
 
         return s

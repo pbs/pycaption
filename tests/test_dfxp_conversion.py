@@ -1,12 +1,12 @@
 import unittest
 
-from pycaption import DFXPReader, DFXPWriter, SRTWriter, SAMIWriter
+from pycaption import (
+    DFXPReader, DFXPWriter, SRTWriter, SAMIWriter, WebVTTWriter)
 
 from .samples import (
     SAMPLE_SAMI, SAMPLE_SRT, SAMPLE_DFXP,
     SAMPLE_SAMI_UTF8, SAMPLE_SRT_UTF8, SAMPLE_DFXP_UTF8,
-    SAMPLE_SAMI_UNICODE, SAMPLE_SRT_UNICODE, SAMPLE_DFXP_UNICODE
-)
+    SAMPLE_SAMI_UNICODE, SAMPLE_DFXP_UNICODE, SAMPLE_WEBVTT)
 from .mixins import SRTTestingMixIn, SAMITestingMixIn, DFXPTestingMixIn
 
 
@@ -61,3 +61,14 @@ class DFXPtoSAMITestCase(DFXPConversionTestCase, SAMITestingMixIn):
     def test_dfxp_to_sami_unicode_conversion(self):
         results = SAMIWriter().write(self.captions_unicode)
         self.assertSAMIEquals(SAMPLE_SAMI_UNICODE, results)
+
+
+class SAMItoWebVTTTestCase(DFXPConversionTestCase, SRTTestingMixIn):
+
+    def test_srt_to_webvtt_conversion(self):
+        results = WebVTTWriter().write(self.captions_utf8)
+        self.assertSRTEquals(SAMPLE_WEBVTT, results)
+
+    def test_srt_to_webvtt_unicode_conversion(self):
+        results = WebVTTWriter().write(self.captions_unicode)
+        self.assertSRTEquals(SAMPLE_WEBVTT, results)
