@@ -1,5 +1,5 @@
 from bs4 import BeautifulSoup
-
+import re
 
 class SRTTestingMixIn(object):
     """
@@ -16,6 +16,46 @@ class SRTTestingMixIn(object):
         first_items = self._extract_srt_captions(first)
         second_items = self._extract_srt_captions(second)
         self.assertEquals(first_items, second_items)
+
+class CaptionSetTestingMixIn(object):
+
+    def assertCaptionSetAlmostEquals(self, first, second, tolerance_microseconds):
+        """
+        Assert that two caption sets have equal text except for newlines,
+        and differences in timing that are less than tolerance_microseconds.
+        """
+
+        captions_1 = first.get_captions(first.get_languages()[0])
+        captions_2 = second.get_captions(first.get_languages()[0])
+
+        def get_text_for_caption(caption):
+            text = caption.get_text()
+            text = re.sub('\s+', ' ', text)
+
+            return text
+
+        text_1 = [get_text_for_caption(caption) for caption in captions_1]
+        text_2 = [get_text_for_caption(caption) for caption in captions_2]
+
+        self.assertEquals(text_1, text_2)
+
+        def close_enough(ts1, ts2):
+            return abs(ts1 - ts2) < tolerance_microseconds
+
+        start_differences = [
+            (caption_1.start, caption_2.start)
+            for caption_1, caption_2 in zip(captions_1, captions_2)
+            if not close_enough(caption_1.start, caption_2.start)
+        ] 
+        self.assertEquals(start_differences, [])
+
+        end_differences = [
+            (caption_1.end, caption_2.end)
+            for caption_1, caption_2 in zip(captions_1, captions_2)
+            if not close_enough(caption_1.end, caption_2.end)
+        ]
+        self.assertEquals(end_differences, [])
+
 
 
 class DFXPTestingMixIn(object):

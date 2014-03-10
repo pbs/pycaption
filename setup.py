@@ -7,9 +7,9 @@ README_PATH = os.path.join(
     'README.rst')
 
 dependencies = [
-    'beautifulsoup4==4.2.1',
-    'lxml==3.2.3',
-    'cssutils==0.9.10',
+    'beautifulsoup4>=4.2.1',
+    'lxml>=3.2.3',
+    'cssutils>=0.9.10',
 ]
 
 setup(
