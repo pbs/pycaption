@@ -4,6 +4,10 @@ from pycaption import BaseWriter, CaptionNode
 from .srt import SRTReader
 
 
+VOICE_SPAN_PATTERN = re.compile('<v(\\.\\w+)* ([^>]*)>')
+OTHER_SPAN_PATTERN = re.compile('</?([cibuv]|ruby|rt|lang).*?>')
+
+
 class WebVTTReader(SRTReader):
     def detect(self, content):
         return 'WEBVTT' in content
@@ -72,7 +76,9 @@ class WebVTTReader(SRTReader):
                     new_lines.append(line)
                 else:
                     # remove cue payload styles
-                    new_lines.append(re.sub('<[^>]*>', '', line))
+                    partial_result = VOICE_SPAN_PATTERN.sub('\\2: ', line)
+                    new_lines.append(
+                        OTHER_SPAN_PATTERN.sub('', partial_result))
 
         return '\n'.join(new_lines)
 

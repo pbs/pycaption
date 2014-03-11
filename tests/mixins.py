@@ -2,6 +2,23 @@ from bs4 import BeautifulSoup
 import re
 
 
+class WebVTTTestingMixIn(object):
+    """
+    Provide specialized test case capabilities for asserting on WebVTT content.
+    """
+
+    def _extract_webvtt_captions(self, content):
+        return tuple(line.strip() for line in content.splitlines())
+
+    def assertWebVTTEquals(self, first, second):
+        """
+        Assert that two WebVTT contents are equal.
+        """
+        first_items = self._extract_webvtt_captions(first)
+        second_items = self._extract_webvtt_captions(second)
+        self.assertEquals(first_items, second_items)
+
+
 class SRTTestingMixIn(object):
     """
     Provide specialized test case capabilities for asserting on SRT content.
