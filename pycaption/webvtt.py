@@ -16,7 +16,7 @@ class WebVTTReader(SRTReader):
 
         content = self.force_byte_string(content)
         cleaned_content = self._clean(content)
-        return super(WebVTTReader, self).read(cleaned_content)
+        return super(WebVTTReader, self).read(cleaned_content, lang=lang)
 
     def _clean(self, content):
         lines = content.splitlines()
