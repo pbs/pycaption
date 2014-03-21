@@ -2,7 +2,7 @@ import unittest
 
 from pycaption import SAMIReader, CaptionReadNoCaptions
 
-from .samples import SAMPLE_SAMI, SAMPLE_SAMI_EMPTY
+from .samples import SAMPLE_SAMI, SAMPLE_SAMI_EMPTY, SAMPLE_SAMI_SYNTAX_ERROR
 
 
 class SAMIReaderTestCase(unittest.TestCase):
@@ -38,3 +38,7 @@ class SAMIReaderTestCase(unittest.TestCase):
         self.assertRaises(
             CaptionReadNoCaptions,
             SAMIReader().read, SAMPLE_SAMI_EMPTY)
+
+    def test_invalid_markup_is_properly_handled(self):
+        captions = SAMIReader().read(SAMPLE_SAMI_SYNTAX_ERROR)
+        self.assertEquals(2, len(captions.get_captions("en-US")))

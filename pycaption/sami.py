@@ -7,7 +7,9 @@ from xml.sax.saxutils import escape
 from cssutils import parseString, log, css as cssutils_css
 from bs4 import BeautifulSoup, NavigableString
 
-from .base import BaseReader, BaseWriter, CaptionSet, Caption, CaptionNode
+from .base import (
+    BaseReader, BaseWriter, CaptionSet, Caption, CaptionNode,
+    DEFAULT_LANGUAGE_CODE)
 from .exceptions import CaptionReadNoCaptions, CaptionReadSyntaxError
 
 
@@ -363,9 +365,8 @@ class SAMIParser(HTMLParser):
         if tag == 'p':
             lang = self._find_lang(attrs)
 
-            # if no language detected, set it as "none"
-            if not lang:
-                lang = 'unknown'
+            # if no language detected, set it as the default
+            lang = lang or DEFAULT_LANGUAGE_CODE
             attrs.append(('lang', lang))
             self.langs[lang] = 1
 

@@ -1,7 +1,9 @@
 from bs4 import BeautifulSoup, NavigableString
 from xml.sax.saxutils import escape
 
-from .base import BaseReader, BaseWriter, CaptionSet, Caption, CaptionNode
+from .base import (
+    BaseReader, BaseWriter, CaptionSet, Caption, CaptionNode,
+    DEFAULT_LANGUAGE_CODE)
 from .exceptions import CaptionReadNoCaptions
 
 
@@ -33,7 +35,7 @@ class DFXPReader(BaseReader):
 
         # Each div represents all the captions for a single language.
         for div in dfxp_soup.find_all('div'):
-            lang = div.attrs.get('xml:lang', 'en')
+            lang = div.attrs.get('xml:lang', DEFAULT_LANGUAGE_CODE)
             captions.set_captions(lang, self._translate_div(div))
 
         for style in dfxp_soup.find_all('style'):

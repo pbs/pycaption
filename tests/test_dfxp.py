@@ -2,7 +2,7 @@ import unittest
 
 from pycaption import DFXPReader, CaptionReadNoCaptions
 
-from .samples import SAMPLE_DFXP, SAMPLE_DFXP_EMPTY
+from .samples import SAMPLE_DFXP, SAMPLE_DFXP_EMPTY, SAMPLE_DFXP_SYNTAX_ERROR
 
 
 class DFXPReaderTestCase(unittest.TestCase):
@@ -26,3 +26,7 @@ class DFXPReaderTestCase(unittest.TestCase):
         self.assertRaises(
             CaptionReadNoCaptions,
             DFXPReader().read, SAMPLE_DFXP_EMPTY)
+
+    def test_invalid_markup_is_properly_handled(self):
+        captions = DFXPReader().read(SAMPLE_DFXP_SYNTAX_ERROR)
+        self.assertEquals(2, len(captions.get_captions("en-US")))

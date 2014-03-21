@@ -6,7 +6,8 @@ from pycaption import (
 from .samples import (
     SAMPLE_SAMI, SAMPLE_SRT, SAMPLE_DFXP,
     SAMPLE_SAMI_UTF8, SAMPLE_SRT_UTF8, SAMPLE_DFXP_UTF8,
-    SAMPLE_SAMI_UNICODE, SAMPLE_DFXP_UNICODE, SAMPLE_WEBVTT)
+    SAMPLE_SAMI_UNICODE, SAMPLE_DFXP_UNICODE, SAMPLE_WEBVTT,
+    SAMPLE_SAMI_SYNTAX_ERROR)
 from .mixins import SRTTestingMixIn, DFXPTestingMixIn, SAMITestingMixIn
 
 
@@ -62,6 +63,13 @@ class SAMItoDFXPTestCase(SAMIConversionTestCase, DFXPTestingMixIn):
         results = DFXPWriter().write(self.captions_unicode)
         self.assertDFXPEquals(SAMPLE_DFXP_UNICODE, results)
 
+    def test_sami_to_dfxp_xml_output(self):
+        captions = SAMIReader().read(SAMPLE_SAMI_SYNTAX_ERROR)
+        results = DFXPWriter().write(captions)
+        self.assertTrue('xmlns="http://www.w3.org/ns/ttml"' in results)
+        self.assertTrue(
+            'xmlns:tts="http://www.w3.org/ns/ttml#styling"' in results)
+
 
 class SAMItoWebVTTTestCase(SAMIConversionTestCase, SRTTestingMixIn):
 
@@ -90,10 +98,10 @@ class SAMIWithMissingLanguage(unittest.TestCase, SAMITestingMixIn):
         self.sample_sami_with_lang = """
         <sami>
         <head>
-        <style type="text/css"><!--.unknown {lang: unknown;}--></style>
+        <style type="text/css"><!--.en-US {lang: en-US;}--></style>
         </head>
         <body>
-        <sync start="1301"><p class="unknown">&gt;&gt; FUNDING FOR OVERHEARD</p></sync>
+        <sync start="1301"><p class="en-US">&gt;&gt; FUNDING FOR OVERHEARD</p></sync>
         </body>
         </sami>
         """
@@ -102,3 +110,4 @@ class SAMIWithMissingLanguage(unittest.TestCase, SAMITestingMixIn):
         captions = SAMIReader().read(self.sample_sami)
         results = SAMIWriter().write(captions)
         self.assertSAMIEquals(self.sample_sami_with_lang, results)
+        self.assertTrue("lang: en-US;" in results)

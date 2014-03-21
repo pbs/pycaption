@@ -169,6 +169,46 @@ P { margin-left:  1pt;
 """
 
 
+SAMPLE_SAMI_SYNTAX_ERROR = """
+<SAMI>
+<Head>
+<title>ir2014_111</title>
+  <STYLE TYPE="text/css">
+    <!--
+
+    P { margin-left:  1pt;
+      margin-right: 1pt;
+      margin-bottom: 2pt;
+      margin-top: 2pt;
+      text-align: center;
+      font-size: 10pt;
+      font-family: Arial;
+      font-weight: normal;
+      font-style: normal;
+      color: #ffffff; }
+
+    #Small {Name:SmallTxt; font-family:Arial;font-weight:normal;font-size:10pt;color:#ffffff;}
+    #Big {Name:BigTxt; font-family:Arial;font-weight:bold;font-size:12pt;color:#ffffff;}
+
+    .ENCC {Name:English; lang: en-US; SAMI_Type: CC;}
+
+    -->
+
+  </Style>
+
+</Head>
+
+<BODY>
+
+<Sync Start=0><P Class=ENCC>
+<Sync Start=5905><P Class=ENCC>>>> PRESENTATION OF "IDAHO<br>REPORTS" ON IDAHO PUBLIC
+<Sync Start=7073><P Class=ENCC>TELEVISION IS MADE POSSIBLE<br>THROUGH THE GENEROUS SUPPORT OF
+
+</Body>
+</SAMI>
+"""
+
+
 SAMPLE_SRT_UNICODE = u"""1
 00:00:09,209 --> 00:00:12,312
 ( clock ticking )
@@ -491,6 +531,19 @@ SAMPLE_DFXP_EMPTY = """
  </head>
  <body>
   <div xml:lang="en-US">
+  </div>
+ </body>
+</tt>
+"""
+
+
+SAMPLE_DFXP_SYNTAX_ERROR = """
+<?xml version="1.0" encoding="UTF-16"?>
+<tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml">
+<body>
+  <div>
+    <p begin="0:00:02.07" end="0:00:05.07">>>THE GENERAL ASSEMBLY'S 2014</p>
+    <p begin="0:00:05.07" end="0:00:06.21">SESSION GOT OFF TO A LATE START,</p>
   </div>
  </body>
 </tt>

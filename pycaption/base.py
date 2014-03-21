@@ -2,6 +2,9 @@ from collections import defaultdict
 from datetime import timedelta
 
 
+DEFAULT_LANGUAGE_CODE = 'en-US'
+
+
 class CaptionConverter(object):
     def __init__(self, captions=[]):
         self.captions = captions
