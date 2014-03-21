@@ -1,8 +1,8 @@
 import unittest
 
-from pycaption import DFXPReader
+from pycaption import DFXPReader, CaptionReadNoCaptions
 
-from .samples import SAMPLE_DFXP
+from .samples import SAMPLE_DFXP, SAMPLE_DFXP_EMPTY
 
 
 class DFXPReaderTestCase(unittest.TestCase):
@@ -21,3 +21,8 @@ class DFXPReaderTestCase(unittest.TestCase):
 
         self.assertEquals(17000000, paragraph.start)
         self.assertEquals(18752000, paragraph.end)
+
+    def test_empty_file(self):
+        self.assertRaises(
+            CaptionReadNoCaptions,
+            DFXPReader().read, SAMPLE_DFXP_EMPTY)

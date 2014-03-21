@@ -1,4 +1,5 @@
-from pycaption import BaseReader, BaseWriter, Caption, CaptionSet, CaptionNode
+from .base import BaseReader, BaseWriter, Caption, CaptionSet, CaptionNode
+from .exceptions import CaptionReadNoCaptions
 
 
 class SRTReader(BaseReader):
@@ -42,6 +43,10 @@ class SRTReader(BaseReader):
             start_line = end_line
 
         caption_set.set_captions(lang, captions)
+
+        if caption_set.is_empty():
+            raise CaptionReadNoCaptions("empty caption file")
+
         return caption_set
 
     def _srttomicro(self, stamp):

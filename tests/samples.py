@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+
+
 SAMPLE_SAMI_UNICODE = u"""
 <SAMI><HEAD><TITLE>NOVA3213</TITLE><STYLE TYPE="text/css">
 <!--
@@ -46,6 +48,7 @@ P { margin-left:  1pt;
 </P></SYNC>
 </BODY></SAMI>
 """
+
 
 SAMPLE_SAMI_UTF8 = """
 <SAMI><HEAD><TITLE>NOVA3213</TITLE><STYLE TYPE="text/css">
@@ -95,6 +98,7 @@ P { margin-left:  1pt;
 </BODY></SAMI>
 """
 
+
 SAMPLE_SAMI = """
 <SAMI><HEAD><TITLE>NOVA3213</TITLE><STYLE TYPE="text/css">
 <!--
@@ -143,6 +147,28 @@ P { margin-left:  1pt;
 </BODY></SAMI>
 """
 
+
+SAMPLE_SAMI_EMPTY = """
+<SAMI><HEAD><TITLE>NOVA3213</TITLE><STYLE TYPE="text/css">
+<!--
+P { margin-left:  1pt;
+    margin-right: 1pt;
+    margin-bottom: 2pt;
+    margin-top: 2pt;
+    text-align: center;
+    font-size: 10pt;
+    font-family: Arial;
+    font-weight: normal;
+    font-style: normal;
+    color: #ffeedd; }
+
+.ENCC {Name: English; lang: en-US; SAMI_Type: CC;}
+
+--></STYLE></HEAD><BODY>
+</BODY></SAMI>
+"""
+
+
 SAMPLE_SRT_UNICODE = u"""1
 00:00:09,209 --> 00:00:12,312
 ( clock ticking )
@@ -177,6 +203,7 @@ It's all about an eternal Einstein.
 00:00:32,200 --> 00:00:36,200
 <LAUGHING & WHOOPS!>
 """
+
 
 SAMPLE_SRT_UTF8 = """1
 00:00:09,209 --> 00:00:12,312
@@ -213,6 +240,7 @@ It's all about an eternal Einstein.
 <LAUGHING & WHOOPS!>
 """
 
+
 SAMPLE_SRT = """1
 00:00:09,209 --> 00:00:12,312
 ( clock ticking )
@@ -248,6 +276,7 @@ It's all about an eternal Einstein.
 <LAUGHING & WHOOPS!>
 """
 
+
 SAMPLE_SRT_NUMERIC = """35
 00:00:32,290 --> 00:00:32,890
 TO  FIND  HIM.            IF
@@ -276,6 +305,11 @@ STD  OUT
 00:00:36,460 --> 00:02:11,500
 3
 """
+
+
+SAMPLE_SRT_EMPTY = """
+"""
+
 
 SAMPLE_WEBVTT = """WEBVTT
 
@@ -307,6 +341,11 @@ It's all about an eternal Einstein.
 <LAUGHING & WHOOPS!>
 
 """
+
+
+SAMPLE_WEBVTT_EMPTY = """WEBVTT
+"""
+
 
 SAMPLE_DFXP_UNICODE = u"""
 <?xml version="1.0" encoding="utf-8"?>
@@ -351,6 +390,7 @@ SAMPLE_DFXP_UNICODE = u"""
  </body>
 </tt>"""
 
+
 SAMPLE_DFXP_UTF8 = """
 <?xml version="1.0" encoding="utf-8"?>
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml"
@@ -393,6 +433,7 @@ SAMPLE_DFXP_UTF8 = """
   </div>
  </body>
 </tt>"""
+
 
 SAMPLE_DFXP = """
 <?xml version="1.0" encoding="utf-8"?>
@@ -437,6 +478,25 @@ SAMPLE_DFXP = """
  </body>
 </tt>"""
 
+
+SAMPLE_DFXP_EMPTY = """
+<?xml version="1.0" encoding="utf-8"?>
+<tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml"
+    xmlns:tts="http://www.w3.org/ns/ttml#styling">
+ <head>
+  <styling>
+   <style id="p" tts:color="#ffeedd" tts:fontfamily="Arial"
+          tts:fontsize="10pt" tts:textAlign="center"/>
+  </styling>
+ </head>
+ <body>
+  <div xml:lang="en-US">
+  </div>
+ </body>
+</tt>
+"""
+
+
 SAMPLE_SCC = """Scenarist_SCC V1.0
 
 00:00:09:05 94ae 94ae 9420 9420 9470 9470 a820 e3ec efe3 6b20 f4e9 e36b e96e 6720 2980 942c 942c 942f 942f
@@ -459,4 +519,7 @@ SAMPLE_SCC = """Scenarist_SCC V1.0
 
 """
 
+
+SAMPLE_SCC_EMPTY = """Scenarist_SCC V1.0
+"""
 

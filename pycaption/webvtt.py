@@ -1,6 +1,6 @@
 import re
 
-from pycaption import BaseWriter, CaptionNode
+from .base import BaseWriter, CaptionNode
 from .srt import SRTReader
 
 
@@ -15,9 +15,7 @@ class WebVTTReader(SRTReader):
     def read(self, content, lang='en-US'):
 
         # TODO: styles. Currently, we clean the WebVTT file to look like an SRT
-        # file; longterm, it makes sense to parse the styles.  When we parse
-        # styles, it may make sense t
-
+        # file; longterm, it makes sense to parse the styles.
         content = self.force_byte_string(content)
         cleaned_content = self._clean(content)
         return super(WebVTTReader, self).read(cleaned_content, lang=lang)

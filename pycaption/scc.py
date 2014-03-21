@@ -6,7 +6,9 @@ import math
 import string
 import textwrap
 
-from pycaption import BaseReader, BaseWriter, Caption, CaptionSet, CaptionNode
+from .base import BaseReader, BaseWriter, Caption, CaptionSet, CaptionNode
+from .exceptions import CaptionReadNoCaptions
+
 
 COMMANDS = {
     '9420': u'',
@@ -552,6 +554,7 @@ COMMANDS = {
     '94a2': u'',
 }
 
+
 CHARACTERS = {
     '20': u' ',
     'a1': u'!',
@@ -652,6 +655,7 @@ CHARACTERS = {
     '80': u''
 }
 
+
 SPECIAL_CHARS = {
     '91b0': u'®',
     '9131': u'°',
@@ -670,6 +674,7 @@ SPECIAL_CHARS = {
     '913e': u'ô',
     '91bf': u'û'
 }
+
 
 EXTENDED_CHARS = {
     '9220': u'Á',
@@ -738,6 +743,22 @@ EXTENDED_CHARS = {
     '13bf': u'┘',
 }
 
+
+# Cursor positioning codes
+PAC_HIGH_BYTE_BY_ROW = ['xx','91','91','92','92','15','15','16','16','97','97','10','13','13','94','94']
+PAC_LOW_BYTE_BY_ROW = ['xx','d0','70','d0','70','d0','70','d0','70','d0','70','d0','d0','70','d0','70']
+
+
+# Inverted character lookup
+CHARACTER_TO_CODE = {character: code for code, character in CHARACTERS.iteritems()}
+SPECIAL_OR_EXTENDED_CHAR_TO_CODE = {character: code for code, character in EXTENDED_CHARS.iteritems()}
+SPECIAL_OR_EXTENDED_CHAR_TO_CODE.update({character: code for code, character in SPECIAL_CHARS.iteritems()})
+
+
+# Time to transmit a single codeword = 1 second / 29.97
+MICROSECONDS_PER_CODEWORD = 1000.0 * 1000.0 / (30.0 * 1000.0 / 1001.0)
+
+
 HEADER = 'Scenarist_SCC V1.0'
 
 
@@ -779,6 +800,10 @@ class SCCReader(BaseReader):
 
         captions = CaptionSet()
         captions.set_captions(lang, self.scc)
+
+        if captions.is_empty():
+            raise CaptionReadNoCaptions("empty caption file")
+
         return captions
 
     def _translate_line(self, line):
@@ -1077,17 +1102,6 @@ class SCCReader(BaseReader):
         except IndexError:
             pass
 
-# Cursor positioning codes
-PAC_HIGH_BYTE_BY_ROW = ['xx','91','91','92','92','15','15','16','16','97','97','10','13','13','94','94']
-PAC_LOW_BYTE_BY_ROW = ['xx','d0','70','d0','70','d0','70','d0','70','d0','70','d0','d0','70','d0','70']
-
-# Inverted character lookup
-CHARACTER_TO_CODE = {character: code for code, character in CHARACTERS.iteritems()}
-SPECIAL_OR_EXTENDED_CHAR_TO_CODE = {character: code for code, character in EXTENDED_CHARS.iteritems()}
-SPECIAL_OR_EXTENDED_CHAR_TO_CODE.update({character: code for code, character in SPECIAL_CHARS.iteritems()})
-
-# Time to transmit a single codeword = 1 second / 29.97
-MICROSECONDS_PER_CODEWORD = 1000.0 * 1000.0 / (30.0 * 1000.0 / 1001.0)
 
 class SCCWriter(BaseWriter):
 
@@ -1131,9 +1145,8 @@ class SCCWriter(BaseWriter):
             output += '942c 942c 942f 942f\n\n'
             if end != None:
                 output += '%s\t942c 942c\n\n' % self._format_timestamp(end)
-   
-        return self.force_byte_string(output)
 
+        return self.force_byte_string(output)
 
     # Wrap lines at 32 chars
     def _layout_line(self, caption):
@@ -1148,7 +1161,7 @@ class SCCWriter(BaseWriter):
         inner_lines_laid_out = [textwrap.fill(x, 32) for x in inner_lines]
         return '\n'.join(inner_lines_laid_out)
 
-    def _maybe_align(self, code): 
+    def _maybe_align(self, code):
         # Finish a half-word with a no-op so we can move to a full word
         if len(code) % 5 == 2:
             code += '80 '
@@ -1187,7 +1200,7 @@ class SCCWriter(BaseWriter):
                                     PAC_LOW_BYTE_BY_ROW[row]))
             # Print the line using the SCC encoding
             for index, char in enumerate(line):
-                code = self._print_character(code, char) 
+                code = self._print_character(code, char)
                 code = self._maybe_space(code)
             code = self._maybe_align(code)
         return code
@@ -1196,7 +1209,7 @@ class SCCWriter(BaseWriter):
         seconds_float = microseconds / 1000.0 / 1000.0
         # Convert to non-drop-frame timecode
         seconds_float *= 1000.0 / 1001.0
-        hours = math.floor(seconds_float / 3600) 
+        hours = math.floor(seconds_float / 3600)
         seconds_float -= hours * 3600
         minutes = math.floor(seconds_float / 60)
         seconds_float -= minutes * 60

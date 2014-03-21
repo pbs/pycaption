@@ -1,8 +1,8 @@
 import unittest
 
-from pycaption import SRTReader
+from pycaption import SRTReader, CaptionReadNoCaptions
 
-from .samples import SAMPLE_SRT, SAMPLE_SRT_NUMERIC
+from .samples import SAMPLE_SRT, SAMPLE_SRT_NUMERIC, SAMPLE_SRT_EMPTY
 
 
 class SRTReaderTestCase(unittest.TestCase):
@@ -25,3 +25,8 @@ class SRTReaderTestCase(unittest.TestCase):
     def test_numeric_captions(self):
         captions = SRTReader().read(SAMPLE_SRT_NUMERIC)
         self.assertEquals(7, len(captions.get_captions("en-US")))
+
+    def test_empty_file(self):
+        self.assertRaises(
+            CaptionReadNoCaptions,
+            SRTReader().read, SAMPLE_SRT_EMPTY)

@@ -1,8 +1,8 @@
 import unittest
 
-from pycaption import SAMIReader
+from pycaption import SAMIReader, CaptionReadNoCaptions
 
-from .samples import SAMPLE_SAMI
+from .samples import SAMPLE_SAMI, SAMPLE_SAMI_EMPTY
 
 
 class SAMIReaderTestCase(unittest.TestCase):
@@ -33,3 +33,8 @@ class SAMIReaderTestCase(unittest.TestCase):
         p_style = captions.get_style("p")
 
         self.assertEquals("#ffeedd", p_style['color'])
+
+    def test_empty_file(self):
+        self.assertRaises(
+            CaptionReadNoCaptions,
+            SAMIReader().read, SAMPLE_SAMI_EMPTY)

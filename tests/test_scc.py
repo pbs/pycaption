@@ -1,8 +1,8 @@
 import unittest
 
-from pycaption import SCCReader
+from pycaption import SCCReader, CaptionReadNoCaptions
 
-from .samples import SAMPLE_SCC
+from .samples import SAMPLE_SCC, SAMPLE_SCC_EMPTY
 
 TOLERANCE_MICROSECONDS = 500 * 1000
 
@@ -25,4 +25,9 @@ class SCCReaderTestCase(unittest.TestCase):
 
         self.assertTrue(delta_start < TOLERANCE_MICROSECONDS)
         self.assertTrue(delta_end < TOLERANCE_MICROSECONDS)
+
+    def test_empty_file(self):
+        self.assertRaises(
+            CaptionReadNoCaptions,
+            SCCReader().read, SAMPLE_SCC_EMPTY)
 

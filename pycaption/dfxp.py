@@ -1,9 +1,11 @@
 from bs4 import BeautifulSoup, NavigableString
 from xml.sax.saxutils import escape
 
-from pycaption import BaseReader, BaseWriter, CaptionSet, Caption, CaptionNode
+from .base import BaseReader, BaseWriter, CaptionSet, Caption, CaptionNode
+from .exceptions import CaptionReadNoCaptions
 
-dfxp_base = '''
+
+DFXP_BASE_MARKUP = '''
 <tt xmlns="http://www.w3.org/ns/ttml"
     xmlns:tts="http://www.w3.org/ns/ttml#styling">
     <head>
@@ -41,6 +43,9 @@ class DFXPReader(BaseReader):
             captions.add_style(id, self._translate_style(style))
 
         captions = self._combine_matching_captions(captions)
+
+        if captions.is_empty():
+            raise CaptionReadNoCaptions("empty caption file")
 
         return captions
 
@@ -170,7 +175,7 @@ class DFXPWriter(BaseWriter):
         self.open_span = False
 
     def write(self, captions, force=''):
-        dfxp = BeautifulSoup(dfxp_base, 'xml')
+        dfxp = BeautifulSoup(DFXP_BASE_MARKUP, 'xml')
         dfxp.find('tt')['xml:lang'] = "en"
 
         for style_id, style in captions.get_styles():

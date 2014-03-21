@@ -7,12 +7,15 @@ from xml.sax.saxutils import escape
 from cssutils import parseString, log, css as cssutils_css
 from bs4 import BeautifulSoup, NavigableString
 
-from pycaption import BaseReader, BaseWriter, CaptionSet, Caption, CaptionNode
+from .base import BaseReader, BaseWriter, CaptionSet, Caption, CaptionNode
+from .exceptions import CaptionReadNoCaptions, CaptionReadSyntaxError
+
 
 # change cssutils default logging
 log.setLevel(FATAL)
 
-sami_base = '''
+
+SAMI_BASE_MARKUP = '''
 <sami>
     <head>
         <style type="text/css"/>
@@ -42,10 +45,10 @@ class SAMIReader(BaseReader):
             lang_captions = self._translate_lang(language, sami_soup)
             captions.set_captions(language, lang_captions)
 
-        if not captions.is_empty():
-            return captions
-        else:
-            raise SAMIReaderError("Empty Caption File")
+        if captions.is_empty():
+            raise CaptionReadNoCaptions("empty caption file")
+
+        return captions
 
     def _translate_lang(self, language, sami_soup):
         captions = []
@@ -155,7 +158,7 @@ class SAMIWriter(BaseWriter):
         self.last_time = None
 
     def write(self, captions):
-        sami = BeautifulSoup(sami_base, "xml")
+        sami = BeautifulSoup(SAMI_BASE_MARKUP, "xml")
         stylesheet = self._recreate_stylesheet(captions)
         sami.find('style').append(stylesheet)
         primary = None
@@ -424,9 +427,9 @@ class SAMIParser(HTMLParser):
         no_cc = 'no closed captioning available'
 
         if '<html' in data.lower():
-            raise SAMIReaderError('SAMI File seems to be an HTML file.')
+            raise CaptionReadSyntaxError('SAMI File seems to be an HTML file.')
         elif no_cc in data.lower():
-            raise SAMIReaderError('SAMI File contains "%s"' % no_cc)
+            raise CaptionReadSyntaxError('SAMI File contains "%s"' % no_cc)
 
         # try to find style tag in SAMI
         try:
@@ -446,7 +449,7 @@ class SAMIParser(HTMLParser):
         try:
             HTMLParser.feed(self, data)
         except HTMLParseError as e:
-            raise SAMIReaderError(e)
+            raise CaptionReadSyntaxError(e)
 
         # close any tags that remain in the queue
         while self.queue != deque([]):
@@ -506,7 +509,3 @@ class SAMIParser(HTMLParser):
                     pass
 
         return None
-
-
-class SAMIReaderError(Exception):
-    pass

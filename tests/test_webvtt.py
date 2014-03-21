@@ -1,8 +1,8 @@
 import unittest
 
-from pycaption import WebVTTReader
+from pycaption import WebVTTReader, CaptionReadNoCaptions
 
-from .samples import SAMPLE_WEBVTT, SAMPLE_SRT
+from .samples import SAMPLE_WEBVTT, SAMPLE_SRT, SAMPLE_WEBVTT_EMPTY
 
 
 class WebVTTReaderTestCase(unittest.TestCase):
@@ -45,3 +45,8 @@ class WebVTTReaderTestCase(unittest.TestCase):
             " Audry: Yes, indeed!"
         )
         self.assertEqual(result, expected)
+
+    def test_empty_file(self):
+        self.assertRaises(
+            CaptionReadNoCaptions,
+            WebVTTReader().read, SAMPLE_WEBVTT_EMPTY)
