@@ -6,8 +6,8 @@ DEFAULT_LANGUAGE_CODE = 'en-US'
 
 
 class CaptionConverter(object):
-    def __init__(self, captions=[]):
-        self.captions = captions
+    def __init__(self, captions=None):
+        self.captions = captions if captions else []
 
     def read(self, content, caption_reader):
         try:
