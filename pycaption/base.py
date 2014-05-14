@@ -5,6 +5,15 @@ from datetime import timedelta
 DEFAULT_LANGUAGE_CODE = 'en-US'
 
 
+def force_byte_string(content):
+    try:
+        return content.encode('UTF-8')
+    except UnicodeEncodeError:
+        raise RuntimeError('Invalid content encoding')
+    except UnicodeDecodeError:
+        return content
+
+
 class CaptionConverter(object):
     def __init__(self, captions=None):
         self.captions = captions if captions else []
@@ -33,26 +42,10 @@ class BaseReader(object):
     def read(self, content):
         return CaptionSet()
 
-    def force_byte_string(self, content):
-        try:
-            return content.encode('UTF-8')
-        except UnicodeEncodeError:
-            raise RuntimeError('Invalid content encoding')
-        except UnicodeDecodeError:
-            return content
-
 
 class BaseWriter(object):
     def write(self, content):
         return content
-
-    def force_byte_string(self, content):
-        try:
-            return content.encode('UTF-8')
-        except UnicodeEncodeError:
-            raise RuntimeError('Invalid content encoding')
-        except UnicodeDecodeError:
-            return content
 
 
 class Style(object):

@@ -1,6 +1,6 @@
 import re
 
-from .base import BaseWriter, CaptionNode
+from .base import force_byte_string, BaseWriter, CaptionNode
 from .srt import SRTReader
 
 
@@ -16,7 +16,7 @@ class WebVTTReader(SRTReader):
 
         # TODO: styles. Currently, we clean the WebVTT file to look like an SRT
         # file; longterm, it makes sense to parse the styles.
-        content = self.force_byte_string(content)
+        content = force_byte_string(content)
         cleaned_content = self._clean(content)
         return super(WebVTTReader, self).read(cleaned_content, lang=lang)
 
@@ -91,7 +91,7 @@ class WebVTTWriter(BaseWriter):
         output = self.HEADER
 
         if caption_set.is_empty():
-            return self.force_byte_string(output)
+            return force_byte_string(output)
 
         # TODO: styles. These go into a separate CSS file, which doesn't really
         # fit the API here. Figure that out.  Though some style stuff can be
@@ -104,7 +104,7 @@ class WebVTTWriter(BaseWriter):
             output += self._write_caption(caption)
             output += '\n'
 
-        return self.force_byte_string(output)
+        return force_byte_string(output)
 
     def _timestamp(self, ts):
         ts = float(ts)/1000000

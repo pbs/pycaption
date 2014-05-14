@@ -3,7 +3,7 @@ from xml.sax.saxutils import escape
 
 from .base import (
     BaseReader, BaseWriter, CaptionSet, Caption, CaptionNode,
-    DEFAULT_LANGUAGE_CODE)
+    force_byte_string, DEFAULT_LANGUAGE_CODE)
 from .exceptions import CaptionReadNoCaptions
 
 
@@ -29,7 +29,7 @@ class DFXPReader(BaseReader):
             return False
 
     def read(self, content):
-        content = self.force_byte_string(content)
+        content = force_byte_string(content)
         dfxp_soup = BeautifulSoup(content)
         captions = CaptionSet()
 
@@ -202,7 +202,7 @@ class DFXPWriter(BaseWriter):
             body.append(div)
 
         caption_content = dfxp.prettify(formatter=None)
-        return self.force_byte_string(caption_content)
+        return force_byte_string(caption_content)
 
     # force the DFXP to only have one language, trying to match on "force"
     def _force_language(self, force, langs):
