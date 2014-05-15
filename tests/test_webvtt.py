@@ -1,6 +1,9 @@
 import unittest
 
-from pycaption import WebVTTReader, CaptionReadNoCaptions
+from pycaption import (
+    WebVTTReader,
+    CaptionReadNoCaptions, CaptionReadError, CaptionReadSyntaxError
+)
 
 from .samples import SAMPLE_WEBVTT, SAMPLE_SRT, SAMPLE_WEBVTT_EMPTY
 
@@ -31,8 +34,7 @@ class WebVTTReaderTestCase(unittest.TestCase):
         self.assertEqual(cue.end, 18752000)
 
     def test_webvtt_cue_components_removed_from_text(self):
-        result = self.reader._clean(
-            "\n"  # the first line is sckipped by the cleaner
+        result = self.reader._remove_styles(
             "<c vIntro><b>Wikipedia</b> is a great adventure. <i>It may have "
             "its shortcomings</i>, but it is<u> the largest</u> collective "
             "knowledge construction endevour</c> <ruby>base text <rt>"
@@ -50,3 +52,35 @@ class WebVTTReaderTestCase(unittest.TestCase):
         self.assertRaises(
             CaptionReadNoCaptions,
             WebVTTReader().read, SAMPLE_WEBVTT_EMPTY)
+
+    def test_invalid_files(self):
+        self.assertRaises(
+            CaptionReadSyntaxError,
+            WebVTTReader().read,
+            """
+            NOTE Cues without text are invalid.
+
+            00:00:20,000 --> 00:00:10,000
+            """
+        )
+
+        self.assertRaises(
+            CaptionReadError,
+            WebVTTReader().read,
+            """
+            00:00:20,000 --> 00:00:10,000
+            Start time is greater than end time.
+            """
+        )
+
+        self.assertRaises(
+            CaptionReadError,
+            WebVTTReader().read,
+            """
+            00:00:20,000 --> 00:00:30,000
+            Start times should be consecutive.
+
+            00:00:10,000 --> 00:00:20,000
+            This cue starts before the previous one.
+            """
+        )
