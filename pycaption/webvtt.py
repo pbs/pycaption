@@ -163,13 +163,15 @@ class WebVTTWriter(BaseWriter):
 
     def _convert_nodes(self, nodes):
         s = ''
-        for node in nodes:
+        for i, node in enumerate(nodes):
             if node.type == CaptionNode.TEXT:
                 s += node.content
             elif node.type == CaptionNode.STYLE:
                 # TODO: Ignoring style so far.
                 pass
             elif node.type == CaptionNode.BREAK:
+                if nodes[i-1].type == CaptionNode.BREAK:
+                    s += '&nbsp;'
                 s += '\n'
 
         return s

@@ -1,11 +1,14 @@
 import unittest
 
 from pycaption import (
-    WebVTTReader,
+    WebVTTReader, WebVTTWriter, SAMIReader,
     CaptionReadNoCaptions, CaptionReadError, CaptionReadSyntaxError
 )
 
-from .samples import SAMPLE_WEBVTT, SAMPLE_SRT, SAMPLE_WEBVTT_EMPTY
+from .samples import (
+    SAMPLE_WEBVTT, SAMPLE_SRT, SAMPLE_WEBVTT_EMPTY,
+    SAMPLE_SAMI_DOUBLE_BR, SAMPLE_WEBVTT_DOUBLE_BR
+)
 
 
 class WebVTTReaderTestCase(unittest.TestCase):
@@ -84,3 +87,14 @@ class WebVTTReaderTestCase(unittest.TestCase):
             This cue starts before the previous one.
             """
         )
+
+
+class WebVTTWriterTestCase(unittest.TestCase):
+
+    def setUp(self):
+        self.writer = WebVTTWriter()
+
+    def test_double_br(self):
+        captions = SAMIReader().read(SAMPLE_SAMI_DOUBLE_BR)
+
+        self.assertEqual(SAMPLE_WEBVTT_DOUBLE_BR, self.writer.write(captions))
