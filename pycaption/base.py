@@ -68,6 +68,18 @@ class CaptionNode(object):
         self.content = None
         self.start = None
 
+    def __repr__(self):
+        t = self.type
+
+        if t == CaptionNode.TEXT:
+            return repr(self.content)
+        elif t == CaptionNode.BREAK:
+            return 'BREAK'
+        elif t == CaptionNode.STYLE:
+            return 'STYLE: %s %s' % (repr(self.start), repr(self.content))
+        else:
+            raise RuntimeError('Unknown node type: ' + repr(t))
+
     @staticmethod
     def create_text(text):
         data = CaptionNode(CaptionNode.TEXT)
