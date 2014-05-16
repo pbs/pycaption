@@ -116,7 +116,8 @@ class Caption(object):
         return self._format_timestamp(self.end, msec_separator)
 
     def __repr__(self):
-        return '%s --> %s\n%s' % (self.format_start(), self.format_end(), self.get_text())
+        return '%s --> %s\n%s' % (
+                self.format_start(), self.format_end(), self.get_text())
 
     def get_text(self):
         """
