@@ -1,4 +1,4 @@
-from .base import CaptionConverter
+from .base import CaptionConverter, Caption, CaptionSet, CaptionNode
 from .dfxp import DFXPWriter, DFXPReader
 from .sami import SAMIReader, SAMIWriter
 from .srt import SRTReader, SRTWriter
@@ -13,7 +13,7 @@ __all__ = [
     'SAMIReader', 'SAMIWriter', 'SRTReader', 'SRTWriter',
     'SCCReader', 'SCCWriter', 'WebVTTReader', 'WebVTTWriter',
     'CaptionReadError', 'CaptionReadNoCaptions', 'CaptionReadSyntaxError',
-    'detect_format'
+    'detect_format', 'Caption', 'CaptionSet', 'CaptionNode'
 ]
 
 
