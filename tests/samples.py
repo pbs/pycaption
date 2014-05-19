@@ -576,3 +576,23 @@ SAMPLE_SCC = """Scenarist_SCC V1.0
 SAMPLE_SCC_EMPTY = """Scenarist_SCC V1.0
 """
 
+
+SAMPLE_SAMI_DOUBLE_BR = """
+<SAMI><HEAD><TITLE>NOVA3213</TITLE>
+</HEAD><BODY>
+<SYNC start="14848"><P class="ENCC">
+    MAN:<br/><br/>
+    When we think<br/>
+    of "E equals m c-squared",
+</BODY></SAMI>
+"""
+
+SAMPLE_WEBVTT_DOUBLE_BR = """WEBVTT
+
+00:14.848 --> 00:18.848
+MAN:
+&nbsp;
+When we think
+of "E equals m c-squared",
+
+"""

@@ -6,7 +6,9 @@ import math
 import string
 import textwrap
 
-from .base import BaseReader, BaseWriter, Caption, CaptionSet, CaptionNode
+from .base import (
+    BaseReader, BaseWriter, Caption, CaptionSet, CaptionNode,
+    force_byte_string) 
 from .exceptions import CaptionReadNoCaptions
 
 
@@ -1112,7 +1114,7 @@ class SCCWriter(BaseWriter):
         output = HEADER + '\n\n'
 
         if caption_set.is_empty():
-            return self.force_byte_string(output)
+            return force_byte_string(output)
 
         # Only support one language.
         lang = caption_set.get_languages()[0]
@@ -1146,7 +1148,7 @@ class SCCWriter(BaseWriter):
             if end != None:
                 output += '%s\t942c 942c\n\n' % self._format_timestamp(end)
 
-        return self.force_byte_string(output)
+        return force_byte_string(output)
 
     # Wrap lines at 32 chars
     def _layout_line(self, caption):

@@ -5,9 +5,18 @@ from datetime import timedelta
 DEFAULT_LANGUAGE_CODE = 'en-US'
 
 
+def force_byte_string(content):
+    try:
+        return content.encode('UTF-8')
+    except UnicodeEncodeError:
+        raise RuntimeError('Invalid content encoding')
+    except UnicodeDecodeError:
+        return content
+
+
 class CaptionConverter(object):
-    def __init__(self, captions=[]):
-        self.captions = captions
+    def __init__(self, captions=None):
+        self.captions = captions if captions else []
 
     def read(self, content, caption_reader):
         try:
@@ -33,26 +42,10 @@ class BaseReader(object):
     def read(self, content):
         return CaptionSet()
 
-    def force_byte_string(self, content):
-        try:
-            return content.encode('UTF-8')
-        except UnicodeEncodeError:
-            raise RuntimeError('Invalid content encoding')
-        except UnicodeDecodeError:
-            return content
-
 
 class BaseWriter(object):
     def write(self, content):
         return content
-
-    def force_byte_string(self, content):
-        try:
-            return content.encode('UTF-8')
-        except UnicodeEncodeError:
-            raise RuntimeError('Invalid content encoding')
-        except UnicodeDecodeError:
-            return content
 
 
 class Style(object):
@@ -74,6 +67,18 @@ class CaptionNode(object):
         self.type = type
         self.content = None
         self.start = None
+
+    def __repr__(self):
+        t = self.type
+
+        if t == CaptionNode.TEXT:
+            return repr(self.content)
+        elif t == CaptionNode.BREAK:
+            return 'BREAK'
+        elif t == CaptionNode.STYLE:
+            return 'STYLE: %s %s' % (repr(self.start), repr(self.content))
+        else:
+            raise RuntimeError('Unknown node type: ' + repr(t))
 
     @staticmethod
     def create_text(text):
@@ -121,6 +126,10 @@ class Caption(object):
         for some of the supported output formats (ex. SRT, DFXP).
         """
         return self._format_timestamp(self.end, msec_separator)
+
+    def __repr__(self):
+        return '%s --> %s\n%s' % (
+                self.format_start(), self.format_end(), self.get_text())
 
     def get_text(self):
         """
