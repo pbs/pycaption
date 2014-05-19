@@ -1,3 +1,4 @@
+import sys
 import re
 
 from .base import (
@@ -47,7 +48,7 @@ class WebVTTReader(BaseReader):
                 try:
                     caption = self._parse_timing_line(line, last_start_time)
                 except CaptionReadError as e:
-                    raise type(e)(e.message + ' (line %d)' % timing_line)
+                    raise type(e), str(e) + ' (line %d)', sys.exc_info()[2]
 
             elif '' == line:
                 if found_timing:
