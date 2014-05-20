@@ -5,10 +5,7 @@ from pycaption import (
     CaptionReadNoCaptions, CaptionReadError, CaptionReadSyntaxError
 )
 
-from .samples import (
-    SAMPLE_WEBVTT, SAMPLE_SRT, SAMPLE_WEBVTT_EMPTY,
-    SAMPLE_SAMI_DOUBLE_BR, SAMPLE_WEBVTT_DOUBLE_BR
-)
+from .samples import *  # noqa
 
 
 class WebVTTReaderTestCase(unittest.TestCase):
@@ -23,7 +20,7 @@ class WebVTTReaderTestCase(unittest.TestCase):
         self.assertFalse(self.reader.detect(SAMPLE_SRT))
 
     def test_caption_length(self):
-        captions = self.reader.read(SAMPLE_WEBVTT)
+        captions = self.reader.read(SAMPLE_WEBVTT_2)
         self.assertEqual(len(captions.get_captions('en-US')), 7)
 
     def test_read_supports_multiple_languages(self):

@@ -37,6 +37,7 @@ class WebVTTReader(BaseReader):
 
     def _parse(self, lines):
         captions = []
+        caption = None
 
         found_timing = False
 
@@ -70,6 +71,9 @@ class WebVTTReader(BaseReader):
                     # it's a comment or some metadata; ignore it
                     pass
 
+        if caption and not caption.is_empty():
+            captions.append(caption)
+
         return captions
 
     def _remove_styles(self, line):
@@ -85,12 +89,12 @@ class WebVTTReader(BaseReader):
         caption = Caption()
 
         caption.start = self._parse_timestamp(m.group(1))
-        if not caption.start:
+        if caption.start is None:
             raise CaptionReadSyntaxError(
                 'Invalid cue start timestamp.')
 
         caption.end = self._parse_timestamp(m.group(2))
-        if not caption.end:
+        if caption.end is None:
             raise CaptionReadSyntaxError('Invalid cue end timestamp.')
 
         if caption.start > caption.end:
