@@ -54,7 +54,7 @@ class WebVTTReader(BaseReader):
                 if found_timing:
                     if caption.is_empty():
                         raise CaptionReadSyntaxError(
-                                'Cue without content. (line %d)' % timing_line)
+                            'Cue without content. (line %d)' % timing_line)
                     else:
                         found_timing = False
                         captions.append(caption)
@@ -79,14 +79,14 @@ class WebVTTReader(BaseReader):
         m = TIMING_PATTERN.search(line)
         if not m:
             raise CaptionReadSyntaxError(
-                    'Invalid timing format.')
+                'Invalid timing format.')
 
         caption = Caption()
 
         caption.start = self._parse_timestamp(m.group(1))
         if not caption.start:
             raise CaptionReadSyntaxError(
-                    'Invalid cue start timestamp.')
+                'Invalid cue start timestamp.')
 
         caption.end = self._parse_timestamp(m.group(2))
         if not caption.end:
@@ -97,8 +97,8 @@ class WebVTTReader(BaseReader):
 
         if caption.start < last_start_time:
             raise CaptionReadError(
-                    'Start timestamp is not greater than or equal'
-                    'to start timestamp of previous cue.')
+                'Start timestamp is not greater than or equal'
+                'to start timestamp of previous cue.')
 
         return caption
 
