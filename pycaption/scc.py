@@ -1114,7 +1114,8 @@ class SCCWriter(BaseWriter):
         output = HEADER + '\n\n'
 
         if caption_set.is_empty():
-            return force_byte_string(output)
+            return output
+            # return force_byte_string(output)
 
         # Only support one language.
         lang = caption_set.get_languages()[0]
@@ -1148,13 +1149,14 @@ class SCCWriter(BaseWriter):
             if end != None:
                 output += '%s\t942c 942c\n\n' % self._format_timestamp(end)
 
-        return force_byte_string(output)
+        return output
+        # return force_byte_string(output)
 
     # Wrap lines at 32 chars
     def _layout_line(self, caption):
         def caption_node_to_text(caption_node):
             if caption_node.type == CaptionNode.TEXT:
-                return unicode(caption_node.content, encoding='utf-8')
+                return unicode(caption_node.content)
             elif caption_node.type == CaptionNode.BREAK:
                 return '\n'
         caption_text = ''.join([caption_node_to_text(node)

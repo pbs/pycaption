@@ -16,7 +16,7 @@ __all__ = [
     'detect_format', 'Caption', 'CaptionSet', 'CaptionNode'
 ]
 
-
+# Tuple containing all supported caption reader classes
 SUPPORTED_READERS = (
     DFXPReader, WebVTTReader, SAMIReader, SRTReader, SCCReader)
 

@@ -25,7 +25,7 @@ class SRTtoSCCtoSRTTestCase(unittest.TestCase, CaptionSetTestingMixIn):
                                           TOLERANCE_MICROSECONDS)
 
     def test_srt_to_scc_to_srt_conversion(self):
-        self._test_srt_to_scc_to_srt_conversion(SAMPLE_SRT)
+        self._test_srt_to_scc_to_srt_conversion(SAMPLE_SRT.decode('utf-8'))
 
 # The following test fails -- maybe a bug with SCCReader
 #    def test_srt_to_scc_to_srt_utf8_conversion(self):

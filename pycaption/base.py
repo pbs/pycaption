@@ -6,9 +6,14 @@ DEFAULT_LANGUAGE_CODE = 'en-US'
 
 
 def force_byte_string(content):
+    """
+    Takes a unicode string and converts
+    it to a utf-8 encoded bytestring
+    """
     try:
         return content.encode('UTF-8')
     except UnicodeEncodeError:
+        # foreign unicode character
         raise RuntimeError('Invalid content encoding')
     except UnicodeDecodeError:
         return content
@@ -98,6 +103,7 @@ class CaptionNode(object):
         return CaptionNode(CaptionNode.BREAK)
 
 
+# todo: change constructor
 class Caption(object):
     """
     A single caption, including the time and styling information
