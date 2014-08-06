@@ -7,7 +7,7 @@ from .base import (
 from .exceptions import CaptionReadNoCaptions
 
 
-DFXP_BASE_MARKUP = '''
+DFXP_BASE_MARKUP = u'''
 <tt xmlns="http://www.w3.org/ns/ttml"
     xmlns:tts="http://www.w3.org/ns/ttml#styling">
     <head>
@@ -23,13 +23,22 @@ class DFXPReader(BaseReader):
         self.nodes = []
 
     def detect(self, content):
+        """
+        Detects if the caption content file
+        is DFXP formated
+        """
         if '</tt>' in content.lower():
             return True
         else:
             return False
 
     def read(self, content):
-        content = force_byte_string(content)
+        """
+        Takes in a dfxp closed capitoning string and
+        parses the captions and caption styles
+
+        :returns: CaptionSet containing parsed captions and styles
+        """
         dfxp_soup = BeautifulSoup(content)
         captions = CaptionSet()
 
@@ -52,17 +61,37 @@ class DFXPReader(BaseReader):
         return captions
 
     def _translate_div(self, div):
+        """
+        Parses a div tag into seperate captions
+
+        :returns: list of Caption objects (timestamp and caption)
+        """
+
+        # captions are contained in 'p' tags
         captions = []
         for p_tag in div.find_all('p'):
             captions.append(self._translate_p_tag(p_tag))
         return captions
 
     def _translate_p_tag(self, p_tag):
+        """
+        Parses a 'p' tag into a Caption object
+
+        :returns: Caption object
+        """
+
+        # Parse start and end timestamp
         start, end = self._find_times(p_tag)
+
+        # clear CaptionNode list and build
+        # new list from 'p' tag
         self.nodes = []
         self._translate_tag(p_tag)
+
+        # Parse caption style of 'p' tag
         styles = self._translate_style(p_tag)
 
+        # Build new Caption object
         caption = Caption()
         caption.start = start
         caption.end = end
@@ -71,20 +100,41 @@ class DFXPReader(BaseReader):
         return caption
 
     def _find_times(self, p_tag):
+        """
+        Takes a 'p' tag and parses the
+        start and end times of the caption
+
+        :returns: start and end timestamp of caption
+        """
+
+        # Convert caption start timestamp to microseconds
         start = self._translate_time(p_tag['begin'])
 
         try:
+            # Convert caption end timestamp to microseconds 
             end = self._translate_time(p_tag['end'])
         except KeyError:
+            # Convert caption duration to microseconds
+            # and calulate caption end
             dur = self._translate_time(p_tag['dur'])
             end = start + dur
 
         return start, end
 
     def _translate_time(self, stamp):
+        """
+        Takes a timestamp (hh:mm:ss.ms) and converts it to 
+        microseconds
+        """
+
+        # split timestamp into h, m, s fields
         timesplit = stamp.split(':')
+
+        # add milliseconds if s field doesn't already have ms
         if not '.' in timesplit[2]:
             timesplit[2] = timesplit[2] + '.000'
+
+        # split s field into seconds and milliseconds
         secsplit = timesplit[2].split('.')
         if len(timesplit) > 3:
             secsplit.append((int(timesplit[3]) / 30) * 100)
@@ -202,7 +252,8 @@ class DFXPWriter(BaseWriter):
             body.append(div)
 
         caption_content = dfxp.prettify(formatter=None)
-        return force_byte_string(caption_content)
+        # return force_byte_string(caption_content)
+        return caption_content
 
     # force the DFXP to only have one language, trying to match on "force"
     def _force_language(self, force, langs):

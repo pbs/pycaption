@@ -26,7 +26,7 @@ class WebVTTReader(BaseReader):
         return 'WEBVTT' in content
 
     def read(self, content, lang='en-US'):
-        content = force_byte_string(content)
+        # content = force_byte_string(content)
         caption_set = CaptionSet()
         caption_set.set_captions(lang, self._parse(content.splitlines()))
 
@@ -132,7 +132,8 @@ class WebVTTWriter(BaseWriter):
         output = self.HEADER
 
         if caption_set.is_empty():
-            return force_byte_string(output)
+            # return force_byte_string(output)
+            return output
 
         # TODO: styles. These go into a separate CSS file, which doesn't really
         # fit the API here. Figure that out.  Though some style stuff can be
@@ -145,7 +146,8 @@ class WebVTTWriter(BaseWriter):
             output += self._write_caption(caption)
             output += '\n'
 
-        return force_byte_string(output)
+        return output
+        # return force_byte_string(output)
 
     def _timestamp(self, ts):
         ts = float(ts)/1000000

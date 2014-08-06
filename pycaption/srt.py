@@ -13,7 +13,7 @@ class SRTReader(BaseReader):
             return False
 
     def read(self, content, lang='en-US'):
-        content = force_byte_string(content)
+        # content = force_byte_string(content)
         caption_set = CaptionSet()
         lines = content.splitlines()
         start_line = 0
@@ -84,7 +84,8 @@ class SRTWriter(BaseWriter):
             )
 
         caption_content = 'MULTI-LANGUAGE SRT\n'.join(srt_captions)
-        return force_byte_string(caption_content)
+        # return force_byte_string(caption_content)
+        return caption_content
 
     def _recreate_lang(self, captions):
         srt = ''
