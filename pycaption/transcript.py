@@ -3,28 +3,28 @@ import os
 try:
     import nltk.data
 except ImportError:
-    raise ImportError('You must install nltk==2.0.4 and numpy==1.7.1 to be able to use this.')
+    raise ImportError(u'You must install nltk==2.0.4 and numpy==1.7.1 to be able to use this.')
 from pycaption import BaseWriter, CaptionNode
 
 
 class TranscriptWriter(BaseWriter):
     def __init__(self, *args, **kw):
-        self.nltk = nltk.data.load('file:%s/english.pickle' %
+        self.nltk = nltk.data.load(u'file:%s/english.pickle' %
                                    os.path.dirname(__file__))
 
     def write(self, captions):
         transcripts = []
 
         for lang in captions.get_languages():
-            lang_transcript = '* %s Transcript *\n' % lang.upper()
+            lang_transcript = u'* %s Transcript *\n' % lang.upper()
 
             for caption in captions.get_captions(lang):
                 lang_transcript = self._strip_text(caption.nodes, lang_transcript)
 
-            lang_transcript = '\n'.join(self.nltk.tokenize(lang_transcript))
+            lang_transcript = u'\n'.join(self.nltk.tokenize(lang_transcript))
             transcripts.append(lang_transcript)
 
-        return '\n'.join(transcripts)
+        return u'\n'.join(transcripts)
 
     def _strip_text(self, elements, lang_transcript):
         for el in elements:

@@ -9,16 +9,16 @@ TOLERANCE_MICROSECONDS = 500 * 1000
 class SCCReaderTestCase(unittest.TestCase):
 
     def test_detection(self):
-        self.assertTrue(SCCReader().detect(SAMPLE_SCC))
+        self.assertTrue(SCCReader().detect(SAMPLE_SCC.decode(u'utf-8')))
 
     def test_caption_length(self):
-        captions = SCCReader().read(SAMPLE_SCC)
+        captions = SCCReader().read(SAMPLE_SCC.decode(u'utf-8'))
 
-        self.assertEquals(7, len(captions.get_captions("en-US")))
+        self.assertEquals(7, len(captions.get_captions(u"en-US")))
 
     def test_proper_timestamps(self):
-        captions = SCCReader().read(SAMPLE_SCC)
-        paragraph = captions.get_captions("en-US")[2]
+        captions = SCCReader().read(SAMPLE_SCC.decode(u'utf-8'))
+        paragraph = captions.get_captions(u"en-US")[2]
 
         delta_start = abs(paragraph.start - 17000000)
         delta_end = abs(paragraph.end - 18752000)
@@ -29,5 +29,5 @@ class SCCReaderTestCase(unittest.TestCase):
     def test_empty_file(self):
         self.assertRaises(
             CaptionReadNoCaptions,
-            SCCReader().read, SAMPLE_SCC_EMPTY)
+            SCCReader().read, SAMPLE_SCC_EMPTY.decode(u'utf-8'))
 
