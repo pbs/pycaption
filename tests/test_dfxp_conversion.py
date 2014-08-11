@@ -1,8 +1,13 @@
 import unittest
 
+from bs4 import BeautifulSoup
+
 from pycaption import (
     DFXPReader, DFXPWriter, SRTWriter, SAMIWriter, WebVTTWriter)
 
+from pycaption.dfxp import (
+    DFXP_DEFAULT_STYLE, DFXP_DEFAULT_STYLE_ID, 
+    DFXP_DEFAULT_REGION, DFXP_DEFAULT_REGION_ID)
 from .samples import (
     SAMPLE_SAMI, SAMPLE_SRT, SAMPLE_DFXP,
     SAMPLE_SAMI_UTF8, SAMPLE_SRT_UTF8, SAMPLE_DFXP_UTF8,
@@ -36,6 +41,52 @@ class DFXPtoDFXPTestCase(DFXPConversionTestCase, DFXPTestingMixIn):
         results = DFXPWriter().write(self.captions_unicode)
         self.assertTrue(isinstance(results, unicode))
         self.assertDFXPEquals(SAMPLE_DFXP_UNICODE, results)
+
+    def test_default_styling_tag(self):
+        w = DFXPWriter()
+        w.default_settings = True
+        result = w.write(self.captions)
+
+        default_style = w._recreate_style(DFXP_DEFAULT_STYLE, None)
+        default_style[u'xml:id'] = DFXP_DEFAULT_STYLE_ID
+
+        soup = BeautifulSoup(result, u'xml')
+        style = soup.find(u'style', {u'xml:id': DFXP_DEFAULT_STYLE_ID})
+        
+        self.assertTrue(style)
+        self.assertEquals(style.attrs, default_style)
+
+    def test_default_styling_p_tags(self):
+        w = DFXPWriter()
+        w.default_settings = True
+        result = w.write(self.captions)
+
+        soup = BeautifulSoup(result, u'xml')
+        for p in soup.find_all(u'p'):
+            self.assertEquals(p.attrs.get(u'style'), DFXP_DEFAULT_STYLE_ID)
+
+    def test_default_region_tag(self):
+        w = DFXPWriter()
+        w.default_settings = True
+        result = w.write(self.captions)
+
+        default_region = w._recreate_style(DFXP_DEFAULT_REGION, None)
+        default_region[u'xml:id'] = DFXP_DEFAULT_REGION_ID
+
+        soup = BeautifulSoup(result, u'xml')
+        region = soup.find(u'region', {u'xml:id': DFXP_DEFAULT_REGION_ID})
+        
+        self.assertTrue(region)
+        self.assertEquals(region.attrs, default_region)
+
+    def test_default_region_p_tags(self):
+        w = DFXPWriter()
+        w.default_settings = True
+        result = w.write(self.captions)
+
+        soup = BeautifulSoup(result, u'xml')
+        for p in soup.find_all(u'p'):
+            self.assertEquals(p.attrs.get(u'region'), DFXP_DEFAULT_REGION_ID)
 
 
 class DFXPtoSRTTestCase(DFXPConversionTestCase, SRTTestingMixIn):
