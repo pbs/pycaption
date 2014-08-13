@@ -22,7 +22,7 @@ DFXP_BASE_MARKUP = u'''
 DFXP_DEFAULT_STYLE = {
     u'color': u'white',
     u'font-family': u'monospace',
-    u'font-size': u'16px',
+    u'font-size': u'1c',
 }
 
 DFXP_DEFAULT_REGION = {
@@ -329,10 +329,12 @@ class DFXPWriter(BaseWriter):
         if u'italics' in content:
             dfxp_style[u'tts:fontStyle'] = u'italic'
         if u'font-family' in content:
-            dfxp_style[u'tts:fontfamily'] = content[u'font-family']
+            dfxp_style[u'tts:fontFamily'] = content[u'font-family']
         if u'font-size' in content:
-            dfxp_style[u'tts:fontsize'] = content[u'font-size']
+            dfxp_style[u'tts:fontSize'] = content[u'font-size']
         if u'color' in content:
             dfxp_style[u'tts:color'] = content[u'color']
+        if u'display-align' in content:
+            dfxp_style[u'tts:displayAlign'] = content[u'display-align']
 
         return dfxp_style
