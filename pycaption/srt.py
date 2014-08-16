@@ -67,11 +67,15 @@ class SRTReader(BaseReader):
         return microseconds
 
     def _find_text_line(self, start_line, lines):
-        end_line = start_line + 1
+        end_line = start_line
 
+        found = False
         while end_line < len(lines):
             if lines[end_line].strip() == u"":
-                return end_line + 1
+                found = True
+            elif found is True:
+                end_line -= 1
+                break
             end_line += 1
 
         return end_line + 1
