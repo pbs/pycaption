@@ -1110,9 +1110,6 @@ class SCCReader(BaseReader):
 
 class SCCWriter(BaseWriter):
 
-    def __init__(self, *args, **kw):
-        pass
-
     def write(self, caption_set):
         output = HEADER + u'\n\n'
 
