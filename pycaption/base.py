@@ -44,6 +44,9 @@ class BaseReader(object):
 
 
 class BaseWriter(object):
+    def __init__(self, *args, **kwargs):
+        pass
+
     def write(self, content):
         return content
 
