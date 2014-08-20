@@ -123,13 +123,18 @@ class WebVTTReader(BaseReader):
 
 
 class WebVTTWriter(BaseWriter):
-    HEADER = 'WEBVTT\n\n'
+    HEADER = 'WEBVTT\n'
 
     def __init__(self, *args, **kw):
-        pass
+        self.metadata = {}
+        if "metadata" in kw and kw["metadata"]:
+            self.metadata.update(kw["metadata"])
 
     def write(self, caption_set):
         output = self.HEADER
+        for key in self.metadata:
+            output += key + ':' + str(self.metadata[key]) + '\n'
+        output += '\n'
 
         if caption_set.is_empty():
             return force_byte_string(output)
