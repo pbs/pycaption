@@ -2,7 +2,8 @@ import unittest
 
 from pycaption import SRTReader, CaptionReadNoCaptions
 
-from .samples import SAMPLE_SRT, SAMPLE_SRT_NUMERIC, SAMPLE_SRT_EMPTY
+from .samples import (
+    SAMPLE_SRT, SAMPLE_SRT_NUMERIC, SAMPLE_SRT_EMPTY, SAMPLE_SRT_BLANK_LINES)
 
 
 class SRTReaderTestCase(unittest.TestCase):
@@ -30,3 +31,9 @@ class SRTReaderTestCase(unittest.TestCase):
         self.assertRaises(
             CaptionReadNoCaptions,
             SRTReader().read, SAMPLE_SRT_EMPTY)
+
+    def test_extra_empty_line(self):
+        captions = SRTReader().read(SAMPLE_SRT_BLANK_LINES)
+
+        self.assertEquals(2, len(captions.get_captions("en-US")))
+
