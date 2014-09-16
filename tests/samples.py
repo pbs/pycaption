@@ -626,3 +626,12 @@ When we think
 of "E equals m c-squared",
 
 """
+
+SAMPLE_WEBVTT_EMPTY_CUE = """WEBVTT
+
+1
+00:00.000 --> 00:02.000
+
+00:04.000 --> 00:05.000
+Transcribed by Celestials
+"""

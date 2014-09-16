@@ -85,6 +85,10 @@ class WebVTTReaderTestCase(unittest.TestCase):
             """
         )
 
+    def test_webvtt_empty_cue(self):
+        self.assertEqual(1, len(self.reader.read(
+                SAMPLE_WEBVTT_EMPTY_CUE).get_captions('en-US')))
+
 
 class WebVTTWriterTestCase(unittest.TestCase):
 
