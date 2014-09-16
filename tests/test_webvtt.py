@@ -9,8 +9,10 @@ from tests.samples.dfxp import DFXP_STYLE_REGION_ALIGN_CONFLICT
 from tests.samples.sami import SAMPLE_SAMI_DOUBLE_BR
 from tests.samples.srt import SAMPLE_SRT
 from tests.samples.webvtt import (
-    SAMPLE_WEBVTT, SAMPLE_WEBVTT_2, SAMPLE_WEBVTT_EMPTY, SAMPLE_WEBVTT_DOUBLE_BR,
-    WEBVTT_FROM_DFXP_WITH_CONFLICTING_ALIGN, SAMPLE_WEBVTT_LAST_CUE_ZERO_START
+    SAMPLE_WEBVTT, SAMPLE_WEBVTT_2, SAMPLE_WEBVTT_EMPTY,
+    SAMPLE_WEBVTT_DOUBLE_BR,
+    WEBVTT_FROM_DFXP_WITH_CONFLICTING_ALIGN, SAMPLE_WEBVTT_LAST_CUE_ZERO_START,
+    SAMPLE_WEBVTT_EMPTY_CUE
 )
 
 
@@ -157,6 +159,10 @@ class WebVTTReaderTestCase(unittest.TestCase):
         captions = self.reader.read(SAMPLE_WEBVTT_LAST_CUE_ZERO_START)
         cue = captions.get_captions('en-US')[0]
         self.assertEqual(cue.start, 0)
+
+    def test_webvtt_empty_cue(self):
+        self.assertEqual(1, len(self.reader.read(
+                SAMPLE_WEBVTT_EMPTY_CUE).get_captions('en-US')))
 
 
 class WebVTTWriterTestCase(unittest.TestCase):

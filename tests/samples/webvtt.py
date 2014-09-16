@@ -245,3 +245,12 @@ SAMPLE_WEBVTT_LAST_CUE_ZERO_START = """WEBVTT
 
 00:00.000 --> 00:12.312
 ( clock ticking )"""
+
+SAMPLE_WEBVTT_EMPTY_CUE = """WEBVTT
+
+1
+00:00.000 --> 00:02.000
+
+00:04.000 --> 00:05.000
+Transcribed by Celestials
+"""
