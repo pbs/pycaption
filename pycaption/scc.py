@@ -787,6 +787,9 @@ class SCCReader(BaseReader):
             return False
 
     def read(self, content, lang=u'en-US', simulate_roll_up=False, offset=0):
+        if type(content) != unicode:
+            raise RuntimeError('The content is not a unicode string.')
+
         self.simulate_roll_up = simulate_roll_up
         self.offset = offset * 1000000
         # split lines

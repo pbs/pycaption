@@ -25,6 +25,9 @@ class WebVTTReader(BaseReader):
         return u'WEBVTT' in content
 
     def read(self, content, lang=u'en-US'):
+        if type(content) != unicode:
+            raise RuntimeError('The content is not a unicode string.')
+
         caption_set = CaptionSet()
         caption_set.set_captions(lang, self._parse(content.splitlines()))
 

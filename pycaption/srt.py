@@ -12,6 +12,9 @@ class SRTReader(BaseReader):
             return False
 
     def read(self, content, lang=u'en-US'):
+        if type(content) != unicode:
+            raise RuntimeError('The content is not a unicode string.')
+
         caption_set = CaptionSet()
         lines = content.splitlines()
         start_line = 0

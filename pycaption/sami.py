@@ -37,6 +37,9 @@ class SAMIReader(BaseReader):
             return False
 
     def read(self, content):
+        if type(content) != unicode:
+            raise RuntimeError('The content is not a unicode string.')
+
         content, doc_styles, doc_langs = SAMIParser().feed(content)
         sami_soup = BeautifulSoup(content)
         captions = CaptionSet()

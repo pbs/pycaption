@@ -29,6 +29,9 @@ class DFXPReader(BaseReader):
             return False
 
     def read(self, content):
+        if type(content) != unicode:
+            raise RuntimeError('The content is not a unicode string.')
+
         dfxp_soup = BeautifulSoup(content)
         captions = CaptionSet()
 
