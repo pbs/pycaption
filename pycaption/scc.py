@@ -752,9 +752,9 @@ PAC_LOW_BYTE_BY_ROW = ['xx','d0','70','d0','70','d0','70','d0','70','d0','70','d
 
 
 # Inverted character lookup
-CHARACTER_TO_CODE = {character: code for code, character in CHARACTERS.iteritems()}
-SPECIAL_OR_EXTENDED_CHAR_TO_CODE = {character: code for code, character in EXTENDED_CHARS.iteritems()}
-SPECIAL_OR_EXTENDED_CHAR_TO_CODE.update({character: code for code, character in SPECIAL_CHARS.iteritems()})
+CHARACTER_TO_CODE = dict(zip(CHARACTERS.values(), CHARACTERS.keys()))
+SPECIAL_OR_EXTENDED_CHAR_TO_CODE = dict(zip(EXTENDED_CHARS.values(), EXTENDED_CHARS.keys()))
+SPECIAL_OR_EXTENDED_CHAR_TO_CODE.update(dict(zip(SPECIAL_CHARS.values(), SPECIAL_CHARS.keys())))
 
 
 # Time to transmit a single codeword = 1 second / 29.97
