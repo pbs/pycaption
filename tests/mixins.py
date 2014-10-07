@@ -50,7 +50,7 @@ class CaptionSetTestingMixIn(object):
 
         def get_text_for_caption(caption):
             text = caption.get_text()
-            text = re.sub('\s+', ' ', text)
+            text = re.sub(u'\s+', u' ', text)
 
             return text
 
@@ -83,19 +83,19 @@ class DFXPTestingMixIn(object):
     """
 
     def _remove_styling(self, soup):
-        for style in soup('styling'):
+        for style in soup(u'styling'):
             style.extract()
 
-        for paragraph in soup('p'):
-            if 'style' in paragraph.attrs:
-                del paragraph.attrs['style']
+        for paragraph in soup(u'p'):
+            if u'style' in paragraph.attrs:
+                del paragraph.attrs[u'style']
 
     def _remove_spans(self, soup):
-        for span in soup('span'):
+        for span in soup(u'span'):
             span.unwrap()
 
     def _trim_text(self, soup):
-        for paragraph in soup('p'):
+        for paragraph in soup(u'p'):
             paragraph.string = paragraph.text.strip()
 
     def assertDFXPEquals(self, first, second,
@@ -125,8 +125,8 @@ class SAMITestingMixIn(object):
 
     def _extract_sami_captions(self, soup):
         return tuple(
-            (caption.attrs['start'], caption.p.text.strip())
-            for caption in soup.select('sync'))
+            (caption.attrs[u'start'], caption.p.text.strip())
+            for caption in soup.select(u'sync'))
 
     def assertSAMIEquals(self, first, second):
         first_soup = BeautifulSoup(first)

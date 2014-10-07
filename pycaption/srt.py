@@ -1,19 +1,20 @@
 from .base import (
-    BaseReader, BaseWriter, CaptionSet, Caption, CaptionNode,
-    force_byte_string)
+    BaseReader, BaseWriter, CaptionSet, Caption, CaptionNode)
 from .exceptions import CaptionReadNoCaptions
 
 
 class SRTReader(BaseReader):
     def detect(self, content):
         lines = content.splitlines()
-        if lines[0].isdigit() and '-->' in lines[1]:
+        if lines[0].isdigit() and u'-->' in lines[1]:
             return True
         else:
             return False
 
-    def read(self, content, lang='en-US'):
-        content = force_byte_string(content)
+    def read(self, content, lang=u'en-US'):
+        if type(content) != unicode:
+            raise RuntimeError('The content is not a unicode string.')
+
         caption_set = CaptionSet()
         lines = content.splitlines()
         start_line = 0
@@ -27,13 +28,13 @@ class SRTReader(BaseReader):
 
             end_line = self._find_text_line(start_line, lines)
 
-            timing = lines[start_line + 1].split('-->')
-            caption.start = self._srttomicro(timing[0].strip(' \r\n'))
-            caption.end = self._srttomicro(timing[1].strip(' \r\n'))
+            timing = lines[start_line + 1].split(u'-->')
+            caption.start = self._srttomicro(timing[0].strip(u' \r\n'))
+            caption.end = self._srttomicro(timing[1].strip(u' \r\n'))
 
             for line in lines[start_line + 2:end_line - 1]:
                 # skip extra blank lines
-                if not caption.nodes or line != '':
+                if not caption.nodes or line != u'':
                     caption.nodes.append(CaptionNode.create_text(line))
                     caption.nodes.append(CaptionNode.create_break())
 
@@ -47,15 +48,15 @@ class SRTReader(BaseReader):
         caption_set.set_captions(lang, captions)
 
         if caption_set.is_empty():
-            raise CaptionReadNoCaptions("empty caption file")
+            raise CaptionReadNoCaptions(u"empty caption file")
 
         return caption_set
 
     def _srttomicro(self, stamp):
-        timesplit = stamp.split(':')
-        if not ',' in timesplit[2]:
-            timesplit[2] = timesplit[2] + ',000'
-        secsplit = timesplit[2].split(',')
+        timesplit = stamp.split(u':')
+        if not u',' in timesplit[2]:
+            timesplit[2] = timesplit[2] + u',000'
+        secsplit = timesplit[2].split(u',')
         microseconds = (int(timesplit[0]) * 3600000000 +
                         int(timesplit[1]) * 60000000 +
                         int(secsplit[0]) * 1000000 +
@@ -67,7 +68,7 @@ class SRTReader(BaseReader):
         end_line = start_line + 1
 
         while end_line < len(lines):
-            if lines[end_line].strip() == "":
+            if lines[end_line].strip() == u"":
                 return end_line + 1
             end_line += 1
 
@@ -83,33 +84,33 @@ class SRTWriter(BaseWriter):
                 self._recreate_lang(captions.get_captions(lang))
             )
 
-        caption_content = 'MULTI-LANGUAGE SRT\n'.join(srt_captions)
-        return force_byte_string(caption_content)
+        caption_content = u'MULTI-LANGUAGE SRT\n'.join(srt_captions)
+        return caption_content
 
     def _recreate_lang(self, captions):
-        srt = ''
+        srt = u''
         count = 1
 
         for caption in captions:
-            srt += '%s\n' % count
+            srt += u'%s\n' % count
 
-            start = caption.format_start(msec_separator=',')
-            end = caption.format_end(msec_separator=',')
-            timestamp = '%s --> %s\n' % (start[:12], end[:12])
+            start = caption.format_start(msec_separator=u',')
+            end = caption.format_end(msec_separator=u',')
+            timestamp = u'%s --> %s\n' % (start[:12], end[:12])
 
-            srt += timestamp.replace('.', ',')
+            srt += timestamp.replace(u'.', u',')
             for node in caption.nodes:
                 srt = self._recreate_line(srt, node)
 
-            srt += '\n\n'
+            srt += u'\n\n'
             count += 1
 
         return srt[:-1]  # remove unwanted newline at end of file
 
     def _recreate_line(self, srt, line):
         if line.type == CaptionNode.TEXT:
-            return srt + '%s ' % line.content
+            return srt + u'%s ' % line.content
         elif line.type == CaptionNode.BREAK:
-            return srt + '\n'
+            return srt + u'\n'
         else:
             return srt

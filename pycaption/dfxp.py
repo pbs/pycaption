@@ -3,11 +3,11 @@ from xml.sax.saxutils import escape
 
 from .base import (
     BaseReader, BaseWriter, CaptionSet, Caption, CaptionNode,
-    force_byte_string, DEFAULT_LANGUAGE_CODE)
+    DEFAULT_LANGUAGE_CODE)
 from .exceptions import CaptionReadNoCaptions
 
 
-DFXP_BASE_MARKUP = '''
+DFXP_BASE_MARKUP = u'''
 <tt xmlns="http://www.w3.org/ns/ttml"
     xmlns:tts="http://www.w3.org/ns/ttml#styling">
     <head>
@@ -23,37 +23,39 @@ class DFXPReader(BaseReader):
         self.nodes = []
 
     def detect(self, content):
-        if '</tt>' in content.lower():
+        if u'</tt>' in content.lower():
             return True
         else:
             return False
 
     def read(self, content):
-        content = force_byte_string(content)
+        if type(content) != unicode:
+            raise RuntimeError('The content is not a unicode string.')
+
         dfxp_soup = BeautifulSoup(content)
         captions = CaptionSet()
 
         # Each div represents all the captions for a single language.
-        for div in dfxp_soup.find_all('div'):
-            lang = div.attrs.get('xml:lang', DEFAULT_LANGUAGE_CODE)
+        for div in dfxp_soup.find_all(u'div'):
+            lang = div.attrs.get(u'xml:lang', DEFAULT_LANGUAGE_CODE)
             captions.set_captions(lang, self._translate_div(div))
 
-        for style in dfxp_soup.find_all('style'):
-            id = style.attrs.get('id')
+        for style in dfxp_soup.find_all(u'style'):
+            id = style.attrs.get(u'id')
             if not id:
-                id = style.attrs.get('xml:id')
+                id = style.attrs.get(u'xml:id')
             captions.add_style(id, self._translate_style(style))
 
         captions = self._combine_matching_captions(captions)
 
         if captions.is_empty():
-            raise CaptionReadNoCaptions("empty caption file")
+            raise CaptionReadNoCaptions(u"empty caption file")
 
         return captions
 
     def _translate_div(self, div):
         captions = []
-        for p_tag in div.find_all('p'):
+        for p_tag in div.find_all(u'p'):
             captions.append(self._translate_p_tag(p_tag))
         return captions
 
@@ -71,21 +73,21 @@ class DFXPReader(BaseReader):
         return caption
 
     def _find_times(self, p_tag):
-        start = self._translate_time(p_tag['begin'])
+        start = self._translate_time(p_tag[u'begin'])
 
         try:
-            end = self._translate_time(p_tag['end'])
+            end = self._translate_time(p_tag[u'end'])
         except KeyError:
-            dur = self._translate_time(p_tag['dur'])
+            dur = self._translate_time(p_tag[u'dur'])
             end = start + dur
 
         return start, end
 
     def _translate_time(self, stamp):
-        timesplit = stamp.split(':')
-        if not '.' in timesplit[2]:
-            timesplit[2] = timesplit[2] + '.000'
-        secsplit = timesplit[2].split('.')
+        timesplit = stamp.split(u':')
+        if not u'.' in timesplit[2]:
+            timesplit[2] = timesplit[2] + u'.000'
+        secsplit = timesplit[2].split(u'.')
         if len(timesplit) > 3:
             secsplit.append((int(timesplit[3]) / 30) * 100)
         microseconds = (int(timesplit[0]) * 3600000000 +
@@ -97,14 +99,14 @@ class DFXPReader(BaseReader):
     def _translate_tag(self, tag):
         # convert text
         if isinstance(tag, NavigableString):
-            if tag.strip() != '':
+            if tag.strip() != u'':
                 node = CaptionNode.create_text(tag.strip())
                 self.nodes.append(node)
         # convert line breaks
-        elif tag.name == 'br':
+        elif tag.name == u'br':
             self.nodes.append(CaptionNode.create_break())
         # convert italics
-        elif tag.name == 'span':
+        elif tag.name == u'span':
             # convert span
             self._translate_span(tag)
         else:
@@ -116,7 +118,7 @@ class DFXPReader(BaseReader):
         # convert tag attributes
         args = self._translate_style(tag)
         # only include span tag if attributes returned
-        if args != '':
+        if args != u'':
             node = CaptionNode.create_style(True, args)
             node.start = True
             node.content = args
@@ -138,18 +140,18 @@ class DFXPReader(BaseReader):
         attrs = {}
         dfxp_attrs = tag.attrs
         for arg in dfxp_attrs:
-            if arg == "style":
-                attrs['class'] = dfxp_attrs[arg]
-            elif arg == "tts:fontstyle" and dfxp_attrs[arg] == "italic":
-                attrs['italics'] = True
-            elif arg == "tts:textalign":
-                attrs['text-align'] = dfxp_attrs[arg]
-            elif arg == "tts:fontfamily":
-                attrs['font-family'] = dfxp_attrs[arg]
-            elif arg == "tts:fontsize":
-                attrs['font-size'] = dfxp_attrs[arg]
-            elif arg == "tts:color":
-                attrs['color'] = dfxp_attrs[arg]
+            if arg == u"style":
+                attrs[u'class'] = dfxp_attrs[arg]
+            elif arg == u"tts:fontstyle" and dfxp_attrs[arg] == u"italic":
+                attrs[u'italics'] = True
+            elif arg == u"tts:textalign":
+                attrs[u'text-align'] = dfxp_attrs[arg]
+            elif arg == u"tts:fontfamily":
+                attrs[u'font-family'] = dfxp_attrs[arg]
+            elif arg == u"tts:fontsize":
+                attrs[u'font-size'] = dfxp_attrs[arg]
+            elif arg == u"tts:color":
+                attrs[u'color'] = dfxp_attrs[arg]
         return attrs
 
     # Merge together captions that have the same start/end times.
@@ -176,15 +178,15 @@ class DFXPWriter(BaseWriter):
         self.p_style = False
         self.open_span = False
 
-    def write(self, captions, force=''):
-        dfxp = BeautifulSoup(DFXP_BASE_MARKUP, 'xml')
-        dfxp.find('tt')['xml:lang'] = "en"
+    def write(self, captions, force=u''):
+        dfxp = BeautifulSoup(DFXP_BASE_MARKUP, u'xml')
+        dfxp.find(u'tt')[u'xml:lang'] = u"en"
 
         for style_id, style in captions.get_styles():
             if style != {}:
                 dfxp = self._recreate_styling_tag(style_id, style, dfxp)
 
-        body = dfxp.find('body')
+        body = dfxp.find(u'body')
 
         if force:
             langs = [self._force_language(force, captions.get_languages())]
@@ -192,8 +194,8 @@ class DFXPWriter(BaseWriter):
             langs = captions.get_languages()
 
         for lang in langs:
-            div = dfxp.new_tag('div')
-            div['xml:lang'] = '%s' % lang
+            div = dfxp.new_tag(u'div')
+            div[u'xml:lang'] = u'%s' % lang
 
             for caption in captions.get_captions(lang):
                 p = self._recreate_p_tag(caption, dfxp)
@@ -202,7 +204,7 @@ class DFXPWriter(BaseWriter):
             body.append(div)
 
         caption_content = dfxp.prettify(formatter=None)
-        return force_byte_string(caption_content)
+        return caption_content
 
     # force the DFXP to only have one language, trying to match on "force"
     def _force_language(self, force, langs):
@@ -213,38 +215,38 @@ class DFXPWriter(BaseWriter):
         return langs[-1]
 
     def _recreate_styling_tag(self, style, content, dfxp):
-        dfxp_style = dfxp.new_tag('style', id="%s" % style)
+        dfxp_style = dfxp.new_tag(u'style', id=u"%s" % style)
 
         attributes = self._recreate_style(content, dfxp)
         dfxp_style.attrs.update(attributes)
 
-        if dfxp_style != dfxp.new_tag('style', id="%s" % style):
-            dfxp.find('styling').append(dfxp_style)
+        if dfxp_style != dfxp.new_tag(u'style', id=u"%s" % style):
+            dfxp.find(u'styling').append(dfxp_style)
 
         return dfxp
 
     def _recreate_p_tag(self, caption, dfxp):
         start = caption.format_start()
         end = caption.format_end()
-        p = dfxp.new_tag("p", begin=start, end=end)
+        p = dfxp.new_tag(u"p", begin=start, end=end)
         p.string = self._recreate_text(caption, dfxp)
 
-        if dfxp.find("style", {"id": "p"}):
-            p['style'] = 'p'
+        if dfxp.find(u"style", {u"id": u"p"}):
+            p[u'style'] = u'p'
 
         p.attrs.update(self._recreate_style(caption.style, dfxp))
 
         return p
 
     def _recreate_text(self, caption, dfxp):
-        line = ''
+        line = u''
 
         for node in caption.nodes:
             if node.type == CaptionNode.TEXT:
-                line += escape(node.content) + ' '
+                line += escape(node.content) + u' '
 
             elif node.type == CaptionNode.BREAK:
-                line = line.rstrip() + '<br/>\n    '
+                line = line.rstrip() + u'<br/>\n    '
 
             elif node.type == CaptionNode.STYLE:
                 line = self._recreate_span(line, node, dfxp)
@@ -253,20 +255,20 @@ class DFXPWriter(BaseWriter):
 
     def _recreate_span(self, line, node, dfxp):
         if node.start:
-            styles = ''
+            styles = u''
 
             content_with_style = self._recreate_style(node.content, dfxp)
             for style, value in content_with_style.items():
-                styles += ' %s="%s"' % (style, value)
+                styles += u' %s="%s"' % (style, value)
 
             if styles:
                 if self.open_span:
-                    line = line.rstrip() + '</span> '
-                line += '<span%s>' % styles
+                    line = line.rstrip() + u'</span> '
+                line += u'<span%s>' % styles
                 self.open_span = True
 
         elif self.open_span:
-            line = line.rstrip() + '</span> '
+            line = line.rstrip() + u'</span> '
             self.open_span = False
 
         return line
@@ -274,18 +276,18 @@ class DFXPWriter(BaseWriter):
     def _recreate_style(self, content, dfxp):
         dfxp_style = {}
 
-        if 'class' in content:
-            if dfxp.find("style", {"id": content['class']}):
-                dfxp_style['style'] = content['class']
-        if 'text-align' in content:
-            dfxp_style['tts:textAlign'] = content['text-align']
-        if 'italics' in content:
-            dfxp_style['tts:fontStyle'] = 'italic'
-        if 'font-family' in content:
-            dfxp_style['tts:fontfamily'] = content['font-family']
-        if 'font-size' in content:
-            dfxp_style['tts:fontsize'] = content['font-size']
-        if 'color' in content:
-            dfxp_style['tts:color'] = content['color']
+        if u'class' in content:
+            if dfxp.find(u"style", {u"id": content[u'class']}):
+                dfxp_style[u'style'] = content[u'class']
+        if u'text-align' in content:
+            dfxp_style[u'tts:textAlign'] = content[u'text-align']
+        if u'italics' in content:
+            dfxp_style[u'tts:fontStyle'] = u'italic'
+        if u'font-family' in content:
+            dfxp_style[u'tts:fontfamily'] = content[u'font-family']
+        if u'font-size' in content:
+            dfxp_style[u'tts:fontsize'] = content[u'font-size']
+        if u'color' in content:
+            dfxp_style[u'tts:color'] = content[u'color']
 
         return dfxp_style

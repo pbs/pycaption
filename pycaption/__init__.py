@@ -9,13 +9,12 @@ from .exceptions import (
 
 
 __all__ = [
-    'CaptionConverter', 'DFXPReader', 'DFXPWriter',
-    'SAMIReader', 'SAMIWriter', 'SRTReader', 'SRTWriter',
-    'SCCReader', 'SCCWriter', 'WebVTTReader', 'WebVTTWriter',
-    'CaptionReadError', 'CaptionReadNoCaptions', 'CaptionReadSyntaxError',
-    'detect_format', 'Caption', 'CaptionSet', 'CaptionNode'
+    u'CaptionConverter', u'DFXPReader', u'DFXPWriter',
+    u'SAMIReader', u'SAMIWriter', u'SRTReader', u'SRTWriter',
+    u'SCCReader', u'SCCWriter', u'WebVTTReader', u'WebVTTWriter',
+    u'CaptionReadError', u'CaptionReadNoCaptions', u'CaptionReadSyntaxError',
+    u'detect_format', u'Caption', u'CaptionSet', u'CaptionNode'
 ]
-
 
 SUPPORTED_READERS = (
     DFXPReader, WebVTTReader, SAMIReader, SRTReader, SCCReader)

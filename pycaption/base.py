@@ -2,14 +2,14 @@ from collections import defaultdict
 from datetime import timedelta
 
 
-DEFAULT_LANGUAGE_CODE = 'en-US'
+DEFAULT_LANGUAGE_CODE = u'en-US'
 
 
 def force_byte_string(content):
     try:
-        return content.encode('UTF-8')
+        return content.encode(u'UTF-8')
     except UnicodeEncodeError:
-        raise RuntimeError('Invalid content encoding')
+        raise RuntimeError(u'Invalid content encoding')
     except UnicodeDecodeError:
         return content
 
@@ -74,11 +74,11 @@ class CaptionNode(object):
         if t == CaptionNode.TEXT:
             return repr(self.content)
         elif t == CaptionNode.BREAK:
-            return 'BREAK'
+            return repr(u'BREAK')
         elif t == CaptionNode.STYLE:
-            return 'STYLE: %s %s' % (repr(self.start), repr(self.content))
+            return repr(u'STYLE: %s %s' % (self.start, self.content))
         else:
-            raise RuntimeError('Unknown node type: ' + repr(t))
+            raise RuntimeError(u'Unknown node type: ' + unicode(t))
 
     @staticmethod
     def create_text(text):
@@ -128,8 +128,8 @@ class Caption(object):
         return self._format_timestamp(self.end, msec_separator)
 
     def __repr__(self):
-        return '%s --> %s\n%s' % (
-                self.format_start(), self.format_end(), self.get_text())
+        return repr(u'%s --> %s\n%s' % (
+                self.format_start(), self.format_end(), self.get_text()))
 
     def get_text(self):
         """
@@ -139,22 +139,22 @@ class Caption(object):
             if node.type == CaptionNode.TEXT:
                 return node.content
             if node.type == CaptionNode.BREAK:
-                return '\n'
-            return ''
+                return u'\n'
+            return u''
         text_nodes = [get_text_for_node(node) for node in self.nodes]
-        return ''.join(text_nodes).strip()
+        return u''.join(text_nodes).strip()
 
     def _format_timestamp(self, value, msec_separator=None):
         datetime_value = timedelta(milliseconds=(int(value / 1000)))
 
-        str_value = str(datetime_value)[:11]
+        str_value = unicode(datetime_value)[:11]
         if not datetime_value.microseconds:
-            str_value += '.000'
+            str_value += u'.000'
 
         if msec_separator is not None:
-            str_value = str_value.replace(".", msec_separator)
+            str_value = str_value.replace(u".", msec_separator)
 
-        return '0' + str_value
+        return u'0' + str_value
 
 
 class CaptionSet(object):
