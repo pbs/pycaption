@@ -423,9 +423,11 @@ SAMPLE_DFXP_UNICODE = u"""
     xmlns:tts="http://www.w3.org/ns/ttml#styling">
  <head>
   <styling>
-   <style id="p" tts:color="#ffeedd" tts:fontfamily="Arial"
+   <style xml:id="p" tts:color="#ffeedd" tts:fontfamily="Arial"
           tts:fontsize="10pt" tts:textAlign="center"/>
   </styling>
+  <layout>
+  </layout>
  </head>
  <body>
   <div xml:lang="en-US">
@@ -467,9 +469,11 @@ SAMPLE_DFXP_UTF8 = """
     xmlns:tts="http://www.w3.org/ns/ttml#styling">
  <head>
   <styling>
-   <style id="p" tts:color="#ffeedd" tts:fontfamily="Arial"
+   <style xml:id="p" tts:color="#ffeedd" tts:fontfamily="Arial"
           tts:fontsize="10pt" tts:textAlign="center"/>
   </styling>
+  <layout>
+  </layout>
  </head>
  <body>
   <div xml:lang="en-US">
@@ -511,9 +515,11 @@ SAMPLE_DFXP = """
     xmlns:tts="http://www.w3.org/ns/ttml#styling">
  <head>
   <styling>
-   <style id="p" tts:color="#ffeedd" tts:fontfamily="Arial"
+   <style xml:id="p" tts:color="#ffeedd" tts:fontfamily="Arial"
           tts:fontsize="10pt" tts:textAlign="center"/>
   </styling>
+  <layout>
+  </layout>
  </head>
  <body>
   <div xml:lang="en-US">
@@ -555,9 +561,11 @@ SAMPLE_DFXP_EMPTY = """
     xmlns:tts="http://www.w3.org/ns/ttml#styling">
  <head>
   <styling>
-   <style id="p" tts:color="#ffeedd" tts:fontfamily="Arial"
+   <style xml:id="p" tts:color="#ffeedd" tts:fontfamily="Arial"
           tts:fontsize="10pt" tts:textAlign="center"/>
   </styling>
+  <layout>
+  </layout>
  </head>
  <body>
   <div xml:lang="en-US">
