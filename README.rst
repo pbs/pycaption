@@ -14,7 +14,7 @@ Turn a caption into multiple caption outputs:
 
 ::
 
-    srt_caps = '''1
+    srt_caps = u'''1
     00:00:09,209 --> 00:00:12,312
     This is an example SRT file,
     which, while extremely short,
@@ -33,7 +33,7 @@ Not sure what format the caption is in? Detect it:
 
     from pycaption import detect_format
 
-    caps = '''1
+    caps = u'''1
     00:00:01,500 --> 00:00:12,345
     Small caption'''
 
@@ -45,7 +45,7 @@ Or if you expect to have only a subset of the supported input formats:
 
 ::
 
-    caps = '''1
+    caps = u'''1
     00:00:01,500 --> 00:00:12,345
     Small caption'''
 
@@ -76,7 +76,7 @@ Example: Convert from SAMI to DFXP
 
     from pycaption import SAMIReader, DFXPWriter
 
-    sami = '''<SAMI><HEAD><TITLE>NOVA3213</TITLE><STYLE TYPE="text/css">
+    sami = u'''<SAMI><HEAD><TITLE>NOVA3213</TITLE><STYLE TYPE="text/css">
     <!--
     P { margin-left:  1pt;
         margin-right: 1pt;
