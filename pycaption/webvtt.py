@@ -39,10 +39,10 @@ class WebVTTReader(BaseReader):
     def _parse(self, lines):
         captions = []
         caption = None
-
         found_timing = False
 
         for i, line in enumerate(lines):
+
             if u'-->' in line:
                 found_timing = True
                 timing_line = i
@@ -163,16 +163,23 @@ class WebVTTWriter(BaseWriter):
         end = self._timestamp(sub.end)
 
         output = u"%s --> %s\n" % (start, end)
+
         output += self._convert_nodes(sub.nodes)
         output += u'\n'
 
         return output
 
     def _convert_nodes(self, nodes):
+        """Convert a Caption's nodes to text.
+        """
+        if not nodes:
+            return u'&nbsp;'
+
         s = u''
+
         for i, node in enumerate(nodes):
             if node.type == CaptionNode.TEXT:
-                s += node.content
+                s += node.content or u'&nbsp;'
             elif node.type == CaptionNode.STYLE:
                 # TODO: Ignoring style so far.
                 pass

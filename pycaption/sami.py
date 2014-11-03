@@ -87,7 +87,10 @@ class SAMIReader(BaseReader):
     def _translate_tag(self, tag):
         # convert text
         if isinstance(tag, NavigableString):
-            self.line.append(CaptionNode.create_text(tag.strip()))
+            text = tag.strip()
+            if not text:
+                return
+            self.line.append(CaptionNode.create_text(text))
         # convert line breaks
         elif tag.name == u'br':
             self.line.append(CaptionNode.create_break())

@@ -99,10 +99,16 @@ class SRTWriter(BaseWriter):
             timestamp = u'%s --> %s\n' % (start[:12], end[:12])
 
             srt += timestamp.replace(u'.', u',')
-            for node in caption.nodes:
-                srt = self._recreate_line(srt, node)
 
-            srt += u'\n\n'
+            new_content = u''
+            for node in caption.nodes:
+                new_content = self._recreate_line(new_content, node)
+
+            # Eliminate excessive line breaks
+            new_content = new_content.strip()
+            new_content.replace(u'\n\n', u'\n')
+
+            srt += u"%s%s" % (new_content, u'\n\n')
             count += 1
 
         return srt[:-1]  # remove unwanted newline at end of file

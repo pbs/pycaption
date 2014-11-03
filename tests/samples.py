@@ -126,6 +126,9 @@ P { margin-left:  1pt;
     of "E equals m c-squared",
 </P></SYNC>
 <SYNC start="17000"><P class="ENCC">
+
+
+
   <SPAN Style="text-align:right;">we have this vision of Einstein</SPAN>
 </P></SYNC>
 <SYNC start="18752"><P class="ENCC">
@@ -144,6 +147,10 @@ P { margin-left:  1pt;
 <SYNC start="32200"><P class="ENCC">
     &lt;LAUGHING &amp; WHOOPS!&gt;
 </P></SYNC>
+<SYNC start="34400">
+<P class="ENCC"><br/>some more text
+</P>
+</SYNC>
 </BODY></SAMI>
 """
 
@@ -312,8 +319,12 @@ MAN 2:
 It's all about an eternal Einstein.
 
 7
-00:00:32,200 --> 00:00:36,200
+00:00:32,200 --> 00:00:34,400
 <LAUGHING & WHOOPS!>
+
+8
+00:00:34,400 --> 00:00:38,400
+some more text
 """
 
 
@@ -541,9 +552,10 @@ SAMPLE_DFXP = """
     MAN 2:<br/>
     It's all about an eternal Einstein.
    </p>
-   <p begin="00:00:32.200" end="00:00:36.200" style="p">
+   <p begin="00:00:32.200" end="00:00:34.400" style="p">
     &lt;LAUGHING &amp; WHOOPS!&gt;
    </p>
+   <p begin="00:00:34.400" end="00:00:38.400" style="p">some more text</p>
   </div>
  </body>
 </tt>"""
