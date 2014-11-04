@@ -12,8 +12,7 @@ DFXP_BASE_MARKUP = u'''
     xmlns:tts="http://www.w3.org/ns/ttml#styling">
     <head>
         <styling/>
-        <layout>
-        </layout>
+        <layout/>
     </head>
     <body/>
 </tt>
@@ -101,7 +100,7 @@ class DFXPReader(BaseReader):
 
     def _translate_time(self, stamp):
         timesplit = stamp.split(u':')
-        if not u'.' in timesplit[2]:
+        if u'.' not in timesplit[2]:
             timesplit[2] = timesplit[2] + u'.000'
         secsplit = timesplit[2].split(u'.')
         if len(timesplit) > 3:
@@ -193,21 +192,22 @@ class DFXPWriter(BaseWriter):
     def __init__(self, *args, **kw):
         self.p_style = False
         self.open_span = False
-        self.default_settings = False
 
     def write(self, captions, force=u''):
         dfxp = BeautifulSoup(DFXP_BASE_MARKUP, u'xml')
         dfxp.find(u'tt')[u'xml:lang'] = u"en"
 
-        if self.default_settings:
+        for style_id, style in captions.get_styles():
+            if style != {}:
+                dfxp = self._recreate_styling_tag(style_id, style, dfxp)
+        if not captions.get_styles():
             dfxp = self._recreate_styling_tag(
                 DFXP_DEFAULT_STYLE_ID, DFXP_DEFAULT_STYLE, dfxp)
-            dfxp = self._recreate_region_tag(
-                DFXP_DEFAULT_REGION_ID, DFXP_DEFAULT_REGION, dfxp)
-        else:
-            for style_id, style in captions.get_styles():
-                if style != {}:
-                    dfxp = self._recreate_styling_tag(style_id, style, dfxp)
+
+        # XXX For now we will always use this default region. In the future if
+        # regions are provided, they will be kept
+        dfxp = self._recreate_region_tag(
+            DFXP_DEFAULT_REGION_ID, DFXP_DEFAULT_REGION, dfxp)
 
         body = dfxp.find(u'body')
 
@@ -221,12 +221,12 @@ class DFXPWriter(BaseWriter):
             div[u'xml:lang'] = u'%s' % lang
 
             for caption in captions.get_captions(lang):
-                caption_style = None
-                if self.default_settings:
+                if caption.style:
+                    caption_style = caption.style
+                    caption_style.update({u'region': DFXP_DEFAULT_REGION_ID})
+                else:
                     caption_style = {u'class': DFXP_DEFAULT_STYLE_ID,
                                      u'region': DFXP_DEFAULT_REGION_ID}
-                else:
-                    caption_style = caption.style
                 p = self._recreate_p_tag(caption, caption_style, dfxp)
                 div.append(p)
 
