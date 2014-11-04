@@ -438,35 +438,36 @@ SAMPLE_DFXP_UNICODE = u"""
           tts:fontsize="10pt" tts:textAlign="center"/>
   </styling>
   <layout>
+  <region tts:displayalign="after" tts:textalign="center" xml:id="bottom"></region>
   </layout>
  </head>
  <body>
   <div xml:lang="en-US">
-   <p begin="00:00:09.209" end="00:00:12.312" style="p">
+   <p begin="00:00:09.209" end="00:00:12.312" region="bottom" style="p">
     ( clock ticking )
    </p>
-   <p begin="00:00:14.848" end="00:00:17.000" style="p">
+   <p begin="00:00:14.848" end="00:00:17.000" region="bottom" style="p">
     MAN:<br/>
     When we think<br/>
     \u266a ...say bow, wow, \u266a
    </p>
-   <p begin="00:00:17.000" end="00:00:18.752" style="p">
+   <p begin="00:00:17.000" end="00:00:18.752" region="bottom" style="p">
     <span tts:textalign="right">we have this vision of Einstein</span>
    </p>
-   <p begin="00:00:18.752" end="00:00:20.887" style="p">
+   <p begin="00:00:18.752" end="00:00:20.887" region="bottom" style="p">
     as an old, wrinkly man<br/>
     with white hair.
    </p>
-   <p begin="00:00:20.887" end="00:00:26.760" style="p">
+   <p begin="00:00:20.887" end="00:00:26.760" region="bottom" style="p">
     MAN 2:<br/>
     E equals m c-squared is<br/>
     not about an old Einstein.
    </p>
-   <p begin="00:00:26.760" end="00:00:32.200" style="p">
+   <p begin="00:00:26.760" end="00:00:32.200" region="bottom" style="p">
     MAN 2:<br/>
     It's all about an eternal Einstein.
    </p>
-   <p begin="00:00:32.200" end="00:00:36.200" style="p">
+   <p begin="00:00:32.200" end="00:00:36.200" region="bottom" style="p">
     &lt;LAUGHING &amp; WHOOPS!&gt;
    </p>
   </div>
@@ -484,6 +485,7 @@ SAMPLE_DFXP_UTF8 = """
           tts:fontsize="10pt" tts:textAlign="center"/>
   </styling>
   <layout>
+  <region tts:displayAlign="after" tts:textAlign="center" xml:id="bottom"></region>
   </layout>
  </head>
  <body>
@@ -520,6 +522,47 @@ SAMPLE_DFXP_UTF8 = """
 </tt>"""
 
 
+SAMPLE_DFXP_WITHOUT_REGION_AND_STYLE = """
+<?xml version="1.0" encoding="utf-8"?>
+<tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml"
+    xmlns:tts="http://www.w3.org/ns/ttml#styling">
+ <head>
+ </head>
+ <body>
+  <div xml:lang="en-US">
+   <p begin="00:00:09.209" end="00:00:12.312" region="bottom" style="p">
+    ( clock ticking )
+   </p>
+   <p begin="00:00:14.848" end="00:00:17.000" region="bottom" style="p">
+    MAN:<br/>
+    When we think<br/>
+    of "E equals m c-squared",
+   </p>
+   <p begin="00:00:17.000" end="00:00:18.752" region="bottom" style="p">
+    <span tts:textalign="right">we have this vision of Einstein</span>
+   </p>
+   <p begin="00:00:18.752" end="00:00:20.887" region="bottom" style="p">
+    as an old, wrinkly man<br/>
+    with white hair.
+   </p>
+   <p begin="00:00:20.887" end="00:00:26.760" region="bottom" style="p">
+    MAN 2:<br/>
+    E equals m c-squared is<br/>
+    not about an old Einstein.
+   </p>
+   <p begin="00:00:26.760" end="00:00:32.200" region="bottom" style="p">
+    MAN 2:<br/>
+    It's all about an eternal Einstein.
+   </p>
+   <p begin="00:00:32.200" end="00:00:34.400" region="bottom" style="p">
+    &lt;LAUGHING &amp; WHOOPS!&gt;
+   </p>
+   <p begin="00:00:34.400" end="00:00:38.400" region="bottom" style="p">some more text</p>
+  </div>
+ </body>
+</tt>"""
+
+
 SAMPLE_DFXP = """
 <?xml version="1.0" encoding="utf-8"?>
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml"
@@ -530,38 +573,39 @@ SAMPLE_DFXP = """
           tts:fontsize="10pt" tts:textAlign="center"/>
   </styling>
   <layout>
+  <region tts:displayAlign="after" tts:textAlign="center" xml:id="bottom"></region>
   </layout>
  </head>
  <body>
   <div xml:lang="en-US">
-   <p begin="00:00:09.209" end="00:00:12.312" style="p">
+   <p begin="00:00:09.209" end="00:00:12.312" region="bottom" style="p">
     ( clock ticking )
    </p>
-   <p begin="00:00:14.848" end="00:00:17.000" style="p">
+   <p begin="00:00:14.848" end="00:00:17.000" region="bottom" style="p">
     MAN:<br/>
     When we think<br/>
     of "E equals m c-squared",
    </p>
-   <p begin="00:00:17.000" end="00:00:18.752" style="p">
+   <p begin="00:00:17.000" end="00:00:18.752" region="bottom" style="p">
     <span tts:textalign="right">we have this vision of Einstein</span>
    </p>
-   <p begin="00:00:18.752" end="00:00:20.887" style="p">
+   <p begin="00:00:18.752" end="00:00:20.887" region="bottom" style="p">
     as an old, wrinkly man<br/>
     with white hair.
    </p>
-   <p begin="00:00:20.887" end="00:00:26.760" style="p">
+   <p begin="00:00:20.887" end="00:00:26.760" region="bottom" style="p">
     MAN 2:<br/>
     E equals m c-squared is<br/>
     not about an old Einstein.
    </p>
-   <p begin="00:00:26.760" end="00:00:32.200" style="p">
+   <p begin="00:00:26.760" end="00:00:32.200" region="bottom" style="p">
     MAN 2:<br/>
     It's all about an eternal Einstein.
    </p>
-   <p begin="00:00:32.200" end="00:00:34.400" style="p">
+   <p begin="00:00:32.200" end="00:00:34.400" region="bottom" style="p">
     &lt;LAUGHING &amp; WHOOPS!&gt;
    </p>
-   <p begin="00:00:34.400" end="00:00:38.400" style="p">some more text</p>
+   <p begin="00:00:34.400" end="00:00:38.400" region="bottom" style="p">some more text</p>
   </div>
  </body>
 </tt>"""

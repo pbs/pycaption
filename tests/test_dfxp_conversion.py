@@ -6,13 +6,13 @@ from pycaption import (
     DFXPReader, DFXPWriter, SRTWriter, SAMIWriter, WebVTTWriter)
 
 from pycaption.dfxp import (
-    DFXP_DEFAULT_STYLE, DFXP_DEFAULT_STYLE_ID, 
+    DFXP_DEFAULT_STYLE, DFXP_DEFAULT_STYLE_ID,
     DFXP_DEFAULT_REGION, DFXP_DEFAULT_REGION_ID)
 from .samples import (
     SAMPLE_SAMI, SAMPLE_SRT, SAMPLE_DFXP,
     SAMPLE_SAMI_UTF8, SAMPLE_SRT_UTF8, SAMPLE_DFXP_UTF8,
     SAMPLE_SAMI_UNICODE, SAMPLE_DFXP_UNICODE, SAMPLE_WEBVTT,
-    SAMPLE_SRT_UNICODE)
+    SAMPLE_SRT_UNICODE, SAMPLE_DFXP_WITHOUT_REGION_AND_STYLE)
 from .mixins import SRTTestingMixIn, SAMITestingMixIn, DFXPTestingMixIn, WebVTTTestingMixIn
 
 
@@ -23,6 +23,8 @@ class DFXPConversionTestCase(unittest.TestCase):
         cls.captions = DFXPReader().read(SAMPLE_DFXP.decode(u'utf-8'))
         cls.captions_utf8 = DFXPReader().read(SAMPLE_DFXP_UTF8.decode(u'utf-8'))
         cls.captions_unicode = DFXPReader().read(SAMPLE_DFXP_UNICODE)
+        cls.captions_without_style_and_region = DFXPReader().read(
+            SAMPLE_DFXP_WITHOUT_REGION_AND_STYLE.decode(u'utf-8'))
 
 
 class DFXPtoDFXPTestCase(DFXPConversionTestCase, DFXPTestingMixIn):
@@ -44,30 +46,27 @@ class DFXPtoDFXPTestCase(DFXPConversionTestCase, DFXPTestingMixIn):
 
     def test_default_styling_tag(self):
         w = DFXPWriter()
-        w.default_settings = True
-        result = w.write(self.captions)
+        result = w.write(self.captions_without_style_and_region)
 
         default_style = w._recreate_style(DFXP_DEFAULT_STYLE, None)
         default_style[u'xml:id'] = DFXP_DEFAULT_STYLE_ID
 
         soup = BeautifulSoup(result, u'xml')
         style = soup.find(u'style', {u'xml:id': DFXP_DEFAULT_STYLE_ID})
-        
+
         self.assertTrue(style)
         self.assertEquals(style.attrs, default_style)
 
     def test_default_styling_p_tags(self):
         w = DFXPWriter()
-        w.default_settings = True
         result = w.write(self.captions)
 
         soup = BeautifulSoup(result, u'xml')
         for p in soup.find_all(u'p'):
-            self.assertEquals(p.attrs.get(u'style'), DFXP_DEFAULT_STYLE_ID)
+            self.assertEquals(p.attrs.get(u'style'), 'p')
 
     def test_default_region_tag(self):
         w = DFXPWriter()
-        w.default_settings = True
         result = w.write(self.captions)
 
         default_region = w._recreate_style(DFXP_DEFAULT_REGION, None)
@@ -75,13 +74,12 @@ class DFXPtoDFXPTestCase(DFXPConversionTestCase, DFXPTestingMixIn):
 
         soup = BeautifulSoup(result, u'xml')
         region = soup.find(u'region', {u'xml:id': DFXP_DEFAULT_REGION_ID})
-        
+
         self.assertTrue(region)
         self.assertEquals(region.attrs, default_region)
 
     def test_default_region_p_tags(self):
         w = DFXPWriter()
-        w.default_settings = True
         result = w.write(self.captions)
 
         soup = BeautifulSoup(result, u'xml')
