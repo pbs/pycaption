@@ -13,7 +13,7 @@ class SRTReaderTestCase(unittest.TestCase):
     def test_caption_length(self):
         captions = SRTReader().read(SAMPLE_SRT.decode(u'utf-8'))
 
-        self.assertEquals(7, len(captions.get_captions(u"en-US")))
+        self.assertEquals(8, len(captions.get_captions(u"en-US")))
 
     def test_proper_timestamps(self):
         captions = SRTReader().read(SAMPLE_SRT.decode(u'utf-8'))
