@@ -54,7 +54,7 @@ class SRTReader(BaseReader):
 
     def _srttomicro(self, stamp):
         timesplit = stamp.split(u':')
-        if not u',' in timesplit[2]:
+        if u',' not in timesplit[2]:
             timesplit[2] = timesplit[2] + u',000'
         secsplit = timesplit[2].split(u',')
         microseconds = (int(timesplit[0]) * 3600000000 +
