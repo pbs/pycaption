@@ -389,7 +389,7 @@ MAN 2:
 It's all about an eternal Einstein.
 
 00:32.200 --> 00:36.200
-<LAUGHING & WHOOPS!>
+&lt;LAUGHING &amp; WHOOPS!>
 
 """
 
