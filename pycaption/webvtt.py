@@ -15,6 +15,8 @@ TIMESTAMP_PATTERN = re.compile(u'^(\d+):(\d{2})(:\d{2})?\.(\d{3})')
 VOICE_SPAN_PATTERN = re.compile(u'<v(\\.\\w+)* ([^>]*)>')
 OTHER_SPAN_PATTERN = re.compile(u'</?([cibuv]|ruby|rt|lang).*?>')
 
+CUE_TEXT_ESCAPES = [('&','&amp;'), ('<','&lt;')]
+
 
 def microseconds(h, m, s, f):
     return (int(h) * 3600 + int(m) * 60 + int(s)) * 1000000 + int(f) * 1000
@@ -35,6 +37,11 @@ class WebVTTReader(BaseReader):
             raise CaptionReadNoCaptions(u"empty caption file")
 
         return caption_set
+
+    def _unescape_chars(self, line):
+        for orig, escaped in CUE_TEXT_ESCAPES:
+            line = line.replace(escaped,orig)
+        return line
 
     def _parse(self, lines):
         captions = []
@@ -67,7 +74,7 @@ class WebVTTReader(BaseReader):
                     if not caption.is_empty():
                         caption.nodes.append(CaptionNode.create_break())
                     caption.nodes.append(CaptionNode.create_text(
-                        self._remove_styles(line)))
+                        self._unescape_chars(self._remove_styles(line))))
                 else:
                     # it's a comment or some metadata; ignore it
                     pass
@@ -169,6 +176,14 @@ class WebVTTWriter(BaseWriter):
 
         return output
 
+    def _escape_chars(self, line):
+        for orig, escaped in CUE_TEXT_ESCAPES:
+            line = line.replace(orig,escaped)
+        return line
+
+    def _remove_styles(self, text):
+        return WebVTTReader()._remove_styles(text)
+
     def _convert_nodes(self, nodes):
         """Convert a Caption's nodes to text.
         """
@@ -179,7 +194,8 @@ class WebVTTWriter(BaseWriter):
 
         for i, node in enumerate(nodes):
             if node.type == CaptionNode.TEXT:
-                s += node.content or u'&nbsp;'
+                text = self._remove_styles(node.content)
+                s += self._escape_chars(text) or u'&nbsp;'
             elif node.type == CaptionNode.STYLE:
                 # TODO: Ignoring style so far.
                 pass
