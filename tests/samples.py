@@ -31,6 +31,7 @@ P { margin-left:  1pt;
   <SPAN Style="text-align:right;">we have this vision of Einstein</SPAN>
 </P></SYNC>
 <SYNC start="18752"><P class="ENCC">
+    <br/>
     as an old, wrinkly man<br/>
     with white hair.
 </P></SYNC>
@@ -80,6 +81,7 @@ P { margin-left:  1pt;
   <SPAN Style="text-align:right;">we have this vision of Einstein</SPAN>
 </P></SYNC>
 <SYNC start="18752"><P class="ENCC">
+    <br/>
     as an old, wrinkly man<br/>
     with white hair.
 </P></SYNC>
@@ -393,6 +395,38 @@ It's all about an eternal Einstein.
 
 """
 
+SAMPLE_WEBVTT_OUTPUT = """WEBVTT
+
+00:09.209 --> 00:12.312
+( clock ticking )
+
+00:14.848 --> 00:17.000
+MAN:
+When we think
+♪ ...say bow, wow, ♪
+
+00:17.000 --> 00:18.752
+we have this vision of Einstein
+
+00:18.752 --> 00:20.887
+&nbsp;
+as an old, wrinkly man
+with white hair.
+
+00:20.887 --> 00:26.760
+MAN 2:
+E equals m c-squared is
+not about an old Einstein.
+
+00:26.760 --> 00:32.200
+MAN 2:
+It's all about an eternal Einstein.
+
+00:32.200 --> 00:36.200
+<LAUGHING & WHOOPS!>
+
+"""
+
 SAMPLE_WEBVTT_2 = """WEBVTT
 
 1
@@ -455,6 +489,7 @@ SAMPLE_DFXP_UNICODE = u"""
     <span tts:textalign="right">we have this vision of Einstein</span>
    </p>
    <p begin="00:00:18.752" end="00:00:20.887" region="bottom" style="p">
+   <br/>
     as an old, wrinkly man<br/>
     with white hair.
    </p>
@@ -502,6 +537,7 @@ SAMPLE_DFXP_UTF8 = """
     <span tts:textalign="right">we have this vision of Einstein</span>
    </p>
    <p begin="00:00:18.752" end="00:00:20.887" style="p">
+   <br/>
     as an old, wrinkly man<br/>
     with white hair.
    </p>
@@ -590,6 +626,7 @@ SAMPLE_DFXP = """
     <span tts:textalign="right">we have this vision of Einstein</span>
    </p>
    <p begin="00:00:18.752" end="00:00:20.887" region="bottom" style="p">
+   <br/>
     as an old, wrinkly man<br/>
     with white hair.
    </p>

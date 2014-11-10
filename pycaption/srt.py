@@ -106,7 +106,8 @@ class SRTWriter(BaseWriter):
 
             # Eliminate excessive line breaks
             new_content = new_content.strip()
-            new_content.replace(u'\n\n', u'\n')
+            while u'\n\n' in new_content:
+                new_content = new_content.replace(u'\n\n', u'\n')
 
             srt += u"%s%s" % (new_content, u'\n\n')
             count += 1

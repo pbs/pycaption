@@ -186,6 +186,8 @@ class WebVTTWriter(BaseWriter):
             elif node.type == CaptionNode.BREAK:
                 if i > 0 and nodes[i-1].type == CaptionNode.BREAK:
                     s += u'&nbsp;'
+                if i == 0:
+                    s += u'&nbsp;'
                 s += u'\n'
 
         return s

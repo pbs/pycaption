@@ -5,10 +5,11 @@ from pycaption import (
 
 from .samples import (
     SAMPLE_SAMI, SAMPLE_SRT, SAMPLE_DFXP,
-    SAMPLE_SAMI_UTF8, SAMPLE_SRT_UTF8, SAMPLE_DFXP_UTF8,
-    SAMPLE_SAMI_UNICODE, SAMPLE_DFXP_UNICODE, SAMPLE_WEBVTT,
+    SAMPLE_SAMI_UTF8, SAMPLE_SAMI_UNICODE, SAMPLE_DFXP_UNICODE,
     SAMPLE_SRT_UNICODE, SAMPLE_SAMI_SYNTAX_ERROR)
 from .mixins import SRTTestingMixIn, DFXPTestingMixIn, SAMITestingMixIn, WebVTTTestingMixIn
+
+from tests.samples import SAMPLE_WEBVTT_OUTPUT
 
 
 class SAMIConversionTestCase(unittest.TestCase):
@@ -86,12 +87,12 @@ class SAMItoWebVTTTestCase(SAMIConversionTestCase, WebVTTTestingMixIn):
     def test_sami_to_webvtt_utf8_conversion(self):
         results = WebVTTWriter().write(self.captions_utf8)
         self.assertTrue(isinstance(results, unicode))
-        self.assertWebVTTEquals(SAMPLE_WEBVTT.decode(u'utf-8'), results)
+        self.assertWebVTTEquals(SAMPLE_WEBVTT_OUTPUT.decode(u'utf-8'), results)
 
     def test_sami_to_webvtt_unicode_conversion(self):
         results = WebVTTWriter().write(self.captions_unicode)
         self.assertTrue(isinstance(results, unicode))
-        self.assertWebVTTEquals(SAMPLE_WEBVTT.decode(u'utf-8'), results)
+        self.assertWebVTTEquals(SAMPLE_WEBVTT_OUTPUT.decode(u'utf-8'), results)
 
 
 class SAMIWithMissingLanguage(unittest.TestCase, SAMITestingMixIn):
