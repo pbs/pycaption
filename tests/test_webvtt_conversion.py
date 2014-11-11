@@ -4,8 +4,7 @@ from pycaption import (
     WebVTTReader, WebVTTWriter, SRTWriter, SAMIWriter, DFXPWriter)
 
 from .samples import (
-    SAMPLE_SAMI_UTF8, SAMPLE_SRT_UTF8, SAMPLE_DFXP_UTF8, SAMPLE_WEBVTT,
-    SAMPLE_DFXP_UNICODE, SAMPLE_SRT_UNICODE, SAMPLE_SAMI_UNICODE
+    SAMPLE_WEBVTT, SAMPLE_DFXP_UNICODE, SAMPLE_SRT_UNICODE, SAMPLE_SAMI_UNICODE
 )
 from .mixins import (
     WebVTTTestingMixIn, DFXPTestingMixIn, SAMITestingMixIn, SRTTestingMixIn
