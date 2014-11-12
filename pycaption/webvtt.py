@@ -21,6 +21,15 @@ def microseconds(h, m, s, f):
 
 
 class WebVTTReader(BaseReader):
+    def __init__(self, ignore_timing_errors=True, *args, **kwargs):
+        """
+        :param ignore_timing_errors: Whether to ignore timing checks
+        """
+        super(WebVTTReader, self).__init__(
+            ignore_timing_errors, *args, **kwargs
+        )
+        self.ignore_timing_errors = ignore_timing_errors
+
     def detect(self, content):
         return u'WEBVTT' in content
 
@@ -81,6 +90,20 @@ class WebVTTReader(BaseReader):
         partial_result = VOICE_SPAN_PATTERN.sub(u'\\2: ', line)
         return OTHER_SPAN_PATTERN.sub(u'', partial_result)
 
+    def _validate_timings(self, caption, last_start_time):
+        if caption.start is None:
+            raise CaptionReadSyntaxError(
+                u'Invalid cue start timestamp.')
+        if caption.end is None:
+            raise CaptionReadSyntaxError(u'Invalid cue end timestamp.')
+        if caption.start > caption.end:
+            raise CaptionReadError(
+                u'End timestamp is not greater than start timestamp.')
+        if caption.start < last_start_time:
+            raise CaptionReadError(
+                u'Start timestamp is not greater than or equal'
+                u'to start timestamp of previous cue.')
+
     def _parse_timing_line(self, line, last_start_time):
         m = TIMING_PATTERN.search(line)
         if not m:
@@ -90,21 +113,10 @@ class WebVTTReader(BaseReader):
         caption = Caption()
 
         caption.start = self._parse_timestamp(m.group(1))
-        if caption.start is None:
-            raise CaptionReadSyntaxError(
-                u'Invalid cue start timestamp.')
-
         caption.end = self._parse_timestamp(m.group(2))
-        if caption.end is None:
-            raise CaptionReadSyntaxError(u'Invalid cue end timestamp.')
 
-        if caption.start > caption.end:
-            raise CaptionReadError(u'End timestamp is not greater than start timestamp.')
-
-        if caption.start < last_start_time:
-            raise CaptionReadError(
-                u'Start timestamp is not greater than or equal'
-                u'to start timestamp of previous cue.')
+        if not self.ignore_timing_errors:
+            self._validate_timings(caption, last_start_time)
 
         return caption
 

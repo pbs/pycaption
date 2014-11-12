@@ -53,36 +53,90 @@ class WebVTTReaderTestCase(unittest.TestCase):
             CaptionReadNoCaptions,
             WebVTTReader().read, SAMPLE_WEBVTT_EMPTY.decode(u'utf-8'))
 
+    def test_not_ignoring_timing_errors(self):
+        self.assertRaises(
+            CaptionReadSyntaxError,
+            WebVTTReader(ignore_timing_errors=False).read,
+            (u"\n"
+             u"00:00:20,000 --> 00:00:10,000\n"
+             u"foo bar baz")
+        )
+
+        self.assertRaises(
+            CaptionReadError,
+            WebVTTReader(ignore_timing_errors=False).read,
+            (u"00:00:20,000 --> 00:00:10,000\n"
+             u"Start time is greater than end time.\n")
+        )
+
+        self.assertRaises(
+            CaptionReadError,
+            WebVTTReader(ignore_timing_errors=False).read,
+            (u"00:00:20,000 --> 00:00:30,000\n"
+             u"Start times should be consecutive.\n"
+             u"\n"
+             u"00:00:10,000 --> 00:00:20,000\n"
+             u"This cue starts before the previous one.\n")
+        )
+
+    def test_ignoring_timing_errors(self):
+        # Even if timing errors are ignored, this is worse
+        self.assertRaises(
+            CaptionReadSyntaxError,
+            WebVTTReader().read,
+            (u"\nNOTE invalid cue stamp\n"
+             u"00:00:20,000 --> \n"
+             u"foo bar baz\n")
+        )
+
+        try:
+            WebVTTReader().read(
+                (u"\n"
+                 u"00:00:20,000 --> 00:00:10,000\n"
+                 u"Start time is greater than end time.\n")
+        )
+        except CaptionReadError:
+            self.fail(u"Shouldn't raise CaptionReadError")
+
+        try:
+            WebVTTReader().read(
+                (u"\n"
+                 u"00:00:20,000 --> 00:00:30,000\n"
+                 u"Start times should be consecutive.\n"
+                 u"\n"
+                 u"00:00:10,000 --> 00:00:20,000\n"
+                 u"This cue starts before the previous one.\n")
+
+        )
+        except CaptionReadError:
+            self.fail(u"Shouldn't raise CaptionReadError")
+
     def test_invalid_files(self):
         self.assertRaises(
             CaptionReadSyntaxError,
             WebVTTReader().read,
-            u"""
-            NOTE Cues without text are invalid.
-
-            00:00:20,000 --> 00:00:10,000
-            """
+            (u"\nNOTE Cues without text are invalid.\n"
+            u"00:00:20,000 --> 00:00:30,000\n"
+            u"\n"
+            u"00:00:40,000 --> 00:00:50,000\n"
+            u"foo bar baz\n")
         )
 
         self.assertRaises(
             CaptionReadError,
-            WebVTTReader().read,
-            u"""
-            00:00:20,000 --> 00:00:10,000
-            Start time is greater than end time.
-            """
+            WebVTTReader(ignore_timing_errors=False).read,
+            (u"00:00:20,000 --> 00:00:10,000\n"
+            u"Start time is greater than end time.")
         )
 
         self.assertRaises(
             CaptionReadError,
-            WebVTTReader().read,
-            u"""
-            00:00:20,000 --> 00:00:30,000
-            Start times should be consecutive.
-
-            00:00:10,000 --> 00:00:20,000
-            This cue starts before the previous one.
-            """
+            WebVTTReader(ignore_timing_errors=False).read,
+            (u"00:00:20,000 --> 00:00:30,000\n"
+            u"Start times should be consecutive.\n"
+            u"\n"
+            u"00:00:10,000 --> 00:00:20,000\n"
+            u"This cue starts before the previous one.\n")
         )
 
 

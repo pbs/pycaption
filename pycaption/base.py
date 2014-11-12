@@ -33,6 +33,9 @@ class CaptionConverter(object):
 
 
 class BaseReader(object):
+    def __init__(self, *args, **kwargs):
+        pass
+
     def detect(self, content):
         if content:
             return True
