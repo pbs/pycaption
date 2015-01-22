@@ -47,7 +47,7 @@ class DFXPReader(BaseReader):
         if type(content) != unicode:
             raise RuntimeError('The content is not a unicode string.')
 
-        dfxp_soup = BeautifulSoup(content)
+        dfxp_soup = BeautifulSoup(content, 'xml')
         captions = CaptionSet()
 
         # Each div represents all the captions for a single language.
