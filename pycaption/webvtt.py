@@ -52,6 +52,8 @@ class WebVTTReader(BaseReader):
 
         for i, line in enumerate(lines):
 
+            line = line.strip(u' \r\n')
+
             if u'-->' in line:
                 found_timing = True
                 timing_line = i
