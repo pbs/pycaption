@@ -115,7 +115,7 @@ class Region(object):
         if hasattr(self, '_origin'):
             return self._origin
         else:
-            return Point.allign_from_origin(self._p1, self._p2)[0]
+            return Point.align_from_origin(self._p1, self._p2)[0]
 
     upper_left_point = origin
 
@@ -124,7 +124,7 @@ class Region(object):
         """The point furthest from the origin from the rectangle's 4 points
         """
         if hasattr(self, '_p2'):
-            return Point.allign_from_origin(self._p1, self._p2)[1]
+            return Point.align_from_origin(self._p1, self._p2)[1]
         else:
             return self.origin.add_extent(self.stretch)
 
@@ -146,10 +146,13 @@ class Point(TwoDimensionalObject):
         return Stretch(abs(self.x - other.x), abs(self.y - other.y))
 
     def add_stretch(self, stretch):
+        """Returns another Point instance, whose coordinates are the sum of the
+         current Point's, and the Stretch instance's.
+        """
         return Point(self.x + stretch.horizontal, self.y + stretch.vertical)
 
     @classmethod
-    def allign_from_origin(cls, p1, p2):
+    def align_from_origin(cls, p1, p2):
         """Returns a tuple of 2 points. The first is closest to the origin
         on both axes than the second.
 
