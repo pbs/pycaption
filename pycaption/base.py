@@ -63,13 +63,18 @@ class CaptionNode(object):
     """
 
     TEXT = 1
+    # When and if this is extended, it might be better to turn it into a
+    # property of the node, not a type of node itself.
     STYLE = 2
     BREAK = 3
 
     def __init__(self, type):
         self.type = type
         self.content = None
+
+        # Boolean. Marks the beginning/ end of a Style node.
         self.start = None
+        self.layout = None
 
     def __repr__(self):
         t = self.type
@@ -111,6 +116,7 @@ class Caption(object):
         self.end = 0
         self.nodes = []
         self.style = {}
+        self.layout = None
 
     def is_empty(self):
         return len(self.nodes) == 0
@@ -164,9 +170,16 @@ class CaptionSet(object):
     """
     A set of captions in potentially multiple languages,
     all representing the same underlying content.
+
+    The .layout_info attribute, keeps information that should be inherited
+    by all the children.
     """
     def __init__(self):
         self._styles = {}
+
+        # For individual languages, represents inheritable layout-related
+        # information
+        self._layout_info = {}
 
         # Captions by language.
         self._captions = defaultdict(list)
@@ -196,6 +209,12 @@ class CaptionSet(object):
         return all(
             [len(captions) == 0 for captions in self._captions.values()]
         )
+
+    def set_layout_info(self, lang, layout_info):
+        self._layout_info[lang] = layout_info
+
+    def get_layout_info(self, lang):
+        return self._layout_info.get(lang)
 
     def adjust_caption_timing(self, offset=0, rate_skew=1.0):
         """
