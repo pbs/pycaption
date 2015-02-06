@@ -43,8 +43,8 @@ class Stretch(TwoDimensionalObject):
     def __init__(self, horizontal, vertical):
         """Use the .from_xxx methods. They know what's best for you.
 
-        :param horizontal: Size object
-        :param vertical: Size object
+        :type horizontal: Size
+        :type vertical: Size
         """
         self.horizontal = horizontal
         self.vertical = vertical
@@ -64,6 +64,10 @@ class Stretch(TwoDimensionalObject):
         return u'<Stretch ({horizontal}, {vertical})>'.format(
             horizontal=self.horizontal, vertical=self.vertical
         )
+
+    def serialized(self):
+        """Returns a tuple of the useful attributes of this object"""
+        return self.horizontal.serialized(), self.vertical.serialized()
 
 
 class Region(object):
@@ -134,8 +138,8 @@ class Point(TwoDimensionalObject):
     """
     def __init__(self, x, y):
         """
-        :param x: Size object
-        :param y: Size object
+        :type x: Size
+        :type y: Size
         """
         self.x = x
         self.y = y
@@ -171,6 +175,11 @@ class Point(TwoDimensionalObject):
         return u'<Point ({x}, {y})>'.format(
             x=self.x, y=self.y
         )
+
+    def serialized(self):
+        """Returns the "useful" values of this object.
+        """
+        return self.x.serialized(), self.y.serialized()
 
 
 class Size(object):
@@ -245,6 +254,10 @@ class Size(object):
             value=self.value, unit=self.unit
         )
 
+    def serialized(self):
+        """Returns the "useful" values of this object"""
+        return self.value, self.unit
+
 
 class Padding(object):
     """Represents padding information. Consists of 4 Size objects, representing
@@ -252,6 +265,12 @@ class Padding(object):
     end (right).
     """
     def __init__(self, before=None, after=None, start=None, end=None):
+        """
+        :type before: Size
+        :type after: Size
+        :type start: Size
+        :type end: Size
+        """
         self.before = before
         self.after = after
         self.start = start
@@ -301,6 +320,16 @@ class Padding(object):
             )
         )
 
+    def serialized(self):
+        """Returns a tuple containing the useful values of this object
+        """
+        return (
+            self.before.serialized(),
+            self.after.serialized(),
+            self.start.serialized(),
+            self.end.serialized()
+        )
+
 
 class Layout(object):
     """Should encapsulate all the information needed to determine (as correctly
@@ -310,6 +339,11 @@ class Layout(object):
      specific for each caption type.
     """
     def __init__(self, origin=None, extent=None, padding=None):
+        """
+        :type origin: Point
+        :type extent: Stretch
+        :type padding: Padding
+        """
         self.origin = origin
         self.extent = extent
         self.padding = padding
@@ -320,4 +354,13 @@ class Layout(object):
             u"padding: {padding})>".format(
                 origin=self.origin, extent=self.extent, padding=self.padding
             )
+        )
+
+    def serialized(self):
+        """Returns nested tuple containing the "useful" values of this object
+        """
+        return (
+            self.origin.serialized(),
+            self.extent.serialized(),
+            self.padding.serialized()
         )
