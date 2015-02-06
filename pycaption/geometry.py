@@ -22,6 +22,8 @@ class TwoDimensionalObject(object):
     """Adds a couple useful methods to its subclasses, nothing fancy.
     """
     @classmethod
+    # TODO - highly cachable. Should use WeakValueDictionary here to return
+    # flyweights, not new objects.
     def from_dfxp_attribute(cls, attribute):
         """Instantiate the class from a value of the type "4px" or "5%"
         or any number concatenated with a measuring unit (member of UnitEnum)
@@ -206,6 +208,8 @@ class Size(object):
             return Size(self.value + other.value, self.unit)
 
     @classmethod
+    # TODO - this also looks highly cachable. Should use a WeakValueDict here
+    # to return flyweights
     def from_string(cls, string):
         """Given a string of the form "46px" or "5%" etc., returns the proper
         size object
