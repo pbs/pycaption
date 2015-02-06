@@ -476,7 +476,7 @@ SAMPLE_DFXP_UNICODE = u"""
   </layout>
  </head>
  <body>
-  <div xml:lang="en-US">
+  <div xml:lang="en-US" region="bottom">
    <p begin="00:00:09.209" end="00:00:12.312" region="bottom" style="p">
     ( clock ticking )
    </p>
@@ -613,7 +613,7 @@ SAMPLE_DFXP = """
   </layout>
  </head>
  <body>
-  <div xml:lang="en-US">
+  <div xml:lang="en-US" region="bottom">
    <p begin="00:00:09.209" end="00:00:12.312" region="bottom" style="p">
     ( clock ticking )
    </p>

@@ -5,11 +5,11 @@ from pycaption import (
 
 from .samples import (
     SAMPLE_SAMI, SAMPLE_SRT, SAMPLE_DFXP,
-    SAMPLE_SAMI_UTF8, SAMPLE_SRT_UTF8, SAMPLE_DFXP_UTF8,
-    SAMPLE_SAMI_UNICODE, SAMPLE_SRT_UNICODE, SAMPLE_DFXP_UNICODE,
-    SAMPLE_WEBVTT
+    SAMPLE_SRT_UTF8, SAMPLE_SAMI_UNICODE, SAMPLE_SRT_UNICODE,
+    SAMPLE_DFXP_UNICODE, SAMPLE_WEBVTT
 )
-from .mixins import SRTTestingMixIn, DFXPTestingMixIn, SAMITestingMixIn, WebVTTTestingMixIn
+from .mixins import (
+    SRTTestingMixIn, DFXPTestingMixIn, SAMITestingMixIn, WebVTTTestingMixIn)
 
 
 class SRTConversionTestCase(unittest.TestCase):
@@ -80,6 +80,7 @@ class SRTtoDFXPTestCase(SRTConversionTestCase, DFXPTestingMixIn):
             SAMPLE_DFXP_UNICODE, results,
             ignore_styling=True, ignore_spans=True
         )
+
 
 class SRTtoWebVTTTestCase(SRTConversionTestCase, WebVTTTestingMixIn):
 

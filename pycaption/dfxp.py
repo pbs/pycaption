@@ -49,15 +49,16 @@ class DFXPReader(BaseReader):
         if type(content) != unicode:
             raise RuntimeError(u'The content is not a unicode string.')
 
-        dfxp_soup = LayoutAwareBeautifulSoup(content)
+        dfxp_document = LayoutAwareDFXPParser(content)
         captions = CaptionSet()
 
         # Each div represents all the captions for a single language.
-        for div in dfxp_soup.find_all(u'div'):
+        for div in dfxp_document.find_all(u'div'):
             lang = div.attrs.get(u'xml:lang', DEFAULT_LANGUAGE_CODE)
             captions.set_captions(lang, self._translate_div(div))
+            captions.set_layout_info(lang, div.layout_info)
 
-        for style in dfxp_soup.find_all(u'style'):
+        for style in dfxp_document.find_all(u'style'):
             id = style.attrs.get(u'id')
             if not id:
                 id = style.attrs.get(u'xml:id')
@@ -82,12 +83,11 @@ class DFXPReader(BaseReader):
         self._translate_tag(p_tag)
         styles = self._translate_style(p_tag)
 
-        caption = Caption()
+        caption = Caption(layout_info=p_tag.layout_info)
         caption.start = start
         caption.end = end
         caption.nodes = self.nodes
         caption.style = styles
-        caption.layout_info = p_tag.layout_info
         return caption
 
     def _find_times(self, p_tag):
@@ -118,11 +118,13 @@ class DFXPReader(BaseReader):
         # convert text
         if isinstance(tag, NavigableString):
             if tag.strip() != u'':
-                node = CaptionNode.create_text(tag.strip())
+                node = CaptionNode.create_text(
+                    tag.strip(), layout_info=tag.layout_info)
                 self.nodes.append(node)
         # convert line breaks
         elif tag.name == u'br':
-            self.nodes.append(CaptionNode.create_break())
+            self.nodes.append(
+                CaptionNode.create_break(layout_info=tag.layout_info))
         # convert italics
         elif tag.name == u'span':
             # convert span
@@ -140,7 +142,8 @@ class DFXPReader(BaseReader):
         # but since nobody complained, I'll leave it like that.
         # Happy investigating!
         if args != u'':
-            node = CaptionNode.create_style(True, args)
+            node = CaptionNode.create_style(
+                True, args, layout_info=tag.layout_info)
             node.start = True
             node.content = args
             self.nodes.append(node)
@@ -148,7 +151,8 @@ class DFXPReader(BaseReader):
             # recursively call function for any children elements
             for a in tag.contents:
                 self._translate_tag(a)
-            node = CaptionNode.create_style(False, args)
+            node = CaptionNode.create_style(
+                False, args, layout_info=tag.layout_info)
             node.start = False
             node.content = args
             self.nodes.append(node)
@@ -198,11 +202,13 @@ class DFXPWriter(BaseWriter):
     def __init__(self, *args, **kw):
         self.p_style = False
         self.open_span = False
+        self.region_creator = None
 
     def write(self, captions, force=u''):
         dfxp = BeautifulSoup(DFXP_BASE_MARKUP, u'xml')
         dfxp.find(u'tt')[u'xml:lang'] = u"en"
 
+        # Create the styles in the <styling> section, or a default style.
         for style_id, style in captions.get_styles():
             if style != {}:
                 dfxp = self._recreate_styling_tag(style_id, style, dfxp)
@@ -210,30 +216,27 @@ class DFXPWriter(BaseWriter):
             dfxp = self._recreate_styling_tag(
                 DFXP_DEFAULT_STYLE_ID, DFXP_DEFAULT_STYLE, dfxp)
 
-        # XXX For now we will always use this default region. In the future if
-        # regions are provided, they will be kept
-        dfxp = self._recreate_region_tag(
-            DFXP_DEFAULT_REGION_ID, DFXP_DEFAULT_REGION, dfxp)
+        self.region_creator = RegionCreator(dfxp, captions)
+        self.region_creator.create_document_regions()
 
         body = dfxp.find(u'body')
-
-        if force:
-            langs = [self._force_language(force, captions.get_languages())]
-        else:
-            langs = captions.get_languages()
+        langs = captions.get_languages()
+        if force in langs:
+            langs = [force]
 
         for lang in langs:
             div = dfxp.new_tag(u'div')
             div[u'xml:lang'] = u'%s' % lang
+            self._assign_region(div, lang, captions)
 
             for caption in captions.get_captions(lang):
                 if caption.style:
                     caption_style = caption.style
-                    caption_style.update({u'region': DFXP_DEFAULT_REGION_ID})
                 else:
-                    caption_style = {u'class': DFXP_DEFAULT_STYLE_ID,
-                                     u'region': DFXP_DEFAULT_REGION_ID}
+                    caption_style = {u'class': DFXP_DEFAULT_STYLE_ID}
+
                 p = self._recreate_p_tag(caption, caption_style, dfxp)
+                self._assign_region(p, lang, captions, caption)
                 div.append(p)
 
             body.append(div)
@@ -241,32 +244,30 @@ class DFXPWriter(BaseWriter):
         caption_content = dfxp.prettify(formatter=None)
         return caption_content
 
-    # force the DFXP to only have one language, trying to match on "force"
-    def _force_language(self, force, langs):
-        for lang in langs:
-            if force == lang:
-                return lang
+    def _assign_region(self, tag, lang,
+                       caption_set=None, caption=None, caption_node=None):
+        """Modifies the current tag, assigning it the 'region' attribute.
 
-        return langs[-1]
+        :param tag: the BeautifulSoup tag to be modified
+        :type lang: unicode
+        :param lang: the caption language
+        :type caption_set: CaptionSet
+        :param caption_set: The CaptionSet parent
+        :type caption: Caption
+        :type caption_node: CaptionNode
+        """
+        assigned_id = self.region_creator.assign_region_id(
+            lang, caption_set, caption, caption_node)
 
-    def _recreate_region_tag(self, region_id, styling, dfxp):
-        dfxp_region = dfxp.new_tag(u'region')
-        dfxp_region.attrs.update({u'xml:id': region_id})
-
-        attributes = self._recreate_style(styling, dfxp)
-        dfxp_region.attrs.update(attributes)
-
-        new_tag = dfxp.new_tag(u'region')
-        new_tag.attrs.update({u'xml:id': region_id})
-        if dfxp_region != new_tag:
-            dfxp.find(u'layout').append(dfxp_region)
-        return dfxp
+        if assigned_id:
+            tag[u'region'] = assigned_id
 
     def _recreate_styling_tag(self, style, content, dfxp):
+        # TODO - should be drastically simplified: if attributes : append
         dfxp_style = dfxp.new_tag(u'style')
         dfxp_style.attrs.update({u'xml:id': style})
 
-        attributes = self._recreate_style(content, dfxp)
+        attributes = _recreate_style(content, dfxp)
         dfxp_style.attrs.update(attributes)
 
         new_tag = dfxp.new_tag(u'style')
@@ -285,7 +286,7 @@ class DFXPWriter(BaseWriter):
         if dfxp.find(u"style", {u"xml:id": u"p"}):
             p[u'style'] = u'p'
 
-        p.attrs.update(self._recreate_style(caption_style, dfxp))
+        p.attrs.update(_recreate_style(caption_style, dfxp))
 
         return p
 
@@ -308,7 +309,7 @@ class DFXPWriter(BaseWriter):
         if node.start:
             styles = u''
 
-            content_with_style = self._recreate_style(node.content, dfxp)
+            content_with_style = _recreate_style(node.content, dfxp)
             for style, value in content_with_style.items():
                 styles += u' %s="%s"' % (style, value)
 
@@ -324,32 +325,10 @@ class DFXPWriter(BaseWriter):
 
         return line
 
-    def _recreate_style(self, content, dfxp):
-        dfxp_style = {}
-
-        if u'region' in content:
-            if dfxp.find(u'region', {u'xml:id': content[u'region']}):
-                dfxp_style[u'region'] = content[u'region']
-        if u'class' in content:
-            if dfxp.find(u"style", {u"xml:id": content[u'class']}):
-                dfxp_style[u'style'] = content[u'class']
-        if u'text-align' in content:
-            dfxp_style[u'tts:textAlign'] = content[u'text-align']
-        if u'italics' in content:
-            dfxp_style[u'tts:fontStyle'] = u'italic'
-        if u'font-family' in content:
-            dfxp_style[u'tts:fontFamily'] = content[u'font-family']
-        if u'font-size' in content:
-            dfxp_style[u'tts:fontSize'] = content[u'font-size']
-        if u'color' in content:
-            dfxp_style[u'tts:color'] = content[u'color']
-        if u'display-align' in content:
-            dfxp_style[u'tts:displayAlign'] = content[u'display-align']
-
-        return dfxp_style
 
 
-class LayoutAwareBeautifulSoup(BeautifulSoup):
+
+class LayoutAwareDFXPParser(BeautifulSoup):
     """This makes the xml instance capable of providing layout information
     for every one of its nodes (it adds a 'layout_info' attribute on each node)
 
@@ -359,7 +338,7 @@ class LayoutAwareBeautifulSoup(BeautifulSoup):
     """
     # A lot of elements will have no positioning info. Use this flyweight
     # to save memory
-    NO_POSITIONING_INFO = (None,) * 3
+    NO_POSITIONING_INFO = None
 
     def __init__(self, markup=u"", features="html.parser", builder=None,
                  parse_only=None, from_encoding=None, **kwargs):
@@ -374,7 +353,7 @@ class LayoutAwareBeautifulSoup(BeautifulSoup):
         Check out the docs below for explanation.
         http://www.crummy.com/software/BeautifulSoup/bs4/doc/#installing-a-parser
         """
-        super(LayoutAwareBeautifulSoup, self).__init__(
+        super(LayoutAwareDFXPParser, self).__init__(
             markup, features, builder, parse_only, from_encoding, **kwargs)
 
         for div in self.find_all(u'div'):
@@ -482,11 +461,11 @@ class LayoutAwareBeautifulSoup(BeautifulSoup):
                 u'More than 1 region with the same id: {id}'
                 .format(id=region_id)
             )
-        region = LayoutAwareRegion(self, region_list[0])
-        return Layout(*region.get_positioning_info())
+        region_scraper = LayoutAwareRegionScraper(self, region_list[0])
+        return Layout(*region_scraper.get_positioning_info())
 
 
-class LayoutAwareRegion(object):
+class LayoutAwareRegionScraper(object):
     """Encapsulates the methods for determining the layout information about
     a region element.
     """
@@ -635,14 +614,14 @@ class LayoutAwareRegion(object):
 
         # Does self.region have the attribute?
         origin = self._get_usable_attribute_value(
-            self.region, attribute_name, Point.from_dfxp_attribute
+            self.region, attribute_name, Point.from_xml_attribute
         )
 
         # Do any of its style have the attribute?
         if not origin:
             for style in self.styles:
                 origin = self._get_usable_attribute_value(
-                    style, attribute_name, Point.from_dfxp_attribute
+                    style, attribute_name, Point.from_xml_attribute
                 )
                 # get the first value met in the style chain
                 if origin:
@@ -663,14 +642,14 @@ class LayoutAwareRegion(object):
 
         # Does self.region have the attribute?
         extent = self._get_usable_attribute_value(
-            self.region, attribute_name, Stretch.from_dfxp_attribute
+            self.region, attribute_name, Stretch.from_xml_attribute
         )
 
         # Do any of its style have the attribute?
         if extent is None:
             for style in self.styles:
                 extent = self._get_usable_attribute_value(
-                    style, attribute_name, Stretch.from_dfxp_attribute
+                    style, attribute_name, Stretch.from_xml_attribute
                 )
                 if extent:
                     break
@@ -679,7 +658,7 @@ class LayoutAwareRegion(object):
         if extent is None:
             root = self.document.findAll('tt')[0]
             extent = self._get_usable_attribute_value(
-                root, attribute_name, Stretch.from_dfxp_attribute
+                root, attribute_name, Stretch.from_xml_attribute
             )
 
             if extent is not None:
@@ -709,16 +688,225 @@ class LayoutAwareRegion(object):
 
         # Does self.region have the attribute?
         padding = self._get_usable_attribute_value(
-            self.region, attribute_name, Padding.from_dfxp_attribute, []
+            self.region, attribute_name, Padding.from_xml_attribute, []
         )
 
         # Do any of its style have the attribute?
         if padding is None:
             for style in self.styles:
                 padding = self._get_usable_attribute_value(
-                    style, attribute_name, Padding.from_dfxp_attribute, []
+                    style, attribute_name, Padding.from_xml_attribute, []
                 )
                 if padding:
                     break
 
         return padding
+
+
+class RegionCreator(object):
+    """Creates the DFXP regions, and knows how retrieve them, for assigning
+    region IDs to every element
+
+    # todo - needs to remember the IDs created, and later, when assigning a
+    region to every dfxp element, needs to know what region to assign to that
+    element, based on the CaptionNode, its Caption and its CaptionSet.
+
+    The layout information for a node is determined like this:
+        - If a node has a (NON-NULL*).layout_info attribute, return the region
+            created for that exact specification
+        - If a node has .layout_info = NULL*, retrieve the .layout_info from its
+            Caption parent... if still NULL*, retrieve it from its CaptionSet
+        - If the retrieval still resulted in None, assign to it the Default
+            region
+
+        *: NULL means LayoutAwareBeautifulParser.NO_POSITIONING_INFO... but
+            should really add a .__nonzero__ method to the layout, and to
+            the its every child..?
+
+    """
+    def __init__(self, dfxp, caption_set):
+        """
+        :type dfxp: BeautifulSoup
+        :type caption_set: CaptionSet
+        """
+        self._dfxp = dfxp
+        self._caption_set = caption_set
+        self._region_map = {}
+        self._id_seed = 0
+
+    def _create_default_region_from_dict(self, region_id, region_spec):
+        """
+        :type region_id: unicode
+        :type region_spec: dict
+        """
+        dfxp_region = self._dfxp.new_tag(u'region')
+        dfxp_region.attrs.update({u'xml:id': region_id})
+
+        attributes = _recreate_style(region_spec, self._dfxp)
+
+        if attributes:
+            dfxp_region.attrs.update(attributes)
+            self._dfxp.find(u'layout').append(dfxp_region)
+
+    @staticmethod
+    def _collect_unique_regions(caption_set):
+        """Iterate through all the nodes in the caption set, and return a list
+        of all unique region specs (Layout objects)
+
+        :type caption_set: CaptionSet
+        :return: iterable containing these
+        """
+        unique_regions = set()
+        # Get all the regions for all the <div>'s..corresponding to all the
+        # languages
+        languages = caption_set.get_languages()
+        for lang in languages:
+            unique_regions.add(caption_set.get_layout_info(lang))
+
+            # Get the regions of all the captions.. (the <p> tags)
+            for caption in caption_set.get_captions(lang):
+                unique_regions.add(caption.layout_info)
+
+                # The regions of all the text/br/style nodes
+                for node in caption.nodes:
+                    unique_regions.add(node.layout_info)
+        unique_regions.discard(None)
+        return unique_regions
+
+    @staticmethod
+    def _create_unique_regions(unique_layouts, dfxp, id_factory):
+        """Create each one of the regions in the list, inside the dfxp
+        document, under the 'layout' section.
+
+        :type unique_layouts: set
+        :param unique_layouts: a set of geometry.Layout instances, describing
+            the properties to be added to the dfxp regions
+        :type dfxp: BeautifulSoup
+        :param id_factory: A callable which generates unique IDs
+        :return: a dict, mapping each unique layout to the ID of the region
+            created for it
+        :rtype: dict
+        """
+        region_map = {}
+        layout_section = dfxp.find(u'layout')
+
+        for region_spec in unique_layouts:
+            if region_spec.origin or region_spec.extent or region_spec.padding:
+                new_region = dfxp.new_tag(u'region')
+                new_id = id_factory()
+                new_region[u'xml:id'] = new_id
+
+                region_map[region_spec] = new_id
+                if region_spec.origin:
+                    new_region[u'tts:origin'] = (
+                        region_spec.origin.to_xml_attribute())
+                if region_spec.extent:
+                    new_region[u'tts:extent'] = (
+                        region_spec.extent.to_xml_attribute())
+                if region_spec.padding:
+                    new_region[u'tts:padding'] = (
+                        region_spec.padding.to_xml_attribute())
+
+                layout_section.append(new_region)
+        return region_map
+
+    def create_document_regions(self):
+        """Create the <region> tags required to position all the captions.
+        """
+        self._create_default_region_from_dict(
+            DFXP_DEFAULT_REGION_ID, DFXP_DEFAULT_REGION)
+        unique_regions = self._collect_unique_regions(self._caption_set)
+
+        self._region_map = self._create_unique_regions(
+            unique_regions, self._dfxp, self._get_new_id)
+
+    def _get_new_id(self, prefix=u'region'):
+        """Return new, unique ids (use an internal counter).
+
+        :type prefix: unicode
+        """
+        new_id = unicode(prefix or u'' + self._id_seed)
+        self._id_seed += 1
+        return new_id
+
+    def assign_region_id(
+            self, lang, caption_set=None, caption=None, caption_node=None):
+        """For the given element will return a valid region ID, used for
+        assigning to the element.
+
+        For the region_id to be returned for the entire CaptionSet, don't
+        supply the `caption` or `caption_node` params.
+
+        For the region_id to be returned for the Caption, don't supply the
+        `caption_node` param
+
+        <div> tags mean the caption is None and caption_node is None.
+        <p> tags mean the caption_node is None
+
+        :type caption_set: CaptionSet
+        :type caption: Caption
+        :type caption_node: CaptionNode
+        :rtype: unicode
+        """
+        # More intelligent people would have used an elem.parent.parent..parent
+        # pattern, but pycaption is not yet structured for this. 3 params
+        # is not too much of a bother. If someone wants to make the structure
+        # tree-like, they can easily change this.
+        layout_info = None
+        if caption_node:
+            layout_info = caption_node.layout_info
+
+        if not layout_info and caption:
+            layout_info = caption.layout_info
+
+        if not layout_info and caption_set:
+            layout_info = caption_set.get_layout_info(lang)
+
+        region_id = self._region_map.get(layout_info)
+
+        if not region_id and not self._region_map:
+            region_id = DFXP_DEFAULT_REGION_ID
+
+        return region_id
+
+
+def _recreate_style(content, dfxp):
+    dfxp_style = {}
+
+    if u'region' in content:
+        if dfxp.find(u'region', {u'xml:id': content[u'region']}):
+            dfxp_style[u'region'] = content[u'region']
+    if u'class' in content:
+        if dfxp.find(u"style", {u"xml:id": content[u'class']}):
+            dfxp_style[u'style'] = content[u'class']
+    if u'text-align' in content:
+        dfxp_style[u'tts:textAlign'] = content[u'text-align']
+    if u'italics' in content:
+        dfxp_style[u'tts:fontStyle'] = u'italic'
+    if u'font-family' in content:
+        dfxp_style[u'tts:fontFamily'] = content[u'font-family']
+    if u'font-size' in content:
+        dfxp_style[u'tts:fontSize'] = content[u'font-size']
+    if u'color' in content:
+        dfxp_style[u'tts:color'] = content[u'color']
+    if u'display-align' in content:
+        dfxp_style[u'tts:displayAlign'] = content[u'display-align']
+
+    return dfxp_style
+
+
+# class LayoutAwareDFXPCreator(BeautifulSoup):
+#     """Automatically assign a region ID to the newly created tags, IF possible
+#     """
+#     def __init__(self, markup="", features=None, builder=None,
+#                  parse_only=None, from_encoding=None, caption_set=None,
+#                  **kwargs):
+#         """Also creates the default region, and all of the other regions
+#         required for this dfxp document.
+#         """
+#         super(LayoutAwareDFXPCreator, self).__init__(
+#             markup, features, builder, parse_only, from_encoding, **kwargs)
+#         self._caption_set = caption_set
+#
+#         self._region_creator = RegionCreator(self, caption_set)
+#         self._region_creator.create_document_regions()

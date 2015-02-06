@@ -7,7 +7,7 @@ from pycaption import (
 
 from pycaption.dfxp import (
     DFXP_DEFAULT_STYLE, DFXP_DEFAULT_STYLE_ID,
-    DFXP_DEFAULT_REGION, DFXP_DEFAULT_REGION_ID)
+    DFXP_DEFAULT_REGION, DFXP_DEFAULT_REGION_ID, _recreate_style)
 from .samples import (
     SAMPLE_SAMI, SAMPLE_SRT, SAMPLE_DFXP,
     SAMPLE_DFXP_UTF8, SAMPLE_SAMI_UNICODE, SAMPLE_DFXP_UNICODE,
@@ -49,7 +49,7 @@ class DFXPtoDFXPTestCase(DFXPConversionTestCase, DFXPTestingMixIn):
         w = DFXPWriter()
         result = w.write(self.captions_without_style_and_region)
 
-        default_style = w._recreate_style(DFXP_DEFAULT_STYLE, None)
+        default_style = _recreate_style(DFXP_DEFAULT_STYLE, None)
         default_style[u'xml:id'] = DFXP_DEFAULT_STYLE_ID
 
         soup = BeautifulSoup(result, u'xml')
@@ -70,7 +70,7 @@ class DFXPtoDFXPTestCase(DFXPConversionTestCase, DFXPTestingMixIn):
         w = DFXPWriter()
         result = w.write(self.captions)
 
-        default_region = w._recreate_style(DFXP_DEFAULT_REGION, None)
+        default_region = _recreate_style(DFXP_DEFAULT_REGION, None)
         default_region[u'xml:id'] = DFXP_DEFAULT_REGION_ID
 
         soup = BeautifulSoup(result, u'xml')
