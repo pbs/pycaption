@@ -67,7 +67,10 @@ class Stretch(TwoDimensionalObject):
 
     def serialized(self):
         """Returns a tuple of the useful attributes of this object"""
-        return self.horizontal.serialized(), self.vertical.serialized()
+        return (
+            None if not self.horizontal else self.horizontal.serialized(),
+            None if not self.vertical else self.vertical.serialized()
+        )
 
 
 class Region(object):
@@ -179,7 +182,10 @@ class Point(TwoDimensionalObject):
     def serialized(self):
         """Returns the "useful" values of this object.
         """
-        return self.x.serialized(), self.y.serialized()
+        return (
+            None if not self.x else self.x.serialized(),
+            None if not self.y else self.y.serialized()
+        )
 
 
 class Size(object):
@@ -324,10 +330,10 @@ class Padding(object):
         """Returns a tuple containing the useful values of this object
         """
         return (
-            self.before.serialized(),
-            self.after.serialized(),
-            self.start.serialized(),
-            self.end.serialized()
+            None if not self.before else self.before.serialized(),
+            None if not self.after else self.after.serialized(),
+            None if not self.start else self.start.serialized(),
+            None if not self.end else self.end.serialized()
         )
 
 
@@ -360,7 +366,7 @@ class Layout(object):
         """Returns nested tuple containing the "useful" values of this object
         """
         return (
-            self.origin.serialized(),
-            self.extent.serialized(),
-            self.padding.serialized()
+            None if not self.origin else self.origin.serialized(),
+            None if not self.extent else self.extent.serialized(),
+            None if not self.padding else self.padding.serialized()
         )
