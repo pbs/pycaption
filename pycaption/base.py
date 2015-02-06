@@ -68,13 +68,13 @@ class CaptionNode(object):
     STYLE = 2
     BREAK = 3
 
-    def __init__(self, type):
+    def __init__(self, type, layout_info=None):
         self.type = type
         self.content = None
 
         # Boolean. Marks the beginning/ end of a Style node.
         self.start = None
-        self.layout = None
+        self.layout_info = layout_info
 
     def __repr__(self):
         t = self.type
@@ -89,21 +89,21 @@ class CaptionNode(object):
             raise RuntimeError(u'Unknown node type: ' + unicode(t))
 
     @staticmethod
-    def create_text(text):
-        data = CaptionNode(CaptionNode.TEXT)
+    def create_text(text, layout_info=None):
+        data = CaptionNode(CaptionNode.TEXT, layout_info=layout_info)
         data.content = text
         return data
 
     @staticmethod
-    def create_style(start, content):
-        data = CaptionNode(CaptionNode.STYLE)
+    def create_style(start, content, layout_info=None):
+        data = CaptionNode(CaptionNode.STYLE, layout_info=layout_info)
         data.content = content
         data.start = start
         return data
 
     @staticmethod
-    def create_break():
-        return CaptionNode(CaptionNode.BREAK)
+    def create_break(layout_info=None):
+        return CaptionNode(CaptionNode.BREAK, layout_info=layout_info)
 
 
 class Caption(object):
@@ -111,12 +111,12 @@ class Caption(object):
     A single caption, including the time and styling information
     for its display.
     """
-    def __init__(self):
+    def __init__(self, layout_info=None):
         self.start = 0
         self.end = 0
         self.nodes = []
         self.style = {}
-        self.layout = None
+        self.layout_info = layout_info
 
     def is_empty(self):
         return len(self.nodes) == 0
