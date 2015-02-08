@@ -24,11 +24,11 @@ class TwoDimensionalObject(object):
     @classmethod
     # TODO - highly cachable. Should use WeakValueDictionary here to return
     # flyweights, not new objects.
-    def from_dfxp_attribute(cls, attribute):
+    def from_xml_attribute(cls, attribute):
         """Instantiate the class from a value of the type "4px" or "5%"
         or any number concatenated with a measuring unit (member of UnitEnum)
 
-        :type attribute: string-like
+        :type attribute: unicode
         """
         horizontal, vertical = unicode(attribute).split(u' ')
         horizontal = Size.from_string(horizontal)
@@ -347,7 +347,7 @@ class Padding(object):
         self.end = end
 
     @classmethod
-    def from_dfxp_attribute(cls, attribute):
+    def from_xml_attribute(cls, attribute):
         """As per the docs, the style attribute can contain 1,2,3 or 4 values.
 
         If 1 value: apply to all edges
