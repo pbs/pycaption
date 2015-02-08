@@ -74,6 +74,21 @@ class Stretch(TwoDimensionalObject):
             None if not self.vertical else self.vertical.serialized()
         )
 
+    def __eq__(self, other):
+        return (
+            other and
+            type(self) == type(other) and
+            self.horizontal == other.horizontal and
+            self.vertical == other.vertical
+        )
+
+    def __hash__(self):
+        return hash(
+            hash(self.horizontal) * 59 +
+            hash(self.vertical) * 61 +
+            67
+        )
+
 
 class Region(object):
     """Represents the spatial coordinates of a rectangle
@@ -95,25 +110,25 @@ class Region(object):
         return inst
 
     @classmethod
-    def from_extent(cls, stretch, origin):
+    def from_extent(cls, extent, origin):
         """Create a rectangle, knowing its upper left origin, and
         spatial extension
 
-        :param stretch: Stretch instance
-        :param origin: Point instance
+        :type extent: Stretch
+        :type origin: Point
         :return: a Point instance
         """
         inst = cls()
-        inst._stretch = stretch
+        inst._extent = extent
         inst._origin = origin
         return inst
 
     @property
-    def stretch(self):
+    def extent(self):
         """How wide this rectangle stretches (horizontally and vertically)
         """
-        if hasattr(self, '_stretch'):
-            return self._stretch
+        if hasattr(self, '_extent'):
+            return self._extent
         else:
             return self._p1 - self._p2
 
@@ -135,7 +150,22 @@ class Region(object):
         if hasattr(self, '_p2'):
             return Point.align_from_origin(self._p1, self._p2)[1]
         else:
-            return self.origin.add_extent(self.stretch)
+            return self.origin.add_extent(self.extent)
+
+    def __eq__(self, other):
+        return (
+            other and
+            type(self) == type(other) and
+            self.extent == other.extent and
+            self.origin == other.origin
+        )
+
+    def __hash__(self):
+        return hash(
+            hash(self.origin) * 71 +
+            hash(self.extent) * 73 +
+            79
+        )
 
 
 class Point(TwoDimensionalObject):
@@ -187,6 +217,21 @@ class Point(TwoDimensionalObject):
         return (
             None if not self.x else self.x.serialized(),
             None if not self.y else self.y.serialized()
+        )
+
+    def __eq__(self, other):
+        return (
+            other and
+            type(self) == type(other) and
+            self.x == other.x and
+            self.y == other.y
+        )
+
+    def __hash__(self):
+        return hash(
+            hash(self.x) * 51 +
+            hash(self.y) * 53 +
+            57
         )
 
 
@@ -268,6 +313,21 @@ class Size(object):
         """Returns the "useful" values of this object"""
         return self.value, self.unit
 
+    def __eq__(self, other):
+        return (
+            other and
+            type(self) == type(other) and
+            self.value == other.value and
+            self.unit == other.unit
+        )
+
+    def __hash__(self):
+        return hash(
+            hash(self.value) * 41 +
+            hash(self.unit) * 43 +
+            47
+        )
+
 
 class Padding(object):
     """Represents padding information. Consists of 4 Size objects, representing
@@ -340,6 +400,25 @@ class Padding(object):
             None if not self.end else self.end.serialized()
         )
 
+    def __eq__(self, other):
+        return (
+            other and
+            type(self) == type(other) and
+            self.before == other.before and
+            self.after == other.after and
+            self.start == other.start and
+            self.end == other.end
+        )
+
+    def __hash__(self):
+        return hash(
+            hash(self.before) * 19 +
+            hash(self.after) * 23 +
+            hash(self.start) * 29 +
+            hash(self.end) * 31 +
+            37
+        )
+
 
 class Layout(object):
     """Should encapsulate all the information needed to determine (as correctly
@@ -373,4 +452,21 @@ class Layout(object):
             None if not self.origin else self.origin.serialized(),
             None if not self.extent else self.extent.serialized(),
             None if not self.padding else self.padding.serialized()
+        )
+
+    def __eq__(self, other):
+        return (
+            other and
+            type(self) == type(other) and
+            self.origin == other.origin and
+            self.extent == other.extent and
+            self.padding == other.padding
+        )
+
+    def __hash__(self):
+        return hash(
+            hash(self.origin) * 7
+            + hash(self.extent) * 11
+            + hash(self.padding) * 13
+            + 17
         )
