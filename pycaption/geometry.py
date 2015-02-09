@@ -93,7 +93,8 @@ class Stretch(TwoDimensionalObject):
         """Returns a unicode representation of this object as an xml attribute
         """
         return u'{horizontal} {vertical}'.format(
-            horizontal=self.horizontal, vertical=self.vertical
+            horizontal=self.horizontal.to_xml_attribute(),
+            vertical=self.vertical.to_xml_attribute()
         )
 
 
@@ -325,7 +326,7 @@ class Size(object):
     def to_xml_attribute(self, **kwargs):
         """Returns a unicode representation of this object, as an xml attribute
         """
-        return u"{unit}{value}".format(unit=self.unit, value=self.value)
+        return u"{value}{unit}".format(unit=self.unit, value=self.value)
 
     def serialized(self):
         """Returns the "useful" values of this object"""
