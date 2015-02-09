@@ -89,6 +89,13 @@ class Stretch(TwoDimensionalObject):
             67
         )
 
+    def to_xml_attribute(self, **kwargs):
+        """Returns a unicode representation of this object as an xml attribute
+        """
+        return u'{horizontal} {vertical}'.format(
+            horizontal=self.horizontal, vertical=self.vertical
+        )
+
 
 class Region(object):
     """Represents the spatial coordinates of a rectangle
@@ -234,6 +241,12 @@ class Point(TwoDimensionalObject):
             57
         )
 
+    def to_xml_attribute(self, **kwargs):
+        """Returns a unicode representation of this object as an xml attribute
+        """
+        return u'{x} {y}'.format(
+            x=self.x.to_xml_attribute(), y=self.y.to_xml_attribute())
+
 
 class Size(object):
     """Ties together a number with a unit, to represent a size.
@@ -308,6 +321,11 @@ class Size(object):
         return u'<Size ({value} {unit})>'.format(
             value=self.value, unit=self.unit
         )
+
+    def to_xml_attribute(self, **kwargs):
+        """Returns a unicode representation of this object, as an xml attribute
+        """
+        return u"{unit}{value}".format(unit=self.unit, value=self.value)
 
     def serialized(self):
         """Returns the "useful" values of this object"""
@@ -418,6 +436,29 @@ class Padding(object):
             hash(self.end) * 31 +
             37
         )
+
+    def to_xml_attribute(
+            self, attribute_order=(u'before', u'end', u'after', u'start'),
+            **kwargs):
+        """Returns a unicode representation of this object as an xml attribute
+
+        TODO - should extend the attribute_order tuple to contain 4 tuples,
+        so we can reduce the output length to 3, 2 or 1 element.
+
+        :type attribute_order: tuple
+        :param attribute_order: the order that the attributes should be
+            serialized
+        """
+        try:
+            string_list = []
+            for attrib in attribute_order:
+                if hasattr(self, attrib):
+                    string_list.append(
+                        getattr(self, attrib).to_xml_attribute())
+        except AttributeError:
+            raise ValueError(u"The attribute order specified is invalid.")
+
+        return u' '.join(string_list)
 
 
 class Layout(object):
