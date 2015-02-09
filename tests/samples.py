@@ -667,6 +667,81 @@ SAMPLE_DFXP_EMPTY = """
 </tt>
 """
 
+SAMPLE_DFXP_MULTIPLE_REGIONS_INPUT = """
+<?xml version="1.0" encoding="utf-8"?>
+<tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml"
+    xmlns:tts="http://www.w3.org/ns/ttml#styling">
+ <head>
+  <styling>
+   <style xml:id="p" tts:color="#ffeedd" tts:fontfamily="Arial"
+          tts:fontsize="10pt" tts:textAlign="center"/>
+    <style xml:id="referential_style2" tts:extent="3em 4em"/>
+    <style xml:id="referential_style1" tts:padding="3px 4px 5px" style="referential_style2"/>
+  </styling>
+  <layout>
+   <region tts:textAlign="center" xml:id="pixel_region">
+    <style tts:origin="40px 50px" tts:extent="30px 40px"/>
+   </region>
+   <region tts:origin="10% 30%" tts:extent="50% 50%" xml:id="percent_region"/>
+   <region tts:padding="2c" xml:id="padding_region" />
+   <region xml:id="referential_region" style="referential_style1"/>
+  </layout>
+ </head>
+ <body>
+  <div xml:lang="en-US">
+   <p region="pixel_region" begin="0:00:02.07" end="0:00:05.07">
+   Hello there!
+   </p>
+   <p region="percent_region" begin="0:00:05.07" end="0:00:06.21">
+   How are you?
+   </p>
+   <p region="padding_region" begin="0:00:07.07" end="0:00:09.21">
+   >> I'm fine, thank you << replied someone.
+   <span region="percent_region">
+    >>And now we're going to have fun<<
+    </span>
+   </p>
+   <p region="referential_region" begin="0:00:10.07" end="0:00:11.21">
+   What do you have in mind?
+   </p>
+  </div>
+ </body>
+</tt>
+"""
+
+SAMPLE_DFXP_MULTIPLE_REGIONS_OUTPUT = """\
+<?xml version="1.0" encoding="utf-8"?>
+<tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling">
+ <head>
+  <styling>
+   <style tts:color="#ffeedd" tts:fontFamily="Arial" tts:fontSize="10pt" tts:textAlign="center" xml:id="p"/>
+  </styling>
+  <layout>
+   <region tts:displayAlign="after" tts:textAlign="center" xml:id="bottom"/>
+   <region tts:extent="30px 40px" tts:origin="40px 50px" xml:id="r0"/>
+   <region tts:padding="2c 2c 2c 2c" xml:id="r1"/>
+   <region tts:extent="3em 4em" tts:padding="3px 4px 5px 4px" xml:id="r2"/>
+   <region tts:extent="50% 50%" tts:origin="10% 30%" xml:id="r3"/>
+  </layout>
+ </head>
+ <body>
+  <div xml:lang="en-US">
+   <p begin="00:00:02.007" end="00:00:05.007" region="r0" style="p">
+    Hello there!
+   </p>
+   <p begin="00:00:05.007" end="00:00:06.021" region="r3" style="p">
+    How are you?
+   </p>
+   <p begin="00:00:07.007" end="00:00:09.021" region="r1" style="p">
+    &gt;&gt; I'm fine, thank you &lt;&lt; replied someone. <span region="r3">&gt;&gt;And now we're going to have fun&lt;&lt;</span>
+   </p>
+   <p begin="00:00:10.007" end="00:00:11.021" region="r2" style="p">
+    What do you have in mind?
+   </p>
+  </div>
+ </body>
+</tt>"""
+
 
 SAMPLE_DFXP_SYNTAX_ERROR = """
 <?xml version="1.0" encoding="UTF-16"?>

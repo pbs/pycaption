@@ -14,7 +14,8 @@ from .samples import (
     SAMPLE_SRT_UNICODE, SAMPLE_DFXP_WITHOUT_REGION_AND_STYLE)
 from .mixins import SRTTestingMixIn, SAMITestingMixIn, DFXPTestingMixIn, WebVTTTestingMixIn
 
-from tests.samples import SAMPLE_WEBVTT_OUTPUT
+from tests.samples import SAMPLE_WEBVTT_OUTPUT, \
+    SAMPLE_DFXP_MULTIPLE_REGIONS_INPUT, SAMPLE_DFXP_MULTIPLE_REGIONS_OUTPUT
 
 
 class DFXPConversionTestCase(unittest.TestCase):
@@ -86,6 +87,12 @@ class DFXPtoDFXPTestCase(DFXPConversionTestCase, DFXPTestingMixIn):
         soup = BeautifulSoup(result, u'xml')
         for p in soup.find_all(u'p'):
             self.assertEquals(p.attrs.get(u'region'), DFXP_DEFAULT_REGION_ID)
+
+    def test_correct_region_attributes_are_recreated(self):
+        caption_set = DFXPReader().read(
+            unicode(SAMPLE_DFXP_MULTIPLE_REGIONS_INPUT))
+        result = DFXPWriter().write(caption_set)
+        self.assertDFXPEquals(result, SAMPLE_DFXP_MULTIPLE_REGIONS_OUTPUT)
 
 
 class DFXPtoSRTTestCase(DFXPConversionTestCase, SRTTestingMixIn):
