@@ -23,25 +23,64 @@ class UnitEnum(Enum):
     CHARACTER = u'c'
 
 
-class AlignmentEnum(Enum):
-    """Enumeration object, specifying the allowed valued for text alignment
+class VerticalAlignmentEnum(Enum):
+    """Enumeration object, specifying the allowed vertical alignment options
 
     Usage:
-        alignment = AlignmentEnum.TOP_LEFT
-        if alignment == AlignmentEnum.BOTTOM_RIGHT:
+        alignment = VerticalAlignmentEnum.TOP
+        if alignment == VerticalAlignmentEnum.BOTTOM:
             ...
     """
     TOP = u'top'
-    BOTTOM = u'bottom'
-    LEFT = u'left'
-    RIGHT = u'right'
-
     CENTER = u'center'
+    BOTTOM = u'bottom'
 
-    TOP_LEFT = u'top_left'
-    TOP_RIGHT = u'top_right'
-    BOTTOM_LEFT = u'bottom_left'
-    BOTTOM_RIGHT = u'bottom_right'
+
+class HorizontalAlignmentEnum(Enum):
+    """Enumeration object specifying the horizontal alignment preferences
+    """
+    LEFT = u'left'
+    CENTER = u'center'
+    RIGHT = u'right'
+    START = u'start'
+    END = u'end'
+
+
+class Alignment(object):
+    def __init__(self, horizontal, vertical):
+        """
+        :type horizontal: unicode
+        :param horizontal: HorizontalAlignmentEnum member
+        :type vertical: unicode
+        :param vertical: VerticalAlignmentEnum member
+        """
+        self.horizontal = horizontal
+        self.vertical = vertical
+
+    def __hash__(self):
+        return hash(
+            hash(self.horizontal) * 83 +
+            hash(self.vertical) * 89 +
+            97
+        )
+
+    def __eq__(self, other):
+        return (
+            other and
+            type(self) == type(other) and
+            self.horizontal == other.horizontal and
+            self.vertical == other.vertical
+        )
+
+    def __repr__(self):
+        return u"<Alignment ({horizontal} {vertical})>".format(
+            horizontal=self.horizontal, vertical=self.vertical
+        )
+
+    def serialized(self):
+        """Returns a tuple of the useful information regarding this object
+        """
+        return self.horizontal, self.vertical
 
 
 class TwoDimensionalObject(object):
@@ -506,8 +545,7 @@ class Layout(object):
         :type padding: Padding
         :param padding: The padding of the text inside the region described
             by the origin and the extent
-        :param alignment: AlignmentEnum member;
-        :type alignment: unicode
+        :type alignment: Alignment
         """
         self.origin = origin
         self.extent = extent
@@ -530,7 +568,7 @@ class Layout(object):
             None if not self.origin else self.origin.serialized(),
             None if not self.extent else self.extent.serialized(),
             None if not self.padding else self.padding.serialized(),
-            self.alignment
+            None if not self.alignment else self.alignment.serialized()
         )
 
     def __eq__(self, other):
