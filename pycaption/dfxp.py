@@ -478,9 +478,17 @@ class LayoutAwareDFXPParser(BeautifulSoup):
             into action (at the moment) if the
         :rtype: Layout
         """
+        has_region = False
+
         if region_id is not None:
             region_list = self.findAll(u'region', {u'xml:id': region_id})
-            region_scraper = LayoutAwareRegionScraper(self, region_list[0])
+            if not region_list:
+                has_region = False
+            else:
+                region_scraper = LayoutAwareRegionScraper(self, region_list[0])
+                has_region = True
+
+        if has_region:
             if self.read_invalid_positioning:
                 # Read positioning info from the region, and inline, from the
                 # element (Be forgiving)
