@@ -53,7 +53,8 @@ class DFXPReader(BaseReader):
         if type(content) != unicode:
             raise RuntimeError(u'The content is not a unicode string.')
 
-        dfxp_document = LayoutAwareDFXPParser(content)
+        dfxp_document = LayoutAwareDFXPParser(
+            content, read_invalid_positioning=self.read_invalid_positioning)
         captions = CaptionSet()
 
         # Each div represents all the captions for a single language.
@@ -500,6 +501,10 @@ class LayoutAwareDFXPParser(BeautifulSoup):
         else:
             if self.read_invalid_positioning:
                 # Positioning info only specified inline?
+                # TODO - replace this with a fake_scrapper.get_positioning_info
+                # ...lol, no need to duplicate logic, especially complicated
+                # one - Time perhapse to create some .set_something on the
+                # region scrapper, eh?
                 layout_info = self._read_inline_positioning(element)
             else:
                 layout_info = self.NO_POSITIONING_INFO
@@ -519,13 +524,21 @@ class LayoutAwareDFXPParser(BeautifulSoup):
         :param element: BeautifulSoup Tag or NavigableString
         :rtype: tuple
         """
-        origin = element.get(u'tts:origin')
-        extent = element.get(u'tts:extent')
-        padding = element.get(u'tts:padding')
+        origin, extent, padding, alignment = (None,) * 4
 
-        text_align = element.get(u'tts:textAlign')
-        display_align = element.get(u'tts:displayAlign')
-        alignment = _create_internal_alignment(text_align, display_align)
+        if hasattr(element, 'get'):
+            origin = _get_usable_attribute_value(
+                element, u'tts:origin', Point.from_xml_attribute)
+            extent = _get_usable_attribute_value(
+                element, u'tts:extent', Stretch.from_xml_attribute
+            )
+            padding = _get_usable_attribute_value(
+                element, u'tts:extent', Padding.from_xml_attribute, []
+            )
+
+            text_align = element.get(u'tts:textAlign')
+            display_align = element.get(u'tts:displayAlign')
+            alignment = _create_internal_alignment(text_align, display_align)
 
         return origin, extent, padding, alignment
 
@@ -654,37 +667,6 @@ class LayoutAwareRegionScraper(object):
 
         return origin, extent, padding, alignment
 
-    @staticmethod
-    def _get_usable_attribute_value(tag, attr_name, factory,
-                                    ignore_vals=(u"auto",)):
-        """For the xml `tag`, tries to retrieve the attribute `attr_name` and
-        pass that to the factory in order to get a result. If the value of the
-        attribute is in the `ignore_vals` iterable, returns None.
-
-        :param tag: a BeautifulSoup tag
-        :param attr_name: a string; represents an xml attribute name
-        :param factory: a callable to transform the attribute into something
-            usable (such as the classes from .geometry)
-        :param ignore_vals: iterable of attribute values to ignore
-        :raise CaptionReadSyntaxError: if the attribute has some crazy value
-        """
-        attr_value = None
-        if tag.has_attr(attr_name):
-            attr_value = tag.get(attr_name)
-
-        if attr_value is None:
-            return
-
-        usable_value = None
-
-        if attr_value not in ignore_vals:
-            try:
-                usable_value = factory(attr_value)
-            except ValueError as err:
-                raise CaptionReadSyntaxError(err)
-
-        return usable_value
-
     def _find_attribute(self, element, attribute_name, factory=lambda x: x):
         """Try to find the `attribute_name` specified on the element, its
          assigned region, its region's styles and their referenced styles.
@@ -697,20 +679,20 @@ class LayoutAwareRegionScraper(object):
 
         # Does the element itself have this inline?
         if element:
-            value = self._get_usable_attribute_value(
+            value = _get_usable_attribute_value(
                 element, attribute_name, factory
             )
 
         # Does self.region have the attribute?
         if value is None:
-            value = self._get_usable_attribute_value(
+            value = _get_usable_attribute_value(
                 self.region, attribute_name, factory
             )
 
         # Do any of its styles have the attribute?
         if value is None:
             for style in self.styles:
-                value = self._get_usable_attribute_value(
+                value = _get_usable_attribute_value(
                     style, attribute_name, factory
                 )
                 # get the first value met in the style chain
@@ -733,7 +715,7 @@ class LayoutAwareRegionScraper(object):
         # Does the root 'tt' element have it?
         if extent is None:
             root = self.document.findAll(u'tt')[0]
-            extent = self._get_usable_attribute_value(
+            extent = _get_usable_attribute_value(
                 root, u'tts:extent', Stretch.from_xml_attribute
             )
 
@@ -746,6 +728,9 @@ class LayoutAwareRegionScraper(object):
                         u"#style-attribute-extent"
                     )
         return extent
+
+
+
 
 
 class RegionCreator(object):
@@ -995,3 +980,34 @@ def _create_internal_alignment(text_align, display_align):
         vertical = VerticalAlignmentEnum.BOTTOM
 
     return Alignment(horizontal, vertical)
+
+
+def _get_usable_attribute_value(tag, attr_name, factory,
+                                ignore_vals=(u"auto",)):
+    """For the xml `tag`, tries to retrieve the attribute `attr_name` and
+    pass that to the factory in order to get a result. If the value of the
+    attribute is in the `ignore_vals` iterable, returns None.
+
+    :param tag: a BeautifulSoup tag
+    :param attr_name: a string; represents an xml attribute name
+    :param factory: a callable to transform the attribute into something
+        usable (such as the classes from .geometry)
+    :param ignore_vals: iterable of attribute values to ignore
+    :raise CaptionReadSyntaxError: if the attribute has some crazy value
+    """
+    attr_value = None
+    if tag.has_attr(attr_name):
+        attr_value = tag.get(attr_name)
+
+    if attr_value is None:
+        return
+
+    usable_value = None
+
+    if attr_value not in ignore_vals:
+        try:
+            usable_value = factory(attr_value)
+        except ValueError as err:
+            raise CaptionReadSyntaxError(err)
+
+    return usable_value
