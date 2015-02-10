@@ -1,4 +1,14 @@
-class UnitEnum(object):
+class Enum(object):
+    """Generic class that's not easily instantiable, serving as a base for
+    the enumeration classes
+    """
+    def __new__(cls, *args, **kwargs):
+        raise Exception(u"Don't instantiate. Use like an enum")
+
+    __init__ = __new__
+
+
+class UnitEnum(Enum):
     """Enumeration-like object, specifying the units of measure for length
 
     Usage:
@@ -7,15 +17,31 @@ class UnitEnum(object):
         if unit == UnitEnum.CHARACTER :
             ...
     """
-    def __new__(cls, *args, **kwargs):
-        raise Exception(u"Don't instantiate. Use like an enum")
-
-    __init__ = __new__
-
     PIXEL = u'px'
     EM = u'em'
     PERCENT = u'%'
     CHARACTER = u'c'
+
+
+class AlignmentEnum(Enum):
+    """Enumeration object, specifying the allowed valued for text alignment
+
+    Usage:
+        alignment = AlignmentEnum.TOP_LEFT
+        if alignment == AlignmentEnum.BOTTOM_RIGHT:
+            ...
+    """
+    TOP = u'top'
+    BOTTOM = u'bottom'
+    LEFT = u'left'
+    RIGHT = u'right'
+
+    CENTER = u'center'
+
+    TOP_LEFT = u'top_left'
+    TOP_RIGHT = u'top_right'
+    BOTTOM_LEFT = u'bottom_left'
+    BOTTOM_RIGHT = u'bottom_right'
 
 
 class TwoDimensionalObject(object):
@@ -469,21 +495,31 @@ class Layout(object):
      Inheritance of this property, from the CaptionSet to its children is
      specific for each caption type.
     """
-    def __init__(self, origin=None, extent=None, padding=None):
+    def __init__(self, origin=None, extent=None, padding=None, alignment=None):
         """
         :type origin: Point
+        :param origin: The point on the screen which is the top left vertex
+            of a rectangular region where the captions should be placed
         :type extent: Stretch
+        :param extent: The width and height of the rectangle where the caption
+            should be placed on the screen.
         :type padding: Padding
+        :param padding: The padding of the text inside the region described
+            by the origin and the extent
+        :param alignment: AlignmentEnum member;
+        :type alignment: unicode
         """
         self.origin = origin
         self.extent = extent
         self.padding = padding
+        self.alignment = alignment
 
     def __repr__(self):
         return (
             u"<Layout (origin: {origin}, extent: {extent}, "
-            u"padding: {padding})>".format(
-                origin=self.origin, extent=self.extent, padding=self.padding
+            u"padding: {padding}, alignment: {alignment})>".format(
+                origin=self.origin, extent=self.extent, padding=self.padding,
+                alignment=self.alignment
             )
         )
 
@@ -493,7 +529,8 @@ class Layout(object):
         return (
             None if not self.origin else self.origin.serialized(),
             None if not self.extent else self.extent.serialized(),
-            None if not self.padding else self.padding.serialized()
+            None if not self.padding else self.padding.serialized(),
+            self.alignment
         )
 
     def __eq__(self, other):
@@ -502,7 +539,8 @@ class Layout(object):
             type(self) == type(other) and
             self.origin == other.origin and
             self.extent == other.extent and
-            self.padding == other.padding
+            self.padding == other.padding and
+            self.alignment == other.alignment
         )
 
     def __hash__(self):
@@ -510,5 +548,6 @@ class Layout(object):
             hash(self.origin) * 7
             + hash(self.extent) * 11
             + hash(self.padding) * 13
+            + hash(self.alignment) * 5
             + 17
         )
