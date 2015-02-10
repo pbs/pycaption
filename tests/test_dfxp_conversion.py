@@ -11,8 +11,10 @@ from pycaption.dfxp import (
 from .samples import (
     SAMPLE_SAMI, SAMPLE_SRT, SAMPLE_DFXP,
     SAMPLE_DFXP_UTF8, SAMPLE_SAMI_UNICODE, SAMPLE_DFXP_UNICODE,
-    SAMPLE_SRT_UNICODE, SAMPLE_DFXP_WITHOUT_REGION_AND_STYLE)
-from .mixins import SRTTestingMixIn, SAMITestingMixIn, DFXPTestingMixIn, WebVTTTestingMixIn
+    SAMPLE_SRT_UNICODE, SAMPLE_DFXP_WITHOUT_REGION_AND_STYLE,
+    SAMPLE_DFXP_INVALID_BUT_SUPPORTED_POSITIONING_OUTPUT)
+from .mixins import (
+    SRTTestingMixIn, SAMITestingMixIn, DFXPTestingMixIn, WebVTTTestingMixIn)
 
 from tests.samples import (
     SAMPLE_WEBVTT_OUTPUT,
@@ -97,10 +99,16 @@ class DFXPtoDFXPTestCase(DFXPConversionTestCase, DFXPTestingMixIn):
         self.assertDFXPEquals(result, SAMPLE_DFXP_MULTIPLE_REGIONS_OUTPUT)
 
     def test_incorrectly_specified_positioning_is_explicitly_accepted(self):
+        # The arguments used here illustrate how we will try to read
+        # and write incorrectly specified positioning information.
+        # By incorrect, I mean the specs say that those attributes should be
+        # ignored, not that the attributes themselves are outside of the specs
         caption_set = DFXPReader(read_invalid_positioning=True).read(
             SAMPLE_DFXP_INVALID_BUT_SUPPORTED_POSITIONING_INPUT
         )
-        result = DFXPWriter().write(caption_set)
+        result = DFXPWriter(write_inline_positioning=True).write(caption_set)
+        self.assertEqual(result,
+                         SAMPLE_DFXP_INVALID_BUT_SUPPORTED_POSITIONING_OUTPUT)
 
 
 class DFXPtoSRTTestCase(DFXPConversionTestCase, SRTTestingMixIn):
