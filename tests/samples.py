@@ -667,7 +667,7 @@ SAMPLE_DFXP_EMPTY = """
 </tt>
 """
 
-SAMPLE_DFXP_MULTIPLE_REGIONS_INPUT = """
+SAMPLE_DFXP_MULTIPLE_REGIONS_INPUT = u"""
 <?xml version="1.0" encoding="utf-8"?>
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml"
     xmlns:tts="http://www.w3.org/ns/ttml#styling">
@@ -709,7 +709,7 @@ SAMPLE_DFXP_MULTIPLE_REGIONS_INPUT = """
 </tt>
 """
 
-SAMPLE_DFXP_MULTIPLE_REGIONS_OUTPUT = """\
+SAMPLE_DFXP_MULTIPLE_REGIONS_OUTPUT = u"""\
 <?xml version="1.0" encoding="utf-8"?>
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling">
  <head>
@@ -737,6 +737,30 @@ SAMPLE_DFXP_MULTIPLE_REGIONS_OUTPUT = """\
    </p>
    <p begin="00:00:10.007" end="00:00:11.021" region="r2" style="p">
     What do you have in mind?
+   </p>
+  </div>
+ </body>
+</tt>"""
+
+SAMPLE_DFXP_INVALID_BUT_SUPPORTED_POSITIONING_INPUT = u"""\
+<?xml version="1.0" encoding="utf-8"?>
+<tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml"
+    xmlns:tts="http://www.w3.org/ns/ttml#styling">
+ <head>
+  <styling>
+   <style xml:id="p" tts:color="#ffeedd" tts:fontfamily="Arial"
+          tts:fontsize="10pt" tts:textAlign="center"/>
+  </styling>
+  <layout>
+  </layout>
+ </head>
+ <body>
+  <div xml:lang="en-US">
+   <p tts:origin='17.5% 10%' tts:extent='62.5% 5.33%' begin="0:00:02.07" end="0:00:05.07">
+   Hello there!
+   </p>
+   <p tts:origin='20% 15.33%' tts:extent='60% 5.33%' begin="0:00:05.07" end="0:00:06.21">
+   How are you?
    </p>
   </div>
  </body>

@@ -5,7 +5,9 @@ from .base import (
     BaseReader, BaseWriter, CaptionSet, Caption, CaptionNode,
     DEFAULT_LANGUAGE_CODE)
 from .exceptions import CaptionReadNoCaptions, CaptionReadSyntaxError
-from .geometry import Point, Stretch, UnitEnum, Padding
+from .geometry import (
+    Point, Stretch, UnitEnum, Padding, VerticalAlignmentEnum,
+    HorizontalAlignmentEnum, Alignment)
 from pycaption.geometry import Layout
 
 
@@ -37,6 +39,8 @@ DFXP_DEFAULT_REGION_ID = u'bottom'
 
 class DFXPReader(BaseReader):
     def __init__(self, *args, **kw):
+        self.read_invalid_positioning = (
+            kw.get('read_invalid_positioning', False))
         self.nodes = []
 
     def detect(self, content):
@@ -353,7 +357,8 @@ class LayoutAwareDFXPParser(BeautifulSoup):
     NO_POSITIONING_INFO = None
 
     def __init__(self, markup=u"", features="html.parser", builder=None,
-                 parse_only=None, from_encoding=None, **kwargs):
+                 parse_only=None, from_encoding=None,
+                 read_invalid_positioning=False, **kwargs):
         """The `features` param determines the parser to be used. The parsers
         are usually html parsers, some more forgiving than others, and as such
         they do stuff very differently especially for xml files. We chose this
@@ -362,11 +367,19 @@ class LayoutAwareDFXPParser(BeautifulSoup):
         The reason why we haven't used the 'xml' parser is that it destroys
         characters such as < or & (even the escaped ones).
 
+        :type read_invalid_positioning: bool
+        :param read_invalid_positioning: if True, will try to also look for
+            layout info on every element itself (even if the docs explicitly
+            call for ignoring attributes, when incorrectly placed)
+
+
         Check out the docs below for explanation.
         http://www.crummy.com/software/BeautifulSoup/bs4/doc/#installing-a-parser
         """
         super(LayoutAwareDFXPParser, self).__init__(
             markup, features, builder, parse_only, from_encoding, **kwargs)
+
+        self.read_invalid_positioning = read_invalid_positioning
 
         for div in self.find_all(u'div'):
             self._post_order_visit(div)
@@ -387,7 +400,8 @@ class LayoutAwareDFXPParser(BeautifulSoup):
 
         # TODO - this looks highly cachable. If it turns out too much memory is
         # being taken up by the caption set, cache this with a WeakValueDict
-        element.layout_info = self._extract_positioning_information(region_id)
+        element.layout_info = (
+            self._extract_positioning_information(region_id, element))
 
     @staticmethod
     def _get_region_from_ancestors(element):
@@ -453,28 +467,59 @@ class LayoutAwareDFXPParser(BeautifulSoup):
 
         return region_id
 
-    def _extract_positioning_information(self, region_id):
-        """Returns a tuple containing positioning information
+    def _extract_positioning_information(self, region_id, element):
+        """Returns a Layout object that describes the element's positioning
+        information
+
         :param region_id: the id of the region to which the element is
             associated
-        :return: see caller
+        :type region_id: unicode
+        :param element: BeautifulSoup Tag or NavigableString; this only comes
+            into action (at the moment) if the
+        :rtype: Layout
         """
-        if region_id is None:
+        if region_id is not None:
+            region_list = self.findAll(u'region', {u'xml:id': region_id})
+            region_scraper = LayoutAwareRegionScraper(self, region_list[0])
+            if self.read_invalid_positioning:
+                # Read positioning info from the region, and inline, from the
+                # element (Be forgiving)
+                layout_info = region_scraper.get_positioning_info(element)
+            else:
+                # Only read positioning info from the region
+                # (Be compatible with the specification)
+                layout_info = region_scraper.get_positioning_info()
+        else:
+            if self.read_invalid_positioning:
+                # Positioning info only specified inline?
+                layout_info = self._read_inline_positioning(element)
+            else:
+                layout_info = self.NO_POSITIONING_INFO
+
+        if layout_info and any(layout_info):
+            # layout_info contains information?
+            return Layout(*layout_info)
+        else:
+            # layout_info doesn't contain any information
             return self.NO_POSITIONING_INFO
 
-        region_list = self.findAll('region', {'xml:id': region_id})
+    @staticmethod
+    def _read_inline_positioning(element):
+        """For the elements who don't have a region, but specify their
+        positioning inline, return their positioning info too
 
-        if not region_list:
-            return self.NO_POSITIONING_INFO
+        :param element: BeautifulSoup Tag or NavigableString
+        :rtype: tuple
+        """
+        origin = element.get(u'tts:origin')
+        extent = element.get(u'tts:extent')
+        padding = element.get(u'tts:padding')
 
-        if len(region_list) > 1:
-            raise CaptionReadSyntaxError(
-                u'Invalid caption file. '
-                u'More than 1 region with the same id: {id}'
-                .format(id=region_id)
-            )
-        region_scraper = LayoutAwareRegionScraper(self, region_list[0])
-        return Layout(*region_scraper.get_positioning_info())
+        text_align = element.get(u'tts:textAlign')
+        display_align = element.get(u'tts:displayAlign')
+        alignment = _create_internal_alignment(text_align, display_align)
+
+        return origin, extent, padding, alignment
 
 
 class LayoutAwareRegionScraper(object):
@@ -572,25 +617,38 @@ class LayoutAwareRegionScraper(object):
 
         return result
 
-    def get_positioning_info(self):
+    def get_positioning_info(self, element=None):
         """Determines the positioning information tuple
         (origin, extent, padding, alignment)
         from the region element.
 
         The 3 attributes can be specified inline, on the region node, on child
         tags of type <style> or on referenced <style> tags.
+
+        :param element: BeautifulSoup Tag or NavigableString
         """
-        origin = self._find_origin()
-        extent = self._find_extent()
-        padding = self._find_padding()
-        # alignment = self._find_alignment()
-        alignment = None
+
+        origin = self._find_attribute(
+            element, u'tts:origin', Point.from_xml_attribute)
+        extent = self._find_attribute(
+            element, u'tts:extent', Stretch.from_xml_attribute
+        )
+
+        if not extent:
+            extent = self._find_root_extent()
+
+        padding = self._find_attribute(
+            element, u'tts:padding', Padding.from_xml_attribute
+        )
+        text_align = self._find_attribute(element, u'tts:textAlign')
+        display_align = self._find_attribute(element, u'tts:displayAlign')
+        alignment = _create_internal_alignment(text_align, display_align)
 
         return origin, extent, padding, alignment
 
     @staticmethod
     def _get_usable_attribute_value(tag, attr_name, factory,
-                                    ignore_vals=("auto",)):
+                                    ignore_vals=(u"auto",)):
         """For the xml `tag`, tries to retrieve the attribute `attr_name` and
         pass that to the factory in order to get a result. If the value of the
         attribute is in the `ignore_vals` iterable, returns None.
@@ -619,63 +677,56 @@ class LayoutAwareRegionScraper(object):
 
         return usable_value
 
-    def _find_origin(self):
-        """Finds the "tts:origin" for this region.
+    def _find_attribute(self, element, attribute_name, factory=lambda x: x):
+        """Try to find the `attribute_name` specified on the element, its
+         assigned region, its region's styles and their referenced styles.
 
-        The tts:origin attribute is either specified on the region, on its
-        styles or referenced styles, or it's taken from the document root
-
-        :return: .geometry.Point instance, or None
+        :param element: BeautifulSoup Tag or NavigableString
+        :type attribute_name: unicode
+        :rtype: unicode
         """
-        attribute_name = u'tts:origin'
+        value = None
+
+        # Does the element itself have this inline?
+        if element:
+            value = self._get_usable_attribute_value(
+                element, attribute_name, factory
+            )
 
         # Does self.region have the attribute?
-        origin = self._get_usable_attribute_value(
-            self.region, attribute_name, Point.from_xml_attribute
-        )
+        if value is None:
+            value = self._get_usable_attribute_value(
+                self.region, attribute_name, factory
+            )
 
-        # Do any of its style have the attribute?
-        if not origin:
+        # Do any of its styles have the attribute?
+        if value is None:
             for style in self.styles:
-                origin = self._get_usable_attribute_value(
-                    style, attribute_name, Point.from_xml_attribute
+                value = self._get_usable_attribute_value(
+                    style, attribute_name, factory
                 )
                 # get the first value met in the style chain
-                if origin:
+                if value:
                     break
 
-        return origin
+        return value
 
-    def _find_extent(self):
-        """Finds the "tts:extent" for this region.
+    def _find_root_extent(self):
+        """Finds the "tts:extent" for the root <tt> element
 
         The tts:extent attribute, like the "tts:origin", can be specified on
         the region, its styles, or can be inherited from the root <tt> element.
         For the latter case, it must be specified in the unit 'pixel'.
 
-        :return .geometry.Stretch, or None
+        :rtype: Stretch
         """
-        attribute_name = u'tts:extent'
-
-        # Does self.region have the attribute?
-        extent = self._get_usable_attribute_value(
-            self.region, attribute_name, Stretch.from_xml_attribute
-        )
-
-        # Do any of its style have the attribute?
-        if extent is None:
-            for style in self.styles:
-                extent = self._get_usable_attribute_value(
-                    style, attribute_name, Stretch.from_xml_attribute
-                )
-                if extent:
-                    break
+        extent = None
 
         # Does the root 'tt' element have it?
         if extent is None:
-            root = self.document.findAll('tt')[0]
+            root = self.document.findAll(u'tt')[0]
             extent = self._get_usable_attribute_value(
-                root, attribute_name, Stretch.from_xml_attribute
+                root, u'tts:extent', Stretch.from_xml_attribute
             )
 
             if extent is not None:
@@ -687,37 +738,6 @@ class LayoutAwareRegionScraper(object):
                         u"#style-attribute-extent"
                     )
         return extent
-
-    def _find_padding(self):
-        """Finds the "tts:padding" for this region, and returns it as a 4-tuple
-        of .geometry.Size objects
-
-        Just like the extent and the origin, this attribute is not inheritable,
-        and should only appear specified on the region (or its many styles).
-        While this algorithm is short-circuited, many attributes might not
-        work in the same way, so please maku sure to read the docs if extending
-        Dfxp is complicated...
-        http://www.w3.org/TR/ttaf1-dfxp/#style-attribute-padding
-
-        Same observations as for self._find_extent and self._find_origin
-        """
-        attribute_name = u'tts:padding'
-
-        # Does self.region have the attribute?
-        padding = self._get_usable_attribute_value(
-            self.region, attribute_name, Padding.from_xml_attribute, []
-        )
-
-        # Do any of its style have the attribute?
-        if padding is None:
-            for style in self.styles:
-                padding = self._get_usable_attribute_value(
-                    style, attribute_name, Padding.from_xml_attribute, []
-                )
-                if padding:
-                    break
-
-        return padding
 
 
 class RegionCreator(object):
@@ -915,3 +935,55 @@ def _recreate_style(content, dfxp):
         dfxp_style[u'tts:displayAlign'] = content[u'display-align']
 
     return dfxp_style
+
+
+# TODO - highly cacheable. use WeakValueDict to improve performance
+def _create_internal_alignment(text_align, display_align):
+    """Given the 2 DFXP specific attributes, return the internal representation
+    of an alignment
+
+    In DFXP, the tts:textAlign can have the values
+        "left", "center", "right", "start" and "end"
+        with the default being "start".
+    We interpret "start" as "left"... we don't yet support languages
+    with right-to-left writing
+
+    The "tts:displayAlign" can have the values
+        "before", "center" and "after",
+    with the default of "before". These refer to top/bottom positioning.
+
+    :type text_align: unicode
+    :type display_align: unicode
+    :rtype: Alignment
+    """
+    if not (text_align or display_align):
+        return None
+
+    horizontal = None
+    vertical = None
+
+    if text_align == u'left' or not text_align:
+        horizontal = HorizontalAlignmentEnum.LEFT
+
+    if text_align == u'start':
+        horizontal = HorizontalAlignmentEnum.START
+
+    if text_align == u'center':
+        horizontal = HorizontalAlignmentEnum.CENTER
+
+    if text_align == u'right':
+        horizontal = HorizontalAlignmentEnum.RIGHT
+
+    if text_align == u'end':
+        horizontal = HorizontalAlignmentEnum.END
+
+    if display_align == u'before' or not display_align:
+        vertical = VerticalAlignmentEnum.TOP
+
+    if display_align == u'center':
+        vertical = VerticalAlignmentEnum.CENTER
+
+    if display_align == u'after':
+        vertical = VerticalAlignmentEnum.BOTTOM
+
+    return Alignment(horizontal, vertical)
