@@ -768,10 +768,7 @@ class RegionCreator(object):
         - If the retrieval still resulted in None, assign to it the Default
             region
 
-        *: NULL means LayoutAwareBeautifulParser.NO_POSITIONING_INFO... but
-            should really add a .__nonzero__ method to the layout, and to
-            the its every child..?
-
+        *: NULL means LayoutAwareBeautifulParser.NO_POSITIONING_INFO
     """
     def __init__(self, dfxp, caption_set):
         """
