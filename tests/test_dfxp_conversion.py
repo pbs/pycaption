@@ -7,14 +7,20 @@ from pycaption import (
 
 from pycaption.dfxp import (
     DFXP_DEFAULT_STYLE, DFXP_DEFAULT_STYLE_ID,
-    DFXP_DEFAULT_REGION, DFXP_DEFAULT_REGION_ID)
+    DFXP_DEFAULT_REGION, DFXP_DEFAULT_REGION_ID, _recreate_style)
 from .samples import (
     SAMPLE_SAMI, SAMPLE_SRT, SAMPLE_DFXP,
     SAMPLE_DFXP_UTF8, SAMPLE_SAMI_UNICODE, SAMPLE_DFXP_UNICODE,
-    SAMPLE_SRT_UNICODE, SAMPLE_DFXP_WITHOUT_REGION_AND_STYLE)
-from .mixins import SRTTestingMixIn, SAMITestingMixIn, DFXPTestingMixIn, WebVTTTestingMixIn
+    SAMPLE_SRT_UNICODE, SAMPLE_DFXP_WITHOUT_REGION_AND_STYLE,
+    SAMPLE_DFXP_INVALID_BUT_SUPPORTED_POSITIONING_OUTPUT)
+from .mixins import (
+    SRTTestingMixIn, SAMITestingMixIn, DFXPTestingMixIn, WebVTTTestingMixIn)
 
-from tests.samples import SAMPLE_WEBVTT_OUTPUT
+from tests.samples import (
+    SAMPLE_WEBVTT_OUTPUT,
+    SAMPLE_DFXP_MULTIPLE_REGIONS_INPUT, SAMPLE_DFXP_MULTIPLE_REGIONS_OUTPUT,
+    SAMPLE_DFXP_INVALID_BUT_SUPPORTED_POSITIONING_INPUT
+)
 
 
 class DFXPConversionTestCase(unittest.TestCase):
@@ -49,7 +55,7 @@ class DFXPtoDFXPTestCase(DFXPConversionTestCase, DFXPTestingMixIn):
         w = DFXPWriter()
         result = w.write(self.captions_without_style_and_region)
 
-        default_style = w._recreate_style(DFXP_DEFAULT_STYLE, None)
+        default_style = _recreate_style(DFXP_DEFAULT_STYLE, None)
         default_style[u'xml:id'] = DFXP_DEFAULT_STYLE_ID
 
         soup = BeautifulSoup(result, u'xml')
@@ -70,7 +76,7 @@ class DFXPtoDFXPTestCase(DFXPConversionTestCase, DFXPTestingMixIn):
         w = DFXPWriter()
         result = w.write(self.captions)
 
-        default_region = w._recreate_style(DFXP_DEFAULT_REGION, None)
+        default_region = _recreate_style(DFXP_DEFAULT_REGION, None)
         default_region[u'xml:id'] = DFXP_DEFAULT_REGION_ID
 
         soup = BeautifulSoup(result, u'xml')
@@ -86,6 +92,23 @@ class DFXPtoDFXPTestCase(DFXPConversionTestCase, DFXPTestingMixIn):
         soup = BeautifulSoup(result, u'xml')
         for p in soup.find_all(u'p'):
             self.assertEquals(p.attrs.get(u'region'), DFXP_DEFAULT_REGION_ID)
+
+    def test_correct_region_attributes_are_recreated(self):
+        caption_set = DFXPReader().read(SAMPLE_DFXP_MULTIPLE_REGIONS_INPUT)
+        result = DFXPWriter().write(caption_set)
+        self.assertDFXPEquals(result, SAMPLE_DFXP_MULTIPLE_REGIONS_OUTPUT)
+
+    def test_incorrectly_specified_positioning_is_explicitly_accepted(self):
+        # The arguments used here illustrate how we will try to read
+        # and write incorrectly specified positioning information.
+        # By incorrect, I mean the specs say that those attributes should be
+        # ignored, not that the attributes themselves are outside of the specs
+        caption_set = DFXPReader(read_invalid_positioning=True).read(
+            SAMPLE_DFXP_INVALID_BUT_SUPPORTED_POSITIONING_INPUT
+        )
+        result = DFXPWriter(write_inline_positioning=True).write(caption_set)
+        self.assertEqual(result,
+                         SAMPLE_DFXP_INVALID_BUT_SUPPORTED_POSITIONING_OUTPUT)
 
 
 class DFXPtoSRTTestCase(DFXPConversionTestCase, SRTTestingMixIn):
