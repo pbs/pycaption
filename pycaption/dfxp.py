@@ -99,6 +99,8 @@ class DFXPReader(BaseReader):
         return start, end
 
     def _translate_time(self, stamp):
+        if u's' in stamp:
+            return int(float(stamp[:-1]) * 1000000)
         timesplit = stamp.split(u':')
         if u'.' not in timesplit[2]:
             timesplit[2] = timesplit[2] + u'.000'
