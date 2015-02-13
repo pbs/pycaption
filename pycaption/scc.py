@@ -1056,7 +1056,7 @@ class SCCReader(BaseReader):
         if self.first_element == True:
             return
         # if the last caption was a break, skip this break
-        elif caption.nodes[-1].type == CaptionNode.BREAK:
+        elif caption.nodes[-1].type_ == CaptionNode.BREAK:
             return
         # close any open italics
         elif self.open_italic == True:
@@ -1070,9 +1070,9 @@ class SCCReader(BaseReader):
         i = 0
         length = max(0, len(caption.nodes) - 2)
         while i < length:
-            if (caption.nodes[i].type == CaptionNode.STYLE and caption.nodes[i].content[u'italics'] and
-                        caption.nodes[i + 1].type == CaptionNode.BREAK and
-                        caption.nodes[i + 2].type == CaptionNode.STYLE and caption.nodes[i + 2].content[u'italics']):
+            if (caption.nodes[i].type_ == CaptionNode.STYLE and caption.nodes[i].content[u'italics'] and
+                        caption.nodes[i + 1].type_ == CaptionNode.BREAK and
+                        caption.nodes[i + 2].type_ == CaptionNode.STYLE and caption.nodes[i + 2].content[u'italics']):
                 # Remove the two italics style nodes
                 caption.nodes.pop(i)
                 caption.nodes.pop(i + 1)
@@ -1156,9 +1156,9 @@ class SCCWriter(BaseWriter):
     # Wrap lines at 32 chars
     def _layout_line(self, caption):
         def caption_node_to_text(caption_node):
-            if caption_node.type == CaptionNode.TEXT:
+            if caption_node.type_ == CaptionNode.TEXT:
                 return unicode(caption_node.content)
-            elif caption_node.type == CaptionNode.BREAK:
+            elif caption_node.type_ == CaptionNode.BREAK:
                 return u'\n'
         caption_text = u''.join([caption_node_to_text(node)
                                 for node in caption.nodes])

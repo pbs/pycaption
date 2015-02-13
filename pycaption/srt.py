@@ -115,9 +115,9 @@ class SRTWriter(BaseWriter):
         return srt[:-1]  # remove unwanted newline at end of file
 
     def _recreate_line(self, srt, line):
-        if line.type == CaptionNode.TEXT:
+        if line.type_ == CaptionNode.TEXT:
             return srt + u'%s ' % line.content
-        elif line.type == CaptionNode.BREAK:
+        elif line.type_ == CaptionNode.BREAK:
             return srt + u'\n'
         else:
             return srt

@@ -20,7 +20,7 @@ log.setLevel(FATAL)
 SAMI_BASE_MARKUP = u'''
 <sami>
     <head>
-        <style type="text/css"/>
+        <style type_="text/css"/>
     </head>
     <body/>
 </sami>'''
@@ -285,11 +285,11 @@ class SAMIWriter(BaseWriter):
         line = u''
 
         for node in caption:
-            if node.type == CaptionNode.TEXT:
+            if node.type_ == CaptionNode.TEXT:
                 line += escape(node.content) + u' '
-            elif node.type == CaptionNode.BREAK:
+            elif node.type_ == CaptionNode.BREAK:
                 line = line.rstrip() + u'<br/>\n    '
-            elif node.type == CaptionNode.STYLE:
+            elif node.type_ == CaptionNode.STYLE:
                 line = self._recreate_line_style(line, node)
 
         return line.rstrip()
