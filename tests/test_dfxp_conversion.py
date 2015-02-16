@@ -11,7 +11,7 @@ from pycaption.dfxp import (
 from .samples import (
     SAMPLE_SAMI, SAMPLE_SRT, SAMPLE_DFXP,
     SAMPLE_DFXP_UTF8, SAMPLE_SAMI_UNICODE, SAMPLE_DFXP_UNICODE,
-    SAMPLE_SRT_UNICODE, SAMPLE_DFXP_WITHOUT_REGION_AND_STYLE)
+    SAMPLE_SRT_UNICODE, SAMPLE_DFXP_WITHOUT_REGION_AND_STYLE, SAMPLE_DFXP_TIME_FORMATS)
 from .mixins import SRTTestingMixIn, SAMITestingMixIn, DFXPTestingMixIn, WebVTTTestingMixIn
 
 from tests.samples import SAMPLE_WEBVTT_OUTPUT
@@ -24,6 +24,7 @@ class DFXPConversionTestCase(unittest.TestCase):
         cls.captions = DFXPReader().read(SAMPLE_DFXP.decode(u'utf-8'))
         cls.captions_utf8 = DFXPReader().read(SAMPLE_DFXP_UTF8.decode(u'utf-8'))
         cls.captions_unicode = DFXPReader().read(SAMPLE_DFXP_UNICODE)
+        cls.captions_time_formats = DFXPReader().read(SAMPLE_DFXP_TIME_FORMATS.decode(u'utf-8'))
         cls.captions_without_style_and_region = DFXPReader().read(
             SAMPLE_DFXP_WITHOUT_REGION_AND_STYLE.decode(u'utf-8'))
 
@@ -105,6 +106,11 @@ class DFXPtoSRTTestCase(DFXPConversionTestCase, SRTTestingMixIn):
         self.assertTrue(isinstance(results, unicode))
         self.assertSRTEquals(SAMPLE_SRT_UNICODE, results)
 
+    def test_dfxp_to_srt_timeformats_conversion(self):
+        results = SRTWriter().write(self.captions_time_formats)
+        self.assertTrue(isinstance(results, unicode))
+        self.assertSRTEquals(SAMPLE_SRT, results)
+
 
 class DFXPtoSAMITestCase(DFXPConversionTestCase, SAMITestingMixIn):
 
@@ -122,6 +128,11 @@ class DFXPtoSAMITestCase(DFXPConversionTestCase, SAMITestingMixIn):
         results = SAMIWriter().write(self.captions_unicode)
         self.assertTrue(isinstance(results, unicode))
         self.assertSAMIEquals(SAMPLE_SAMI_UNICODE, results)
+
+    def test_dfxp_to_sami_timeformats_conversion(self):
+        results = SAMIWriter().write(self.captions_time_formats)
+        self.assertTrue(isinstance(results, unicode))
+        self.assertSAMIEquals(SAMPLE_SAMI, results)
 
 
 class DFXPtoWebVTTTestCase(DFXPConversionTestCase, WebVTTTestingMixIn):
