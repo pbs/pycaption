@@ -2,7 +2,7 @@ import unittest
 
 from pycaption import DFXPReader, CaptionReadNoCaptions
 
-from .samples import SAMPLE_DFXP, SAMPLE_DFXP_EMPTY, SAMPLE_DFXP_SYNTAX_ERROR
+from .samples import SAMPLE_DFXP, SAMPLE_DFXP_EMPTY, SAMPLE_DFXP_SYNTAX_ERROR, SAMPLE_DFXP_TIME_FORMATS
 
 
 class DFXPReaderTestCase(unittest.TestCase):
@@ -15,7 +15,7 @@ class DFXPReaderTestCase(unittest.TestCase):
         self.assertEquals(8, len(captions.get_captions(u"en-US")))
 
     def test_proper_timestamps(self):
-        captions = DFXPReader().read(SAMPLE_DFXP.decode(u'utf-8'))
+        captions = DFXPReader().read(SAMPLE_DFXP_TIME_FORMATS.decode(u'utf-8'))
         paragraph = captions.get_captions(u"en-US")[2]
 
         self.assertEquals(17000000, paragraph.start)

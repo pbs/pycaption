@@ -648,6 +648,55 @@ SAMPLE_DFXP = """
 </tt>"""
 
 
+SAMPLE_DFXP_TIME_FORMATS = """
+<?xml version="1.0" encoding="utf-8"?>
+<tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml"
+    xmlns:tts="http://www.w3.org/ns/ttml#styling">
+ <head>
+  <styling>
+   <style xml:id="p" tts:color="#ffeedd" tts:fontfamily="Arial"
+          tts:fontsize="10pt" tts:textAlign="center"/>
+  </styling>
+  <layout>
+  <region tts:displayAlign="after" tts:textAlign="center" xml:id="bottom"></region>
+  </layout>
+ </head>
+ <body>
+  <div xml:lang="en-US">
+   <p begin="00:00:09.209" end="12.312s" region="bottom" style="p">
+    ( clock ticking )
+   </p>
+   <p begin="14.848s" end="00:00:17.000" region="bottom" style="p">
+    MAN:<br/>
+    When we think<br/>
+    of "E equals m c-squared",
+   </p>
+   <p begin="00:00:17.000" end="18.752s" region="bottom" style="p">
+    <span tts:textalign="right">we have this vision of Einstein</span>
+   </p>
+   <p begin="18.752s" end="00:00:20.887" region="bottom" style="p">
+   <br/>
+    as an old, wrinkly man<br/>
+    with white hair.
+   </p>
+   <p begin="00:00:20.887" end="26.760s" region="bottom" style="p">
+    MAN 2:<br/>
+    E equals m c-squared is<br/>
+    not about an old Einstein.
+   </p>
+   <p begin="26.760s" end="00:00:32.200" region="bottom" style="p">
+    MAN 2:<br/>
+    It's all about an eternal Einstein.
+   </p>
+   <p begin="00:00:32.200" end="34.400s" region="bottom" style="p">
+    &lt;LAUGHING &amp; WHOOPS!&gt;
+   </p>
+   <p begin="34.400s" end="00:00:38.400" region="bottom" style="p">some more text</p>
+  </div>
+ </body>
+</tt>"""
+
+
 SAMPLE_DFXP_EMPTY = """
 <?xml version="1.0" encoding="utf-8"?>
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml"
