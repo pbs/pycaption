@@ -184,6 +184,9 @@ class DFXPReader(BaseReader):
                 attrs[u'color'] = dfxp_attrs[arg]
         return attrs
 
+    # TODO - fairly confident that this should be removed now (or redone),
+    # since the positioning was added, since positioning can't simply be
+    # merged. Must find the reason for this in the first place
     # Merge together captions that have the same start/end times.
     def _combine_matching_captions(self, caption_set):
         for lang in caption_set.get_languages():
