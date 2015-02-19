@@ -99,18 +99,8 @@ class DFXPReader(BaseReader):
         return start, end
 
     def _translate_time(self, stamp):
-        if u's' in stamp:
-            return int(float(stamp[:-1]) * 1000000)
         timesplit = stamp.split(u':')
-        if u'.' not in timesplit[2]:
-            timesplit[2] = timesplit[2] + u'.000'
-        secsplit = timesplit[2].split(u'.')
-        if len(timesplit) > 3:
-            secsplit.append((int(timesplit[3]) / 30) * 100)
-        microseconds = (int(timesplit[0]) * 3600000000 +
-                        int(timesplit[1]) * 60000000 +
-                        int(secsplit[0]) * 1000000 +
-                        int(secsplit[1]) * 1000)
+        microseconds = int(int(timesplit[0]) * 3600000000 + int(timesplit[1]) * 60000000 + (float(timesplit[2])*1000000))
         return microseconds
 
     def _translate_tag(self, tag):
