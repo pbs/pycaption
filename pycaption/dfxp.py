@@ -101,6 +101,9 @@ class DFXPReader(BaseReader):
     def _translate_time(self, stamp):
         timesplit = stamp.split(u':')
         microseconds = int(int(timesplit[0]) * 3600000000 + int(timesplit[1]) * 60000000 + (float(timesplit[2])*1000000))
+        # are there frames? - add them assuming video is 30 frames/second
+        if len(timesplit) > 3:
+            microseconds = microseconds + ((float(timesplit[3]) / 29.97) * 100)
         return microseconds
 
     def _translate_tag(self, tag):
