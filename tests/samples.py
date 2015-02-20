@@ -647,6 +647,28 @@ SAMPLE_DFXP = """
  </body>
 </tt>"""
 
+SAMPLE_DFXP_TIME_FORMATS = """
+<?xml version="1.0" encoding="utf-8"?>
+<tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml"
+    xmlns:tts="http://www.w3.org/ns/ttml#styling">
+ <head>
+  <styling>
+   <style xml:id="p" tts:color="#ffeedd" tts:fontfamily="Arial"
+          tts:fontsize="10pt" tts:textAlign="center"/>
+  </styling>
+  <layout>
+  <region tts:displayAlign="after" tts:textAlign="center" xml:id="bottom"></region>
+  </layout>
+ </head>
+ <body>
+  <div xml:lang="en-US">
+   <p begin="01:02:03.530530" end="01:02:03:15.9" region="bottom" style="p">
+    begin time uses fraction seconds end time uses frames
+   </p>
+</div>
+ </body>
+</tt>"""
+
 
 SAMPLE_DFXP_EMPTY = """
 <?xml version="1.0" encoding="utf-8"?>
