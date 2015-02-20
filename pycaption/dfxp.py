@@ -28,10 +28,10 @@ DFXP_DEFAULT_STYLE = {
     u'font-size': u'1c',
 }
 
-DFXP_DEFAULT_REGION = {
-    u'text-align': u'center',
-    u'display-align': u'after'
-}
+DFXP_DEFAULT_REGION = Layout(
+    alignment=Alignment(
+        HorizontalAlignmentEnum.CENTER, VerticalAlignmentEnum.BOTTOM)
+)
 
 DFXP_DEFAULT_STYLE_ID = u'default'
 DFXP_DEFAULT_REGION_ID = u'bottom'
@@ -167,18 +167,29 @@ class DFXPReader(BaseReader):
 
     # convert style from DFXP
     def _translate_style(self, tag):
+        """Converts the attributes of an XML node to a dictionary. This is a
+         deprecated method of handling styling/ layout information, and
+         overlaps (in partially known ways)with the newer way of doing stuff.
+
+         For examples of how to refactor this, see the .layout_info attribute,
+         and the geometry.Layout class.
+
+
+        :param tag: BeautifulSoup Tag
+        :rtype: dict
+        """
         attrs = {}
         dfxp_attrs = tag.attrs
         for arg in dfxp_attrs:
             if arg == u"style":
                 attrs[u'class'] = dfxp_attrs[arg]
-            elif arg == u"tts:fontstyle" and dfxp_attrs[arg] == u"italic":
+            elif arg.lower() == u"tts:fontstyle" and dfxp_attrs[arg] == u"italic":
                 attrs[u'italics'] = True
-            elif arg == u"tts:textalign":
+            elif arg.lower() == u"tts:textalign":
                 attrs[u'text-align'] = dfxp_attrs[arg]
-            elif arg == u"tts:fontfamily":
+            elif arg.lower() == u"tts:fontfamily":
                 attrs[u'font-family'] = dfxp_attrs[arg]
-            elif arg == u"tts:fontsize":
+            elif arg.lower() == u"tts:fontsize":
                 attrs[u'font-size'] = dfxp_attrs[arg]
             elif arg == u"tts:color":
                 attrs[u'color'] = dfxp_attrs[arg]
@@ -497,35 +508,16 @@ class LayoutAwareDFXPParser(BeautifulSoup):
             into action (at the moment) if the
         :rtype: Layout
         """
-        has_region = False
+        region_list = []
 
         if region_id is not None:
             region_list = self.findAll(u'region', {u'xml:id': region_id})
-            if not region_list:
-                has_region = False
-            else:
-                region_scraper = LayoutAwareRegionScraper(self, region_list[0])
-                has_region = True
 
-        if has_region:
-            if self.read_invalid_positioning:
-                # Read positioning info from the region, and inline, from the
-                # element (Be forgiving)
-                layout_info = region_scraper.scrape_positioning_info(element)
-            else:
-                # Only read positioning info from the region
-                # (Be compatible with the specification)
-                layout_info = region_scraper.scrape_positioning_info()
-        else:
-            if self.read_invalid_positioning:
-                # Positioning info only specified inline?
-                # TODO - replace this with a fake_scrapper.get_positioning_info
-                # ...lol, no need to duplicate logic, especially complicated
-                # one - Time perhapse to create some .set_something on the
-                # region scrapper, eh?
-                layout_info = self._read_inline_positioning(element)
-            else:
-                layout_info = self.NO_POSITIONING_INFO
+        region_scraper = LayoutInfoScraper(self, *(region_list[:1]))
+
+        layout_info = region_scraper.scrape_positioning_info(
+            element, self.read_invalid_positioning
+        )
 
         if layout_info and any(layout_info):
             # layout_info contains information?
@@ -534,42 +526,12 @@ class LayoutAwareDFXPParser(BeautifulSoup):
             # layout_info doesn't contain any information
             return self.NO_POSITIONING_INFO
 
-    @staticmethod
-    def _read_inline_positioning(element):
-        """For the elements who don't have a region, but specify their
-        positioning inline, return their positioning info too
 
-        :param element: BeautifulSoup Tag or NavigableString
-        :rtype: tuple
-        """
-        origin, extent, padding, alignment = (None,) * 4
-
-        if hasattr(element, 'get'):
-            origin = _get_geometry_object_from_attribute(
-                element, u'tts:origin', Point.from_xml_attribute, [u'auto'])
-            extent = _get_geometry_object_from_attribute(
-                element, u'tts:extent', Stretch.from_xml_attribute, [u'auto']
-            )
-            padding = _get_geometry_object_from_attribute(
-                element, u'tts:padding', Padding.from_xml_attribute
-            )
-
-            # For some reason this parser parses lower case. Not sure if all
-            # only occasionally.
-            text_align = (element.get(u'tts:textAlign') or
-                          element.get(u'tts:textalign'))
-            display_align = (element.get(u'tts:displayAlign') or
-                             element.get(u'tts:displayalign'))
-            alignment = _create_internal_alignment(text_align, display_align)
-
-        return origin, extent, padding, alignment
-
-
-class LayoutAwareRegionScraper(object):
+class LayoutInfoScraper(object):
     """Encapsulates the methods for determining the layout information about
-    a region element.
+    an element (with the element's region playing an important role).
     """
-    def __init__(self, document, region):
+    def __init__(self, document, region=None):
         """
         :param document: the BeautifulSoup document instance, of which `region`
             is a descendant
@@ -577,10 +539,13 @@ class LayoutAwareRegionScraper(object):
         """
         self.region = region
         self.document = document
-        self.styles = self._get_style_sources(document, region)
+        if region:
+            self.region_styles = self._get_style_sources(document, region)
+        else:
+            self.region_styles = []
 
     @classmethod
-    def _get_style_sources(cls, document, region):
+    def _get_style_sources(cls, document, element):
         """Returns a list, containing  tags, in the order they should be
         evaluated, for determining layout information.
 
@@ -592,22 +557,26 @@ class LayoutAwareRegionScraper(object):
         http://www.w3.org/TR/ttaf1-dfxp/#semantics-style-association
 
         Returns:
-          1. All child styles of the region, each with its reference chain
-          2. The style referenced by the region, via the attrib. 'style="asdf"'
+          1. All child styles of the element, each with its reference chain
+          2. The style referenced by the element, via the attrib. style="asdf"
             together with its reference chain
         Note: the specs are unclear about the priority of styles that are
         referenced by nested styles. I've assumed it's higher than referential
         styling
         """
+        # If we're analyzing a NavigableString, just quit
+        if not hasattr(element, 'findAll'):
+            return ()
+
         styling_section = document.findChild('styling')
 
         nested_styles = []
-        for style in region.findAll('style'):
+        for style in element.findAll('style'):
             nested_styles.extend(
                 cls._get_style_reference_chain(style, styling_section)
             )
 
-        referenced_style_id = region.get('style')
+        referenced_style_id = element.get('style')
 
         referenced_styles = []
         if referenced_style_id and styling_section:
@@ -660,40 +629,64 @@ class LayoutAwareRegionScraper(object):
 
         return result
 
-    def scrape_positioning_info(self, element=None):
+    def scrape_positioning_info(self, element=None, even_invalid=False):
         """Determines the positioning information tuple
-        (origin, extent, padding, alignment)
-        from the region element.
+        (origin, extent, padding, alignment) from the region element.
 
-        The 3 attributes can be specified inline, on the region node, on child
-        tags of type <style> or on referenced <style> tags.
+        The first 3 attributes can be specified inline, on the region node,
+        on child tags of type <style> or on referenced <style> tags.
+
+        The fourth attribute can be specified like the first 3, or on the xml
+        element itself.
+
+        If the attributes can't be determined, default values are returned
+        (where such values exist)
 
         :param element: BeautifulSoup Tag or NavigableString
+        :type even_invalid: bool
+        :param even_invalid: if True, will search attributes on the element
+            (when they really should be checked only on the region)
         :rtype: tuple
         """
+        usable_elem = element if even_invalid else None
 
         origin = self._find_attribute(
-            element, u'tts:origin', Point.from_xml_attribute, [u'auto'])
+            usable_elem, u'tts:origin', Point.from_xml_attribute, [u'auto']
+        ) or DFXP_DEFAULT_REGION.origin
+
         extent = self._find_attribute(
-            element, u'tts:extent', Stretch.from_xml_attribute, [u'auto']
-        )
+            usable_elem, u'tts:extent', Stretch.from_xml_attribute, [u'auto'])
 
         if not extent:
-            extent = self._find_root_extent()
+            extent = self._find_root_extent() or DFXP_DEFAULT_REGION.extent
 
         padding = self._find_attribute(
-            element, u'tts:padding', Padding.from_xml_attribute
+            usable_elem, u'tts:padding', Padding.from_xml_attribute
+        ) or DFXP_DEFAULT_REGION.padding
+
+        # tts:textAlign is a special attribute, which can not be ignored when
+        # specified on the element itself (<p> nodes matter)
+        text_align = (
+            self._find_attribute(element, u'tts:textAlign')
+            or _create_external_horizontal_alignment(
+                DFXP_DEFAULT_REGION.alignment.horizontal
+            )
         )
-        text_align = self._find_attribute(element, u'tts:textAlign')
-        display_align = self._find_attribute(element, u'tts:displayAlign')
+        display_align = (
+            self._find_attribute(usable_elem, u'tts:displayAlign')
+            or _create_external_vertical_alignment(
+                DFXP_DEFAULT_REGION.alignment.vertical
+            )
+        )
         alignment = _create_internal_alignment(text_align, display_align)
 
         return origin, extent, padding, alignment
 
     def _find_attribute(self, element, attribute_name, factory=lambda x: x,
                         ignore=(), ignorecase=True):
-        """Try to find the `attribute_name` specified on the element, its
-         assigned region, its region's styles and their referenced styles.
+        """Try to find the `attribute_name` specified on the element,
+        on its styles, its assigned region, its region's styles and their
+        referenced styles.
 
         :param element: BeautifulSoup Tag or NavigableString
         :type attribute_name: unicode
@@ -703,20 +696,28 @@ class LayoutAwareRegionScraper(object):
 
         # Does the element itself have this inline?
         if element:
-            value = _get_geometry_object_from_attribute(
+            value = _get_object_from_attribute(
                 element, attribute_name, factory, ignore, ignorecase
             )
+            if value is None:
+                # Does a referenced style of the element have it?
+                for style in self._get_style_sources(self.document, element):
+                    value = _get_object_from_attribute(
+                        style, attribute_name, factory, ignore, ignorecase
+                    )
+                    if value:
+                        break
 
         # Does self.region have the attribute?
         if value is None:
-            value = _get_geometry_object_from_attribute(
+            value = _get_object_from_attribute(
                 self.region, attribute_name, factory, ignore, ignorecase
             )
 
-        # Do any of its styles have the attribute?
+        # Do any of the region's styles have the attribute?
         if value is None:
-            for style in self.styles:
-                value = _get_geometry_object_from_attribute(
+            for style in self.region_styles:
+                value = _get_object_from_attribute(
                     style, attribute_name, factory, ignore, ignorecase
                 )
                 # get the first value met in the style chain
@@ -739,7 +740,7 @@ class LayoutAwareRegionScraper(object):
         # Does the root 'tt' element have it?
         if extent is None:
             root = self.document.findAll(u'tt')[0]
-            extent = _get_geometry_object_from_attribute(
+            extent = _get_object_from_attribute(
                 root, u'tts:extent', Stretch.from_xml_attribute
             )
 
@@ -783,27 +784,18 @@ class RegionCreator(object):
         self._region_map = {}
         self._id_seed = 0
 
-    def _create_default_region_from_dict(self, region_id, region_spec):
-        """
-        :type region_id: unicode
-        :type region_spec: dict
-        """
-        dfxp_region = self._dfxp.new_tag(u'region')
-        dfxp_region.attrs.update({u'xml:id': region_id})
-
-        attributes = _recreate_style(region_spec, self._dfxp)
-
-        if attributes:
-            dfxp_region.attrs.update(attributes)
-            self._dfxp.find(u'layout').append(dfxp_region)
-
     @staticmethod
-    def _collect_unique_regions(caption_set):
+    def _collect_unique_regions(caption_set, ignore_region):
         """Iterate through all the nodes in the caption set, and return a list
         of all unique region specs (Layout objects)
 
+        If a default region was created, and any scraped region matches its
+        attributes, don't duplicate the region (eliminate that region from the
+        result set)
+
         :type caption_set: CaptionSet
-        :return: iterable containing these
+        :return: iterable containing the unique regions that will have to
+            appear in the document
         """
         # This used to be a set, however since set order depends on the hash,
         # this messed up the tests every time some little detail was added to
@@ -825,6 +817,7 @@ class RegionCreator(object):
                     unique_regions.add(node.layout_info)
 
         unique_regions.discard(None)
+        unique_regions.discard(ignore_region)
         return unique_regions
 
     @staticmethod
@@ -832,9 +825,8 @@ class RegionCreator(object):
         """Create each one of the regions in the list, inside the dfxp
         document, under the 'layout' section.
 
-        :type unique_layouts: _OrderedSet
-        :param unique_layouts: a set of geometry.Layout instances, describing
-            the properties to be added to the dfxp regions
+        :param unique_layouts: an iterable (unique!) geometry.Layout instances,
+            describing the properties to be added to the dfxp regions
         :type dfxp: BeautifulSoup
         :param id_factory: A callable which generates unique IDs
         :return: a dict, mapping each unique layout to the ID of the region
@@ -862,13 +854,22 @@ class RegionCreator(object):
 
     def create_document_regions(self):
         """Create the <region> tags required to position all the captions.
-        """
-        self._create_default_region_from_dict(
-            DFXP_DEFAULT_REGION_ID, DFXP_DEFAULT_REGION)
-        unique_regions = self._collect_unique_regions(self._caption_set)
 
+        Makes sure we have a default region
+        """
+        # Creates the default region
+        default_region_map = self._create_unique_regions(
+            [DFXP_DEFAULT_REGION],
+            self._dfxp, lambda: DFXP_DEFAULT_REGION_ID
+        )
+        unique_regions = self._collect_unique_regions(
+            self._caption_set, DFXP_DEFAULT_REGION)
+
+        # Create the document specified regions
         self._region_map = self._create_unique_regions(
             unique_regions, self._dfxp, self._get_new_id)
+
+        self._region_map.update(default_region_map)
 
     def _get_new_id(self, prefix=u'r'):
         """Return new, unique ids (use an internal counter).
@@ -917,12 +918,15 @@ class RegionCreator(object):
             layout_info = caption_set.get_layout_info(lang)
 
         region_id = self._region_map.get(layout_info)
-        positioning_attribs = _convert_layout_to_attributes(layout_info)
 
-        if not region_id and not self._region_map:
+        # Make sure the default region ID/ attributes are always returned
+        # as fallback
+        if not region_id:
             region_id = DFXP_DEFAULT_REGION_ID
 
-        return region_id, positioning_attribs
+        positioning_attributes = _convert_layout_to_attributes(layout_info)
+
+        return region_id, positioning_attributes
 
 
 def _recreate_style(content, dfxp):
@@ -975,8 +979,14 @@ def _create_internal_alignment(text_align, display_align):
     if not (text_align or display_align):
         return None
 
+    horizontal = _create_internal_horizontal_alignment(text_align)
+    vertical = _create_internal_vertical_alignment(display_align)
+
+    return Alignment(horizontal, vertical)
+
+
+def _create_internal_horizontal_alignment(text_align):
     horizontal = None
-    vertical = None
 
     if text_align == u'left' or not text_align:
         horizontal = HorizontalAlignmentEnum.LEFT
@@ -989,6 +999,12 @@ def _create_internal_alignment(text_align, display_align):
     if text_align == u'end':
         horizontal = HorizontalAlignmentEnum.END
 
+    return horizontal
+
+
+def _create_internal_vertical_alignment(display_align):
+    vertical = None
+
     if display_align == u'before' or not display_align:
         vertical = VerticalAlignmentEnum.TOP
     if display_align == u'center':
@@ -996,7 +1012,37 @@ def _create_internal_alignment(text_align, display_align):
     if display_align == u'after':
         vertical = VerticalAlignmentEnum.BOTTOM
 
-    return Alignment(horizontal, vertical)
+    return vertical
+
+
+def _create_external_horizontal_alignment(horizontal_component):
+    result = None
+
+    if horizontal_component == HorizontalAlignmentEnum.LEFT:
+        result = u'left'
+    if horizontal_component == HorizontalAlignmentEnum.CENTER:
+        result = u'center'
+    if horizontal_component == HorizontalAlignmentEnum.RIGHT:
+        result = u'right'
+    if horizontal_component == HorizontalAlignmentEnum.START:
+        result = u'start'
+    if horizontal_component == HorizontalAlignmentEnum.END:
+        result = u'end'
+
+    return result
+
+
+def _create_external_vertical_alignment(vertical_component):
+    result = None
+
+    if vertical_component == VerticalAlignmentEnum.TOP:
+        result = u'before'
+    if vertical_component == VerticalAlignmentEnum.CENTER:
+        result = u'center'
+    if vertical_component == VerticalAlignmentEnum.BOTTOM:
+        result = u'after'
+
+    return result
 
 
 def _create_external_alignment(alignment):
@@ -1014,29 +1060,21 @@ def _create_external_alignment(alignment):
     if not (alignment.horizontal or alignment.vertical):
         return result
 
-    if alignment.horizontal == HorizontalAlignmentEnum.LEFT:
-        result[u'tts:textAlign'] = u'left'
-    if alignment.horizontal == HorizontalAlignmentEnum.CENTER:
-        result[u'tts:textAlign'] = u'center'
-    if alignment.horizontal == HorizontalAlignmentEnum.RIGHT:
-        result[u'tts:textAlign'] = u'right'
-    if alignment.horizontal == HorizontalAlignmentEnum.START:
-        result[u'tts:textAlign'] = u'start'
-    if alignment.horizontal == HorizontalAlignmentEnum.END:
-        result[u'tts:textAlign'] = u'end'
+    horizontal_alignment = _create_external_horizontal_alignment(
+        alignment.horizontal)
+    if horizontal_alignment:
+        result[u'tts:textAlign'] = horizontal_alignment
 
-    if alignment.vertical == VerticalAlignmentEnum.TOP:
-        result[u'tts:displayAlign'] = u'before'
-    if alignment.vertical == VerticalAlignmentEnum.CENTER:
-        result[u'tts:displayAlign'] = u'center'
-    if alignment.vertical == VerticalAlignmentEnum.BOTTOM:
-        result[u'tts:displayAlign'] = u'after'
+    vertical_alignment = _create_external_vertical_alignment(
+        alignment.vertical)
+    if vertical_alignment:
+        result[u'tts:displayAlign'] = vertical_alignment
 
     return result
 
 
-def _get_geometry_object_from_attribute(tag, attr_name, factory,
-                                        ignore_vals=(), ignorecase=True):
+def _get_object_from_attribute(tag, attr_name, factory,
+                               ignore_vals=(), ignorecase=True):
     """For the xml `tag`, tries to retrieve the attribute `attr_name` and
     pass that to the factory in order to get a result. If the value of the
     attribute is in the `ignore_vals` iterable, returns None.
@@ -1048,11 +1086,14 @@ def _get_geometry_object_from_attribute(tag, attr_name, factory,
     :param ignore_vals: iterable of attribute values to ignore
     :raise CaptionReadSyntaxError: if the attribute has some crazy value
     """
+    if not hasattr(tag, 'has_attr'):
+        return
+
     attr_value = None
     if tag.has_attr(attr_name):
         attr_value = tag.get(attr_name)
 
-    if ignorecase and attr_name is None:
+    if ignorecase and attr_name is not None:
         attr_value = tag.get(attr_name.lower())
 
     if attr_value is None:
@@ -1071,13 +1112,18 @@ def _get_geometry_object_from_attribute(tag, attr_name, factory,
 
 def _convert_layout_to_attributes(layout):
     """Takes a layout object, and returns a dict whose keys are the dfxp
-    attribute names, and the values are the dfxp attr. values
+    attribute names, and the values are the dfxp attr. values.
+
+    If the layout is None, return region default attributes
 
     :type layout: Layout
     :rtype: dict
     """
     result = {}
     if not layout:
+        # TODO - change this to actually use the DFXP_DEFAULT_REGION
+        result[u'tts:textAlign'] = HorizontalAlignmentEnum.CENTER
+        result[u'tts:displayAlign'] = VerticalAlignmentEnum.BOTTOM
         return result
 
     if layout.origin:

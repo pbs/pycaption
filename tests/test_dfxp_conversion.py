@@ -7,7 +7,8 @@ from pycaption import (
 
 from pycaption.dfxp import (
     DFXP_DEFAULT_STYLE, DFXP_DEFAULT_STYLE_ID,
-    DFXP_DEFAULT_REGION, DFXP_DEFAULT_REGION_ID, _recreate_style)
+    DFXP_DEFAULT_REGION, DFXP_DEFAULT_REGION_ID, _recreate_style,
+    _convert_layout_to_attributes)
 from .samples import (
     SAMPLE_SAMI, SAMPLE_SRT, SAMPLE_DFXP,
     SAMPLE_DFXP_UTF8, SAMPLE_SAMI_UNICODE, SAMPLE_DFXP_UNICODE,
@@ -39,6 +40,7 @@ class DFXPtoDFXPTestCase(DFXPConversionTestCase, DFXPTestingMixIn):
     def test_dfxp_to_dfxp_conversion(self):
         results = DFXPWriter().write(self.captions)
         self.assertTrue(isinstance(results, unicode))
+        import pydevd; pydevd.settrace('172.16.65.1')
         self.assertDFXPEquals(SAMPLE_DFXP.decode(u'utf-8'), results)
 
     def test_dfxp_to_dfxp_utf8_conversion(self):
@@ -76,14 +78,15 @@ class DFXPtoDFXPTestCase(DFXPConversionTestCase, DFXPTestingMixIn):
         w = DFXPWriter()
         result = w.write(self.captions)
 
-        default_region = _recreate_style(DFXP_DEFAULT_REGION, None)
-        default_region[u'xml:id'] = DFXP_DEFAULT_REGION_ID
-
         soup = BeautifulSoup(result, u'xml')
         region = soup.find(u'region', {u'xml:id': DFXP_DEFAULT_REGION_ID})
 
+        default_region = _convert_layout_to_attributes(DFXP_DEFAULT_REGION)
+        default_region[u'xml:id'] = DFXP_DEFAULT_REGION_ID
+
         self.assertTrue(region)
-        self.assertEquals(region.attrs, default_region)
+        self.assertEquals(region.attrs[u'xml:id'], DFXP_DEFAULT_REGION_ID)
+        self.assertEqual(region.attrs, default_region)
 
     def test_default_region_p_tags(self):
         w = DFXPWriter()

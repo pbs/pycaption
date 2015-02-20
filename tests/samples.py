@@ -729,20 +729,20 @@ SAMPLE_DFXP_MULTIPLE_REGIONS_OUTPUT = u"""\
   </layout>
  </head>
  <body>
-  <div xml:lang="en-US">
-   <p begin="00:00:02.007" end="00:00:05.007" region="r0" style="p">
+  <div region="bottom" xml:lang="en-US">
+   <p begin="00:00:02.070" end="00:00:05.070" region="r0" style="p">
     Hello there!
    </p>
-   <p begin="00:00:05.007" end="00:00:06.021" region="r1" style="p">
+   <p begin="00:00:05.070" end="00:00:06.210" region="r1" style="p">
     How are you?
    </p>
-   <p begin="00:00:07.007" end="00:00:09.021" region="r2" style="p">
+   <p begin="00:00:07.070" end="00:00:09.210" region="r2" style="p">
     &gt;&gt; I'm fine, thank you &lt;&lt; replied someone. <span region="r1">&gt;&gt;And now we're going to have fun&lt;&lt;</span>
    </p>
-   <p begin="00:00:10.007" end="00:00:11.021" region="r3" style="p">
+   <p begin="00:00:10.070" end="00:00:11.210" region="r3" style="p">
     What do you have in mind?
    </p>
-   <p begin="00:00:12.009" end="00:00:13.009" style="p" tts:textAlign="start">
+   <p begin="00:00:12.900" end="00:00:13.900" region="bottom" style="p" tts:textAlign="start">
     To write random words here!
    </p>
   </div>
@@ -766,10 +766,10 @@ SAMPLE_DFXP_INVALID_BUT_SUPPORTED_POSITIONING_INPUT = u"""\
    <p tts:origin='17.5% 10%' tts:extent='62.5% 5.33%' begin="0:00:02.07" end="0:00:05.07">
    Hello there!
    </p>
-   <p tts:origin='20% 15.33%' tts:extent='60% 5.33%' begin="0:00:05.07" end="0:00:06.21">
+   <p tts:origin='20% 15.67%' tts:extent='30% 7.67%' begin="0:00:05.07" end="0:00:06.21">
    How are you?<span tts:origin="1px 2px">>>Fine, thx<<</span>
    </p>
-   <p tts:extent='60% 5.33%' begin="0:00:07.9" end="0:00:07.9" tts:textAlign="right" tts:displayAlign="before">
+   <p tts:extent='60% 22%' begin="0:00:07.9" end="0:00:07.9" tts:textAlign="right" tts:displayAlign="before">
    Just fine?
    </p>
   </div>
