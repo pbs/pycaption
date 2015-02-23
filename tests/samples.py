@@ -462,17 +462,17 @@ SAMPLE_WEBVTT_EMPTY = """WEBVTT
 """
 
 
-SAMPLE_DFXP_UNICODE = u"""
+SAMPLE_DFXP_UNICODE = u"""\
 <?xml version="1.0" encoding="utf-8"?>
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml"
     xmlns:tts="http://www.w3.org/ns/ttml#styling">
  <head>
   <styling>
-   <style xml:id="p" tts:color="#ffeedd" tts:fontfamily="Arial"
-          tts:fontsize="10pt" tts:textAlign="center"/>
+   <style xml:id="p" tts:color="#ffeedd" tts:fontFamily="Arial"
+          tts:fontSize="10pt" tts:textAlign="center"/>
   </styling>
   <layout>
-  <region tts:displayalign="after" tts:textalign="center" xml:id="bottom"></region>
+  <region tts:displayAlign="after" tts:textAlign="center" xml:id="bottom"></region>
   </layout>
  </head>
  <body>
@@ -516,8 +516,8 @@ SAMPLE_DFXP_UTF8 = """
     xmlns:tts="http://www.w3.org/ns/ttml#styling">
  <head>
   <styling>
-   <style xml:id="p" tts:color="#ffeedd" tts:fontfamily="Arial"
-          tts:fontsize="10pt" tts:textAlign="center"/>
+   <style xml:id="p" tts:color="#ffeedd" tts:fontFamily="Arial"
+          tts:fontSize="10pt" tts:textAlign="center"/>
   </styling>
   <layout>
   <region tts:displayAlign="after" tts:textAlign="center" xml:id="bottom"></region>
@@ -534,7 +534,7 @@ SAMPLE_DFXP_UTF8 = """
     ♪ ...say bow, wow, ♪
    </p>
    <p begin="00:00:17.000" end="00:00:18.752" style="p">
-    <span tts:textalign="right">we have this vision of Einstein</span>
+    <span tts:textAlign="right">we have this vision of Einstein</span>
    </p>
    <p begin="00:00:18.752" end="00:00:20.887" style="p">
    <br/>
@@ -599,7 +599,7 @@ SAMPLE_DFXP_WITHOUT_REGION_AND_STYLE = """
 </tt>"""
 
 
-SAMPLE_DFXP = """
+SAMPLE_DFXP = """\
 <?xml version="1.0" encoding="utf-8"?>
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml"
     xmlns:tts="http://www.w3.org/ns/ttml#styling">
@@ -623,10 +623,10 @@ SAMPLE_DFXP = """
     of "E equals m c-squared",
    </p>
    <p begin="00:00:17.000" end="00:00:18.752" region="bottom" style="p">
-    <span tts:textalign="right">we have this vision of Einstein</span>
+    <span tts:textAlign="right">we have this vision of Einstein</span>
    </p>
    <p begin="00:00:18.752" end="00:00:20.887" region="bottom" style="p">
-   <br/>
+    <br/>
     as an old, wrinkly man<br/>
     with white hair.
    </p>
@@ -642,7 +642,9 @@ SAMPLE_DFXP = """
    <p begin="00:00:32.200" end="00:00:34.400" region="bottom" style="p">
     &lt;LAUGHING &amp; WHOOPS!&gt;
    </p>
-   <p begin="00:00:34.400" end="00:00:38.400" region="bottom" style="p">some more text</p>
+   <p begin="00:00:34.400" end="00:00:38.400" region="bottom" style="p">
+    some more text
+   </p>
   </div>
  </body>
 </tt>"""
@@ -666,145 +668,6 @@ SAMPLE_DFXP_EMPTY = """
  </body>
 </tt>
 """
-
-SAMPLE_DFXP_MULTIPLE_REGIONS_INPUT = u"""
-<?xml version="1.0" encoding="utf-8"?>
-<tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml"
-    xmlns:tts="http://www.w3.org/ns/ttml#styling">
- <head>
-  <styling>
-   <style xml:id="p" tts:color="#ffeedd" tts:fontfamily="Arial"
-          tts:fontsize="10pt" tts:textAlign="center"/>
-    <style xml:id="referential_style2" tts:extent="3em 4em"/>
-    <style xml:id="referential_style1" tts:padding="3px 4px 5px" style="referential_style2"/>
-  </styling>
-  <layout>
-   <region tts:textAlign="center" xml:id="pixel_region">
-    <style tts:origin="40px 50px" tts:extent="30px 40px"/>
-   </region>
-   <region tts:origin="10% 30%" tts:extent="50% 50%" xml:id="percent_region"/>
-   <region tts:padding="2c" xml:id="padding_region" />
-   <region xml:id="referential_region" style="referential_style1"/>
-  </layout>
- </head>
- <body>
-  <div xml:lang="en-US">
-   <p region="pixel_region" begin="0:00:02.07" end="0:00:05.07">
-   Hello there!
-   </p>
-   <p region="percent_region" begin="0:00:05.07" end="0:00:06.21">
-   How are you?
-   </p>
-   <p region="padding_region" begin="0:00:07.07" end="0:00:09.21">
-   >> I'm fine, thank you << replied someone.
-   <span region="percent_region">
-    >>And now we're going to have fun<<
-    </span>
-   </p>
-   <p region="referential_region" begin="0:00:10.07" end="0:00:11.21">
-   What do you have in mind?
-   </p>
-   <p begin="0:00:12.9" end="0:00:13.9" tts:textAlign="start"
-        tts:displayAlign="after">
-   To write random words here!
-   </p>
-  </div>
- </body>
-</tt>
-"""
-
-SAMPLE_DFXP_MULTIPLE_REGIONS_OUTPUT = u"""\
-<?xml version="1.0" encoding="utf-8"?>
-<tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling">
- <head>
-  <styling>
-   <style tts:color="#ffeedd" tts:fontFamily="Arial" tts:fontSize="10pt" tts:textAlign="center" xml:id="p"/>
-  </styling>
-  <layout>
-   <region tts:displayAlign="after" tts:textAlign="center" xml:id="bottom"/>
-   <region tts:extent="30px 40px" tts:origin="40px 50px" xml:id="r0"/>
-   <region tts:extent="50% 50%" tts:origin="10% 30%" xml:id="r1"/>
-   <region tts:padding="2c 2c 2c 2c" xml:id="r2"/>
-   <region tts:extent="3em 4em" tts:padding="3px 4px 5px 4px" xml:id="r3"/>
-  </layout>
- </head>
- <body>
-  <div region="bottom" xml:lang="en-US">
-   <p begin="00:00:02.070" end="00:00:05.070" region="r0" style="p">
-    Hello there!
-   </p>
-   <p begin="00:00:05.070" end="00:00:06.210" region="r1" style="p">
-    How are you?
-   </p>
-   <p begin="00:00:07.070" end="00:00:09.210" region="r2" style="p">
-    &gt;&gt; I'm fine, thank you &lt;&lt; replied someone. <span region="r1">&gt;&gt;And now we're going to have fun&lt;&lt;</span>
-   </p>
-   <p begin="00:00:10.070" end="00:00:11.210" region="r3" style="p">
-    What do you have in mind?
-   </p>
-   <p begin="00:00:12.900" end="00:00:13.900" region="bottom" style="p" tts:textAlign="start">
-    To write random words here!
-   </p>
-  </div>
- </body>
-</tt>"""
-
-SAMPLE_DFXP_INVALID_BUT_SUPPORTED_POSITIONING_INPUT = u"""\
-<?xml version="1.0" encoding="utf-8"?>
-<tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml"
-    xmlns:tts="http://www.w3.org/ns/ttml#styling">
- <head>
-  <styling>
-   <style xml:id="p" tts:color="#ffeedd" tts:fontfamily="Arial"
-          tts:fontsize="10pt" tts:textAlign="center"/>
-  </styling>
-  <layout>
-  </layout>
- </head>
- <body>
-  <div xml:lang="en-US">
-   <p tts:origin='17.5% 10%' tts:extent='62.5% 5.33%' begin="0:00:02.07" end="0:00:05.07">
-   Hello there!
-   </p>
-   <p tts:origin='20% 15.67%' tts:extent='30% 7.67%' begin="0:00:05.07" end="0:00:06.21">
-   How are you?<span tts:origin="1px 2px">>>Fine, thx<<</span>
-   </p>
-   <p tts:extent='60% 22%' begin="0:00:07.9" end="0:00:07.9" tts:textAlign="right" tts:displayAlign="before">
-   Just fine?
-   </p>
-  </div>
- </body>
-</tt>"""
-
-SAMPLE_DFXP_INVALID_BUT_SUPPORTED_POSITIONING_OUTPUT = u"""\
-<?xml version="1.0" encoding="utf-8"?>
-<tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling">
- <head>
-  <styling>
-   <style tts:color="#ffeedd" tts:fontFamily="Arial" tts:fontSize="10pt" tts:textAlign="center" xml:id="p"/>
-  </styling>
-  <layout>
-   <region tts:displayAlign="after" tts:textAlign="center" xml:id="bottom"/>
-   <region tts:extent="62.5% 5.33%" tts:origin="17.5% 10%" xml:id="r0"/>
-   <region tts:extent="60% 5.33%" tts:origin="20% 15.33%" xml:id="r1"/>
-   <region tts:origin="1px 2px" xml:id="r2"/>
-   <region tts:displayAlign="before" tts:extent="60% 5.33%" tts:textAlign="right" xml:id="r3"/>
-  </layout>
- </head>
- <body>
-  <div xml:lang="en-US">
-   <p begin="00:00:02.007" end="00:00:05.007" region="r0" style="p" tts:extent="62.5% 5.33%" tts:origin="17.5% 10%">
-    Hello there!
-   </p>
-   <p begin="00:00:05.007" end="00:00:06.021" region="r1" style="p" tts:extent="60% 5.33%" tts:origin="20% 15.33%">
-    How are you? <span region="r2" tts:origin="1px 2px">&gt;&gt;Fine, thx&lt;&lt;</span>
-   </p>
-   <p begin="00:00:07.009" end="00:00:07.009" region="r3" style="p" tts:displayAlign="before" tts:extent="60% 5.33%" tts:textAlign="right">
-    Just fine?
-   </p>
-  </div>
- </body>
-</tt>"""
 
 
 SAMPLE_DFXP_SYNTAX_ERROR = """

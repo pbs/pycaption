@@ -40,7 +40,8 @@ class WebVTTtoSAMITestCase(WebVTTConversionTestCase, SAMITestingMixIn):
 class WebVTTtoDFXPTestCase(WebVTTConversionTestCase, DFXPTestingMixIn):
 
     def test_webvtt_to_dfxp_conversion(self):
-        results = DFXPWriter().write(self.captions)
+        caption_set = WebVTTReader().read(SAMPLE_WEBVTT.decode(u'utf-8'))
+        results = DFXPWriter().write(caption_set)
         self.assertTrue(isinstance(results, unicode))
         self.assertDFXPEquals(
             SAMPLE_DFXP_UNICODE, results, ignore_styling=True, ignore_spans=True
