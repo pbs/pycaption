@@ -68,8 +68,12 @@ class CaptionNode(object):
     STYLE = 2
     BREAK = 3
 
-    def __init__(self, type, layout_info=None):
-        self.type = type
+    def __init__(self, type_, layout_info=None):
+        """
+        :type type_: int
+        :type layout_info: Layout
+        """
+        self.type_ = type_
         self.content = None
 
         # Boolean. Marks the beginning/ end of a Style node.
@@ -77,7 +81,7 @@ class CaptionNode(object):
         self.layout_info = layout_info
 
     def __repr__(self):
-        t = self.type
+        t = self.type_
 
         if t == CaptionNode.TEXT:
             return repr(self.content)
@@ -145,9 +149,9 @@ class Caption(object):
         Get the text of the caption.
         """
         def get_text_for_node(node):
-            if node.type == CaptionNode.TEXT:
+            if node.type_ == CaptionNode.TEXT:
                 return node.content
-            if node.type == CaptionNode.BREAK:
+            if node.type_ == CaptionNode.BREAK:
                 return u'\n'
             return u''
         text_nodes = [get_text_for_node(node) for node in self.nodes]

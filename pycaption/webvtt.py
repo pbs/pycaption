@@ -13,7 +13,9 @@ from .exceptions import (
 TIMING_PATTERN = re.compile(u'^(.+?) --> (.+)')
 TIMESTAMP_PATTERN = re.compile(u'^(\d+):(\d{2})(:\d{2})?\.(\d{3})')
 VOICE_SPAN_PATTERN = re.compile(u'<v(\\.\\w+)* ([^>]*)>')
-OTHER_SPAN_PATTERN = re.compile(u'</?([cibuv]|ruby|rt|lang).*?>')
+OTHER_SPAN_PATTERN = (
+    re.compile(u'</?([cibuv]|ruby|rt|lang|(\d+):(\d{2})(:\d{2})?\.(\d{3})).*?>')
+)  # These WebVTT tags are stripped off the cues on conversion
 
 
 def microseconds(h, m, s, f):
@@ -190,13 +192,13 @@ class WebVTTWriter(BaseWriter):
         s = u''
 
         for i, node in enumerate(nodes):
-            if node.type == CaptionNode.TEXT:
+            if node.type_ == CaptionNode.TEXT:
                 s += node.content or u'&nbsp;'
-            elif node.type == CaptionNode.STYLE:
+            elif node.type_ == CaptionNode.STYLE:
                 # TODO: Ignoring style so far.
                 pass
-            elif node.type == CaptionNode.BREAK:
-                if i > 0 and nodes[i-1].type == CaptionNode.BREAK:
+            elif node.type_ == CaptionNode.BREAK:
+                if i > 0 and nodes[i-1].type_ == CaptionNode.BREAK:
                     s += u'&nbsp;'
                 if i == 0:
                     s += u'&nbsp;'

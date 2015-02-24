@@ -321,13 +321,13 @@ class DFXPWriter(BaseWriter):
         line = u''
 
         for node in caption.nodes:
-            if node.type == CaptionNode.TEXT:
+            if node.type_ == CaptionNode.TEXT:
                 line += escape(node.content) + u' '
 
-            elif node.type == CaptionNode.BREAK:
+            elif node.type_ == CaptionNode.BREAK:
                 line = line.rstrip() + u'<br/>\n    '
 
-            elif node.type == CaptionNode.STYLE:
+            elif node.type_ == CaptionNode.STYLE:
                 line = self._recreate_span(
                     line, node, dfxp, caption_set, caption, lang)
 
