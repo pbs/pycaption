@@ -665,7 +665,9 @@ class LayoutInfoScraper(object):
         ) or DFXP_DEFAULT_REGION.padding
 
         # tts:textAlign is a special attribute, which can not be ignored when
-        # specified on the element itself (<p> nodes matter)
+        # specified on the element itself (only <p> nodes matter)
+        # On elements like <span> it is also read, because this was legacy
+        # behavior.
         text_align = (
             self._find_attribute(element, u'tts:textAlign')
             or _create_external_horizontal_alignment(
@@ -690,6 +692,14 @@ class LayoutInfoScraper(object):
 
         :param element: BeautifulSoup Tag or NavigableString
         :type attribute_name: unicode
+        :param attribute_name: the name of the attribute to resolve
+        :type attribute_name: unicode
+        :param factory: callable to transform the xml attribute into something
+        :param ignore: iterable of values to ignore (will return None if the
+            xml attribute is in that list)
+        :param ignorecase: if True, the attribute will be searched in lowercase
+            too
+        :type ignorecase: bool
         :rtype: unicode
         """
         value = None
