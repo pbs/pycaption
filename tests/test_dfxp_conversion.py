@@ -109,6 +109,19 @@ class DFXPtoDFXPTestCase(DFXPConversionTestCase, DFXPTestingMixIn):
         self.assertEqual(result,
                          SAMPLE_DFXP_INVALID_BUT_SUPPORTED_POSITIONING_OUTPUT)
 
+    def test_dont_create_style_tags_with_no_id(self):
+        # The <style> tags can have no 'xml:id' attribute. Previously, in this
+        # case, the style was copied to the output file, with the 'xml:id'
+        # property declared, but no value assigned to it. Since such a style
+        # can not be referred anyway, and <style> elements, children of
+        # <region> tags shouldn't be referred to anyway, we don't include
+        # these styles in the output file
+        caption_set = DFXPReader().read(
+            SAMPLE_DFXP_STYLE_TAG_WITH_NO_XML_ID_INPUT)
+        result = DFXPWriter().write(caption_set)
+
+        self.assertEqual(result, SAMPLE_DFXP_STYLE_TAG_WITH_NO_XML_ID_OUTPUT)
+
 
 class DFXPtoSRTTestCase(DFXPConversionTestCase, SRTTestingMixIn):
 
@@ -400,3 +413,59 @@ SAMPLE_DFXP_UNICODE_OUTPUT = u"""\
   </div>
  </body>
 </tt>"""
+
+SAMPLE_DFXP_STYLE_TAG_WITH_NO_XML_ID_INPUT = u"""\
+<?xml version="1.0" encoding="utf-8"?>
+<tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling">
+ <head>
+  <styling>
+   <style tts:color="#ffeedd" tts:fontFamily="Arial" tts:fontSize="10pt" tts:textAlign="center" xml:id="p"/>
+  </styling>
+  <layout>
+   <region tts:displayAlign="after" tts:textAlign="center" xml:id="bottom"/>
+   <region tts:displayAlign="after" xml:id="r0">
+    <style tts:textAlign="start"/>
+   </region>
+  </layout>
+ </head>
+ <body>
+  <div xml:lang="en-US">
+   <p begin="00:00:09.209" end="00:00:12.312" region="r0" style="p">
+    ( clock ticking )
+   </p>
+   <p begin="00:00:14.848" end="00:00:17.000" region="bottom" style="p">
+    MAN:<br/>
+    When we think<br/>
+    of "E equals m c-squared",
+   </p>
+  </div>
+ </body>
+</tt>
+"""
+
+SAMPLE_DFXP_STYLE_TAG_WITH_NO_XML_ID_OUTPUT = u"""\
+<?xml version="1.0" encoding="utf-8"?>
+<tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling">
+ <head>
+  <styling>
+   <style tts:color="#ffeedd" tts:fontFamily="Arial" tts:fontSize="10pt" tts:textAlign="center" xml:id="p"/>
+  </styling>
+  <layout>
+   <region tts:displayAlign="after" tts:textAlign="center" xml:id="bottom"/>
+   <region tts:displayAlign="after" tts:textAlign="start" xml:id="r0"/>
+  </layout>
+ </head>
+ <body>
+  <div region="bottom" xml:lang="en-US">
+   <p begin="00:00:09.209" end="00:00:12.312" region="bottom" style="p">
+    ( clock ticking )
+   </p>
+   <p begin="00:00:14.848" end="00:00:17.000" region="bottom" style="p">
+    MAN:<br/>
+    When we think<br/>
+    of "E equals m c-squared",
+   </p>
+  </div>
+ </body>
+</tt>"""
+

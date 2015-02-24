@@ -64,10 +64,14 @@ class DFXPReader(BaseReader):
             captions.set_layout_info(lang, div.layout_info)
 
         for style in dfxp_document.find_all(u'style'):
-            id = style.attrs.get(u'id')
-            if not id:
-                id = style.attrs.get(u'xml:id')
-            captions.add_style(id, self._translate_style(style))
+            id_ = style.attrs.get(u'xml:id') or style.attrs.get(u'id')
+            if id_:
+                # Don't create document styles for those styles that are
+                # descendants of <region> tags. See link:
+                # http://www.w3.org/TR/ttaf1-dfxp/#styling-vocabulary-style
+                if u'region' not in [
+                        parent_.name for parent_ in style.parents]:
+                    captions.add_style(id_, self._translate_style(style))
 
         captions = self._combine_matching_captions(captions)
 
