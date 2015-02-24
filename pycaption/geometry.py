@@ -354,17 +354,19 @@ class Size(object):
         size object
 
         :param string: a number concatenated to any of the UnitEnum members.
-        :return: an instance of Size
+        :type string: unicode
+        :rtype: Size
         """
         units = [UnitEnum.CHARACTER, UnitEnum.PERCENT, UnitEnum.PIXEL,
                  UnitEnum.EM]
 
         raw_number = string
-        unit = None
         for unit in units:
             if raw_number.endswith(unit):
                 raw_number = raw_number.rstrip(unit)
                 break
+        else:
+            unit = None
 
         if unit is not None:
             value = None
@@ -376,12 +378,18 @@ class Size(object):
 
             if value is None:
                 raise ValueError(
-                    u"Couldn't recognize the string as a number, or the unit "
-                    u"specified is not recognized. Only the {units} units "
-                    u"are supported".format(units=units)
+                    u"""Couldn't recognize the value "{value}" as a number"""
+                    .format(value=raw_number)
                 )
             instance = cls(value, unit)
             return instance
+        else:
+            raise ValueError(
+                u"The specified value is not valid because its unit "
+                u"is not recognized: {value}. "
+                u"The only supported units are: {supported}"
+                .format(value=raw_number, supported=u', '.join(units))
+            )
 
     def __repr__(self):
         return u'<Size ({value} {unit})>'.format(
