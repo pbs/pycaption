@@ -705,6 +705,7 @@ class LayoutInfoScraper(object):
             too
         :type ignorecase: bool
         :rtype: unicode
+        :raises CaptionSyntaxError:
         """
         value = None
 
