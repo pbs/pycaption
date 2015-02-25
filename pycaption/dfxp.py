@@ -512,12 +512,12 @@ class LayoutAwareDFXPParser(BeautifulSoup):
             into action (at the moment) if the
         :rtype: Layout
         """
-        region_list = []
+        region_tag = None
 
         if region_id is not None:
-            region_list = self.findAll(u'region', {u'xml:id': region_id})
+            region_tag = self.find(u'region', {u'xml:id': region_id})
 
-        region_scraper = LayoutInfoScraper(self, *(region_list[:1]))
+        region_scraper = LayoutInfoScraper(self, region_tag)
 
         layout_info = region_scraper.scrape_positioning_info(
             element, self.read_invalid_positioning
@@ -754,7 +754,7 @@ class LayoutInfoScraper(object):
 
         # Does the root 'tt' element have it?
         if extent is None:
-            root = self.document.findAll(u'tt')[0]
+            root = self.document.find(u'tt')
             extent = _get_object_from_attribute(
                 root, u'tts:extent', Stretch.from_xml_attribute
             )
