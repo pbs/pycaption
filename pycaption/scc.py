@@ -5,10 +5,11 @@ import re
 import math
 import string
 import textwrap
+from itertools import product
 
 from .base import (
     BaseReader, BaseWriter, Caption, CaptionSet, CaptionNode,
-) 
+)
 from .exceptions import CaptionReadNoCaptions
 
 
@@ -747,8 +748,219 @@ EXTENDED_CHARS = {
 
 
 # Cursor positioning codes
-PAC_HIGH_BYTE_BY_ROW = [u'xx',u'91',u'91',u'92',u'92',u'15',u'15',u'16',u'16',u'97',u'97',u'10',u'13',u'13',u'94',u'94']
-PAC_LOW_BYTE_BY_ROW = [u'xx',u'd0',u'70',u'd0',u'70',u'd0',u'70',u'd0',u'70',u'd0',u'70',u'd0',u'd0',u'70',u'd0',u'70']
+PAC_HIGH_BYTE_BY_ROW = [
+    u'xx',
+    u'91',
+    u'91',
+    u'92',
+    u'92',
+    u'15',
+    u'15',
+    u'16',
+    u'16',
+    u'97',
+    u'97',
+    u'10',
+    u'13',
+    u'13',
+    u'94',
+    u'94'
+]
+PAC_LOW_BYTE_BY_ROW_RESTRICTED = [
+    u'xx',
+    u'd0',
+    u'70',
+    u'd0',
+    u'70',
+    u'd0',
+    u'70',
+    u'd0',
+    u'70',
+    u'd0',
+    u'70',
+    u'd0',
+    u'd0',
+    u'70',
+    u'd0',
+    u'70'
+]
+
+# High order bytes come first, then each key contains a list of low bytes.
+# Any of the values in that list, coupled with the high order byte will
+# map to the (row, column) tuple.
+# This particular dictionary will get transformed to a more suitable form for
+# usage like PAC_BYTES_TO_POSITIONING_MAP[u'91'][u'd6'] = (1, 12)
+PAC_BYTES_TO_POSITIONING_MAP = {
+    u'91': {
+        (u'd0', u'51', u'c2', u'43', u'c4', u'45', u'46', u'c7', u'c8', u'49', u'4a', u'cb', u'4c', u'cd'): (1, 0),
+        (u'70', u'f1', u'62', u'e3', u'64', u'e5', u'e6', u'67', u'68', u'e9', u'ea', u'6b', u'ec', u'6d'): (2, 0),
+        (u'52', u'd3'): (1, 4),
+        (u'54', u'd5'): (1, 8),
+        (u'd6', u'57'): (1, 12),
+        (u'58', u'd9'): (1, 16),
+        (u'da', u'5b'): (1, 20),
+        (u'dc', u'5d'): (1, 24),
+        (u'5e', u'df'): (1, 28),
+
+        (u'f2', u'73'): (2, 4),
+        (u'f4', u'75'): (2, 8),
+        (u'76', u'f7'): (2, 12),
+        (u'f8', u'79'): (2, 16),
+        (u'7a', u'fb'): (2, 20),
+        (u'7c', u'fd'): (2, 24),
+        (u'fe', u'7f'): (2, 28)
+    },
+    u'92': {
+        (u'd0', u'51', u'c2', u'43', u'c4', u'45', u'46', u'c7', u'c8', u'49', u'4a', u'cb', u'4c', u'cd'): (3, 0),
+        (u'70', u'f1', u'62', u'e3', u'64', u'e5', u'e6', u'67', u'68', u'e9', u'ea', u'6b', u'ec', u'6d'): (4, 0),
+        (u'52', u'd3'): (3, 4),
+        (u'54', u'd5'): (3, 8),
+        (u'd6', u'57'): (3, 12),
+        (u'58', u'd9'): (3, 16),
+        (u'da', u'5b'): (3, 20),
+        (u'dc', u'5d'): (3, 24),
+        (u'5e', u'df'): (3, 28),
+
+        (u'f2', u'73'): (4, 4),
+        (u'f4', u'75'): (4, 8),
+        (u'76', u'f7'): (4, 12),
+        (u'f8', u'79'): (4, 16),
+        (u'7a', u'fb'): (4, 20),
+        (u'7c', u'fd'): (4, 24),
+        (u'fe', u'7f'): (4, 28)
+    },
+    u'15': {
+        (u'd0', u'51', u'c2', u'43', u'c4', u'45', u'46', u'c7', u'c8', u'49', u'4a', u'cb', u'4c', u'cd'): (5, 0),
+        (u'70', u'f1', u'62', u'e3', u'64', u'e5', u'e6', u'67', u'68', u'e9', u'ea', u'6b', u'ec', u'6d'): (6, 0),
+        (u'52', u'd3'): (5, 4),
+        (u'54', u'd5'): (5, 8),
+        (u'd6', u'57'): (5, 12),
+        (u'58', u'd9'): (5, 16),
+        (u'da', u'5b'): (5, 20),
+        (u'dc', u'5d'): (5, 24),
+        (u'5e', u'df'): (5, 28),
+
+        (u'f2', u'73'): (6, 4),
+        (u'f4', u'75'): (6, 8),
+        (u'76', u'f7'): (6, 12),
+        (u'f8', u'79'): (6, 16),
+        (u'7a', u'fb'): (6, 20),
+        (u'7c', u'fd'): (6, 24),
+        (u'fe', u'7f'): (6, 28)
+    },
+    u'16': {
+        (u'd0', u'51', u'c2', u'43', u'c4', u'45', u'46', u'c7', u'c8', u'49', u'4a', u'cb', u'4c', u'cd'): (7, 0),
+        (u'70', u'f1', u'62', u'e3', u'64', u'e5', u'e6', u'67', u'68', u'e9', u'ea', u'6b', u'ec', u'6d'): (8, 0),
+        (u'52', u'd3'): (7, 4),
+        (u'54', u'd5'): (7, 8),
+        (u'd6', u'57'): (7, 12),
+        (u'58', u'd9'): (7, 16),
+        (u'da', u'5b'): (7, 20),
+        (u'dc', u'5d'): (7, 24),
+        (u'5e', u'df'): (7, 28),
+
+        (u'f2', u'73'): (8, 4),
+        (u'f4', u'75'): (8, 8),
+        (u'76', u'f7'): (8, 12),
+        (u'f8', u'79'): (8, 16),
+        (u'7a', u'fb'): (8, 20),
+        (u'7c', u'fd'): (8, 24),
+        (u'fe', u'7f'): (8, 28)
+    },
+    u'97': {
+        (u'd0', u'51', u'c2', u'43', u'c4', u'45', u'46', u'c7', u'c8', u'49', u'4a', u'cb', u'4c', u'cd'): (9, 0),
+        (u'70', u'f1', u'62', u'e3', u'64', u'e5', u'e6', u'67', u'68', u'e9', u'ea', u'6b', u'ec', u'6d'): (10, 0),
+        (u'52', u'd3'): (9, 4),
+        (u'54', u'd5'): (9, 8),
+        (u'd6', u'57'): (9, 12),
+        (u'58', u'd9'): (9, 16),
+        (u'da', u'5b'): (9, 20),
+        (u'dc', u'5d'): (9, 24),
+        (u'5e', u'df'): (9, 28),
+
+        (u'f2', u'73'): (10, 4),
+        (u'f4', u'75'): (10, 8),
+        (u'76', u'f7'): (10, 12),
+        (u'f8', u'79'): (10, 16),
+        (u'7a', u'fb'): (10, 20),
+        (u'7c', u'fd'): (10, 24),
+        (u'fe', u'7f'): (10, 28)
+    },
+    u'10': {
+        (u'd0', u'51', u'c2', u'43', u'c4', u'45', u'46', u'c7', u'c8', u'49', u'4a', u'cb', u'4c', u'cd'): (11, 0),
+        (u'52', u'd3'): (11, 4),
+        (u'54', u'd5'): (11, 8),
+        (u'd6', u'57'): (11, 12),
+        (u'58', u'd9'): (11, 16),
+        (u'da', u'5b'): (11, 20),
+        (u'dc', u'5d'): (11, 24),
+        (u'5e', u'df'): (11, 28),
+    },
+    u'13': {
+        (u'd0', u'51', u'c2', u'43', u'c4', u'45', u'46', u'c7', u'c8', u'49', u'4a', u'cb', u'4c', u'cd'): (12, 0),
+        (u'70', u'f1', u'62', u'e3', u'64', u'e5', u'e6', u'67', u'68', u'e9', u'ea', u'6b', u'ec', u'6d'): (13, 0),
+        (u'52', u'd3'): (12, 4),
+        (u'54', u'd5'): (12, 8),
+        (u'd6', u'57'): (12, 12),
+        (u'58', u'd9'): (12, 16),
+        (u'da', u'5b'): (12, 20),
+        (u'dc', u'5d'): (12, 24),
+        (u'5e', u'df'): (12, 28),
+
+        (u'f2', u'73'): (13, 4),
+        (u'f4', u'75'): (13, 8),
+        (u'76', u'f7'): (13, 12),
+        (u'f8', u'79'): (13, 16),
+        (u'7a', u'fb'): (13, 20),
+        (u'7c', u'fd'): (13, 24),
+        (u'fe', u'7f'): (13, 28)
+    },
+    u'94': {
+        (u'd0', u'51', u'c2', u'43', u'c4', u'45', u'46', u'c7', u'c8', u'49', u'4a', u'cb', u'4c', u'cd'): (14, 0),
+        (u'70', u'f1', u'62', u'e3', u'64', u'e5', u'e6', u'67', u'68', u'e9', u'ea', u'6b', u'ec', u'6d'): (15, 0),
+        (u'52', u'd3'): (14, 4),
+        (u'54', u'd5'): (14, 8),
+        (u'd6', u'57'): (14, 12),
+        (u'58', u'd9'): (14, 16),
+        (u'da', u'5b'): (14, 20),
+        (u'dc', u'5d'): (14, 24),
+        (u'5e', u'df'): (14, 28),
+
+        (u'f2', u'73'): (15, 4),
+        (u'f4', u'75'): (15, 8),
+        (u'76', u'f7'): (15, 12),
+        (u'f8', u'79'): (15, 16),
+        (u'7a', u'fb'): (15, 20),
+        (u'7c', u'fd'): (15, 24),
+        (u'fe', u'7f'): (15, 28)
+    }
+}
+
+# (Almost) the reverse of PAC_BYTES_TO_POSITIONING_MAP. Call with arguments
+# like for example [15][4] to get the tuple ((u'94', u'f2'), (u'94', u'73'))
+POSITIONING_TO_PAC_MAP = {}
+for highbyte, lowbyte_dict in PAC_BYTES_TO_POSITIONING_MAP.items():
+    column_dict = {}
+
+    # must contain mappings to column, to the tuple of possible values
+    for lowbyte_list in lowbyte_dict.keys():
+        column = PAC_BYTES_TO_POSITIONING_MAP[highbyte][lowbyte_list][1]
+
+        row = PAC_BYTES_TO_POSITIONING_MAP[highbyte][lowbyte_list][0]
+        if row not in POSITIONING_TO_PAC_MAP:
+            POSITIONING_TO_PAC_MAP[row] = {}
+
+        POSITIONING_TO_PAC_MAP[row][column] = (
+            tuple(product([highbyte], lowbyte_list)))
+
+# Now use the dict with arguments like [u'91'][u'75'] directly.
+PAC_BYTES_TO_POSITIONING_MAP = {
+    k_: {
+        lowbyte: PAC_BYTES_TO_POSITIONING_MAP[k_][lowbyte_list]
+        for lowbyte_list in v_.keys() for lowbyte in lowbyte_list
+    }
+    for k_, v_ in PAC_BYTES_TO_POSITIONING_MAP.items()
+}
 
 
 # Inverted character lookup
@@ -952,10 +1164,25 @@ class SCCReader(BaseReader):
 
         # if command not one of the aforementioned, add to buffer
         else:
+            # determine whether the word is a PAC, save it for later
+            pac = self._translate_pac(word)
+            if pac:
+                # need to compare it with the previous PAC
+                pass
+
             if self.paint_on:
                 self.paint_buffer += COMMANDS[word]
             else:
                 self.pop_buffer += COMMANDS[word]
+
+    @staticmethod
+    def _translate_pac(word):
+        """Return a tuple (row, column) if the word given is a Preamble
+         Address Code (PAC), or None if it's not
+
+        :type word: unicode
+        :rtype: tuple
+        """
 
     def _translate_characters(self, word):
         # split word into the 2 bytes
@@ -1202,7 +1429,7 @@ class SCCWriter(BaseWriter):
             # Move cursor to column 0 of the destination row
             for _ in range(2):
                 code += (u'%s%s ' % (PAC_HIGH_BYTE_BY_ROW[row],
-                                    PAC_LOW_BYTE_BY_ROW[row]))
+                                    PAC_LOW_BYTE_BY_ROW_RESTRICTED[row]))
             # Print the line using the SCC encoding
             for index, char in enumerate(line):
                 code = self._print_character(code, char)
