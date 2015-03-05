@@ -978,7 +978,7 @@ HEADER = u'Scenarist_SCC V1.0'
 
 class SCCReader(BaseReader):
     def __init__(self, *args, **kw):
-        self.scc = TimingCorrectingCaptionList()
+        self.caption_stash = _CaptionStash()
         self.time = u''
         self.pop_buffer = u''
         self.paint_buffer = u''
@@ -1016,7 +1016,7 @@ class SCCReader(BaseReader):
             self._roll_up()
 
         captions = CaptionSet()
-        captions.set_captions(lang, list(self.scc))
+        captions.set_captions(lang, self.caption_stash.get_all())
 
         if captions.is_empty():
             raise CaptionReadNoCaptions(u"empty caption file")
@@ -1120,10 +1120,8 @@ class SCCReader(BaseReader):
             # if content is in the queue, turn it into a caption
             if self.paint_buffer:
                 # convert and empty buffer
-                self.scc.append(
-                    self._convert_to_caption(
-                        self.paint_buffer, self.paint_time)
-                )
+                self.caption_stash.create_and_store(
+                    self.paint_buffer, self.paint_time)
                 self.paint_buffer = u''
 
             # set rows to empty, configure start time for caption
@@ -1142,8 +1140,7 @@ class SCCReader(BaseReader):
             self.pop_time = self._translate_time(self.time[:-2] +
                                                  unicode(int(self.time[-2:]) +
                                                  self.frame_count))
-            self.scc.append(
-                self._convert_to_caption(self.pop_buffer, self.pop_time))
+            self.caption_stash.create_and_store(self.pop_buffer, self.pop_time)
             self.pop_buffer = u''
 
         # roll up captions
@@ -1160,13 +1157,12 @@ class SCCReader(BaseReader):
                 self._roll_up()
 
             # attempt to add proper end time to last caption
-            # # XXX - turn this into a method on the timingcorrectinglist
-            # self.scc.correct_end_time(self.time, self.frame_count)
-            if self.scc and self.scc[-1].end == 0:
+            last_caption = self.caption_stash.get_last()
+            if last_caption and last_caption.end == 0:
                 last_time = self._translate_time(self.time[:-2] +
                                                  unicode(int(self.time[-2:]) +
                                                  self.frame_count))
-                self.scc[-1].end = last_time
+                last_caption.end = last_time
 
         # if command not one of the aforementioned, add to buffer
         else:
@@ -1180,15 +1176,6 @@ class SCCReader(BaseReader):
                 self.paint_buffer += COMMANDS[word]
             else:
                 self.pop_buffer += COMMANDS[word]
-
-    @staticmethod
-    def _translate_pac(word):
-        """Return a tuple (row, column) if the word given is a Preamble
-         Address Code (PAC), or None if it's not
-
-        :type word: unicode
-        :rtype: tuple
-        """
 
     def _translate_characters(self, word):
         # split word into the 2 bytes
@@ -1230,111 +1217,6 @@ class SCCReader(BaseReader):
 
         return microseconds
 
-    # convert buffer into Caption object
-    def _convert_to_caption(self, text_buffer, start):
-        """Creates a Caption from the text buffer and the start time
-
-        :type text_buffer: unicode
-        :type start: int
-        :rtype: Caption
-        """
-        caption = Caption()
-        caption.start = start
-        caption.end = 0  # Not yet known; filled in later
-
-        open_italic = False
-        first_element = True
-
-        # split into elements (e.g. break, italics, text)
-        for element in text_buffer.split(u'<$>'):
-            # skip empty elements
-            if element.strip() == u'':
-                continue
-
-            # handle line breaks
-            elif element == u'{break}':
-                new_captions, open_italic = (
-                    self._translate_break(
-                        caption, first_element, open_italic)
-                )
-                caption.nodes.extend(new_captions)
-
-            # handle open italics
-            elif element == u'{italic}':
-                # add italics
-                caption.nodes.append(
-                    CaptionNode.create_style(True, {u'italics': True}))
-                # open italics, no longer first element
-                open_italic = True
-                first_element = False
-
-            # handle clone italics
-            elif element == u'{end-italic}' and open_italic:
-                caption.nodes.append(
-                    CaptionNode.create_style(False, {u'italics': True}))
-                open_italic = False
-
-            # handle text
-            else:
-                # add text
-                caption.nodes.append(
-                    CaptionNode.create_text(u' '.join(element.split())))
-                # no longer first element
-                first_element = False
-
-        # close any open italics left over
-        if open_italic:
-            caption.nodes.append(
-                CaptionNode.create_style(False, {u'italics': True}))
-
-        # remove extraneous italics tags in the same caption
-        self._remove_italics(caption)
-
-        # caption_list.append(caption)
-        return caption
-
-    @staticmethod
-    def _translate_break(caption, first_element, open_italic):
-        """Depending on the context, translates a line break into one or more
-        nodes, returning them. Also returns whether to turn off the italics.
-
-        :type caption: Caption
-        :param first_element: bool
-        :param open_italic: bool
-        :rtype: tuple
-        """
-        new_nodes = []
-
-        # if break appears at start of caption, skip break
-        if first_element:
-            return new_nodes, open_italic
-        # if the last caption was a break, skip this break
-        elif caption.nodes[-1].type_ == CaptionNode.BREAK:
-            return new_nodes, open_italic
-        # close any open italics
-        elif open_italic:
-            new_nodes.append(CaptionNode.create_style(False, {u'italics': True}))
-            open_italic = False
-
-        # add line break
-        new_nodes.append(CaptionNode.create_break())
-
-        return new_nodes, open_italic
-
-    @staticmethod
-    def _remove_italics(caption):
-        i = 0
-        length = max(0, len(caption.nodes) - 2)
-        while i < length:
-            if (caption.nodes[i].type_ == CaptionNode.STYLE and caption.nodes[i].content[u'italics'] and
-                        caption.nodes[i + 1].type_ == CaptionNode.BREAK and
-                        caption.nodes[i + 2].type_ == CaptionNode.STYLE and caption.nodes[i + 2].content[u'italics']):
-                # Remove the two italics style nodes
-                caption.nodes.pop(i)
-                caption.nodes.pop(i + 1)
-                length -= 2
-            i += 1
-
     def _roll_up(self):
         if self.simulate_roll_up == False:
             self.roll_rows = []
@@ -1348,8 +1230,7 @@ class SCCReader(BaseReader):
         self.paint_buffer = u' '.join(self.roll_rows)
 
         # convert buffer and empty
-        self.scc.append(
-            self._convert_to_caption(self.paint_buffer, self.paint_time))
+        self.caption_stash.create_and_store(self.paint_buffer, self.paint_time)
         self.paint_buffer = u''
 
         # configure time
@@ -1360,7 +1241,7 @@ class SCCReader(BaseReader):
 
         # try to insert the proper ending time for the previous caption
         try:
-            self.scc[-1].end = self.paint_time
+            self.caption_stash.get_last().end = self.paint_time
         except IndexError:
             pass
 
@@ -1481,7 +1362,7 @@ class SCCWriter(BaseWriter):
         return u'%02d:%02d:%02d:%02d' % (hours, minutes, seconds, frames)
 
 
-class TimingCorrectingCaptionList(list):
+class _TimingCorrectingCaptionList(list):
     """List of captions. Will know to correct the last caption's end time
     when adding a new caption.
 
@@ -1492,7 +1373,6 @@ class TimingCorrectingCaptionList(list):
         has an end. Also, don't add empty captions
 
         :type p_object: Caption
-        :rtype: bool
         """
         if p_object is None:
             return
@@ -1501,8 +1381,146 @@ class TimingCorrectingCaptionList(list):
             self[-1].end = p_object.start
 
         if p_object.nodes:
-            super(TimingCorrectingCaptionList, self).append(p_object)
+            super(_TimingCorrectingCaptionList, self).append(p_object)
 
     def extend(self, iterable):
         for elem in iterable:
             self.append(elem)
+
+
+class _CaptionStash(object):
+    """Creates and maintains a collection of Captions
+    """
+    def __init__(self):
+        self._collection = _TimingCorrectingCaptionList()
+
+    def get_last(self):
+        """Returns the last caption stored (for setting the time on it),
+        or None
+
+        :rtype: Caption
+        """
+        if len(self._collection) > 0:
+            return self._collection[-1]
+
+        return None
+
+    def create_and_store(self, text_buffer, start):
+        """Creates a Caption from the text buffer and the start, storing it
+        internally
+
+        :type text_buffer: unicode
+        :type start: int
+        """
+        caption = Caption()
+        caption.start = start
+        caption.end = 0  # Not yet known; filled in later
+
+        open_italic = False
+        first_element = True
+
+        # split into elements (e.g. break, italics, text)
+        for element in text_buffer.split(u'<$>'):
+            # skip empty elements
+            if element.strip() == u'':
+                continue
+
+            # handle line breaks
+            elif element == u'{break}':
+                new_captions, open_italic = (
+                    self._translate_break(
+                        caption, first_element, open_italic)
+                )
+                caption.nodes.extend(new_captions)
+
+            # handle open italics
+            elif element == u'{italic}':
+                # add italics
+                caption.nodes.append(
+                    CaptionNode.create_style(True, {u'italics': True}))
+                # open italics, no longer first element
+                open_italic = True
+                first_element = False
+
+            # handle clone italics
+            elif element == u'{end-italic}' and open_italic:
+                caption.nodes.append(
+                    CaptionNode.create_style(False, {u'italics': True}))
+                open_italic = False
+
+            # handle text
+            else:
+                # add text
+                caption.nodes.append(
+                    CaptionNode.create_text(u' '.join(element.split())))
+                # no longer first element
+                first_element = False
+
+        # close any open italics left over
+        if open_italic:
+            caption.nodes.append(
+                CaptionNode.create_style(False, {u'italics': True}))
+
+        # remove extraneous italics tags in the same caption
+        self._remove_italics(caption)
+
+        self._collection.append(caption)
+
+    @staticmethod
+    def _translate_break(caption, first_element, open_italic):
+        """Depending on the context, translates a line break into one or more
+        nodes, returning them. Also returns whether to turn off the italics.
+
+        :type caption: Caption
+        :param first_element: bool
+        :param open_italic: bool
+        :rtype: tuple
+        """
+        new_nodes = []
+
+        # if break appears at start of caption, skip break
+        if first_element:
+            return new_nodes, open_italic
+        # if the last caption was a break, skip this break
+        elif caption.nodes[-1].type_ == CaptionNode.BREAK:
+            return new_nodes, open_italic
+        # close any open italics
+        elif open_italic:
+            new_nodes.append(CaptionNode.create_style(
+                False, {u'italics': True}))
+            open_italic = False
+
+        # add line break
+        new_nodes.append(CaptionNode.create_break())
+
+        return new_nodes, open_italic
+
+    @staticmethod
+    def _remove_italics(caption):
+        """Legacy logic slightly refactored. Removes STYLE nodes that would
+        surround a BREAK node.
+
+        See CaptionNode
+
+        :type caption: Caption
+        """
+        i = 0
+        length = max(0, len(caption.nodes) - 2)
+        while i < length:
+            if (caption.nodes[i].type_ == CaptionNode.STYLE and
+                    caption.nodes[i].content[u'italics'] and
+                        caption.nodes[i + 1].type_ == CaptionNode.BREAK and
+                        caption.nodes[i + 2].type_ == CaptionNode.STYLE and
+                    caption.nodes[i + 2].content[u'italics']):
+                # Remove the two italics style nodes
+                caption.nodes.pop(i)
+                caption.nodes.pop(i + 1)
+                length -= 2
+            i += 1
+
+    def get_all(self):
+        """Returns the Caption collection as a list
+
+        :rtype: list
+        """
+        return list(self._collection)
