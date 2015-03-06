@@ -1167,11 +1167,6 @@ class SCCReader(BaseReader):
         # if command not one of the aforementioned, add to buffer
         else:
             # determine whether the word is a PAC, save it for later
-            pac = self._translate_pac(word)
-            if pac:
-                # need to compare it with the previous PAC
-                pass
-
             if self.paint_on:
                 self.paint_buffer += COMMANDS[word]
             else:
