@@ -45,16 +45,21 @@ class CoverageOnlyTestCase(unittest.TestCase):
         # Roll-Up captions. Make sure nothing changes during the refactoring
         scc1 = SCCReader().read(SAMPLE_SCC_ROLL_UP_RU2)
         captions = scc1.get_captions(u'en-US')
-        text_contents = [cap_.nodes[0].content for cap_ in captions]
-        self.assertEqual(text_contents[0], u'>>> HI')
-        self.assertEqual(text_contents[1], u"I'M KEVIN CUNNING AND AT")
-        # Notice, this freezes a problem with the caption.
-        # The 'ce' character translates to "N", but to be interpreted, it can
-        # not be all by itself, and should be followed by '80' as in 'ce80'
-        self.assertEqual(text_contents[2], u"INVESTOR'S BANK WE BELIEVE I")
-        self.assertEqual(text_contents[3], u"HELPING THE LOCAL NEIGHBORHOOD")
-        self.assertEqual(text_contents[4], u"AND IMPROVING THE LIVES OF ALL")
-        self.assertEqual(text_contents[5], u"WE SERVE")
+        actual_texts = [cap_.nodes[0].content for cap_ in captions]
+        expected_texts = [u'>>> HI',
+                          u"I'M KEVIN CUNNING AND AT",
+                          u"INVESTOR'S BANK WE BELIEVE I",
+                          u'HELPING THE LOCAL NEIGHBORHOOD',
+                          u'AND IMPROVING THE LIVES OF ALL',
+                          u'WE SERVE',
+                          u"WHERE YOU'RE STANDING NOW,",
+                          u"LOOKING OUT THERE, THAT'S AL",
+                          u'THE CROWD.',
+                          u'>> IT WAS GOOD TO BE IN TH',
+                          u"And restore Iowa's land, water",
+                          u'And wildlife.',
+                          u'>> Bike Iowa, your source for']
+        self.assertEqual(expected_texts, actual_texts)
 
     def test_freeze_semicolon_spec_time(self):
         scc1 = SCCReader().read(SAMPLE_SCC_ROLL_UP_RU2)
@@ -64,7 +69,15 @@ class CoverageOnlyTestCase(unittest.TestCase):
                             (4600000.0, 6166666.666666667),
                             (6166666.666666667, 9733333.333333332),
                             (9733333.333333332, 11266666.666666668),
-                            (11266666.666666668, 11600000.0)]
+                            (11266666.666666668, 17066666.666666668),
+                            (17066666.666666668, 18666666.666666668),
+                            (18666666.666666668, 20233333.333333336),
+                            (20233333.333333336, 21833333.333333332),
+                            (21833333.333333332, 34933333.33333333),
+                            (34933333.33333333, 36433333.33333333),
+                            (36433333.33333333, 44300000.0),
+                            (44300000.0, 44866666.666666664)]
+
         actual_timings = [(c_.start, c_.end) for c_ in captions]
         self.assertEqual(expected_timings, actual_timings)
 
@@ -125,5 +138,19 @@ Scenarist_SCC V1.0
 00:00:09;21	9425 9425 94ad 94ad 9470 9470 c1ce c420 49cd d052 4fd6 49ce c720 54c8 4520 4c49 d645 d320 4f46 20c1 4c4c
 
 00:00:11;07	9425 9425 94ad 94ad 9470 9470 5745 20d3 4552 d645 ae
+
+00:00:17;01	9426 9426 94ad 94ad 9470 9470 57c8 4552 4520 d94f d5a7 5245 20d3 54c1 cec4 49ce c720 ce4f 572c
+
+00:00:18;19	9426 9426 94ad 94ad 9470 9470 4c4f 4fcb 49ce c720 4fd5 5420 54c8 4552 452c 2054 c8c1 54a7 d320 c14c 4c
+
+00:00:20;06	9426 9426 94ad 94ad 9470 9470 54c8 4520 4352 4f57 c4ae
+
+00:00:21;24	9426 9426 94ad 94ad 9470 9470 3e3e 2049 5420 57c1 d320 c74f 4fc4 2054 4f20 c245 2049 ce20 54c8 45
+
+00:00:34;27	94a7 94ad 9470 c16e 6420 f2e5 73f4 eff2 e520 49ef f761 a773 20ec 616e 642c 20f7 61f4 e5f2
+
+00:00:36;12	94a7 94ad 9470 c16e 6420 f7e9 ec64 ece9 e6e5 ae80
+
+00:00:44;08	94a7 94ad 9470 3e3e 20c2 e96b e520 49ef f761 2c20 79ef 75f2 2073 ef75 f2e3 e520 e6ef f280
 """
 
