@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import unittest
 
 from pycaption import SCCReader, CaptionReadNoCaptions
@@ -52,6 +53,12 @@ class CoverageOnlyTestCase(unittest.TestCase):
                           u'HELPING THE LOCAL NEIGHBORHOOD',
                           u'AND IMPROVING THE LIVES OF ALL',
                           u'WE SERVE',
+                          u'®°½',   # special chars
+                          # - this is how the output should look like
+                          # u'ÁÉÓ¡',  # extended chars
+                          # - this is how it actually looks like.
+                          # Therefore we're freezing a bug
+                          u'{break}<$¡',
                           u"WHERE YOU'RE STANDING NOW,",
                           u"LOOKING OUT THERE, THAT'S AL",
                           u'THE CROWD.',
@@ -69,7 +76,9 @@ class CoverageOnlyTestCase(unittest.TestCase):
                             (4600000.0, 6166666.666666667),
                             (6166666.666666667, 9733333.333333332),
                             (9733333.333333332, 11266666.666666668),
-                            (11266666.666666668, 17066666.666666668),
+                            (11266666.666666668, 12266666.666666668),
+                            (12266666.666666668, 13266666.666666668),
+                            (13266666.666666668, 17066666.666666668),
                             (17066666.666666668, 18666666.666666668),
                             (18666666.666666668, 20233333.333333336),
                             (20233333.333333336, 21833333.333333332),
@@ -138,6 +147,10 @@ Scenarist_SCC V1.0
 00:00:09;21	9425 9425 94ad 94ad 9470 9470 c1ce c420 49cd d052 4fd6 49ce c720 54c8 4520 4c49 d645 d320 4f46 20c1 4c4c
 
 00:00:11;07	9425 9425 94ad 94ad 9470 9470 5745 20d3 4552 d645 ae
+
+00:00:12;07	9425 9425 94ad 94ad 9470 9470 91b0 9131 9132 9132
+
+00:00:13;07	9425 9425 94ad 94ad 9470 9470 9220 9220 92a1 92a2 92a7
 
 00:00:17;01	9426 9426 94ad 94ad 9470 9470 57c8 4552 4520 d94f d5a7 5245 20d3 54c1 cec4 49ce c720 ce4f 572c
 
