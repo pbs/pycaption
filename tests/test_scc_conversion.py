@@ -1,12 +1,8 @@
 import unittest
 
-from pycaption import (
-    CaptionConverter, SCCReader, SCCWriter, SRTReader, SRTWriter
-)
+from pycaption import SCCReader, SCCWriter, SRTReader, SRTWriter
 
-from .samples import (
-    SAMPLE_SRT, SAMPLE_SRT_UTF8, SAMPLE_SRT_UNICODE, SAMPLE_SCC
-)
+from .samples import SAMPLE_SRT
 from .mixins import CaptionSetTestingMixIn
 
 # This is quite fuzzy at the moment.
