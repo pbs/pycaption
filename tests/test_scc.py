@@ -8,15 +8,15 @@ TOLERANCE_MICROSECONDS = 500 * 1000
 class SCCReaderTestCase(unittest.TestCase):
 
     def test_detection(self):
-        self.assertTrue(SCCReader().detect(SAMPLE_SCC.decode(u'utf-8')))
+        self.assertTrue(SCCReader().detect(SAMPLE_SCC_POP_ON.decode(u'utf-8')))
 
     def test_caption_length(self):
-        captions = SCCReader().read(SAMPLE_SCC.decode(u'utf-8'))
+        captions = SCCReader().read(SAMPLE_SCC_POP_ON.decode(u'utf-8'))
 
         self.assertEquals(7, len(captions.get_captions(u"en-US")))
 
     def test_proper_timestamps(self):
-        captions = SCCReader().read(SAMPLE_SCC.decode(u'utf-8'))
+        captions = SCCReader().read(SAMPLE_SCC_POP_ON.decode(u'utf-8'))
         paragraph = captions.get_captions(u"en-US")[2]
 
         delta_start = abs(paragraph.start - 17000000)
@@ -31,7 +31,62 @@ class SCCReaderTestCase(unittest.TestCase):
             SCCReader().read, SAMPLE_SCC_EMPTY.decode(u'utf-8'))
 
 
-SAMPLE_SCC = """Scenarist_SCC V1.0
+class CoverageOnlyTestCase(unittest.TestCase):
+    """In order to refactor safely, we need coverage of 95% or more.
+     This class includes tests that ensure that at the very least, we don't
+     break anything that was working, OR fix anything whose faulty behavior
+      was accepted.
+
+      All the tests in this suite should only be useful for refactoring. They
+      DO NOT ensure functionality. They only ensure nothing changes.
+    """
+    def test_freeze_rollup_captions_contents(self):
+        # There were no tests for ROLL-UP captions, but the library processed
+        # Roll-Up captions. Make sure nothing changes during the refactoring
+        scc1 = SCCReader().read(SAMPLE_SCC_ROLL_UP_RU2)
+        captions = scc1.get_captions(u'en-US')
+        text_contents = [cap_.nodes[0].content for cap_ in captions]
+        self.assertEqual(text_contents[0], u'>>> HI')
+        self.assertEqual(text_contents[1], u"I'M KEVIN CUNNING AND AT")
+        # Notice, this freezes a problem with the caption.
+        # The 'ce' character translates to "N", but to be interpreted, it can
+        # not be all by itself, and should be followed by '80' as in 'ce80'
+        self.assertEqual(text_contents[2], u"INVESTOR'S BANK WE BELIEVE I")
+        self.assertEqual(text_contents[3], u"HELPING THE LOCAL NEIGHBORHOOD")
+        self.assertEqual(text_contents[4], u"AND IMPROVING THE LIVES OF ALL")
+        self.assertEqual(text_contents[5], u"WE SERVE")
+
+    def test_freeze_semicolon_spec_time(self):
+        scc1 = SCCReader().read(SAMPLE_SCC_ROLL_UP_RU2)
+        captions = scc1.get_captions(u'en-US')
+        expected_timings = [(766666.6666666667, 2800000.0),
+                            (2800000.0, 4600000.0),
+                            (4600000.0, 6166666.666666667),
+                            (6166666.666666667, 9733333.333333332),
+                            (9733333.333333332, 11266666.666666668),
+                            (11266666.666666668, 11600000.0)]
+        actual_timings = [(c_.start, c_.end) for c_ in captions]
+        self.assertEqual(expected_timings, actual_timings)
+
+    def test_freeze_colon_spec_time(self):
+        # Coverage doesn't mean we test that functionality, so assert that
+        # all the timing specs that previously had coverage, will actually
+        # remain unchanged.
+        scc1 = SCCReader().read(unicode(SAMPLE_SCC_POP_ON))
+        expected_timings = [(9776433.333333332, 12312300.0),
+                            (14781433.33333333, 16883533.333333332),
+                            (16950266.666666664, 18618600.000000004),
+                            (18685333.333333332, 20754066.666666664),
+                            (20820800.0, 26626600.0),
+                            (26693333.333333332, 32098733.333333332),
+                            (32165466.66666666, 36202833.33333332)]
+
+        actual_timings = [
+            (c_.start, c_.end) for c_ in scc1.get_captions(u'en-US')]
+        self.assertEqual(expected_timings, actual_timings)
+
+
+SAMPLE_SCC_POP_ON = """Scenarist_SCC V1.0
 
 00:00:09:05 94ae 94ae 9420 9420 9470 9470 a820 e3ec efe3 6b20 f4e9 e36b e96e 6720 2980 942c 942c 942f 942f
 
@@ -55,5 +110,20 @@ SAMPLE_SCC = """Scenarist_SCC V1.0
 
 
 SAMPLE_SCC_EMPTY = """Scenarist_SCC V1.0
+"""
+
+SAMPLE_SCC_ROLL_UP_RU2 = u"""\
+Scenarist_SCC V1.0
+00:00:00;22	9425 9425 94ad 94ad 9470 9470 3e3e 3e20 c849 ae
+
+00:00:02;23	9425 9425 94ad 94ad 9470 9470 49a7 cd20 cb45 d649 ce20 43d5 cece 49ce c720 c1ce c420 c154
+
+00:00:04;17	9425 9425 94ad 94ad 9470 9470 49ce d645 d354 4f52 a7d3 20c2 c1ce cb20 5745 20c2 454c 4945 d645 2049 ce
+
+00:00:06;04	9425 9425 94ad 94ad 9470 9470 c845 4cd0 49ce c720 54c8 4520 4c4f 43c1 4c20 ce45 49c7 c8c2 4f52 c84f 4fc4 d3
+
+00:00:09;21	9425 9425 94ad 94ad 9470 9470 c1ce c420 49cd d052 4fd6 49ce c720 54c8 4520 4c49 d645 d320 4f46 20c1 4c4c
+
+00:00:11;07	9425 9425 94ad 94ad 9470 9470 5745 20d3 4552 d645 ae
 """
 
