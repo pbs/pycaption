@@ -979,7 +979,7 @@ HEADER = u'Scenarist_SCC V1.0'
 class SCCReader(BaseReader):
     def __init__(self, *args, **kw):
         self.caption_stash = _CaptionStash()
-        self.time = u''
+        self.time_translator = _SccTimeTranslator()
         self.pop_buffer = u''
         self.paint_buffer = u''
         self.last_command = u''
@@ -987,9 +987,7 @@ class SCCReader(BaseReader):
         self.roll_rows_expected = 0
         self.pop_on = False
         self.paint_on = False
-        self.frame_count = 0
         self.simulate_roll_up = False
-        self.offset = 0
 
     def detect(self, content):
         lines = content.splitlines()
@@ -1003,7 +1001,7 @@ class SCCReader(BaseReader):
             raise RuntimeError('The content is not a unicode string.')
 
         self.simulate_roll_up = simulate_roll_up
-        self.offset = offset * 1000000
+        self.time_translator.set_offset(offset * 1000000)
         # split lines
         lines = content.splitlines()
 
@@ -1032,8 +1030,8 @@ class SCCReader(BaseReader):
         r = re.compile(u"([0-9:;]*)([\s\t]*)((.)*)")
         parts = r.findall(line.lower())
 
-        self.time = parts[0][0]
-        self.frame_count = 0
+        self.time_translator.start_at(parts[0][0])
+        # self.frame_count = 0
 
         # loop through each word
         for word in parts[0][2].split(u' '):
@@ -1043,7 +1041,8 @@ class SCCReader(BaseReader):
 
     def _translate_word(self, word):
         # count frames for timing
-        self.frame_count += 1
+        # self.frame_count += 1
+        self.time_translator.increment_frames()
 
         # first check if word is a command
         if word in COMMANDS:
@@ -1126,9 +1125,7 @@ class SCCReader(BaseReader):
 
             # set rows to empty, configure start time for caption
             self.roll_rows = []
-            self.paint_time = self._translate_time(self.time[:-2] +
-                                                   unicode(int(self.time[-2:]) +
-                                                   self.frame_count))
+            self.paint_time = self.time_translator.get_time()
 
         # clear pop_on buffer
         elif word == u'94ae':
@@ -1136,10 +1133,7 @@ class SCCReader(BaseReader):
 
         # display pop_on buffer
         elif word == u'942f' and self.pop_buffer:
-            # configure timestamp, convert and empty buffer
-            self.pop_time = self._translate_time(self.time[:-2] +
-                                                 unicode(int(self.time[-2:]) +
-                                                 self.frame_count))
+            self.pop_time = self.time_translator.get_time()
             self.caption_stash.create_and_store(self.pop_buffer, self.pop_time)
             self.pop_buffer = u''
 
@@ -1159,9 +1153,7 @@ class SCCReader(BaseReader):
             # attempt to add proper end time to last caption
             last_caption = self.caption_stash.get_last()
             if last_caption and last_caption.end == 0:
-                last_time = self._translate_time(self.time[:-2] +
-                                                 unicode(int(self.time[-2:]) +
-                                                 self.frame_count))
+                last_time = self.time_translator.get_time()
                 last_caption.end = last_time
 
         # if command not one of the aforementioned, add to buffer
@@ -1187,31 +1179,6 @@ class SCCReader(BaseReader):
         else:
             self.pop_buffer += CHARACTERS[byte1] + CHARACTERS[byte2]
 
-    # convert SCC timestamp into total microseconds
-    def _translate_time(self, stamp):
-        if u';' in stamp:
-            # Drop-frame timebase runs at the same rate as wall clock
-            seconds_per_timestamp_second = 1.0
-        else:
-            # Non-drop-frame timebase runs "slow"
-            # 1 second of timecode is longer than an actual second (1.001s)
-            seconds_per_timestamp_second = 1001.0 / 1000.0
-
-        timesplit = stamp.replace(u';', u':').split(u':')
-
-        timestamp_seconds = (int(timesplit[0]) * 3600 +
-                             int(timesplit[1]) * 60 +
-                             int(timesplit[2]) +
-                             int(timesplit[3]) / 30.0)
-
-        seconds = timestamp_seconds * seconds_per_timestamp_second
-        microseconds = seconds * 1000 * 1000 - self.offset
-
-        if microseconds < 0:
-            microseconds = 0
-
-        return microseconds
-
     def _roll_up(self):
         if self.simulate_roll_up == False:
             self.roll_rows = []
@@ -1229,15 +1196,12 @@ class SCCReader(BaseReader):
         self.paint_buffer = u''
 
         # configure time
-        self.paint_time = self._translate_time(
-            self.time[:-2] +
-            unicode(int(self.time[-2:]) +
-            self.frame_count))
+        self.paint_time = self.time_translator.get_time()
 
         # try to insert the proper ending time for the previous caption
         try:
             self.caption_stash.get_last().end = self.paint_time
-        except IndexError:
+        except AttributeError:
             pass
 
 
@@ -1519,3 +1483,76 @@ class _CaptionStash(object):
         :rtype: list
         """
         return list(self._collection)
+
+
+class _SccTimeTranslator(object):
+    """Converts SCC time to microseconds, keeping track of frames passed
+    """
+    def __init__(self):
+        self._time = 0
+        self._offset = 0
+        self._frames = 0
+
+    def get_time(self):
+        """Returns the time, in microseconds. Takes into account the number of
+        frames passed, and the offset
+
+        :rtype: int
+        """
+        return self._translate_time(
+            self._time[:-2] + unicode(int(self._time[-2:]) + self._frames),
+            self._offset
+        )
+
+    @staticmethod
+    def _translate_time(stamp, offset):
+        """
+        :param stamp:
+        :type offset: int
+        :param offset: Subtract this many microseconds from the calculated time
+            Helpful for when the captions are off by some time interval.
+        :rtype: int
+        """
+        if u';' in stamp:
+            # Drop-frame timebase runs at the same rate as wall clock
+            seconds_per_timestamp_second = 1.0
+        else:
+            # Non-drop-frame timebase runs "slow"
+            # 1 second of timecode is longer than an actual second (1.001s)
+            seconds_per_timestamp_second = 1001.0 / 1000.0
+
+        timesplit = stamp.replace(u';', u':').split(u':')
+
+        timestamp_seconds = (int(timesplit[0]) * 3600 +
+                             int(timesplit[1]) * 60 +
+                             int(timesplit[2]) +
+                             int(timesplit[3]) / 30.0)
+
+        seconds = timestamp_seconds * seconds_per_timestamp_second
+        microseconds = seconds * 1000 * 1000 - offset
+
+        if microseconds < 0:
+            microseconds = 0
+
+        return microseconds
+
+    def start_at(self, timespec):
+        """Reset the counter to the given time
+
+        :type timespec: unicode
+        """
+        self._time = timespec
+        self._frames = 0
+
+    def set_offset(self, offset):
+        """Sets the offset from which to calculate the time
+
+        :param offset:
+        :return:
+        """
+        self._offset = offset
+
+    def increment_frames(self):
+        """After a command was processed, we'd increment the number of frames
+        """
+        self._frames += 1
