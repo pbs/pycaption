@@ -1021,6 +1021,7 @@ class SCCReader(BaseReader):
         # library was treating incorrectly the Roll-up's. We shouldn't convert
         # the characters in the buffer to a caption, but I'd still do that
         # seeing as though it's legacy behavior.
+        # TODO - Very Very important to do this check for Paint On.
         if self.roll_buffer:
             self._roll_up()
 
