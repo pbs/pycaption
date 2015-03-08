@@ -983,10 +983,12 @@ class SCCReader(BaseReader):
         self.pop_buffer = u''
         self.paint_buffer = u''
         self.last_command = u''
+        self.roll_buffer = u''
         self.roll_rows = []
         self.roll_rows_expected = 0
         self.pop_on = False
         self.paint_on = False
+        self.roll_on = False
         self.simulate_roll_up = False
 
     def detect(self, content):
@@ -1010,7 +1012,16 @@ class SCCReader(BaseReader):
             self._translate_line(line)
 
         # after converting lines, see if anything is left in paint_buffer
-        if self.paint_buffer:
+        # TODO - IMPORTANT!! Pop-Up captions are displayed explicitly (command
+        # 942f [EOC]. Also Roll-up's are explicitly rolled up (with 94ad [CR])
+        # We should however check the paint_buffer for any remaining content
+        # and turn that into a caption, or we'll lose the last line of the
+        # Paint-on captions.
+        # ALSO: because the paint and roll buffer were previously mixed, the
+        # library was treating incorrectly the Roll-up's. We shouldn't convert
+        # the characters in the buffer to a caption, but I'd still do that
+        # seeing as though it's legacy behavior.
+        if self.roll_buffer:
             self._roll_up()
 
         captions = CaptionSet()
@@ -1076,8 +1087,10 @@ class SCCReader(BaseReader):
         # add to buffer
         if self.paint_on:
             self.paint_buffer += SPECIAL_CHARS[word]
-        else:
+        elif self.pop_on:
             self.pop_buffer += SPECIAL_CHARS[word]
+        elif self.roll_on:
+            self.roll_buffer += SPECIAL_CHARS[word]
 
     def _translate_extended_char(self, word):
         # XXX - this looks highly buggy. Why would a special char be ignored
@@ -1090,10 +1103,14 @@ class SCCReader(BaseReader):
             if self.paint_buffer:
                 self.paint_buffer = self.paint_buffer[:-1]
             self.paint_buffer += EXTENDED_CHARS[word]
-        else:
+        elif self.pop_on:
             if self.pop_buffer:
                 self.pop_buffer = self.pop_buffer[:-1]
             self.pop_buffer += EXTENDED_CHARS[word]
+        elif self.roll_on:
+            if self.roll_buffer:
+                self.roll_buffer = self.roll_buffer[:-1]
+            self.roll_buffer += EXTENDED_CHARS[word]
 
     def _translate_command(self, word):
         if self._handle_double_command(word):
@@ -1102,17 +1119,29 @@ class SCCReader(BaseReader):
         # if command is pop_up
         if word == u'9420':
             self.pop_on = True
-            self.paint_on = False
+            self.paint_on = self.roll_on = False
 
-        # if command is paint_on / _roll_up
-        elif word in [u'9429', u'9425', u'9426', u'94a7']:
+        # command is paint_on [Resume Direct Captioning]
+        elif word == u'9429':
             self.paint_on = True
-            self.pop_on = False
+            self.pop_on = self.roll_on = False
+
+            self.roll_rows_expected = 1
+            if self.paint_buffer:
+                self.caption_stash.create_and_store(
+                    self.paint_buffer, self.paint_time
+                )
+                self.paint_buffer = u''
+
+            self.paint_time = self.time_translator.get_time()
+
+        # if command is roll_up 2, 3 or 4 rows
+        elif word in [u'9425', u'9426', u'94a7']:
+            self.roll_on = True
+            self.paint_on = self.pop_on = False
 
             # count how many lines are expected
-            if word == u'9429':
-                self.roll_rows_expected = 1
-            elif word == u'9425':
+            if word == u'9425':
                 self.roll_rows_expected = 2
             elif word == u'9426':
                 self.roll_rows_expected = 3
@@ -1120,37 +1149,37 @@ class SCCReader(BaseReader):
                 self.roll_rows_expected = 4
 
             # if content is in the queue, turn it into a caption
-            if self.paint_buffer:
+            if self.roll_buffer:
                 # convert and empty buffer
                 self.caption_stash.create_and_store(
-                    self.paint_buffer, self.paint_time)
-                self.paint_buffer = u''
+                    self.roll_buffer, self.roll_time)
+                self.roll_buffer = u''
 
             # set rows to empty, configure start time for caption
             self.roll_rows = []
-            self.paint_time = self.time_translator.get_time()
+            self.roll_time = self.time_translator.get_time()
 
         # clear pop_on buffer
         elif word == u'94ae':
             self.pop_buffer = u''
 
-        # display pop_on buffer
+        # display pop_on buffer [End Of Caption]
         elif word == u'942f' and self.pop_buffer:
             self.pop_time = self.time_translator.get_time()
             self.caption_stash.create_and_store(self.pop_buffer, self.pop_time)
             self.pop_buffer = u''
 
-        # roll up captions
+        # roll up captions [Carriage Return]
         elif word == u'94ad':
             # display paint_on buffer
-            if self.paint_buffer:
+            if self.roll_buffer:
                 self._roll_up()
 
         # clear screen
         elif word == u'942c':
             self.roll_rows = []
 
-            if self.paint_buffer:
+            if self.roll_buffer:
                 self._roll_up()
 
             # attempt to add proper end time to last caption
@@ -1164,8 +1193,10 @@ class SCCReader(BaseReader):
             # determine whether the word is a PAC, save it for later
             if self.paint_on:
                 self.paint_buffer += COMMANDS[word]
-            else:
+            elif self.pop_on:
                 self.pop_buffer += COMMANDS[word]
+            elif self.roll_on:
+                self.roll_buffer += COMMANDS[word]
 
     def _translate_characters(self, word):
         # split word into the 2 bytes
@@ -1176,11 +1207,14 @@ class SCCReader(BaseReader):
         if byte1 not in CHARACTERS or byte2 not in CHARACTERS:
             return
 
+        # xxx - Polymorphism means avoiding conditional chains like this
         # if so, add to buffer
         if self.paint_on:
             self.paint_buffer += CHARACTERS[byte1] + CHARACTERS[byte2]
-        else:
+        elif self.pop_on:
             self.pop_buffer += CHARACTERS[byte1] + CHARACTERS[byte2]
+        elif self.roll_on:
+            self.roll_buffer += CHARACTERS[byte1] + CHARACTERS[byte2]
 
     def _roll_up(self):
         if self.simulate_roll_up == False:
@@ -1191,19 +1225,19 @@ class SCCReader(BaseReader):
             self.roll_rows.pop(0)
 
         # add buffer as row to bottom
-        self.roll_rows.append(self.paint_buffer)
-        self.paint_buffer = u' '.join(self.roll_rows)
+        self.roll_rows.append(self.roll_buffer)
+        self.roll_buffer = u' '.join(self.roll_rows)
 
         # convert buffer and empty
-        self.caption_stash.create_and_store(self.paint_buffer, self.paint_time)
-        self.paint_buffer = u''
+        self.caption_stash.create_and_store(self.roll_buffer, self.roll_time)
+        self.roll_buffer = u''
 
         # configure time
-        self.paint_time = self.time_translator.get_time()
+        self.roll_time = self.time_translator.get_time()
 
         # try to insert the proper ending time for the previous caption
         try:
-            self.caption_stash.get_last().end = self.paint_time
+            self.caption_stash.get_last().end = self.roll_time
         except AttributeError:
             pass
 
