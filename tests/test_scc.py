@@ -49,12 +49,20 @@ class CoverageOnlyTestCase(unittest.TestCase):
         actual_texts = [cap_.nodes[0].content for cap_ in captions]
         expected_texts = [u'>>> HI',
                           u"I'M KEVIN CUNNING AND AT",
+                          # Notige the missing 'N' at the end. This is because
+                          # the input is not OK (should only use 4 byte "words"
+                          # (filling in with '80' where only 2 bytes are
+                          # meaningful)
                           u"INVESTOR'S BANK WE BELIEVE I",
                           u'HELPING THE LOCAL NEIGHBORHOOD',
                           u'AND IMPROVING THE LIVES OF ALL',
                           u'WE SERVE',
-                          u'®°½',   # special chars
-                          # - this is how the output should look like
+                          # special chars. Last one should be printer 2 times
+                          # XXX this is a bug.
+                          u'®°½',
+                          # special/ extended chars delete last 0-4 chars.
+                          # XXX - this is a bug.
+                          u'ABû',
                           # u'ÁÉÓ¡',  # extended chars
                           # - this is how it actually looks like.
                           # Therefore we're freezing a bug
@@ -78,7 +86,8 @@ class CoverageOnlyTestCase(unittest.TestCase):
                             (9733333.333333332, 11266666.666666668),
                             (11266666.666666668, 12266666.666666668),
                             (12266666.666666668, 13266666.666666668),
-                            (13266666.666666668, 17066666.666666668),
+                            (13266666.666666668, 14266666.666666668),
+                            (14266666.666666668, 17066666.666666668),
                             (17066666.666666668, 18666666.666666668),
                             (18666666.666666668, 20233333.333333336),
                             (20233333.333333336, 21833333.333333332),
@@ -150,7 +159,9 @@ Scenarist_SCC V1.0
 
 00:00:12;07	9425 9425 94ad 94ad 9470 9470 91b0 9131 9132 9132
 
-00:00:13;07	9425 9425 94ad 94ad 9470 9470 9220 9220 92a1 92a2 92a7
+00:00:13;07	9425 9425 94ad 94ad 9470 9470 c1c2 c3c4 c580 91bf
+
+00:00:14;07	9425 9425 94ad 94ad 9470 9470 9220 9220 92a1 92a2 92a7
 
 00:00:17;01	9426 9426 94ad 94ad 9470 9470 57c8 4552 4520 d94f d5a7 5245 20d3 54c1 cec4 49ce c720 ce4f 572c
 

@@ -1041,7 +1041,6 @@ class SCCReader(BaseReader):
 
     def _translate_word(self, word):
         # count frames for timing
-        # self.frame_count += 1
         self.time_translator.increment_frames()
 
         # first check if word is a command
@@ -1069,6 +1068,8 @@ class SCCReader(BaseReader):
             return False
 
     def _translate_special_char(self, word):
+        # XXX - this looks highly buggy. Why should special chars be ignored
+        # when printed 2 times one after another?
         if self._handle_double_command(word):
             return
 
@@ -1079,6 +1080,8 @@ class SCCReader(BaseReader):
             self.pop_buffer += SPECIAL_CHARS[word]
 
     def _translate_extended_char(self, word):
+        # XXX - this looks highly buggy. Why would a special char be ignored
+        # if it's printed 2 times one after another?
         if self._handle_double_command(word):
             return
 
