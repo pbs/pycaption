@@ -10,6 +10,7 @@ from itertools import product
 from .base import (
     BaseReader, BaseWriter, Caption, CaptionSet, CaptionNode,
 )
+from .geometry import Layout, Point, Size, UnitEnum
 from .exceptions import CaptionReadNoCaptions
 
 
@@ -980,15 +981,22 @@ class SCCReader(BaseReader):
     def __init__(self, *args, **kw):
         self.caption_stash = _CaptionStash()
         self.time_translator = _SccTimeTranslator()
-        self.pop_buffer = u''
-        self.paint_buffer = u''
+
         self.last_command = u''
+
+        self.pop_buffer = _InterpretableNodeBuffer()
+        self.pop_on = False
+        self.pop_time = 0
+
+        self.paint_buffer = u''
+        self.paint_on = False
+        self.paint_time = 0
+
         self.roll_buffer = u''
         self.roll_rows = []
         self.roll_rows_expected = 0
-        self.pop_on = False
-        self.paint_on = False
         self.roll_on = False
+        self.roll_time = 0
         self.simulate_roll_up = False
 
     def detect(self, content):
@@ -1089,7 +1097,7 @@ class SCCReader(BaseReader):
         if self.paint_on:
             self.paint_buffer += SPECIAL_CHARS[word]
         elif self.pop_on:
-            self.pop_buffer += SPECIAL_CHARS[word]
+            self.pop_buffer.add_chars(SPECIAL_CHARS[word])
         elif self.roll_on:
             self.roll_buffer += SPECIAL_CHARS[word]
 
@@ -1105,9 +1113,10 @@ class SCCReader(BaseReader):
                 self.paint_buffer = self.paint_buffer[:-1]
             self.paint_buffer += EXTENDED_CHARS[word]
         elif self.pop_on:
-            if self.pop_buffer:
-                self.pop_buffer = self.pop_buffer[:-1]
-            self.pop_buffer += EXTENDED_CHARS[word]
+            if self.pop_buffer.is_empty():
+                self.pop_buffer.discard_last_letter()
+            # self.pop_buffer += EXTENDED_CHARS[word]
+            self.pop_buffer.add_chars(EXTENDED_CHARS[word])
         elif self.roll_on:
             if self.roll_buffer:
                 self.roll_buffer = self.roll_buffer[:-1]
@@ -1162,13 +1171,13 @@ class SCCReader(BaseReader):
 
         # clear pop_on buffer
         elif word == u'94ae':
-            self.pop_buffer = u''
+            self.pop_buffer.clear()
 
         # display pop_on buffer [End Of Caption]
-        elif word == u'942f' and self.pop_buffer:
+        elif word == u'942f' and not self.pop_buffer.is_empty():
             self.pop_time = self.time_translator.get_time()
             self.caption_stash.create_and_store(self.pop_buffer, self.pop_time)
-            self.pop_buffer = u''
+            self.pop_buffer.clear()
 
         # roll up captions [Carriage Return]
         elif word == u'94ad':
@@ -1195,7 +1204,7 @@ class SCCReader(BaseReader):
             if self.paint_on:
                 self.paint_buffer += COMMANDS[word]
             elif self.pop_on:
-                self.pop_buffer += COMMANDS[word]
+                self.pop_buffer.add_command(COMMANDS[word])
             elif self.roll_on:
                 self.roll_buffer += COMMANDS[word]
 
@@ -1213,7 +1222,8 @@ class SCCReader(BaseReader):
         if self.paint_on:
             self.paint_buffer += CHARACTERS[byte1] + CHARACTERS[byte2]
         elif self.pop_on:
-            self.pop_buffer += CHARACTERS[byte1] + CHARACTERS[byte2]
+            # self.pop_buffer += CHARACTERS[byte1] + CHARACTERS[byte2]
+            self.pop_buffer.add_chars(CHARACTERS[byte1], CHARACTERS[byte2])
         elif self.roll_on:
             self.roll_buffer += CHARACTERS[byte1] + CHARACTERS[byte2]
 
@@ -1409,6 +1419,9 @@ class _CaptionStash(object):
         :type text_buffer: unicode
         :type start: int
         """
+        if isinstance(text_buffer, _InterpretableNodeBuffer):
+            return self._create_and_store_from_buffer(text_buffer, start)
+
         caption = Caption()
         caption.start = start
         caption.end = 0  # Not yet known; filled in later
@@ -1450,6 +1463,63 @@ class _CaptionStash(object):
                 # add text
                 caption.nodes.append(
                     CaptionNode.create_text(u' '.join(element.split())))
+                # no longer first element
+                first_element = False
+
+        # close any open italics left over
+        if open_italic:
+            caption.nodes.append(
+                CaptionNode.create_style(False, {u'italics': True}))
+
+        # remove extraneous italics tags in the same caption
+        self._remove_italics(caption)
+
+        self._collection.append(caption)
+
+    def _create_and_store_from_buffer(self, node_buffer, start):
+        caption = Caption()
+        caption.start = start
+        caption.end = 0  # Not yet known; filled in later
+
+        open_italic = False
+        first_element = True
+
+        for element in node_buffer:
+            # skip empty elements
+            if element.is_empty():
+                continue
+
+            # handle line breaks
+            elif element.is_explicit_break():
+                new_captions, open_italic = (
+                    self._translate_break(
+                        caption, first_element, open_italic)
+                )
+                caption.nodes.extend(new_captions)
+
+            # handle open italics
+            elif element.sets_italics_on():
+                # add italics
+                caption.nodes.append(
+                    CaptionNode.create_style(True, {u'italics': True}))
+                # open italics, no longer first element
+                open_italic = True
+                first_element = False
+
+            # handle clone italics
+            elif element.sets_italics_off() and open_italic:
+                caption.nodes.append(
+                    CaptionNode.create_style(False, {u'italics': True}))
+                open_italic = False
+
+            # handle text
+            else:
+                # add text
+                caption.nodes.append(
+                    CaptionNode.create_text(
+                        u' '.join(element.split()),
+                        layout_info=_get_layout_info(element.position)),
+                )
                 # no longer first element
                 first_element = False
 
@@ -1585,8 +1655,9 @@ class _SccTimeTranslator(object):
     def set_offset(self, offset):
         """Sets the offset from which to calculate the time
 
-        :param offset:
-        :return:
+        :param offset: number of microseconds. will be deducted when
+            calculating the time
+        :type offset: int
         """
         self._offset = offset
 
@@ -1594,3 +1665,79 @@ class _SccTimeTranslator(object):
         """After a command was processed, we'd increment the number of frames
         """
         self._frames += 1
+
+
+class _InterpretableNodeBuffer(object):
+    """Mutable collection of _InterpretableNodes
+    """
+    def __init__(self):
+        self._collection = []
+        self._current_node = None
+
+    def clear(self):
+        """Resets the buffer
+        """
+        self._collection = []
+
+    def is_empty(self):
+        """Whether any text was added to the buffer
+        """
+        return any(element.text for element in self._collection)
+
+    def discard_last_letter(self):
+        """Haven't understood why this would be used. Anyway, it's legacy
+        behavior, but it generates bugs and I can't see a reason for it
+        """
+        pass
+
+    def add_chars(self, *args):
+        """Adds these characters to the current node being processed
+
+        :param args: iterable containing characters (unicode)
+        """
+        pass
+
+    def add_command(self, command):
+        """Interprets the given scc command. Will alter the state of the nodes
+        created after this method was called.
+
+        :param command:
+        """
+        pass
+
+
+class _InterpretableNode(object):
+    """Value object, that can contain text information, or interpretable
+    commands (such as explicit line breaks or turning italics on/off)
+    """
+    _types = {0: u'text', 1: u'break', 2: u'italics-on', 3: u'italics-off'}
+
+    def __init__(self, text=None, position=None, type_=0):
+        """
+        :type text: unicode
+        :param position:  tuple of ints: (row, col)
+        :type position: tuple
+        :param type_: a key from the self._types dictionary
+        :type type_: int
+        """
+        self.text = text
+        self.position = position
+        self._type = type_
+
+
+def _get_layout_info(position_tuple):
+    """Create a Layout object from the positioning information given
+
+    The row can have a value from 1 to 15 inclusive. (vertical positioning)
+    Toe column can have a value from 0 to 31 inclusive. (horizontal)
+
+    :param position_tuple: a tuple of ints (row, col)
+    :type position_tuple: tuple
+    :rtype: Layout
+    """
+    if not position_tuple:
+        return None
+
+    horizontal = Size(100 * column / 32.0, UnitEnum.PERCENT)
+    vertical = Size(100 * row / 15.0, UnitEnum.PERCENT)
+    return Point(horizontal, vertical)
