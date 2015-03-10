@@ -63,9 +63,9 @@ class CoverageOnlyTestCase(unittest.TestCase):
                           # special/ extended chars delete last 0-4 chars.
                           # XXX - this is a bug.
                           u'ABû',
-                          # u'ÁÉÓ¡',  # extended chars
+                          # XXX - bug
+                          # u'ÁÉÓ¡',  # extended chars <- should look like this
                           # - this is how it actually looks like.
-                          # Therefore we're freezing a bug
                           u'{break}<$¡',
                           u"WHERE YOU'RE STANDING NOW,",
                           u"LOOKING OUT THERE, THAT'S AL",
