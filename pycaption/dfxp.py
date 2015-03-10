@@ -266,7 +266,7 @@ class DFXPWriter(BaseWriter):
                 div.append(p)
 
             body.append(div)
-
+        self.region_creator.cleanup_regions()
         caption_content = dfxp.prettify(formatter=None)
         return caption_content
 
@@ -575,7 +575,7 @@ class LayoutInfoScraper(object):
         styling_section = document.findChild('styling')
 
         nested_styles = []
-        for style in element.findAll('style'):
+        for style in element.findChildren('style', recursive=False):
             nested_styles.extend(
                 cls._get_style_reference_chain(style, styling_section)
             )
@@ -644,7 +644,8 @@ class LayoutInfoScraper(object):
         element itself.
 
         If the attributes can't be determined, default values are returned
-        (where such values exist)
+        (where such values exist) - XXX this is incorrect. No default values
+        should be provided.
 
         :param element: BeautifulSoup Tag or NavigableString
         :type even_invalid: bool
@@ -672,8 +673,13 @@ class LayoutInfoScraper(object):
         # specified on the element itself (only <p> nodes matter)
         # On elements like <span> it is also read, because this was legacy
         # behavior.
+        if getattr(element, u'name', None) in (u'span', u'p'):
+            text_align_source = element
+        else:
+            text_align_source = None
+
         text_align = (
-            self._find_attribute(element, u'tts:textAlign')
+            self._find_attribute(text_align_source, u'tts:textAlign')
             or _create_external_horizontal_alignment(
                 DFXP_DEFAULT_REGION.alignment.horizontal
             )
@@ -688,11 +694,38 @@ class LayoutInfoScraper(object):
 
         return origin, extent, padding, alignment
 
+    def _find_attribute_on_element_or_styles(self, attribute_name, element,
+                                             factory, ignore, ignorecase):
+        """Look up the given attribute on the element, and all the styles
+        referenced by it.
+
+        :type attribute_name: unicode
+        :param element: BeautifulSoup Tag or NavigableString
+        :param factory: a function, to apply to the xml attribute
+        :param ignore: a list of values to ignore
+        :type ignore: list
+        :param ignorecase: Whether to ignore the casing
+        :type ignorecase: bool
+        :return: The result of applying the `factory` to the found attribute
+            value, or None
+        """
+        value = _get_object_from_attribute(
+            element, attribute_name, factory, ignore, ignorecase
+        )
+        if value is None:
+            # Does a referenced style of the element have it?
+            for style in self._get_style_sources(self.document, element):
+                value = _get_object_from_attribute(
+                    style, attribute_name, factory, ignore, ignorecase
+                )
+                if value:
+                    break
+        return value
+
     def _find_attribute(self, element, attribute_name, factory=lambda x: x,
                         ignore=(), ignorecase=True):
-        """Try to find the `attribute_name` specified on the element,
-        on its styles, its assigned region, its region's styles and their
-        referenced styles.
+        """Try to find the `attribute_name` specified on the element, all its
+        parents and all their styles (and referenced styles).
 
         :param element: BeautifulSoup Tag or NavigableString
         :type attribute_name: unicode
@@ -709,35 +742,25 @@ class LayoutInfoScraper(object):
         """
         value = None
 
-        # Does the element itself have this inline?
+        # Does the element itself have it inline, or any of its styles?
         if element:
-            value = _get_object_from_attribute(
-                element, attribute_name, factory, ignore, ignorecase
-            )
+            value = self._find_attribute_on_element_or_styles(
+                attribute_name, element, factory, ignore, ignorecase)
+
             if value is None:
-                # Does a referenced style of the element have it?
-                for style in self._get_style_sources(self.document, element):
-                    value = _get_object_from_attribute(
-                        style, attribute_name, factory, ignore, ignorecase
+                # Do any of the element's parents have the attribute?
+                for parent in element.parents:
+                    value = self._find_attribute_on_element_or_styles(
+                        attribute_name, parent, factory, ignore, ignorecase
                     )
                     if value:
                         break
 
-        # Does self.region have the attribute?
+        # Does self.region or any of its styles have it?
         if value is None:
-            value = _get_object_from_attribute(
-                self.region, attribute_name, factory, ignore, ignorecase
+            value = self._find_attribute_on_element_or_styles(
+                attribute_name, self.region, factory, ignore, ignorecase
             )
-
-        # Do any of the region's styles have the attribute?
-        if value is None:
-            for style in self.region_styles:
-                value = _get_object_from_attribute(
-                    style, attribute_name, factory, ignore, ignorecase
-                )
-                # get the first value met in the style chain
-                if value:
-                    break
 
         return value
 
@@ -798,6 +821,7 @@ class RegionCreator(object):
         self._caption_set = caption_set
         self._region_map = {}
         self._id_seed = 0
+        self._assigned_region_ids = set()
 
     @staticmethod
     def _collect_unique_regions(caption_set, ignore_region):
@@ -941,18 +965,30 @@ class RegionCreator(object):
 
         positioning_attributes = _convert_layout_to_attributes(layout_info)
 
+        # Mark the region as having been assigned, so we can perform cleanup
+        self._assigned_region_ids.add(region_id)
+
         return region_id, positioning_attributes
+
+    def cleanup_regions(self):
+        """Remove the unused regions from the output file
+        """
+        layout_tag = self._dfxp.find(u'layout')
+        if not layout_tag:
+            return
+
+        regions = layout_tag.findChildren(u'region')
+        if not regions:
+            return
+
+        for region in regions:
+            if region.attrs.get(u'xml:id') not in self._assigned_region_ids:
+                region.extract()
 
 
 def _recreate_style(content, dfxp):
     dfxp_style = {}
 
-    # TODO - don't really know, but the 'region' check might possibly have to
-    # be excluded. Regions are handled by the specialized classes now. They're
-    # not treated as styling info.
-    if u'region' in content:
-        if dfxp.find(u'region', {u'xml:id': content[u'region']}):
-            dfxp_style[u'region'] = content[u'region']
     if u'class' in content:
         if dfxp.find(u"style", {u"xml:id": content[u'class']}):
             dfxp_style[u'style'] = content[u'class']

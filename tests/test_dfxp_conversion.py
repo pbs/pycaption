@@ -119,7 +119,6 @@ class DFXPtoDFXPTestCase(DFXPConversionTestCase, DFXPTestingMixIn):
         caption_set = DFXPReader().read(
             SAMPLE_DFXP_STYLE_TAG_WITH_NO_XML_ID_INPUT)
         result = DFXPWriter().write(caption_set)
-
         self.assertEqual(result, SAMPLE_DFXP_STYLE_TAG_WITH_NO_XML_ID_OUTPUT)
 
 
@@ -191,8 +190,11 @@ SAMPLE_DFXP_INVALID_BUT_SUPPORTED_POSITIONING_INPUT = u"""\
    <p tts:origin="20% 15.67%" tts:extent="30% 7.67%" begin="0:00:05.700" end="0:00:06.210">
    How are you?<span tts:origin="1px 2px">>>Fine, thx<<</span>
    </p>
-   <p tts:extent="60% 22%" begin="0:00:07.900" end="0:00:07.900" tts:textAlign="right" tts:displayAlign="before">
+   <p tts:extent="60% 22%" begin="0:00:07.900" end="0:00:08.900" tts:textAlign="right" tts:displayAlign="before">
    Just fine?
+   </p>
+   <p tts:origin="11% 11%" begin="0:00:09.900" end="0:00:10.800">
+    <span weirdAttribute="1" tts:textAlign="right">>>>Lol, yes!</span>
    </p>
   </div>
  </body>
@@ -209,8 +211,10 @@ SAMPLE_DFXP_INVALID_BUT_SUPPORTED_POSITIONING_OUTPUT = u"""\
    <region tts:displayAlign="after" tts:textAlign="center" xml:id="bottom"/>
    <region tts:displayAlign="after" tts:extent="62.5% 5.33%" tts:origin="17.5% 10%" tts:textAlign="center" xml:id="r0"/>
    <region tts:displayAlign="after" tts:extent="30% 7.67%" tts:origin="20% 15.67%" tts:textAlign="center" xml:id="r1"/>
-   <region tts:displayAlign="after" tts:origin="1px 2px" tts:textAlign="center" xml:id="r2"/>
+   <region tts:displayAlign="after" tts:extent="30% 7.67%" tts:origin="1px 2px" tts:textAlign="center" xml:id="r2"/>
    <region tts:displayAlign="before" tts:extent="60% 22%" tts:textAlign="right" xml:id="r3"/>
+   <region tts:displayAlign="after" tts:origin="11% 11%" tts:textAlign="center" xml:id="r5"/>
+   <region tts:displayAlign="after" tts:origin="11% 11%" tts:textAlign="right" xml:id="r6"/>
   </layout>
  </head>
  <body>
@@ -219,10 +223,13 @@ SAMPLE_DFXP_INVALID_BUT_SUPPORTED_POSITIONING_OUTPUT = u"""\
     Hello there!
    </p>
    <p begin="00:00:05.700" end="00:00:06.210" region="r1" style="p" tts:displayAlign="after" tts:extent="30% 7.67%" tts:origin="20% 15.67%" tts:textAlign="center">
-    How are you? <span region="r2" tts:origin="1px 2px" tts:textAlign="center" tts:displayAlign="after">&gt;&gt;Fine, thx&lt;&lt;</span>
+    How are you? <span region="r2" tts:origin="1px 2px" tts:textAlign="center" tts:extent="30% 7.67%" tts:displayAlign="after">&gt;&gt;Fine, thx&lt;&lt;</span>
    </p>
-   <p begin="00:00:07.900" end="00:00:07.900" region="r3" style="p" tts:displayAlign="before" tts:extent="60% 22%" tts:textAlign="right">
+   <p begin="00:00:07.900" end="00:00:08.900" region="r3" style="p" tts:displayAlign="before" tts:extent="60% 22%" tts:textAlign="right">
     Just fine?
+   </p>
+   <p begin="00:00:09.900" end="00:00:10.800" region="r5" style="p" tts:displayAlign="after" tts:origin="11% 11%" tts:textAlign="center">
+    <span tts:textAlign="right" region="r6" tts:origin="11% 11%" tts:textAlign="right" tts:displayAlign="after">&gt;&gt;&gt;Lol, yes!</span>
    </p>
   </div>
  </body>
@@ -419,7 +426,7 @@ SAMPLE_DFXP_STYLE_TAG_WITH_NO_XML_ID_INPUT = u"""\
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling">
  <head>
   <styling>
-   <style tts:color="#ffeedd" tts:fontFamily="Arial" tts:fontSize="10pt" tts:textAlign="center" xml:id="p"/>
+   <style tts:color="#ffeedd" tts:fontFamily="Arial" tts:fontSize="10pt" xml:id="p"/>
   </styling>
   <layout>
    <region tts:displayAlign="after" tts:textAlign="center" xml:id="bottom"/>
@@ -448,7 +455,7 @@ SAMPLE_DFXP_STYLE_TAG_WITH_NO_XML_ID_OUTPUT = u"""\
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling">
  <head>
   <styling>
-   <style tts:color="#ffeedd" tts:fontFamily="Arial" tts:fontSize="10pt" tts:textAlign="center" xml:id="p"/>
+   <style tts:color="#ffeedd" tts:fontFamily="Arial" tts:fontSize="10pt" xml:id="p"/>
   </styling>
   <layout>
    <region tts:displayAlign="after" tts:textAlign="center" xml:id="bottom"/>
@@ -457,7 +464,7 @@ SAMPLE_DFXP_STYLE_TAG_WITH_NO_XML_ID_OUTPUT = u"""\
  </head>
  <body>
   <div region="bottom" xml:lang="en-US">
-   <p begin="00:00:09.209" end="00:00:12.312" region="bottom" style="p">
+   <p begin="00:00:09.209" end="00:00:12.312" region="r0" style="p">
     ( clock ticking )
    </p>
    <p begin="00:00:14.848" end="00:00:17.000" region="bottom" style="p">
@@ -468,4 +475,3 @@ SAMPLE_DFXP_STYLE_TAG_WITH_NO_XML_ID_OUTPUT = u"""\
   </div>
  </body>
 </tt>"""
-
