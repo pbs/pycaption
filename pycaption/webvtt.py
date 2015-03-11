@@ -176,11 +176,10 @@ class WebVTTWriter(BaseWriter):
 
         self.global_layout = caption_set.get_layout_info(lang)
 
-        for caption in caption_set.get_captions(lang):
-            output += self._write_caption(caption)
-            output += u'\n'
+        captions = caption_set.get_captions(lang)
 
-        return output
+        return output + u'\n'.join(
+            [self._write_caption(caption) for caption in captions])
 
     def _timestamp(self, ts):
         ts = float(ts) / 1000000
@@ -237,10 +236,14 @@ class WebVTTWriter(BaseWriter):
             cue_width = layout.extent.horizontal
 
         if layout.padding:
-            # Since there is no padding in WebVTT, the left padding is added
-            # to the total left offset (if it is defined and not relative),
             if layout.padding.start and left_offset:
-                left_offset += layout.padding.start
+                # Since there is no padding in WebVTT, the left padding is added
+                # to the total left offset (if it is defined and not relative),
+                if left_offset:
+                    left_offset += layout.padding.start
+                # and removed from the total cue width
+                if cue_width:
+                    cue_width -= layout.padding.start
             # the right padding is cut out of the total cue width,
             if layout.padding.end and cue_width:
                 cue_width -= layout.padding.end
@@ -294,8 +297,6 @@ class WebVTTWriter(BaseWriter):
                     already_appended = True
                     current_layout = node.layout_info
                     s = u''
-#                 esse = s
-#                 import ipdb; ipdb.set_trace()
                 s += node.content or u'&nbsp;'
             elif node.type_ == CaptionNode.STYLE:
                 # TODO: Ignoring style so far.

@@ -392,7 +392,6 @@ It's all about an eternal Einstein.
 
 00:32.200 --> 00:36.200
 <LAUGHING & WHOOPS!>
-
 """
 
 SAMPLE_WEBVTT_OUTPUT = """WEBVTT
@@ -424,7 +423,6 @@ It's all about an eternal Einstein.
 
 00:32.200 --> 00:36.200
 <LAUGHING & WHOOPS!>
-
 """
 
 SAMPLE_WEBVTT_FROM_DFXP = """WEBVTT
@@ -456,7 +454,22 @@ It's all about an eternal Einstein.
 
 00:32.200 --> 00:36.200 align:middle
 <LAUGHING & WHOOPS!>
+"""
 
+SAMPLE_WEBVTT_FROM_DFXP_WITH_POSITIONING = """WEBVTT
+
+00:01.000 --> 00:03.000 position:25%,start line:25% size:50%
+You might not remember us. We are a typical transparent region with centered text that has an outline.
+
+00:03.500 --> 00:05.000 align:right position:25%,start line:25% size:50%
+had personality.
+
+00:05.500 --> 00:07.000 align:left position:50%,start line:50% size:25%
+Hello there, children! Have you seen any visitors?
+
+00:07.500 --> 00:09.000 align:right position:25%,start line:75% size:25%
+This is
+the last cue
 """
 
 SAMPLE_WEBVTT_2 = """WEBVTT
@@ -589,7 +602,6 @@ SAMPLE_DFXP_UTF8 = """
  </body>
 </tt>"""
 
-
 SAMPLE_DFXP_WITHOUT_REGION_AND_STYLE = """
 <?xml version="1.0" encoding="utf-8"?>
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml"
@@ -681,6 +693,40 @@ SAMPLE_DFXP = """\
  </body>
 </tt>"""
 
+SAMPLE_DFXP_WITH_POSITIONING = """<?xml version="1.0" encoding="utf-8"?>
+<tt xml:lang="en-us"
+    xmlns="http://www.w3.org/ns/ttml"
+    xmlns:tts='http://www.w3.org/ns/ttml#styling'
+    >
+<head>
+    <styling>
+        <style xml:id="padded" tts:backgroundColor="yellow" tts:padding="10%"/>
+    </styling>
+    <layout>
+        <region xml:id="regionOne" tts:textAlign='middle' tts:origin='15% 15%' tts:extent='70% 25%' style="padded"/>
+        <region xml:id="regionTwo" tts:backgroundColor="blue" tts:textAlign='right' tts:origin='25% 25%' tts:extent='50% 10%'/>
+        <region xml:id="regionThree" tts:backgroundColor="green" tts:textAlign='left' tts:origin='50% 50%' tts:extent='25% 25%'/>
+        <region xml:id="regionFour" tts:backgroundColor="red" tts:textAlign='right' tts:origin='25% 75%' tts:extent='25% 25%'/>
+    </layout>
+</head>
+<body>
+    <div>
+        <p region="regionOne" tts:backgroundColor="black" begin='00:00:01.000' end='00:00:03.000'>
+        You might not remember us. We are a typical transparent region with centered text that has an outline.
+        </p>
+        <p region="regionTwo" begin='00:00:03.500' end='00:00:05.000'>
+        had <span tts:textDecoration="underline">personality.</span>
+        </p>
+        <p region="regionThree" begin='00:00:05.500' end='00:00:07.000'>
+        Hello there, children! Have you seen any visitors?
+        </p>
+        <p region="regionFour" begin='00:00:07.500' end='00:00:09.000'>
+        This is<br/>
+        the last cue
+        </p>
+    </div>
+</body>
+</tt>"""
 
 SAMPLE_DFXP_EMPTY = """
 <?xml version="1.0" encoding="utf-8"?>
@@ -759,5 +805,4 @@ MAN:
 &nbsp;
 When we think
 of "E equals m c-squared",
-
 """

@@ -8,7 +8,6 @@ class WebVTTTestingMixIn(object):
     """
 
     def _extract_webvtt_captions(self, content):
-        # import ipdb; ipdb.set_trace()
         return tuple(line.strip() for line in content.splitlines())
 
     def assertWebVTTEquals(self, first, second):
