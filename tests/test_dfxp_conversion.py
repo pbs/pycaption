@@ -16,7 +16,7 @@ from .samples import (
 from .mixins import (
     SRTTestingMixIn, SAMITestingMixIn, DFXPTestingMixIn, WebVTTTestingMixIn)
 
-from tests.samples import SAMPLE_WEBVTT_OUTPUT
+from tests.samples import SAMPLE_WEBVTT_FROM_DFXP
 
 
 class DFXPConversionTestCase(unittest.TestCase):
@@ -164,12 +164,12 @@ class DFXPtoWebVTTTestCase(DFXPConversionTestCase, WebVTTTestingMixIn):
     def test_dfxp_to_webvtt_conversion(self):
         results = WebVTTWriter().write(self.captions_utf8)
         self.assertTrue(isinstance(results, unicode))
-        self.assertWebVTTEquals(SAMPLE_WEBVTT_OUTPUT.decode(u'utf-8'), results)
+        self.assertWebVTTEquals(SAMPLE_WEBVTT_FROM_DFXP.decode(u'utf-8'), results)
 
     def test_dfxp_to_webvtt_unicode_conversion(self):
         results = WebVTTWriter().write(self.captions_unicode)
         self.assertTrue(isinstance(results, unicode))
-        self.assertWebVTTEquals(SAMPLE_WEBVTT_OUTPUT.decode(u'utf-8'), results)
+        self.assertWebVTTEquals(SAMPLE_WEBVTT_FROM_DFXP.decode(u'utf-8'), results)
 
 SAMPLE_DFXP_INVALID_BUT_SUPPORTED_POSITIONING_INPUT = u"""\
 <?xml version="1.0" encoding="utf-8"?>

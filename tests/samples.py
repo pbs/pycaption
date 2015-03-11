@@ -427,6 +427,38 @@ It's all about an eternal Einstein.
 
 """
 
+SAMPLE_WEBVTT_FROM_DFXP = """WEBVTT
+
+00:09.209 --> 00:12.312 align:middle
+( clock ticking )
+
+00:14.848 --> 00:17.000 align:middle
+MAN:
+When we think
+♪ ...say bow, wow, ♪
+
+00:17.000 --> 00:18.752 align:right
+we have this vision of Einstein
+
+00:18.752 --> 00:20.887 align:middle
+&nbsp;
+as an old, wrinkly man
+with white hair.
+
+00:20.887 --> 00:26.760 align:middle
+MAN 2:
+E equals m c-squared is
+not about an old Einstein.
+
+00:26.760 --> 00:32.200 align:middle
+MAN 2:
+It's all about an eternal Einstein.
+
+00:32.200 --> 00:36.200 align:middle
+<LAUGHING & WHOOPS!>
+
+"""
+
 SAMPLE_WEBVTT_2 = """WEBVTT
 
 1

@@ -8,7 +8,8 @@ from .exceptions import (
     CaptionReadError, CaptionReadSyntaxError,
     CaptionReadNoCaptions
 )
-
+from pycaption.geometry import UnitEnum, Size
+import ic
 
 TIMING_PATTERN = re.compile(u'^(.+?) --> (.+)')
 TIMESTAMP_PATTERN = re.compile(u'^(\d+):(\d{2})(:\d{2})?\.(\d{3})')
@@ -17,6 +18,15 @@ OTHER_SPAN_PATTERN = (
     re.compile(u'</?([cibuv]|ruby|rt|lang|(\d+):(\d{2})(:\d{2})?\.(\d{3})).*?>')
 )  # These WebVTT tags are stripped off the cues on conversion
 
+WEBVTT_VERSION_OF = {
+    u'left': u'left',
+    u'center': u'middle',
+    u'right': u'right',
+    u'start': u'start',
+    u'end': u'end'
+}
+
+DEFAULT_ALIGNMENT = u'middle'
 
 def microseconds(h, m, s, f):
     return (int(h) * 3600 + int(m) * 60 + int(s)) * 1000000 + int(f) * 1000
@@ -122,8 +132,8 @@ class WebVTTReader(BaseReader):
 
         return caption
 
-    def _parse_timestamp(self, input):
-        m = TIMESTAMP_PATTERN.search(input)
+    def _parse_timestamp(self, timestamp):
+        m = TIMESTAMP_PATTERN.search(timestamp)
         if not m:
             return None
 
@@ -139,11 +149,18 @@ class WebVTTReader(BaseReader):
 
 class WebVTTWriter(BaseWriter):
     HEADER = u'WEBVTT\n\n'
+    global_layout = None
+    video_width = None
+    video_height = None
 
-    def __init__(self, *args, **kw):
-        pass
+    def __init__(self, *args, **kwargs):
+        self.video_width = kwargs.pop('video_width', None)
+        self.video_height = kwargs.pop('video_height', None)
 
     def write(self, caption_set):
+        """
+        :type caption_set: CaptionSet
+        """
         output = self.HEADER
 
         if caption_set.is_empty():
@@ -156,6 +173,9 @@ class WebVTTWriter(BaseWriter):
         # WebVTT's language support seems to be a bit crazy, so let's just
         # support a single one for now.
         lang = caption_set.get_languages()[0]
+
+        self.global_layout = caption_set.get_layout_info(lang)
+
         for caption in caption_set.get_captions(lang):
             output += self._write_caption(caption)
             output += u'\n'
@@ -163,45 +183,129 @@ class WebVTTWriter(BaseWriter):
         return output
 
     def _timestamp(self, ts):
-        ts = float(ts)/1000000
-        hours = int(ts)/60/60
-        minutes = int(ts)/60 - hours*60
-        seconds = ts - hours*60*60 - minutes*60
+        ts = float(ts) / 1000000
+        hours = int(ts) / 60 / 60
+        minutes = int(ts) / 60 - hours * 60
+        seconds = ts - hours * 60 * 60 - minutes * 60
         if hours:
             return u"%02d:%02d:%06.3f" % (hours, minutes, seconds)
         else:
             return u"%02d:%06.3f" % (minutes, seconds)
 
-    def _write_caption(self, sub):
-        start = self._timestamp(sub.start)
-        end = self._timestamp(sub.end)
+    def _write_caption(self, caption):
+        """
+        :type caption: Caption
+        """
+        layout_groups = self._layout_groups(caption.nodes)
 
-        output = u"%s --> %s\n" % (start, end)
+        start = self._timestamp(caption.start)
+        end = self._timestamp(caption.end)
+        timespan = u"%s --> %s" % (start, end)
 
-        output += self._convert_nodes(sub.nodes)
-        output += u'\n'
+        output = u''
+
+        for cue_text, layout in layout_groups:
+            if not layout:
+                layout = caption.layout_info or self.global_layout
+
+            cue_settings = self._cue_settings_from(layout)
+            output += timespan + cue_settings + u'\n'
+            output += cue_text + u'\n'
 
         return output
 
-    def _convert_nodes(self, nodes):
-        """Convert a Caption's nodes to text.
+    def _cue_settings_from(self, layout):
+        """
+        :type layout: Layout
+        """
+        if not layout:
+            return u''
+
+        left_offset = None
+        top_offset = None
+        cue_width = None
+        alignment = None
+
+        # Ensure that all positioning values are measured using percentage
+        layout.to_percentage_of(self.video_width, self.video_height)
+
+        if layout.origin:
+            left_offset = layout.origin.x
+            top_offset = layout.origin.y
+
+        if layout.extent:
+            cue_width = layout.extent.horizontal
+
+        if layout.padding:
+            # Since there is no padding in WebVTT, the left padding is added
+            # to the total left offset (if it is defined and not relative),
+            if layout.padding.start and left_offset:
+                left_offset += layout.padding.start
+            # the right padding is cut out of the total cue width,
+            if layout.padding.end and cue_width:
+                cue_width -= layout.padding.end
+            # the top padding is added to the top offset
+            # (if it is defined and not relative)
+            if layout.padding.before and top_offset:
+                top_offset += layout.padding.before
+            # and the bottom padding is ignored because the cue box is only as
+            # long vertically as the text it contains and nothing can be cut out
+
+        try:
+            alignment = WEBVTT_VERSION_OF[layout.alignment.horizontal]
+        except KeyError:
+            pass
+
+        cue_settings = u''
+
+        if alignment:
+            cue_settings += u" align:" + alignment
+        if left_offset:
+            cue_settings += u" position:{},start".format(unicode(left_offset))
+        if top_offset:
+            cue_settings += u" line:" + unicode(top_offset)
+        if cue_width:
+            cue_settings += u" size:" + unicode(cue_width)
+
+        return cue_settings
+
+    def _layout_groups(self, nodes):
+        """
+        Convert a Caption's nodes to WebVTT cue or cues (depending on
+        whether they have the same positioning or not).
         """
         if not nodes:
-            return u'&nbsp;'
+            return []
 
+        current_layout = nodes[0].layout_info
+
+        # A list with layout groups. Since WebVTT only support positioning
+        # for different cues, each layout group has to be represented in a
+        # new cue with the same timing but different positioning settings.
+        layout_groups = []
         s = u''
-
         for i, node in enumerate(nodes):
+            already_appended = False
             if node.type_ == CaptionNode.TEXT:
+                if s and not node.layout_info == current_layout:
+                    # If the positioning changes from one node to another,
+                    # another WebVTT cue has to be created.
+                    layout_groups.append((s, current_layout))
+                    already_appended = True
+                    current_layout = node.layout_info
+                    s = u''
+#                 esse = s
+#                 import ipdb; ipdb.set_trace()
                 s += node.content or u'&nbsp;'
             elif node.type_ == CaptionNode.STYLE:
                 # TODO: Ignoring style so far.
                 pass
             elif node.type_ == CaptionNode.BREAK:
-                if i > 0 and nodes[i-1].type_ == CaptionNode.BREAK:
+                if i > 0 and nodes[i - 1].type_ == CaptionNode.BREAK:
                     s += u'&nbsp;'
                 if i == 0:
                     s += u'&nbsp;'
                 s += u'\n'
-
-        return s
+        if not already_appended:
+            layout_groups.append((s, current_layout))
+        return layout_groups

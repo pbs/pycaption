@@ -14,13 +14,13 @@ class UnitEnum(Enum):
     Usage:
         unit = UnitEnum.PIXEL
         unit = UnitEnum.EM
-        if unit == UnitEnum.CHARACTER :
+        if unit == UnitEnum.CELL :
             ...
     """
     PIXEL = u'px'
     EM = u'em'
     PERCENT = u'%'
-    CHARACTER = u'c'
+    CELL = u'c'
 
 
 class VerticalAlignmentEnum(Enum):
@@ -101,9 +101,12 @@ class TwoDimensionalObject(object):
 
         return cls(horizontal, vertical)
 
+    def to_percentage_of(self, video_width, video_height):
+        self._to_percentage_of(video_width, video_height)
+
 
 class Stretch(TwoDimensionalObject):
-    """Used for specifying the extent of a rectangle (hot much it stretches),
+    """Used for specifying the extent of a rectangle (how much it stretches),
     or the padding in a rectangle (how much space should be left empty until
     text can be displayed)
     """
@@ -161,6 +164,13 @@ class Stretch(TwoDimensionalObject):
             horizontal=self.horizontal.to_xml_attribute(),
             vertical=self.vertical.to_xml_attribute()
         )
+
+    def to_percentage_of(self, video_width, video_height):
+        """
+        Converts absolute units (e.g. px, pt etc) to percentage
+        """
+        self.horizontal.to_percentage_of(video_width=video_width)
+        self.vertical.to_percentage_of(video_height=video_height)
 
 
 class Region(object):
@@ -263,6 +273,13 @@ class Point(TwoDimensionalObject):
         """
         return Point(self.x + stretch.horizontal, self.y + stretch.vertical)
 
+    def to_percentage_of(self, video_width, video_height):
+        """
+        Converts absolute units (e.g. px, pt etc) to percentage
+        """
+        self.x.to_percentage_of(video_width=video_width)
+        self.y.to_percentage_of(video_height=video_height)
+
     @classmethod
     def align_from_origin(cls, p1, p2):
         """Returns a tuple of 2 points. The first is closest to the origin
@@ -345,6 +362,45 @@ class Size(object):
     def __add__(self, other):
         if self.unit == other.unit:
             return Size(self.value + other.value, self.unit)
+        else:
+            raise ValueError(u"The sizes should have the same measure units.")
+
+    def to_percentage_of(self, video_width=None, video_height=None):
+        """
+        :param video_width: An integer representing a width in pixels
+        :param video_height: An integer representing a height in pixels
+        """
+        if self.unit == UnitEnum.PERCENT:
+            return  # Nothing to do here
+
+        # The input must be valid so that any conversion can be done
+        if not (video_width or video_height):
+            raise ValueError(
+                u"Either video width or height must be given as a reference")
+        elif video_width and video_height:
+            raise ValueError(
+                u"Only video width or height can be given as reference")
+
+        if self.unit == UnitEnum.EM:
+            # TODO: Implement proper conversion of em in function of font-size
+            # The em unit is relative to the font-size, to which we currently
+            # have no access. As a workaround, we presume the font-size is 16px,
+            # which is a common default value but not guaranteed.
+            self.value *= 16
+            self.unit = UnitEnum.PIXEL
+
+        if self.unit == UnitEnum.PIXEL:
+            self.value = self.value * 100 / (video_width or video_height)
+            self.unit = UnitEnum.PERCENT
+
+        if self.unit == UnitEnum.CELL:
+            # TODO: Implement proper cell resolution
+            # (w3.org/TR/ttaf1-dfxp/#parameter-attribute-cellResolution)
+            # For now we will use the default values (32 columns and 15 rows)
+            cell_reference = 32 if video_width else 15
+            self.value = self.value * 100 / cell_reference
+            self.unit = UnitEnum.PERCENT
+        return self
 
     @classmethod
     # TODO - this also looks highly cachable. Should use a WeakValueDict here
@@ -357,7 +413,7 @@ class Size(object):
         :type string: unicode
         :rtype: Size
         """
-        units = [UnitEnum.CHARACTER, UnitEnum.PERCENT, UnitEnum.PIXEL,
+        units = [UnitEnum.CELL, UnitEnum.PERCENT, UnitEnum.PIXEL,
                  UnitEnum.EM]
 
         raw_number = string
@@ -396,10 +452,13 @@ class Size(object):
             value=self.value, unit=self.unit
         )
 
+    def __unicode__(self):
+        return u"{}{}".format(self.value, self.unit)
+
     def to_xml_attribute(self, **kwargs):
         """Returns a unicode representation of this object, as an xml attribute
         """
-        return u"{value}{unit}".format(unit=self.unit, value=self.value)
+        return unicode(self)
 
     def serialized(self):
         """Returns the "useful" values of this object"""
@@ -534,6 +593,16 @@ class Padding(object):
 
         return u' '.join(string_list)
 
+    def to_percentage_of(self, video_width, video_height):
+        if self.before:
+            self.before.to_percentage_of(video_height=video_height)
+        if self.after:
+            self.after.to_percentage_of(video_height=video_height)
+        if self.start:
+            self.start.to_percentage_of(video_width=video_width)
+        if self.end:
+            self.end.to_percentage_of(video_width=video_width)
+
 
 class Layout(object):
     """Should encapsulate all the information needed to determine (as correctly
@@ -597,3 +666,8 @@ class Layout(object):
             + hash(self.alignment) * 5
             + 17
         )
+
+    def to_percentage_of(self, video_width, video_height):
+        for attr in [self.origin, self.extent, self.padding]:
+            if attr:
+                attr.to_percentage_of(video_width, video_height)
