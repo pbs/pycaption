@@ -1,3 +1,5 @@
+import re
+
 from bs4 import BeautifulSoup, NavigableString
 from xml.sax.saxutils import escape
 
@@ -126,9 +128,13 @@ class DFXPReader(BaseReader):
     def _translate_tag(self, tag):
         # convert text
         if isinstance(tag, NavigableString):
-            if tag.strip() != u'':
+            # strips indentation whitespace only
+            pattern = re.compile(u"^(?:\n\s*)?(.+)")
+            result = pattern.search(tag)
+            if result:
+                tag_text = result.groups()[0]
                 node = CaptionNode.create_text(
-                    tag.strip(), layout_info=tag.layout_info)
+                    tag_text, layout_info=tag.layout_info)
                 self.nodes.append(node)
         # convert line breaks
         elif tag.name == u'br':
