@@ -174,7 +174,9 @@ class DFXPtoWebVTTTestCase(DFXPConversionTestCase, WebVTTTestingMixIn):
         self.assertWebVTTEquals(SAMPLE_WEBVTT_FROM_DFXP.decode(u'utf-8'), results)
 
     def test_dfxp_with_positioning_to_webvtt_conversion(self):
-        results = WebVTTWriter().write(self.captions_with_positioning)
+        results = WebVTTWriter(
+            video_width=638, video_height=360
+        ).write(self.captions_with_positioning)
         self.assertTrue(isinstance(results, unicode))
         self.assertWebVTTEquals(
             SAMPLE_WEBVTT_FROM_DFXP_WITH_POSITIONING.decode(u'utf-8'), results)

@@ -703,7 +703,7 @@ SAMPLE_DFXP_WITH_POSITIONING = """<?xml version="1.0" encoding="utf-8"?>
         <style xml:id="padded" tts:backgroundColor="yellow" tts:padding="10%"/>
     </styling>
     <layout>
-        <region xml:id="regionOne" tts:textAlign='middle' tts:origin='15% 15%' tts:extent='70% 25%' style="padded"/>
+        <region xml:id="regionOne" tts:textAlign='middle' tts:origin='96px 54px' tts:extent='70% 25%' style="padded"/>
         <region xml:id="regionTwo" tts:backgroundColor="blue" tts:textAlign='right' tts:origin='25% 25%' tts:extent='50% 10%'/>
         <region xml:id="regionThree" tts:backgroundColor="green" tts:textAlign='left' tts:origin='50% 50%' tts:extent='25% 25%'/>
         <region xml:id="regionFour" tts:backgroundColor="red" tts:textAlign='right' tts:origin='25% 75%' tts:extent='25% 25%'/>
