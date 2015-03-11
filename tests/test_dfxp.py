@@ -46,7 +46,6 @@ class DFXPReaderTestCase(unittest.TestCase):
             SAMPLE_DFXP_INVALID_POSITIONING_VALUE_TEMPLATE
             .format(origin=u"6foo 7bar")
         )
-
         self.assertRaises(
             CaptionReadSyntaxError, DFXPReader().read,
             invalid_dfxp
