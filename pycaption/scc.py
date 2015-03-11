@@ -12,6 +12,7 @@ from .base import (
 )
 from .geometry import Layout, Point, Size, UnitEnum
 from .exceptions import CaptionReadNoCaptions
+from pycaption.exceptions import CaptionReadSyntaxError
 
 
 COMMANDS = {
@@ -937,31 +938,42 @@ PAC_BYTES_TO_POSITIONING_MAP = {
     }
 }
 
+
+def _create_position_to_bytes_map(bytes_to_pos):
+    result = {}
+    for highbyte, lowbyte_dict in bytes_to_pos.items():
+
+        # must contain mappings to column, to the tuple of possible values
+        for lowbyte_list in lowbyte_dict.keys():
+            column = bytes_to_pos[highbyte][lowbyte_list][1]
+
+            row = bytes_to_pos[highbyte][lowbyte_list][0]
+            if row not in result:
+                result[row] = {}
+
+            result[row][column] = (
+                tuple(product([highbyte], lowbyte_list)))
+    return result
+
 # (Almost) the reverse of PAC_BYTES_TO_POSITIONING_MAP. Call with arguments
 # like for example [15][4] to get the tuple ((u'94', u'f2'), (u'94', u'73'))
-POSITIONING_TO_PAC_MAP = {}
-for highbyte, lowbyte_dict in PAC_BYTES_TO_POSITIONING_MAP.items():
-    column_dict = {}
+POSITIONING_TO_PAC_MAP = _create_position_to_bytes_map(
+    PAC_BYTES_TO_POSITIONING_MAP
+)
 
-    # must contain mappings to column, to the tuple of possible values
-    for lowbyte_list in lowbyte_dict.keys():
-        column = PAC_BYTES_TO_POSITIONING_MAP[highbyte][lowbyte_list][1]
 
-        row = PAC_BYTES_TO_POSITIONING_MAP[highbyte][lowbyte_list][0]
-        if row not in POSITIONING_TO_PAC_MAP:
-            POSITIONING_TO_PAC_MAP[row] = {}
-
-        POSITIONING_TO_PAC_MAP[row][column] = (
-            tuple(product([highbyte], lowbyte_list)))
+def _restructure_bytes_to_position_map(byte_to_pos_map):
+    return {
+        k_: {
+            lowbyte: byte_to_pos_map[k_][lowbyte_list]
+            for lowbyte_list in v_.keys() for lowbyte in lowbyte_list
+        }
+        for k_, v_ in byte_to_pos_map.items()
+    }
 
 # Now use the dict with arguments like [u'91'][u'75'] directly.
-PAC_BYTES_TO_POSITIONING_MAP = {
-    k_: {
-        lowbyte: PAC_BYTES_TO_POSITIONING_MAP[k_][lowbyte_list]
-        for lowbyte_list in v_.keys() for lowbyte in lowbyte_list
-    }
-    for k_, v_ in PAC_BYTES_TO_POSITIONING_MAP.items()
-}
+PAC_BYTES_TO_POSITIONING_MAP = _restructure_bytes_to_position_map(
+    PAC_BYTES_TO_POSITIONING_MAP)
 
 
 # Inverted character lookup
@@ -984,7 +996,7 @@ class SCCReader(BaseReader):
 
         self.last_command = u''
 
-        self.pop_buffer = _InterpretableNodeBuffer()
+        self.pop_buffer = _InterpretableNodeStash()
         self.pop_on = False
         self.pop_time = 0
 
@@ -1114,7 +1126,7 @@ class SCCReader(BaseReader):
             self.paint_buffer += EXTENDED_CHARS[word]
         elif self.pop_on:
             if self.pop_buffer.is_empty():
-                self.pop_buffer.discard_last_letter()
+                self.pop_buffer.discard_last_char()
             # self.pop_buffer += EXTENDED_CHARS[word]
             self.pop_buffer.add_chars(EXTENDED_CHARS[word])
         elif self.roll_on:
@@ -1171,13 +1183,13 @@ class SCCReader(BaseReader):
 
         # clear pop_on buffer
         elif word == u'94ae':
-            self.pop_buffer.clear()
+            self.pop_buffer = _InterpretableNodeStash()
 
         # display pop_on buffer [End Of Caption]
-        elif word == u'942f' and not self.pop_buffer.is_empty():
+        elif word == u'942f':
             self.pop_time = self.time_translator.get_time()
             self.caption_stash.create_and_store(self.pop_buffer, self.pop_time)
-            self.pop_buffer.clear()
+            self.pop_buffer = _InterpretableNodeStash()
 
         # roll up captions [Carriage Return]
         elif word == u'94ad':
@@ -1416,10 +1428,10 @@ class _CaptionStash(object):
         """Creates a Caption from the text buffer and the start, storing it
         internally
 
-        :type text_buffer: unicode
+        :type text_buffer: unicode | _InterpretableNodeStash
         :type start: int
         """
-        if isinstance(text_buffer, _InterpretableNodeBuffer):
+        if isinstance(text_buffer, _InterpretableNodeStash):
             return self._create_and_store_from_buffer(text_buffer, start)
 
         caption = Caption()
@@ -1477,6 +1489,14 @@ class _CaptionStash(object):
         self._collection.append(caption)
 
     def _create_and_store_from_buffer(self, node_buffer, start):
+        """
+
+        :type node_buffer: _InterpretableNodeStash
+        :type start: int
+        """
+        if node_buffer.is_empty():
+            return
+
         caption = Caption()
         caption.start = start
         caption.end = 0  # Not yet known; filled in later
@@ -1518,7 +1538,7 @@ class _CaptionStash(object):
                 caption.nodes.append(
                     CaptionNode.create_text(
                         u' '.join(element.split()),
-                        layout_info=_get_layout_info(element.position)),
+                        layout_info=_get_layout_from_tuple(element.position)),
                 )
                 # no longer first element
                 first_element = False
@@ -1667,41 +1687,122 @@ class _SccTimeTranslator(object):
         self._frames += 1
 
 
-class _InterpretableNodeBuffer(object):
-    """Mutable collection of _InterpretableNodes
+class _InterpretableNodeStash(object):
+    """Creates _InterpretableNode instances from characters and commands,
+    and stores them internally in a buffer.
     """
     def __init__(self):
         self._collection = []
-        self._current_node = None
-
-    def clear(self):
-        """Resets the buffer
-        """
-        self._collection = []
+        self._position_builder = _PositioningBuilder()
 
     def is_empty(self):
         """Whether any text was added to the buffer
         """
-        return any(element.text for element in self._collection)
+        return not any(element.text for element in self._collection)
 
-    def discard_last_letter(self):
+    def discard_last_char(self):
         """Haven't understood why this would be used. Anyway, it's legacy
         behavior, but it generates bugs and I can't see a reason for it
         """
         pass
 
-    def add_chars(self, *args):
-        """Adds these characters to the current node being processed
+    def add_chars(self, *chars):
+        """Adds characters to a text node (last text node, or a new one)
 
-        :param args: iterable containing characters (unicode)
+        :param chars: iterable containing characters (unicode)
+        """
+        # get or create a usable node
+        if self._collection and self._collection[-1].is_text_node():
+            node = self._collection[-1]
+        else:
+            node = _InterpretableNode(position_builder=self._position_builder)
+            self._collection.append(node)
+
+        # add chars to current or new node
+        if self._position_builder.is_node_reusable(node):
+            pass
+        elif self._position_builder.is_breakline_enough(node):
+            # must insert a line break here
+            self._collection.append(_InterpretableNode.create_break())
+            node = _InterpretableNode.create_text(self._position_builder)
+            self._collection.append(node)
+        else:
+            # this node will have a different positioning than the previos one
+            node = _InterpretableNode.create_text(self._position_builder)
+            self._collection.append(node)
+
+        node.add_chars(*chars)
+
+    def switch_italics(self, on=True):
+        """Marks whether the next text nodes will be written in italics
+
+        :param on: whether to turn italics on or off
+        :type on: bool
         """
         pass
 
-    def add_command(self, command):
-        """Interprets the given scc command. Will alter the state of the nodes
-        created after this method was called.
+    def add_positioning(self, positioning):
+        """Sets the positioning information for the following nodes
 
-        :param command:
+        :type positioning: tuple[int]
+        """
+        self._position_builder.add_positioning(positioning)
+
+    def __iter__(self):
+        return iter(self._collection)
+
+
+class _PositioningBuilder(object):
+    """Helps determine the positioning of a node, having kept track of
+    positioning-related commands.
+    """
+    def __init__(self, positioning=None):
+        """
+        :param positioning: positioning information
+        :type positioning: tuple[int]
+        :return:
+        """
+        self._current = [positioning]
+
+    def add_positioning(self, positioning):
+        current = self._current[-1]
+
+        if not current and not positioning:
+            return
+
+        if not self._current:
+            return
+
+        row, col = self._current
+        new_row, new_col = positioning
+
+        if new_col == col + 1:
+            # increment vertically the current pos
+            pass
+
+    def get_current_position(self):
+        """
+        :rtype: tuple[int]
+        """
+        if not any(self._current):
+            raise CaptionReadSyntaxError(
+                u'No Preamble Address Code [PAC] was provided'
+            )
+
+    def is_node_reusable(self, node):
+        """Determines whether the current node has positioning information that
+        agrees with the state of the builder.
+
+        :type node:_InterpretableNode
+        :rtype: bool
+        """
+        pass
+
+    def is_breakline_enough(self, node):
+        """If the current should simply be displayed below the last one
+
+        :type node: _InterpretableNode
+        :rtype: bool
         """
         pass
 
@@ -1710,22 +1811,59 @@ class _InterpretableNode(object):
     """Value object, that can contain text information, or interpretable
     commands (such as explicit line breaks or turning italics on/off)
     """
-    _types = {0: u'text', 1: u'break', 2: u'italics-on', 3: u'italics-off'}
+    TEXT = 0
+    BREAK = 1
+    ITALICS = 2
 
-    def __init__(self, text=None, position=None, type_=0):
+    def __init__(self, text=None, position_builder=None, type_=0):
         """
         :type text: unicode
-        :param position:  tuple of ints: (row, col)
-        :type position: tuple
-        :param type_: a key from the self._types dictionary
+        :param position_builder:  tuple of ints: (row, col)
+        :type position_builder: _PositioningBuilder
+        :param type_: self.TEXT | self.BREAK | self.ITALICS
         :type type_: int
         """
         self.text = text
-        self.position = position
+        if position_builder:
+            self.position = position_builder.get_current_position()
+        else:
+            self.position = None
         self._type = type_
 
+    def add_chars(self, *args):
+        """This being a text node, add characters to it.
+        :param args:
+        :type args: tuple[unicode]
+        :return:
+        """
+        if self.text is None:
+            self.text = u''
 
-def _get_layout_info(position_tuple):
+        self.text += u''.join(args)
+
+    def is_text_node(self):
+        return self._type == self.TEXT
+
+    @classmethod
+    def create_break(cls):
+        return cls(type_=cls.BREAK)
+
+    @classmethod
+    def create_text(cls, position_builder, *chars):
+        return cls(u''.join(chars), position_buffer=position_builder)
+
+
+def _get_italics_state_from_command(command):
+    """
+    :type command: unicode
+    :rtype: bool
+    """
+    if u'italic' in command:
+        return True
+    return False
+
+
+def _get_layout_from_tuple(position_tuple):
     """Create a Layout object from the positioning information given
 
     The row can have a value from 1 to 15 inclusive. (vertical positioning)
@@ -1737,6 +1875,8 @@ def _get_layout_info(position_tuple):
     """
     if not position_tuple:
         return None
+
+    row, column = position_tuple
 
     horizontal = Size(100 * column / 32.0, UnitEnum.PERCENT)
     vertical = Size(100 * row / 15.0, UnitEnum.PERCENT)
