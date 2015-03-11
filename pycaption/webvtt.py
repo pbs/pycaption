@@ -209,7 +209,7 @@ class WebVTTWriter(BaseWriter):
 
             cue_settings = self._cue_settings_from(layout)
             output += timespan + cue_settings + u'\n'
-            output += cue_text + u'\n'
+            output += self._escape_special_characters(cue_text) + u'\n'
 
         return output
 
@@ -310,3 +310,17 @@ class WebVTTWriter(BaseWriter):
         if not already_appended:
             layout_groups.append((s, current_layout))
         return layout_groups
+
+    def _escape_special_characters(self, s):
+        """
+        :type s: unicode
+        """
+        # TODO: Fix XML-like readers and make it unescape XML codes (e.g. &amp; -> &).
+        # Once this is done this code can be uncommented.
+        # s = s.replace(u'&', u'&amp;')
+        # s = s.replace(u'<', u'&lt;')
+        # s = s.replace(u'>', u'&gt;')
+        # s = s.replace(u'\u200e', u'&lrm;')
+        # s = s.replace(u'\u200f', u'&rlm;')
+        # s = s.replace(u'\u00a0', u'&nbsp;')
+        return s
