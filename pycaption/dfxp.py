@@ -73,8 +73,6 @@ class DFXPReader(BaseReader):
                         parent_.name for parent_ in style.parents]:
                     captions.add_style(id_, self._translate_style(style))
 
-        captions = self._combine_matching_captions(captions)
-
         if captions.is_empty():
             raise CaptionReadNoCaptions(u"empty caption file")
 
@@ -198,27 +196,6 @@ class DFXPReader(BaseReader):
             elif arg == u"tts:color":
                 attrs[u'color'] = dfxp_attrs[arg]
         return attrs
-
-    # TODO - fairly confident that this should be removed now (or redone),
-    # since the positioning was added, since positioning can't simply be
-    # merged. Must find the reason for this in the first place
-    # Merge together captions that have the same start/end times.
-    def _combine_matching_captions(self, caption_set):
-        for lang in caption_set.get_languages():
-            captions = caption_set.get_captions(lang)
-            new_caps = captions[:1]
-
-            for caption in captions[1:]:
-                if (caption.start == new_caps[-1].start
-                        and caption.end == new_caps[-1].end):
-                    new_caps[-1].nodes.append(CaptionNode.create_break())
-                    new_caps[-1].nodes.extend(caption.nodes)
-                else:
-                    new_caps.append(caption)
-
-            caption_set.set_captions(lang, new_caps)
-
-        return caption_set
 
 
 class DFXPWriter(BaseWriter):

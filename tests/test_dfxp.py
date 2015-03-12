@@ -51,6 +51,41 @@ class DFXPReaderTestCase(unittest.TestCase):
             invalid_dfxp
         )
 
+    def test_individual_timings_of_captions_with_matching_timespec_are_kept(self):  # noqa
+        captionset = DFXPReader().read(
+            SAMPLE_DFXP_MULTIPLE_CAPTIONS_WITH_THE_SAME_TIMING
+        )
+        expected_timings = [(9209000, 12312000)] * 3
+        actual_timings = [(c_.start, c_.end) for c_ in
+                          captionset.get_captions('en-US')]
+        self.assertEqual(expected_timings, actual_timings)
+
+    def test_individual_texts_of_captions_with_matching_timespec_are_kept(self):  # noqa
+        captionset = DFXPReader().read(
+            SAMPLE_DFXP_MULTIPLE_CAPTIONS_WITH_THE_SAME_TIMING
+        )
+
+        expected_texts = [u'Some text here',
+                          u'Some text there',
+                          u'Caption texts are everywhere!']
+        actual_texts = [c_.nodes[0].content for c_ in
+                        captionset.get_captions("en-US")]
+
+        self.assertEqual(expected_texts, actual_texts)
+
+    def test_individual_layouts_of_captions_with_matching_timespec_are_kept(self):  # noqa
+        captionset = DFXPReader().read(
+            SAMPLE_DFXP_MULTIPLE_CAPTIONS_WITH_THE_SAME_TIMING
+        )
+        expected_layouts = [
+            (((10, u'%'), (10, u'%')), None, None, (u'center', u'bottom')),
+            (((40, u'%'), (40, u'%')), None, None, (u'center', u'bottom')),
+            (((10, u'%'), (70, u'%')), None, None, (u'center', u'bottom'))]
+        actual_layouts = [c_.layout_info.serialized() for c_ in
+                          captionset.get_captions('en-US')]
+
+        self.assertEqual(expected_layouts, actual_layouts)
+
 SAMPLE_DFXP_INVALID_POSITIONING_VALUE_TEMPLATE = u"""\
 <?xml version="1.0" encoding="utf-8"?>
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling">
@@ -63,6 +98,31 @@ SAMPLE_DFXP_INVALID_POSITIONING_VALUE_TEMPLATE = u"""\
   <div region="bottom" xml:lang="en-US">
    <p begin="00:00:09.209" end="00:00:12.312" region="bottom">
     ( clock ticking )
+   </p>
+  </div>
+ </body>
+</tt>"""
+
+SAMPLE_DFXP_MULTIPLE_CAPTIONS_WITH_THE_SAME_TIMING = u"""\
+<?xml version="1.0" encoding="utf-8"?>
+<tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling">
+ <head>
+  <layout>
+   <region tts:origin="10% 10%" xml:id="b1"/>
+   <region tts:origin="40% 40%" xml:id="b2"/>
+   <region tts:origin="10% 70%" xml:id="b3"/>
+  </layout>
+ </head>
+ <body>
+  <div region="bottom" xml:lang="en-US">
+   <p begin="00:00:09.209" end="00:00:12.312" region="b1">
+    Some text here
+   </p>
+   <p begin="00:00:09.209" end="00:00:12.312" region="b2">
+    Some text there
+   </p>
+   <p begin="00:00:09.209" end="00:00:12.312" region="b3">
+    Caption texts are everywhere!
    </p>
   </div>
  </body>
