@@ -1693,7 +1693,7 @@ class _InterpretableNodeStash(object):
     """
     def __init__(self):
         self._collection = []
-        self._position_builder = _PositioningBuilder()
+        self._position_builder = _PositioningTracer()
 
     def is_empty(self):
         """Whether any text was added to the buffer
@@ -1752,13 +1752,13 @@ class _InterpretableNodeStash(object):
         return iter(self._collection)
 
 
-class _PositioningBuilder(object):
+class _PositioningTracer(object):
     """Helps determine the positioning of a node, having kept track of
     positioning-related commands.
     """
     def __init__(self, positioning=None):
         """
-        :param positioning: positioning information
+        :param positioning: positioning information (row, column)
         :type positioning: tuple[int]
         :return:
         """
@@ -1819,7 +1819,7 @@ class _InterpretableNode(object):
         """
         :type text: unicode
         :param position_builder:  tuple of ints: (row, col)
-        :type position_builder: _PositioningBuilder
+        :type position_builder: _PositioningTracer
         :param type_: self.TEXT | self.BREAK | self.ITALICS
         :type type_: int
         """
