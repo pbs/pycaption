@@ -82,13 +82,13 @@ Positioning
 ^^^^^^^^^^^
 
 The WebVTT specs allow customizing the position of cues by configuring a
-number of cue settings. ``pycaption`` supports the following settings:
+number of cue settings. ``pycaption`` currently only *maintains positioning
+information on writing*, in which case it supports the following settings:
 
--  A WebVTT line position cue setting.\*
--  A WebVTT text position cue setting.\*
+-  A WebVTT line position cue setting.
+-  A WebVTT text position cue setting.
 -  A WebVTT size cue setting.
 -  A WebVTT alignment cue setting.
-\* *The optional parameters preceded by a comma are not supported.*
 
 ``pycaption`` **does not** support:
 

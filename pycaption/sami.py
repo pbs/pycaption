@@ -20,7 +20,7 @@ log.setLevel(FATAL)
 SAMI_BASE_MARKUP = u'''
 <sami>
     <head>
-        <style type_="text/css"/>
+        <style type="text/css"/>
     </head>
     <body/>
 </sami>'''
