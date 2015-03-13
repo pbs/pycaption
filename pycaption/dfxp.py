@@ -207,7 +207,7 @@ class DFXPReader(BaseReader):
 class DFXPWriter(BaseWriter):
     def __init__(self, *args, **kw):
         self.write_inline_positioning = kw.get(
-            'write_inline_positioning', False)
+            u'write_inline_positioning', False)
         self.p_style = False
         self.open_span = False
         self.region_creator = None
@@ -373,7 +373,7 @@ class LayoutAwareDFXPParser(BeautifulSoup):
     # to save memory
     NO_POSITIONING_INFO = None
 
-    def __init__(self, markup=u"", features="html.parser", builder=None,
+    def __init__(self, markup=u"", features=u"html.parser", builder=None,
                  parse_only=None, from_encoding=None,
                  read_invalid_positioning=False, **kwargs):
         """The `features` param determines the parser to be used. The parsers
@@ -427,7 +427,7 @@ class LayoutAwareDFXPParser(BeautifulSoup):
         region_id = None
         parent = element.parent
         while parent:
-            region_id = parent.get('region')
+            region_id = parent.get(u'region')
             if region_id:
                 break
             parent = parent.parent
@@ -441,12 +441,12 @@ class LayoutAwareDFXPParser(BeautifulSoup):
         could be different. If this happens, discard region data
         """
         # element might be a NavigableString, not a Tag.
-        if not hasattr(element, 'findChildren'):
+        if not hasattr(element, u'findChildren'):
             return None
 
         region_id = None
         child_region_ids = {
-            child.get('region') for child in element.findChildren()
+            child.get(u'region') for child in element.findChildren()
         }
         if len(child_region_ids) > 1:
             raise LookupError
@@ -470,8 +470,8 @@ class LayoutAwareDFXPParser(BeautifulSoup):
         # element could be a NavigableString. Those are dumb.
         region_id = None
 
-        if hasattr(element, 'get'):
-            region_id = element.get('region')
+        if hasattr(element, u'get'):
+            region_id = element.get(u'region')
 
         if not region_id:
             region_id = cls._get_region_from_ancestors(element)
@@ -525,14 +525,16 @@ class LayoutInfoScraper(object):
         :param region: the region tag
         """
         self.region = region
-        self.document = document
+        self._styling_section = document.findChild(u'styling')
         if region:
-            self.region_styles = self._get_style_sources(document, region)
+            self.region_styles = self._get_style_sources(
+                self._styling_section, region)
         else:
             self.region_styles = []
+        self.root_element = document.find(u'tt')
 
     @classmethod
-    def _get_style_sources(cls, document, element):
+    def _get_style_sources(cls, styling_section, element):
         """Returns a list, containing  tags, in the order they should be
         evaluated, for determining layout information.
 
@@ -552,23 +554,30 @@ class LayoutInfoScraper(object):
         styling
         """
         # If we're analyzing a NavigableString, just quit
-        if not hasattr(element, 'findAll'):
+        if not hasattr(element, u'findAll'):
             return ()
 
-        styling_section = document.findChild('styling')
-
         nested_styles = []
-        for style in element.findChildren('style', recursive=False):
-            nested_styles.extend(
-                cls._get_style_reference_chain(style, styling_section)
-            )
 
-        referenced_style_id = element.get('style')
+        # <div> tags have a huge number of children, with highly unlikely
+        # <style> tags among them. Looping through all of them as is, would
+        # make the DFXP parser freeze for a long time, so we skip this step
+        # if the parent is a <div> tag. Technically, this step shouldn't be
+        # skipped, but it would make the reader read in O(n^2) (half an hour
+        # for 1500 timed captions)
+        if element.name not in (u'div', u'body', u'tt'):
+            for style in element.contents:
+                if getattr(style, u'name', None) == u'style':
+                    nested_styles.extend(
+                        cls._get_style_reference_chain(style, styling_section)
+                    )
+
+        referenced_style_id = element.get(u'style')
 
         referenced_styles = []
         if referenced_style_id and styling_section:
             referenced_style = styling_section.findChild(
-                'style', {'xml:id': referenced_style_id}
+                u'style', {u'xml:id': referenced_style_id}
             )
 
             referenced_styles = (
@@ -596,11 +605,11 @@ class LayoutInfoScraper(object):
         if not styling_tag:
             return result
 
-        reference = style.get('style')
+        reference = style.get(u'style')
 
         if reference:
             referenced_styles = styling_tag.findChildren(
-                'style', {'xml:id': reference}
+                u'style', {u'xml:id': reference}
             )
 
             if len(referenced_styles) == 1:
@@ -697,7 +706,8 @@ class LayoutInfoScraper(object):
         )
         if value is None:
             # Does a referenced style of the element have it?
-            for style in self._get_style_sources(self.document, element):
+            for style in self._get_style_sources(
+                    self._styling_section, element):
                 value = _get_object_from_attribute(
                     style, attribute_name, factory, ignore, ignorecase
                 )
@@ -760,7 +770,7 @@ class LayoutInfoScraper(object):
 
         # Does the root 'tt' element have it?
         if extent is None:
-            root = self.document.find(u'tt')
+            root = self.root_element
             extent = _get_object_from_attribute(
                 root, u'tts:extent', Stretch.from_xml_attribute
             )
@@ -1120,7 +1130,7 @@ def _get_object_from_attribute(tag, attr_name, factory,
     :param ignore_vals: iterable of attribute values to ignore
     :raise CaptionReadSyntaxError: if the attribute has some crazy value
     """
-    if not hasattr(tag, 'has_attr'):
+    if not hasattr(tag, u'has_attr'):
         return
 
     attr_value = None
