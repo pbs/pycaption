@@ -8,8 +8,6 @@ from .exceptions import (
     CaptionReadError, CaptionReadSyntaxError,
     CaptionReadNoCaptions
 )
-from pycaption.geometry import UnitEnum, Size
-import ic
 
 TIMING_PATTERN = re.compile(u'^(.+?) --> (.+)')
 TIMESTAMP_PATTERN = re.compile(u'^(\d+):(\d{2})(:\d{2})?\.(\d{3})')
@@ -30,7 +28,6 @@ DEFAULT_ALIGNMENT = u'middle'
 
 def microseconds(h, m, s, f):
     return (int(h) * 3600 + int(m) * 60 + int(s)) * 1000000 + int(f) * 1000
-
 
 class WebVTTReader(BaseReader):
     def __init__(self, ignore_timing_errors=True, *args, **kwargs):
