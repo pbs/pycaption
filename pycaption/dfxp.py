@@ -127,7 +127,7 @@ class DFXPReader(BaseReader):
         # convert text
         if isinstance(tag, NavigableString):
             # strips indentation whitespace only
-            pattern = re.compile(u"^(?:\n\s*)?(.+)")
+            pattern = re.compile(u"^(?:[\n\r]+\s*)?(.+)")
             result = pattern.search(tag)
             if result:
                 tag_text = result.groups()[0]
