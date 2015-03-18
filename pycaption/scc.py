@@ -1216,7 +1216,7 @@ class SCCReader(BaseReader):
             if self.paint_on:
                 self.paint_buffer += COMMANDS[word]
             elif self.pop_on:
-                self.pop_buffer.add_command(COMMANDS[word])
+                self.pop_buffer.interpret_command(COMMANDS[word])
             elif self.roll_on:
                 self.roll_buffer += COMMANDS[word]
 
@@ -1693,7 +1693,7 @@ class _InterpretableNodeStash(object):
     """
     def __init__(self):
         self._collection = []
-        self._position_builder = _PositioningTracer()
+        self._position_tracer = _PositioningTracer()
 
     def is_empty(self):
         """Whether any text was added to the buffer
@@ -1701,8 +1701,10 @@ class _InterpretableNodeStash(object):
         return not any(element.text for element in self._collection)
 
     def discard_last_char(self):
-        """Haven't understood why this would be used. Anyway, it's legacy
-        behavior, but it generates bugs and I can't see a reason for it
+        """This was previously used to discard a mid-row command, but generated
+        a bug, by confusing special/extended characters with mid-row commands.
+        This method should only discard the last character if it's a mid-row
+        command, and it's equal to the current command
         """
         pass
 
@@ -1711,42 +1713,56 @@ class _InterpretableNodeStash(object):
 
         :param chars: iterable containing characters (unicode)
         """
+        current_position = self._position_tracer.get_current_position()
+
         # get or create a usable node
         if self._collection and self._collection[-1].is_text_node():
             node = self._collection[-1]
         else:
-            node = _InterpretableNode(position_builder=self._position_builder)
+            node = _InterpretableNode(position=current_position)
             self._collection.append(node)
 
         # add chars to current or new node
-        if self._position_builder.is_node_reusable(node):
+        if self._position_tracer.is_node_reusable(node):
             pass
-        elif self._position_builder.is_breakline_enough(node):
+        elif self._position_tracer.is_breakline_enough(node):
             # must insert a line break here
             self._collection.append(_InterpretableNode.create_break())
-            node = _InterpretableNode.create_text(self._position_builder)
+            node = _InterpretableNode.create_text(current_position)
             self._collection.append(node)
         else:
-            # this node will have a different positioning than the previos one
-            node = _InterpretableNode.create_text(self._position_builder)
+            # this node will have a different positioning than the previous one
+            node = _InterpretableNode.create_text(current_position)
             self._collection.append(node)
 
         node.add_chars(*chars)
 
-    def switch_italics(self, on=True):
-        """Marks whether the next text nodes will be written in italics
+    def interpret_command(self, command):
+        """Given a command determines whether tu turn italics on or off
 
-        :param on: whether to turn italics on or off
-        :type on: bool
+        This is mostly used to convert from the legacy-style commands
+
+        :type command: unicode
         """
-        pass
+        if u'<$>{italic}<$>' in command:
+            self._collection.append(
+                _InterpretableNode.create_italics_style(
+                    self._position_tracer.get_current_position())
+            )
+        elif u'<$>{end-italic}<$>' in command:
+            self._collection.append(
+                _InterpretableNode.create_italics_style(
+                    self._position_tracer.get_current_position(),
+                    on=False
+                )
+            )
 
     def add_positioning(self, positioning):
         """Sets the positioning information for the following nodes
 
         :type positioning: tuple[int]
         """
-        self._position_builder.add_positioning(positioning)
+        self._position_tracer.add_positioning(positioning)
 
     def __iter__(self):
         return iter(self._collection)
@@ -1760,7 +1776,6 @@ class _PositioningTracer(object):
         """
         :param positioning: positioning information (row, column)
         :type positioning: tuple[int]
-        :return:
         """
         self._current = [positioning]
 
@@ -1813,21 +1828,18 @@ class _InterpretableNode(object):
     """
     TEXT = 0
     BREAK = 1
-    ITALICS = 2
+    ITALICS_ON = 2
+    ITALICS_OFF = 3
 
-    def __init__(self, text=None, position_builder=None, type_=0):
+    def __init__(self, text=None, position=None, type_=0):
         """
         :type text: unicode
-        :param position_builder:  tuple of ints: (row, col)
-        :type position_builder: _PositioningTracer
+        :param position: a tuple of ints (row, column)
         :param type_: self.TEXT | self.BREAK | self.ITALICS
         :type type_: int
         """
         self.text = text
-        if position_builder:
-            self.position = position_builder.get_current_position()
-        else:
-            self.position = None
+        self.position = position
         self._type = type_
 
     def add_chars(self, *args):
@@ -1849,8 +1861,14 @@ class _InterpretableNode(object):
         return cls(type_=cls.BREAK)
 
     @classmethod
-    def create_text(cls, position_builder, *chars):
-        return cls(u''.join(chars), position_buffer=position_builder)
+    def create_text(cls, position, *chars):
+        return cls(u''.join(chars), position=position)
+
+    @classmethod
+    def create_italics_style(cls, position, on=True):
+        return cls(
+            position=position, type_=cls.ITALICS_ON if on else cls.ITALICS_OFF
+        )
 
 
 def _get_italics_state_from_command(command):

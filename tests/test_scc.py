@@ -49,7 +49,7 @@ class CoverageOnlyTestCase(unittest.TestCase):
         actual_texts = [cap_.nodes[0].content for cap_ in captions]
         expected_texts = [u'>>> HI',
                           u"I'M KEVIN CUNNING AND AT",
-                          # Notige the missing 'N' at the end. This is because
+                          # Notice the missing 'N' at the end. This is because
                           # the input is not OK (should only use 4 byte "words"
                           # (filling in with '80' where only 2 bytes are
                           # meaningful)
@@ -66,6 +66,9 @@ class CoverageOnlyTestCase(unittest.TestCase):
                           # XXX - bug
                           # u'ÁÉÓ¡',  # extended chars <- should look like this
                           # - this is how it actually looks like.
+                          # [EDIT] - this happens because special / extended
+                          # characters are treated like mid-row command
+                          # characters
                           u'{break}<$¡',
                           u"WHERE YOU'RE STANDING NOW,",
                           u"LOOKING OUT THERE, THAT'S AL",
