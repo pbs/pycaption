@@ -2,14 +2,20 @@ import sys
 import re
 
 from .base import (
-    BaseReader, BaseWriter, CaptionSet, Caption, CaptionNode,
+    BaseReader, BaseWriter, CaptionSet, Caption, CaptionNode
 )
+
+from .geometry import Layout
+
 from .exceptions import (
     CaptionReadError, CaptionReadSyntaxError,
     CaptionReadNoCaptions
 )
 
-TIMING_PATTERN = re.compile(u'^(.+?) --> (.+)')
+# A WebVTT timing line has both start/end times and layout related settings
+# (referred to as 'cue settings' in the documentation)
+# The following pattern captures [start], [end] and [cue settings] if existent
+TIMING_LINE_PATTERN = re.compile(u'^(\S+)\s+-->\s+(\S+)(?:\s+(.*?))?\s*$')
 TIMESTAMP_PATTERN = re.compile(u'^(\d+):(\d{2})(:\d{2})?\.(\d{3})')
 VOICE_SPAN_PATTERN = re.compile(u'<v(\\.\\w+)* ([^>]*)>')
 OTHER_SPAN_PATTERN = (
@@ -114,7 +120,10 @@ class WebVTTReader(BaseReader):
                 u'to start timestamp of previous cue.')
 
     def _parse_timing_line(self, line, last_start_time):
-        m = TIMING_PATTERN.search(line)
+        """
+        :returns: Caption
+        """
+        m = TIMING_LINE_PATTERN.search(line)
         if not m:
             raise CaptionReadSyntaxError(
                 u'Invalid timing format.')
@@ -123,9 +132,13 @@ class WebVTTReader(BaseReader):
 
         caption.start = self._parse_timestamp(m.group(1))
         caption.end = self._parse_timestamp(m.group(2))
+        cue_settings = m.group(3)
 
         if not self.ignore_timing_errors:
             self._validate_timings(caption, last_start_time)
+
+        if cue_settings:
+            caption.layout_info = Layout(webvtt_positioning=cue_settings)
 
         return caption
 
@@ -213,9 +226,16 @@ class WebVTTWriter(BaseWriter):
     def _cue_settings_from(self, layout):
         """
         :type layout: Layout
+
+        :return: unicode
         """
         if not layout:
             return u''
+
+        # If it's converting from WebVTT to WebVTT, keep positioning info
+        # unchanged
+        if layout.webvtt_positioning:
+            return u' {}'.format(layout.webvtt_positioning)
 
         left_offset = None
         top_offset = None
@@ -312,8 +332,8 @@ class WebVTTWriter(BaseWriter):
         """
         :type s: unicode
         """
-        # TODO: Fix XML-like readers and make it unescape XML codes (e.g. &amp; -> &).
-        # Once this is done this code can be uncommented.
+        # TODO: Fix XML-like readers and make it unescape XML codes
+        # (e.g. &amp; -> &). Once this is done this code can be uncommented.
         # s = s.replace(u'&', u'&amp;')
         # s = s.replace(u'<', u'&lt;')
         # s = s.replace(u'>', u'&gt;')

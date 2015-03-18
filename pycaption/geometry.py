@@ -611,19 +611,31 @@ class Layout(object):
      Inheritance of this property, from the CaptionSet to its children is
      specific for each caption type.
     """
-    def __init__(self, origin=None, extent=None, padding=None, alignment=None):
+    def __init__(self, origin=None, extent=None, padding=None, alignment=None,
+                 webvtt_positioning=None):
         """
         :type origin: Point
         :param origin: The point on the screen which is the top left vertex
             of a rectangular region where the captions should be placed
+
         :type extent: Stretch
         :param extent: The width and height of the rectangle where the caption
             should be placed on the screen.
+
         :type padding: Padding
         :param padding: The padding of the text inside the region described
             by the origin and the extent
+
         :type alignment: Alignment
+
+        :type webvtt_positioning: unicode
+        :param webvtt_positioning: A string with the raw WebVTT cue settings.
+            This is used so that WebVTT positioning isn't lost on conversion
+            from WebVTT to WebVTT. It is needed only because pycaption
+            currently doesn't support reading positioning from WebVTT.
         """
+
+        self.webvtt_positioning = webvtt_positioning
         self.origin = origin
         self.extent = extent
         self.padding = padding
