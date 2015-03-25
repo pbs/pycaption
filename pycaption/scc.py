@@ -1020,7 +1020,7 @@ class SCCReader(BaseReader):
 
     def read(self, content, lang=u'en-US', simulate_roll_up=False, offset=0):
         if type(content) != unicode:
-            raise RuntimeError('The content is not a unicode string.')
+            raise RuntimeError(u'The content is not a unicode string.')
 
         self.simulate_roll_up = simulate_roll_up
         self.time_translator.set_offset(offset * 1000000)
@@ -1076,6 +1076,8 @@ class SCCReader(BaseReader):
         self.time_translator.increment_frames()
 
         # first check if word is a command
+        # TODO - check that all the positioning commands are here, or use
+        # some other strategy to determine if the word is a command.
         if word in COMMANDS:
             self._translate_command(word)
 
@@ -1158,7 +1160,7 @@ class SCCReader(BaseReader):
             self.paint_time = self.time_translator.get_time()
 
         # if command is roll_up 2, 3 or 4 rows
-        elif word in [u'9425', u'9426', u'94a7']:
+        elif word in (u'9425', u'9426', u'94a7'):
             self.roll_on = True
             self.paint_on = self.pop_on = False
 
@@ -1216,7 +1218,7 @@ class SCCReader(BaseReader):
             if self.paint_on:
                 self.paint_buffer += COMMANDS[word]
             elif self.pop_on:
-                self.pop_buffer.interpret_command(COMMANDS[word])
+                self.pop_buffer.interpret_command(word)
             elif self.roll_on:
                 self.roll_buffer += COMMANDS[word]
 
@@ -1537,7 +1539,7 @@ class _CaptionStash(object):
                 # add text
                 caption.nodes.append(
                     CaptionNode.create_text(
-                        u' '.join(element.split()),
+                        element.get_text(),
                         layout_info=_get_layout_from_tuple(element.position)),
                 )
                 # no longer first element
@@ -1738,18 +1740,23 @@ class _InterpretableNodeStash(object):
         node.add_chars(*chars)
 
     def interpret_command(self, command):
-        """Given a command determines whether tu turn italics on or off
+        """Given a command determines whether tu turn italics on or off,
+        or to set the positioning
 
         This is mostly used to convert from the legacy-style commands
 
         :type command: unicode
         """
-        if u'<$>{italic}<$>' in command:
+        self._update_positioning(command)
+
+        text = COMMANDS.get(command, u'')
+
+        if u'<$>{italic}<$>' in text:
             self._collection.append(
                 _InterpretableNode.create_italics_style(
                     self._position_tracer.get_current_position())
             )
-        elif u'<$>{end-italic}<$>' in command:
+        elif u'<$>{end-italic}<$>' in text:
             self._collection.append(
                 _InterpretableNode.create_italics_style(
                     self._position_tracer.get_current_position(),
@@ -1757,12 +1764,22 @@ class _InterpretableNodeStash(object):
                 )
             )
 
-    def add_positioning(self, positioning):
-        """Sets the positioning information for the following nodes
+    def _update_positioning(self, command):
+        """Sets the positioning information to use for the next nodes
 
-        :type positioning: tuple[int]
+        :type command: unicode
         """
-        self._position_tracer.add_positioning(positioning)
+        if len(command) != 4:
+            return
+
+        first, second = command[:2], command[2:]
+
+        try:
+            positioning = PAC_BYTES_TO_POSITIONING_MAP[first][second]
+        except KeyError:
+            pass
+        else:
+            self._position_tracer.update_positioning(positioning)
 
     def __iter__(self):
         return iter(self._collection)
@@ -1777,32 +1794,45 @@ class _PositioningTracer(object):
         :param positioning: positioning information (row, column)
         :type positioning: tuple[int]
         """
-        self._current = [positioning]
+        self._positions = [positioning]
 
-    def add_positioning(self, positioning):
-        current = self._current[-1]
+    def update_positioning(self, positioning):
+        """Being notified of a position change, updates the internal state,
+        to as to be able to tell if it was a trivial change (a simple line
+        break) or not.
 
-        if not current and not positioning:
+        :type positioning: tuple[int]
+        :param positioning: a tuple (row, col)
+        """
+        current = self._positions[-1]
+
+        if not current:
+            if positioning:
+                # set the positioning for the first time
+                self._positions = [positioning]
             return
 
-        if not self._current:
-            return
-
-        row, col = self._current
+        row, col = current
         new_row, new_col = positioning
 
+        # is the new position simply one line below?
         if new_col == col + 1:
             # increment vertically the current pos
-            pass
+            self._positions.append((row, new_col))
+        else:
+            # reset the "current" position altogether.
+            self._positions = [positioning]
 
     def get_current_position(self):
         """
         :rtype: tuple[int]
         """
-        if not any(self._current):
+        if not any(self._positions):
             raise CaptionReadSyntaxError(
                 u'No Preamble Address Code [PAC] was provided'
             )
+        else:
+            return self._positions[0]
 
     def is_node_reusable(self, node):
         """Determines whether the current node has positioning information that
@@ -1811,15 +1841,18 @@ class _PositioningTracer(object):
         :type node:_InterpretableNode
         :rtype: bool
         """
-        pass
+        return node.position in self._positions
 
     def is_breakline_enough(self, node):
-        """If the current should simply be displayed below the last one
+        """If the current position is simply one line below the previous
 
         :type node: _InterpretableNode
         :rtype: bool
         """
-        pass
+        node_col = node.position[1]
+        current_col = self._positions[-1][1]
+
+        return current_col == node_col + 1
 
 
 class _InterpretableNode(object):
@@ -1854,7 +1887,39 @@ class _InterpretableNode(object):
         self.text += u''.join(args)
 
     def is_text_node(self):
+        """
+        :rtype: bool
+        """
         return self._type == self.TEXT
+
+    def is_empty(self):
+        """
+        :rtype: bool
+        """
+        return not self.text
+
+    def is_explicit_break(self):
+        """
+        :rtype: bool
+        """
+        return self._type == self.BREAK
+
+    def sets_italics_on(self):
+        """
+        :rtype: bool
+        """
+        return self._type == self.ITALICS_ON
+
+    def sets_italics_off(self):
+        """
+        :rtype: bool
+        """
+        return self._type == self.ITALICS_OFF
+
+    def get_text(self):
+        """A little legacy code.
+        """
+        return u' '.join(self.text.split())
 
     @classmethod
     def create_break(cls):
