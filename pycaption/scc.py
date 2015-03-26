@@ -8,7 +8,7 @@ import textwrap
 
 from .base import (
     BaseReader, BaseWriter, Caption, CaptionSet, CaptionNode,
-) 
+)
 from .exceptions import CaptionReadNoCaptions
 
 

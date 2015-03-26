@@ -323,6 +323,8 @@ class WebVTTWriter(BaseWriter):
         # for different cues, each layout group has to be represented in a
         # new cue with the same timing but different positioning settings.
         layout_groups = []
+        # A properly encoded WebVTT string (plain unicode must be properly
+        # escaped before being appended to this string)
         s = u''
         for i, node in enumerate(nodes):
             already_appended = False
@@ -334,6 +336,8 @@ class WebVTTWriter(BaseWriter):
                     already_appended = True
                     current_layout = node.layout_info
                     s = u''
+                # ATTENTION: This is where the plain unicode node content is
+                # finally encoded as WebVTT.
                 s += self._encode(node.content) or u'&nbsp;'
             elif node.type_ == CaptionNode.STYLE:
                 # TODO: Ignoring style so far.

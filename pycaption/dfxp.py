@@ -1,7 +1,7 @@
 import re
 
 from bs4 import BeautifulSoup, NavigableString
-from xml.sax.saxutils import escape, unescape
+from xml.sax.saxutils import escape
 
 from .base import (
     BaseReader, BaseWriter, CaptionSet, Caption, CaptionNode,
@@ -130,7 +130,10 @@ class DFXPReader(BaseReader):
             pattern = re.compile(u"^(?:[\n\r]+\s*)?(.+)")
             result = pattern.search(tag)
             if result:
-                tag_text = self._decode(result.groups()[0])
+                # BeautifulSoup apparently handles unescaping character codes
+                # (e.g. &amp;) automatically. The following variable, therefore,
+                # should contain a plain unicode string.
+                tag_text = result.groups()[0]
                 node = CaptionNode.create_text(
                     tag_text, layout_info=tag.layout_info)
                 self.nodes.append(node)
@@ -202,14 +205,6 @@ class DFXPReader(BaseReader):
             elif arg == u"tts:color":
                 attrs[u'color'] = dfxp_attrs[arg]
         return attrs
-
-    def _decode(self, s):
-        """
-        Decodes XML 1.0 special characters to plain unicode
-        :type s: unicode
-        :param s: The text content of a leaf node ()
-        """
-        return unescape(s)
 
 
 class DFXPWriter(BaseWriter):
