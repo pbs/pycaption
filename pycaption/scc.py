@@ -1730,17 +1730,19 @@ class _InterpretableNodeStash(object):
 
         # add chars to current or new node
         # TODO - this changed a lot. still not stable.
-        if self._position_tracer.is_repositioning_required():
+        if not self._position_tracer.is_repositioning_required():
             pass
         elif self._position_tracer.is_linebreak_required():
             # must insert a line break here
             self._collection.append(_InterpretableNode.create_break())
             node = _InterpretableNode.create_text(current_position)
             self._collection.append(node)
+            self._position_tracer.acknowledge_linebreak_consumed()
         else:
             # this node will have a different positioning than the previous one
             node = _InterpretableNode.create_text(current_position)
             self._collection.append(node)
+            self._position_tracer.acknowledge_position_changed()
 
         node.add_chars(*chars)
 
