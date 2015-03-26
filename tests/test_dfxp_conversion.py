@@ -166,6 +166,7 @@ class DFXPtoWebVTTTestCase(DFXPConversionTestCase, WebVTTTestingMixIn):
     def test_dfxp_to_webvtt_conversion(self):
         results = WebVTTWriter().write(self.captions_utf8)
         self.assertTrue(isinstance(results, unicode))
+#         import ipdb; ipdb.set_trace()
         self.assertWebVTTEquals(SAMPLE_WEBVTT_FROM_DFXP.decode(u'utf-8'), results)
 
     def test_dfxp_to_webvtt_unicode_conversion(self):

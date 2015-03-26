@@ -91,7 +91,7 @@ class WebVTTReader(BaseReader):
                     if not caption.is_empty():
                         caption.nodes.append(CaptionNode.create_break())
                     caption.nodes.append(CaptionNode.create_text(
-                        self._remove_styles(line)))
+                        self._decode(line)))
                 else:
                     # it's a comment or some metadata; ignore it
                     pass
@@ -156,6 +156,27 @@ class WebVTTReader(BaseReader):
             # Timestamp takes the form of [minutes]:[seconds].[milliseconds]
             return microseconds(0, m[0], m[1], m[3])
 
+    def _decode(self, s):
+        """
+        Convert cue text from WebVTT XML-like format to plain unicode.
+        :type s: unicode
+        """
+        s = s.strip()
+        # Covert voice span
+        s = VOICE_SPAN_PATTERN.sub(u'\\2: ', s)
+        # TODO: Add support for other WebVTT tags. For now just strip them
+        # off the text.
+        s = OTHER_SPAN_PATTERN.sub(u'', s)
+        # Replace WebVTT special XML codes with plain unicode values
+        s = s.replace(u'&lt;', u'<')
+        s = s.replace(u'&gt;', u'>')
+        s = s.replace(u'&lrm;', u'\u200e')
+        s = s.replace(u'&rlm;', u'\u200f')
+        s = s.replace(u'&nbsp;', u'\u00a0')
+        # Must do ampersand last
+        s = s.replace(u'&amp;', u'&')
+        return s
+
 
 class WebVTTWriter(BaseWriter):
     HEADER = u'WEBVTT\n\n'
@@ -209,25 +230,24 @@ class WebVTTWriter(BaseWriter):
 
         start = self._timestamp(caption.start)
         end = self._timestamp(caption.end)
-        timespan = u"%s --> %s" % (start, end)
+        timespan = u"{} --> {}".format(start, end)
 
         output = u''
 
         for cue_text, layout in layout_groups:
             if not layout:
                 layout = caption.layout_info or self.global_layout
-
             cue_settings = self._cue_settings_from(layout)
             output += timespan + cue_settings + u'\n'
-            output += self._escape_special_characters(cue_text) + u'\n'
+            output += cue_text + u'\n'
 
         return output
 
     def _cue_settings_from(self, layout):
         """
+        Return WebVTT cue settings string based on layout info
         :type layout: Layout
-
-        :return: unicode
+        :rtype: unicode
         """
         if not layout:
             return u''
@@ -273,7 +293,7 @@ class WebVTTWriter(BaseWriter):
 
         try:
             alignment = WEBVTT_VERSION_OF[layout.alignment.horizontal]
-        except KeyError:
+        except (AttributeError, KeyError):
             pass
 
         cue_settings = u''
@@ -314,7 +334,7 @@ class WebVTTWriter(BaseWriter):
                     already_appended = True
                     current_layout = node.layout_info
                     s = u''
-                s += node.content or u'&nbsp;'
+                s += self._encode(node.content) or u'&nbsp;'
             elif node.type_ == CaptionNode.STYLE:
                 # TODO: Ignoring style so far.
                 pass
@@ -328,14 +348,20 @@ class WebVTTWriter(BaseWriter):
             layout_groups.append((s, current_layout))
         return layout_groups
 
-    def _escape_special_characters(self, s):
+    def _encode(self, s):
         """
+        Convert cue text from plain unicode to WebVTT XML-like format
+        escaping illegal characters. For a list of illegal characters see:
+            - http://dev.w3.org/html5/webvtt/#dfn-webvtt-cue-text-span
         :type s: unicode
         """
-        # TODO: Fix XML-like readers and make it unescape XML codes
-        # (e.g. &amp; -> &). Once this is done this code can be uncommented.
-        # s = s.replace(u'&', u'&amp;')
-        # s = s.replace(u'<', u'&lt;')
+        s = s.replace(u'&', u'&amp;')
+        s = s.replace(u'<', u'&lt;')
+
+        # The following characters have escaping codes for some reason, but
+        # they're not illegal, so for now I'll leave this commented out so that
+        # we stay as close as possible to the specification and avoid doing
+        # extra stuff "just to be safe".
         # s = s.replace(u'>', u'&gt;')
         # s = s.replace(u'\u200e', u'&lrm;')
         # s = s.replace(u'\u200f', u'&rlm;')

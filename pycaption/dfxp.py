@@ -1,7 +1,7 @@
 import re
 
 from bs4 import BeautifulSoup, NavigableString
-from xml.sax.saxutils import escape
+from xml.sax.saxutils import escape, unescape
 
 from .base import (
     BaseReader, BaseWriter, CaptionSet, Caption, CaptionNode,
@@ -130,7 +130,7 @@ class DFXPReader(BaseReader):
             pattern = re.compile(u"^(?:[\n\r]+\s*)?(.+)")
             result = pattern.search(tag)
             if result:
-                tag_text = result.groups()[0]
+                tag_text = self._decode(result.groups()[0])
                 node = CaptionNode.create_text(
                     tag_text, layout_info=tag.layout_info)
                 self.nodes.append(node)
@@ -202,6 +202,14 @@ class DFXPReader(BaseReader):
             elif arg == u"tts:color":
                 attrs[u'color'] = dfxp_attrs[arg]
         return attrs
+
+    def _decode(self, s):
+        """
+        Decodes XML 1.0 special characters to plain unicode
+        :type s: unicode
+        :param s: The text content of a leaf node ()
+        """
+        return unescape(s)
 
 
 class DFXPWriter(BaseWriter):
@@ -309,7 +317,7 @@ class DFXPWriter(BaseWriter):
 
         for node in caption.nodes:
             if node.type_ == CaptionNode.TEXT:
-                line += escape(node.content) + u' '
+                line += self._encode(node.content) + u' '
 
             elif node.type_ == CaptionNode.BREAK:
                 line = line.rstrip() + u'<br/>\n    '
@@ -359,6 +367,16 @@ class DFXPWriter(BaseWriter):
             self.open_span = False
 
         return line
+
+    def _encode(self, s):
+        """
+        Escapes XML 1.0 illegal or discouraged characters
+        For details see:
+            - http://www.w3.org/TR/2008/REC-xml-20081126/#dt-chardata
+        :type s: unicode
+        :param s: The content of a text node
+        """
+        return escape(s)
 
 
 class LayoutAwareDFXPParser(BeautifulSoup):
