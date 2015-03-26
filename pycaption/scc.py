@@ -1063,7 +1063,7 @@ class SCCReader(BaseReader):
         parts = r.findall(line.lower())
 
         self.time_translator.start_at(parts[0][0])
-        # self.frame_count = 0
+
 
         # loop through each word
         for word in parts[0][2].split(u' '):
@@ -1713,21 +1713,26 @@ class _InterpretableNodeStash(object):
     def add_chars(self, *chars):
         """Adds characters to a text node (last text node, or a new one)
 
-        :param chars: iterable containing characters (unicode)
+        :param chars: tuple containing text (unicode)
         """
+        if not chars:
+            return
+
         current_position = self._position_tracer.get_current_position()
 
         # get or create a usable node
-        if self._collection and self._collection[-1].is_text_node():
+        if self._collection:
             node = self._collection[-1]
         else:
+            # create first node
             node = _InterpretableNode(position=current_position)
             self._collection.append(node)
 
         # add chars to current or new node
-        if self._position_tracer.is_node_reusable(node):
+        # TODO - this changed a lot. still not stable.
+        if self._position_tracer.is_repositioning_required():
             pass
-        elif self._position_tracer.is_breakline_enough(node):
+        elif self._position_tracer.is_linebreak_required():
             # must insert a line break here
             self._collection.append(_InterpretableNode.create_break())
             node = _InterpretableNode.create_text(current_position)
@@ -1788,6 +1793,12 @@ class _InterpretableNodeStash(object):
 class _PositioningTracer(object):
     """Helps determine the positioning of a node, having kept track of
     positioning-related commands.
+
+    Acts like a state-machine, with 2
+
+    >>> p1 = _PositioningTracer((0,0))
+    >>> p1.get_current_position()
+
     """
     def __init__(self, positioning=None):
         """
@@ -1795,6 +1806,8 @@ class _PositioningTracer(object):
         :type positioning: tuple[int]
         """
         self._positions = [positioning]
+        self._break_required = False
+        self._repositioning_required = False
 
     def update_positioning(self, positioning):
         """Being notified of a position change, updates the internal state,
@@ -1816,15 +1829,17 @@ class _PositioningTracer(object):
         new_row, new_col = positioning
 
         # is the new position simply one line below?
-        if new_col == col + 1:
-            # increment vertically the current pos
-            self._positions.append((row, new_col))
+        if new_row == row + 1:
+            self._positions.append((new_row, col))
+            self._break_required = True
         else:
             # reset the "current" position altogether.
             self._positions = [positioning]
+            self._repositioning_required = True
 
     def get_current_position(self):
-        """
+        """Returns the current usable position
+
         :rtype: tuple[int]
         """
         if not any(self._positions):
@@ -1834,25 +1849,30 @@ class _PositioningTracer(object):
         else:
             return self._positions[0]
 
-    def is_node_reusable(self, node):
-        """Determines whether the current node has positioning information that
-        agrees with the state of the builder.
+    def is_repositioning_required(self):
+        """Determines whether the current positioning has changed non-trivially
 
-        :type node:_InterpretableNode
+        Trivial would be mean that a line break should suffice.
         :rtype: bool
         """
-        return node.position in self._positions
+        return self._repositioning_required
 
-    def is_breakline_enough(self, node):
-        """If the current position is simply one line below the previous
+    def acknowledge_position_changed(self):
+        """Consume
+        :return:
+        """
+        self._repositioning_required = False
 
-        :type node: _InterpretableNode
+    def is_linebreak_required(self):
+        """If the current position is simply one line below the previous.
         :rtype: bool
         """
-        node_col = node.position[1]
-        current_col = self._positions[-1][1]
+        return self._break_required
 
-        return current_col == node_col + 1
+    def acknowledge_linebreak_consumed(self):
+        """Call to acknowledge that the line required was consumed
+        """
+        self._break_required = False
 
 
 class _InterpretableNode(object):
@@ -1963,4 +1983,4 @@ def _get_layout_from_tuple(position_tuple):
 
     horizontal = Size(100 * column / 32.0, UnitEnum.PERCENT)
     vertical = Size(100 * row / 15.0, UnitEnum.PERCENT)
-    return Point(horizontal, vertical)
+    return Layout(origin=Point(horizontal, vertical))
