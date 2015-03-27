@@ -1122,13 +1122,12 @@ class SCCReader(BaseReader):
 
         # add to buffer
         if self.paint_on:
-            if self.paint_buffer.is_empty():
+            if not self.paint_buffer.is_empty():
                 self.paint_buffer = self.paint_buffer.discard_last_char()
             self.paint_buffer.add_chars(EXTENDED_CHARS[word])
         elif self.pop_on:
-            if self.pop_buffer.is_empty():
+            if not self.pop_buffer.is_empty():
                 self.pop_buffer.discard_last_char()
-            # self.pop_buffer += EXTENDED_CHARS[word]
             self.pop_buffer.add_chars(EXTENDED_CHARS[word])
         elif self.roll_on:
             if self.roll_buffer:
