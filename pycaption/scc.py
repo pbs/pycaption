@@ -1000,7 +1000,7 @@ class SCCReader(BaseReader):
         self.pop_on = False
         self.pop_time = 0
 
-        self.paint_buffer = u''
+        self.paint_buffer = _InterpretableNodeStash()
         self.paint_on = False
         self.paint_time = 0
 
@@ -1108,7 +1108,7 @@ class SCCReader(BaseReader):
 
         # add to buffer
         if self.paint_on:
-            self.paint_buffer += SPECIAL_CHARS[word]
+            self.paint_buffer.add_chars(SPECIAL_CHARS[word])
         elif self.pop_on:
             self.pop_buffer.add_chars(SPECIAL_CHARS[word])
         elif self.roll_on:
@@ -1122,9 +1122,9 @@ class SCCReader(BaseReader):
 
         # add to buffer
         if self.paint_on:
-            if self.paint_buffer:
-                self.paint_buffer = self.paint_buffer[:-1]
-            self.paint_buffer += EXTENDED_CHARS[word]
+            if self.paint_buffer.is_empty():
+                self.paint_buffer = self.paint_buffer.discard_last_char()
+            self.paint_buffer.add_chars(EXTENDED_CHARS[word])
         elif self.pop_on:
             if self.pop_buffer.is_empty():
                 self.pop_buffer.discard_last_char()
@@ -1150,11 +1150,11 @@ class SCCReader(BaseReader):
             self.pop_on = self.roll_on = False
 
             self.roll_rows_expected = 1
-            if self.paint_buffer:
+            if not self.paint_buffer.is_empty():
                 self.caption_stash.create_and_store(
                     self.paint_buffer, self.paint_time
                 )
-                self.paint_buffer = u''
+                self.paint_buffer = _InterpretableNodeStash()
 
             self.paint_time = self.time_translator.get_time()
 
@@ -1215,7 +1215,7 @@ class SCCReader(BaseReader):
         else:
             # determine whether the word is a PAC, save it for later
             if self.paint_on:
-                self.paint_buffer += COMMANDS[word]
+                self.paint_buffer.interpret_command(word)
             elif self.pop_on:
                 self.pop_buffer.interpret_command(word)
             elif self.roll_on:
@@ -1233,7 +1233,8 @@ class SCCReader(BaseReader):
         # xxx - Polymorphism means avoiding conditional chains like this
         # if so, add to buffer
         if self.paint_on:
-            self.paint_buffer += CHARACTERS[byte1] + CHARACTERS[byte2]
+            # self.paint_buffer += CHARACTERS[byte1] + CHARACTERS[byte2]
+            self.paint_buffer.add_chars(CHARACTERS[byte1], CHARACTERS[byte2])
         elif self.pop_on:
             # self.pop_buffer += CHARACTERS[byte1] + CHARACTERS[byte2]
             self.pop_buffer.add_chars(CHARACTERS[byte1], CHARACTERS[byte2])
