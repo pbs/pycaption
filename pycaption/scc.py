@@ -1064,7 +1064,6 @@ class SCCReader(BaseReader):
 
         self.time_translator.start_at(parts[0][0])
 
-
         # loop through each word
         for word in parts[0][2].split(u' '):
             # ignore empty results
@@ -1486,7 +1485,7 @@ class _CaptionStash(object):
                 CaptionNode.create_style(False, {u'italics': True}))
 
         # remove extraneous italics tags in the same caption
-        self._remove_italics(caption)
+        self._remove_extra_italics(caption)
 
         self._collection.append(caption)
 
@@ -1551,7 +1550,7 @@ class _CaptionStash(object):
                 CaptionNode.create_style(False, {u'italics': True}))
 
         # remove extraneous italics tags in the same caption
-        self._remove_italics(caption)
+        self._remove_extra_italics(caption)
 
         self._collection.append(caption)
 
@@ -1585,7 +1584,7 @@ class _CaptionStash(object):
         return new_nodes, open_italic
 
     @staticmethod
-    def _remove_italics(caption):
+    def _remove_extra_italics(caption):
         """Legacy logic slightly refactored. Removes STYLE nodes that would
         surround a BREAK node.
 
@@ -1728,17 +1727,16 @@ class _InterpretableNodeStash(object):
             node = _InterpretableNode(position=current_position)
             self._collection.append(node)
 
-        # add chars to current or new node
-        # TODO - this changed a lot. still not stable.
-        if not self._position_tracer.is_repositioning_required():
-            pass
-        elif self._position_tracer.is_linebreak_required():
+        # handle a simple line break
+        if self._position_tracer.is_linebreak_required():
             # must insert a line break here
             self._collection.append(_InterpretableNode.create_break())
             node = _InterpretableNode.create_text(current_position)
             self._collection.append(node)
             self._position_tracer.acknowledge_linebreak_consumed()
-        else:
+
+        # handle completely new positioning
+        elif self._position_tracer.is_repositioning_required():
             # this node will have a different positioning than the previous one
             node = _InterpretableNode.create_text(current_position)
             self._collection.append(node)
@@ -1797,9 +1795,6 @@ class _PositioningTracer(object):
     positioning-related commands.
 
     Acts like a state-machine, with 2
-
-    >>> p1 = _PositioningTracer((0,0))
-    >>> p1.get_current_position()
 
     """
     def __init__(self, positioning=None):
@@ -1918,7 +1913,10 @@ class _InterpretableNode(object):
         """
         :rtype: bool
         """
-        return not self.text
+        if self._type == self.TEXT:
+            return not self.text
+
+        return False
 
     def is_explicit_break(self):
         """
@@ -1957,6 +1955,18 @@ class _InterpretableNode(object):
             position=position, type_=cls.ITALICS_ON if on else cls.ITALICS_OFF
         )
 
+    def __repr__(self):
+        if self._type == self.BREAK:
+            return u'<INode: BR>'
+        elif self._type == self.TEXT:
+            return u'<INode: "{}">'.format(self.text)
+        else:
+            return u'<INode: italics {}>'.format(
+                u'on' if self._type == self.ITALICS_ON else u'off')
+
+
+class _ItalicStateTracker(object):
+    pass
 
 def _get_italics_state_from_command(command):
     """
