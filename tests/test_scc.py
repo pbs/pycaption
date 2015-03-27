@@ -31,6 +31,10 @@ class SCCReaderTestCase(unittest.TestCase):
             CaptionReadNoCaptions,
             SCCReader().read, SAMPLE_SCC_EMPTY.decode(u'utf-8'))
 
+    def test_temporary(self):
+        captions = SCCReader().read(SAMPLE_SCC_POP_ON_TEMPORARY)
+
+        x = 1
 
 class CoverageOnlyTestCase(unittest.TestCase):
     """In order to refactor safely, we need coverage of 95% or more.
@@ -137,6 +141,14 @@ SAMPLE_SCC_POP_ON = """Scenarist_SCC V1.0
 00:00:25:16 94ae 94ae 9420 9420 1370 1370 cdc1 ce20 32ba 94d0 94d0 49f4 a773 2061 ecec 2061 62ef 75f4 2061 6e20 e5f4 e5f2 6e61 ec80 9470 9470 45e9 6e73 f4e5 e96e ae80 942c 942c 942f 942f
 
 00:00:31:15 94ae 94ae 9420 9420 9470 9470 bc4c c1d5 c7c8 49ce c720 2620 57c8 4f4f d0d3 a13e 942c 942c 942f 942f
+
+00:00:36:04 942c 942c
+
+"""
+
+SAMPLE_SCC_POP_ON_TEMPORARY = u"""Scenarist_SCC V1.0
+
+00:00:25:16 94ae 94ae 9420 9420 1370 1370 cdc1 ce20 94d0 94d0 49f4 2020 9470 9470 45e9 2020 942c 942c 942f 942f
 
 00:00:36:04 942c 942c
 
