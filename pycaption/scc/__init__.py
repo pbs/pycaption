@@ -539,6 +539,7 @@ class _CaptionStash(object):
                     CaptionNode.create_text(element.get_text(),
                                             layout_info=layout_info),
                 )
+                caption.layout_info = layout_info
 
         # close any open italics left over
         if open_italic:
