@@ -1036,40 +1036,8 @@ def _create_internal_alignment(text_align, display_align):
     if not (text_align or display_align):
         return None
 
-    horizontal = _create_internal_horizontal_alignment(text_align)
-    vertical = _create_internal_vertical_alignment(display_align)
-
-    return Alignment(horizontal, vertical)
-
-
-def _create_internal_horizontal_alignment(text_align):
-    horizontal = None
-
-    if text_align == u'left' or not text_align:
-        horizontal = HorizontalAlignmentEnum.LEFT
-    if text_align == u'start':
-        horizontal = HorizontalAlignmentEnum.START
-    if text_align == u'center':
-        horizontal = HorizontalAlignmentEnum.CENTER
-    if text_align == u'right':
-        horizontal = HorizontalAlignmentEnum.RIGHT
-    if text_align == u'end':
-        horizontal = HorizontalAlignmentEnum.END
-
-    return horizontal
-
-
-def _create_internal_vertical_alignment(display_align):
-    vertical = None
-
-    if display_align == u'before' or not display_align:
-        vertical = VerticalAlignmentEnum.TOP
-    if display_align == u'center':
-        vertical = VerticalAlignmentEnum.CENTER
-    if display_align == u'after':
-        vertical = VerticalAlignmentEnum.BOTTOM
-
-    return vertical
+    return Alignment.from_horizontal_and_vertical_align(
+        text_align, display_align)
 
 
 def _create_external_horizontal_alignment(horizontal_component):

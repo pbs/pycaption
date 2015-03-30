@@ -19,7 +19,9 @@ TIMING_LINE_PATTERN = re.compile(u'^(\S+)\s+-->\s+(\S+)(?:\s+(.*?))?\s*$')
 TIMESTAMP_PATTERN = re.compile(u'^(\d+):(\d{2})(:\d{2})?\.(\d{3})')
 VOICE_SPAN_PATTERN = re.compile(u'<v(\\.\\w+)* ([^>]*)>')
 OTHER_SPAN_PATTERN = (
-    re.compile(u'</?([cibuv]|ruby|rt|lang|(\d+):(\d{2})(:\d{2})?\.(\d{3})).*?>')
+    re.compile(
+        u'</?([cibuv]|ruby|rt|lang|(\d+):(\d{2})(:\d{2})?\.(\d{3})).*?>'
+    )
 )  # These WebVTT tags are stripped off the cues on conversion
 
 WEBVTT_VERSION_OF = {
@@ -32,8 +34,10 @@ WEBVTT_VERSION_OF = {
 
 DEFAULT_ALIGNMENT = u'middle'
 
+
 def microseconds(h, m, s, f):
     return (int(h) * 3600 + int(m) * 60 + int(s)) * 1000000 + int(f) * 1000
+
 
 class WebVTTReader(BaseReader):
     def __init__(self, ignore_timing_errors=True, *args, **kwargs):
@@ -274,8 +278,9 @@ class WebVTTWriter(BaseWriter):
 
         if layout.padding:
             if layout.padding.start and left_offset:
-                # Since there is no padding in WebVTT, the left padding is added
-                # to the total left offset (if it is defined and not relative),
+                # Since there is no padding in WebVTT, the left padding is
+                # added to the total left offset (if it is defined and not
+                # relative),
                 if left_offset:
                     left_offset += layout.padding.start
                 # and removed from the total cue width
@@ -289,7 +294,8 @@ class WebVTTWriter(BaseWriter):
             if layout.padding.before and top_offset:
                 top_offset += layout.padding.before
             # and the bottom padding is ignored because the cue box is only as
-            # long vertically as the text it contains and nothing can be cut out
+            # long vertically as the text it contains and nothing can be cut
+            # out
 
         try:
             alignment = WEBVTT_VERSION_OF[layout.alignment.horizontal]

@@ -11,6 +11,9 @@ from .base import (
     BaseReader, BaseWriter, CaptionSet, Caption, CaptionNode,
     DEFAULT_LANGUAGE_CODE)
 from .exceptions import CaptionReadNoCaptions, CaptionReadSyntaxError
+from .geometry import (
+    Layout, Alignment, Padding, Size
+)
 
 
 # change cssutils default logging
@@ -44,8 +47,10 @@ class SAMIReader(BaseReader):
         sami_soup = BeautifulSoup(content)
         captions = CaptionSet()
         captions.set_styles(doc_styles)
+        layout_info = self._build_layout(doc_styles)
 
         for language in doc_langs:
+            captions.set_layout_info(language, layout_info)
             lang_captions = self._translate_lang(language, sami_soup)
             captions.set_captions(language, lang_captions)
 
@@ -53,6 +58,38 @@ class SAMIReader(BaseReader):
             raise CaptionReadNoCaptions(u"empty caption file")
 
         return captions
+
+    def _build_layout(self, styles):
+        alignment = Alignment.from_horizontal_and_vertical_align(
+            text_align=styles.get('p', {}).get('text-align', None)
+        )
+        layout = Layout(
+            origin=None,
+            extent=None,
+            padding=self._get_padding(styles),
+            alignment=alignment
+        )
+        return layout
+
+    def _get_padding(self, styles):
+        margin_before = self._get_size(styles, 'margin-top')
+        margin_after = self._get_size(styles, 'margin-bottom')
+        margin_start = self._get_size(styles, 'margin-left')
+        margin_end = self._get_size(styles, 'margin-right')
+        if not any([margin_before, margin_after, margin_start, margin_end]):
+            return None
+        return Padding(
+            before=margin_before,  # top
+            after=margin_after,  # bottom
+            start=margin_start,  # left
+            end=margin_end  # right
+        )
+
+    def _get_size(self, styles, style_label):
+        value_from_style = styles.get('p', {}).get(style_label, None)
+        if not value_from_style:
+            return None
+        return Size.from_string(value_from_style)
 
     def _translate_lang(self, language, sami_soup):
         captions = []
@@ -71,7 +108,8 @@ class SAMIReader(BaseReader):
                 self._translate_tag(p)
                 text = self.line
                 styles = self._translate_attrs(p)
-                caption = Caption()
+                layout_info = self._build_layout(styles)
+                caption = Caption(layout_info=layout_info)
                 caption.start = start
                 caption.end = end
                 caption.nodes = text
@@ -99,7 +137,9 @@ class SAMIReader(BaseReader):
             self.line.append(CaptionNode.create_break())
         # convert italics
         elif tag.name == u'i':
-            self.line.append(CaptionNode.create_style(True, {u'italics': True}))
+            self.line.append(
+                CaptionNode.create_style(True, {u'italics': True})
+            )
             # recursively call function for any children elements
             for a in tag.contents:
                 self._translate_tag(a)
@@ -265,9 +305,11 @@ class SAMIWriter(BaseWriter):
                 stylesheet += self._recreate_style_tag(attr, value)
 
         for lang in captions.get_languages():
-            if u'lang: %s' % lang not in stylesheet:
-                stylesheet += u'\n    .%s {\n     lang: %s;\n    }\n' % (lang,
-                                                                        lang)
+            lang_string = u'lang: {}'.format(lang)
+            if lang_string not in stylesheet:
+                stylesheet += (
+                    u'\n    .{lang} {{\n     lang: {lang};\n    }}\n'
+                ).format(lang=lang)
 
         return stylesheet + u'   -->'
 
@@ -444,7 +486,8 @@ class SAMIParser(HTMLParser):
         no_cc = u'no closed captioning available'
 
         if u'<html' in data.lower():
-            raise CaptionReadSyntaxError(u'SAMI File seems to be an HTML file.')
+            raise CaptionReadSyntaxError(
+                u'SAMI File seems to be an HTML file.')
         elif no_cc in data.lower():
             raise CaptionReadSyntaxError(u'SAMI File contains "%s"' % no_cc)
 
