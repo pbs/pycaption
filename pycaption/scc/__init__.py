@@ -425,7 +425,7 @@ class SCCWriter(BaseWriter):
             output += u'94ae 94ae 9420 9420 '
             output += code
             output += u'942c 942c 942f 942f\n\n'
-            if end != None:
+            if end is not None:
                 output += u'%s\t942c 942c\n\n' % self._format_timestamp(end)
 
         return output
@@ -461,7 +461,7 @@ class SCCWriter(BaseWriter):
             try:
                 char_code = SPECIAL_OR_EXTENDED_CHAR_TO_CODE[char]
             except KeyError:
-                char_code = u'91b6' # Use £ as "unknown character" symbol
+                char_code = u'91b6'  # Use £ as "unknown character" symbol
 
         if len(char_code) == 2:
             return code + char_code
@@ -475,13 +475,13 @@ class SCCWriter(BaseWriter):
         code = u''
         lines = string.split(self._layout_line(s), u'\n')
         for row, line in enumerate(lines):
-            row = 16 - len(lines) + row
+            row += 16 - len(lines)
             # Move cursor to column 0 of the destination row
             for _ in range(2):
                 code += (u'%s%s ' % (PAC_HIGH_BYTE_BY_ROW[row],
-                                    PAC_LOW_BYTE_BY_ROW_RESTRICTED[row]))
+                                     PAC_LOW_BYTE_BY_ROW_RESTRICTED[row]))
             # Print the line using the SCC encoding
-            for index, char in enumerate(line):
+            for char in line:
                 code = self._print_character(code, char)
                 code = self._maybe_space(code)
             code = self._maybe_align(code)
@@ -622,7 +622,6 @@ class _CaptionStash(object):
         caption.end = 0  # Not yet known; filled in later
 
         open_italic = False
-        first_element = True
 
         for element in node_buffer:
             # skip empty elements
@@ -631,10 +630,8 @@ class _CaptionStash(object):
 
             # handle line breaks
             elif element.is_explicit_break():
-                new_captions, open_italic = (
-                    self._translate_break(
-                        caption, first_element, open_italic)
-                )
+                new_captions = self._translate_break(caption)
+                open_italic = False
                 caption.nodes.extend(new_captions)
 
             # handle open italics
@@ -644,7 +641,6 @@ class _CaptionStash(object):
                     CaptionNode.create_style(True, {u'italics': True}))
                 # open italics, no longer first element
                 open_italic = True
-                first_element = False
 
             # handle clone italics
             elif element.sets_italics_off() and open_italic:
@@ -661,7 +657,6 @@ class _CaptionStash(object):
                         layout_info=_get_layout_from_tuple(element.position)),
                 )
                 # no longer first element
-                first_element = False
 
         # close any open italics left over
         if open_italic:
@@ -674,33 +669,23 @@ class _CaptionStash(object):
         self._collection.append(caption)
 
     @staticmethod
-    def _translate_break(caption, first_element, open_italic):
+    def _translate_break(open_italic):
         """Depending on the context, translates a line break into one or more
-        nodes, returning them. Also returns whether to turn off the italics.
+        nodes, returning them.
 
-        :type caption: Caption
-        :param first_element: bool
         :param open_italic: bool
         :rtype: tuple
         """
         new_nodes = []
 
-        # if break appears at start of caption, skip break
-        if first_element:
-            return new_nodes, open_italic
-        # if the last caption was a break, skip this break
-        elif caption.nodes[-1].type_ == CaptionNode.BREAK:
-            return new_nodes, open_italic
-        # close any open italics
-        elif open_italic:
+        if open_italic:
             new_nodes.append(CaptionNode.create_style(
                 False, {u'italics': True}))
-            open_italic = False
 
         # add line break
         new_nodes.append(CaptionNode.create_break())
 
-        return new_nodes, open_italic
+        return new_nodes
 
     @staticmethod
     def _remove_extra_italics(caption):
@@ -769,12 +754,12 @@ class _SccTimeTranslator(object):
             # 1 second of timecode is longer than an actual second (1.001s)
             seconds_per_timestamp_second = 1001.0 / 1000.0
 
-        timesplit = stamp.replace(u';', u':').split(u':')
+        time_split = stamp.replace(u';', u':').split(u':')
 
-        timestamp_seconds = (int(timesplit[0]) * 3600 +
-                             int(timesplit[1]) * 60 +
-                             int(timesplit[2]) +
-                             int(timesplit[3]) / 30.0)
+        timestamp_seconds = (int(time_split[0]) * 3600 +
+                             int(time_split[1]) * 60 +
+                             int(time_split[2]) +
+                             int(time_split[3]) / 30.0)
 
         seconds = timestamp_seconds * seconds_per_timestamp_second
         microseconds = seconds * 1000 * 1000 - offset
@@ -1002,8 +987,7 @@ class _PositioningTracer(object):
         return self._repositioning_required
 
     def acknowledge_position_changed(self):
-        """Consume
-        :return:
+        """Acknowledge the position tracer that the position was changed
         """
         self._repositioning_required = False
 
