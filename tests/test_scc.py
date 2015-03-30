@@ -67,13 +67,7 @@ class CoverageOnlyTestCase(unittest.TestCase):
                           # special/ extended chars delete last 0-4 chars.
                           # XXX - this is a bug.
                           u'ABû',
-                          # XXX - bug
-                          # u'ÁÉÓ¡',  # extended chars <- should look like this
-                          # - this is how it actually looks like.
-                          # [EDIT] - this happens because special / extended
-                          # characters are treated like mid-row command
-                          # characters
-                          u'{break}<$¡',
+                          u'ÁÉÓ¡',
                           u"WHERE YOU'RE STANDING NOW,",
                           u"LOOKING OUT THERE, THAT'S AL",
                           u'THE CROWD.',

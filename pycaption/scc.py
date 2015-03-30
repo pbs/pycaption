@@ -1004,7 +1004,7 @@ class SCCReader(BaseReader):
         self.paint_on = False
         self.paint_time = 0
 
-        self.roll_buffer = u''
+        self.roll_buffer = _InterpretableNodeStash()
         self.roll_rows = []
         self.roll_rows_expected = 0
         self.roll_on = False
@@ -1041,9 +1041,12 @@ class SCCReader(BaseReader):
         # library was treating incorrectly the Roll-up's. We shouldn't convert
         # the characters in the buffer to a caption, but I'd still do that
         # seeing as though it's legacy behavior.
-        # TODO - Very Very important to do this check for Paint On.
-        if self.roll_buffer:
+        if not self.roll_buffer.is_empty():
             self._roll_up()
+
+        if not self.paint_buffer.is_empty():
+            self.caption_stash.create_and_store(
+                self.paint_buffer, self.paint_time)
 
         captions = CaptionSet()
         captions.set_captions(lang, self.caption_stash.get_all())
@@ -1112,7 +1115,7 @@ class SCCReader(BaseReader):
         elif self.pop_on:
             self.pop_buffer.add_chars(SPECIAL_CHARS[word])
         elif self.roll_on:
-            self.roll_buffer += SPECIAL_CHARS[word]
+            self.roll_buffer.add_chars(SPECIAL_CHARS[word])
 
     def _translate_extended_char(self, word):
         # XXX - this looks highly buggy. Why would a special char be ignored
@@ -1130,9 +1133,9 @@ class SCCReader(BaseReader):
                 self.pop_buffer.discard_last_char()
             self.pop_buffer.add_chars(EXTENDED_CHARS[word])
         elif self.roll_on:
-            if self.roll_buffer:
-                self.roll_buffer = self.roll_buffer[:-1]
-            self.roll_buffer += EXTENDED_CHARS[word]
+            if not self.roll_buffer.is_empty():
+                self.roll_buffer.discard_last_char()
+            self.roll_buffer.add_chars(EXTENDED_CHARS[word])
 
     def _translate_command(self, word):
         if self._handle_double_command(word):
@@ -1171,11 +1174,11 @@ class SCCReader(BaseReader):
                 self.roll_rows_expected = 4
 
             # if content is in the queue, turn it into a caption
-            if self.roll_buffer:
+            if not self.roll_buffer.is_empty():
                 # convert and empty buffer
                 self.caption_stash.create_and_store(
                     self.roll_buffer, self.roll_time)
-                self.roll_buffer = u''
+                self.roll_buffer = _InterpretableNodeStash()
 
             # set rows to empty, configure start time for caption
             self.roll_rows = []
@@ -1193,16 +1196,24 @@ class SCCReader(BaseReader):
 
         # roll up captions [Carriage Return]
         elif word == u'94ad':
-            # display paint_on buffer
-            if self.roll_buffer:
+            # display roll-up buffer
+            if not self.roll_buffer.is_empty():
                 self._roll_up()
 
         # clear screen
         elif word == u'942c':
             self.roll_rows = []
 
-            if self.roll_buffer:
-                self._roll_up()
+            # xxx - create paint_on functionality, similar to roll_up
+
+            # xxx - we don't use the roll buffer for paint-on's any more
+            # if not self.roll_buffer:
+            #     self._roll_up()
+
+            if not self.paint_buffer.is_empty():
+                self.caption_stash.create_and_store(
+                    self.paint_buffer, self.paint_time)
+                self.paint_buffer = _InterpretableNodeStash()
 
             # attempt to add proper end time to last caption
             last_caption = self.caption_stash.get_last()
@@ -1218,7 +1229,8 @@ class SCCReader(BaseReader):
             elif self.pop_on:
                 self.pop_buffer.interpret_command(word)
             elif self.roll_on:
-                self.roll_buffer += COMMANDS[word]
+                # self.roll_buffer += COMMANDS[word]
+                self.roll_buffer.interpret_command(word)
 
     def _translate_characters(self, word):
         # split word into the 2 bytes
@@ -1238,10 +1250,15 @@ class SCCReader(BaseReader):
             # self.pop_buffer += CHARACTERS[byte1] + CHARACTERS[byte2]
             self.pop_buffer.add_chars(CHARACTERS[byte1], CHARACTERS[byte2])
         elif self.roll_on:
-            self.roll_buffer += CHARACTERS[byte1] + CHARACTERS[byte2]
+            # self.roll_buffer += CHARACTERS[byte1] + CHARACTERS[byte2]
+            self.roll_buffer.add_chars(CHARACTERS[byte1], CHARACTERS[byte2])
 
     def _roll_up(self):
-        if self.simulate_roll_up == False:
+        if isinstance(self.roll_buffer, _InterpretableNodeStash):
+            self._roll_up_from_buffer()
+            return
+
+        if not self.simulate_roll_up:
             self.roll_rows = []
 
         # if rows already filled, drop the top one
@@ -1264,6 +1281,77 @@ class SCCReader(BaseReader):
             self.caption_stash.get_last().end = self.roll_time
         except AttributeError:
             pass
+
+    def _roll_up_from_buffer(self):
+        if not self.simulate_roll_up:
+            # xxx - does this break the symmetry?
+            # xxx - is this even necessary now? i don't think so.
+            # self.roll_rows = []
+
+            # vwh: convert buffer to Captions
+            self.caption_stash.create_and_store(
+                self.roll_buffer, self.roll_time)
+            # vwh: reset buffer
+            self.roll_buffer = _InterpretableNodeStash()
+
+            # vwh: the time is being corrected when adding to the stash.
+            # why then would this still be necessary?
+            self.roll_time = self.time_translator.get_time()
+            try:
+                self.caption_stash.get_last().end = self.roll_time
+            except AttributeError:
+                pass
+
+        else:
+            if self.roll_rows_expected == 1:
+                # convert buffer and empty
+                self.caption_stash.create_and_store(
+                    self.roll_buffer, self.roll_time)
+                self.roll_buffer = _InterpretableNodeStash()
+
+                # configure time
+                self.roll_time = self.time_translator.get_time()
+
+                # try to insert the proper ending time for the previous caption
+                try:
+                    self.caption_stash.get_last().end = self.roll_time
+                except AttributeError:
+                    pass
+
+            elif self.roll_rows_expected > 1:
+                # xxx - try to orient this towards the objects
+                # xxx - begin
+                # # if rows already filled, drop the top one
+                # if len(self.roll_rows) >= self.roll_rows_expected:
+                #     self.roll_rows.pop(0)
+                #
+                # # add buffer as row to bottom
+                # self.roll_rows.append(self.roll_buffer)
+                # self.roll_buffer = u' '.join(self.roll_rows)
+                # xxx - end
+                # xxx - remake begin
+                if len(self.roll_rows) >= self.roll_rows_expected:
+                    self.roll_rows.pop(0)
+
+                self.roll_rows.append(self.roll_buffer)
+                self.roll_buffer = _InterpretableNodeStash.from_list(
+                    self.roll_rows)
+                # xxx - remake end
+
+                # convert buffer and empty
+                self.caption_stash.create_and_store(
+                    self.roll_buffer, self.roll_time)
+                self.roll_buffer = _InterpretableNodeStash()
+
+                # configure time
+                self.roll_time = self.time_translator.get_time()
+
+                # try to insert the proper ending time for the previous caption
+                try:
+                    self.caption_stash.get_last().end = self.roll_time
+                except AttributeError:
+                    pass
+
 
 
 class SCCWriter(BaseWriter):
@@ -1692,8 +1780,11 @@ class _InterpretableNodeStash(object):
     """Creates _InterpretableNode instances from characters and commands,
     and stores them internally in a buffer.
     """
-    def __init__(self):
-        self._collection = []
+    def __init__(self, collection=None):
+        if not collection:
+            self._collection = []
+        else:
+            self._collection = collection
         self._position_tracer = _PositioningTracer()
 
     def is_empty(self):
@@ -1788,6 +1879,31 @@ class _InterpretableNodeStash(object):
 
     def __iter__(self):
         return iter(self._collection)
+
+    @classmethod
+    def from_list(cls, stash_list):
+        """Having received a list of instances of this class, creates a new
+        instance that contains all the nodes of the previous instances
+        (basically concatenates the many stashes into one)
+
+        :param stash_list: a list of instances of this class
+        :type stash_list: list[_InterpretableNodeStash]
+        :rtype: _InterpretableNodeStash
+        """
+        instance = cls()
+        new_collection = instance._collection
+
+        for idx, stash in enumerate(stash_list):
+            new_collection.extend(stash._collection)
+
+            # use space to separate the next nodes, but don't add final space
+            if idx < len(stash_list) - 1:
+                try:
+                    instance._collection[-1].add_chars(u' ')
+                except AttributeError:
+                    pass
+
+        return instance
 
 
 class _PositioningTracer(object):
