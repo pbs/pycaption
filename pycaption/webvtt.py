@@ -362,6 +362,10 @@ class WebVTTWriter(BaseWriter):
         s = s.replace(u'&', u'&amp;')
         s = s.replace(u'<', u'&lt;')
 
+        # The substring "-->" is also not allowed according to this:
+        #   - http://dev.w3.org/html5/webvtt/#dfn-webvtt-cue-block
+        s = s.replace(u'-->', u'--&gt;')
+
         # The following characters have escaping codes for some reason, but
         # they're not illegal, so for now I'll leave this commented out so that
         # we stay as close as possible to the specification and avoid doing
