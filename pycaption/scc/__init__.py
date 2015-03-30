@@ -441,24 +441,33 @@ class _CaptionStash(object):
     def __init__(self):
         self._collection = _TimingCorrectingCaptionList()
 
-    def correct_last_timing(self, time, force=False):
+        # subset of self._collection;
+        # captions here will be susceptible to time corrections
+        self._still_editing = []
+
+    def correct_last_timing(self, end_time, force=False):
         """Called to set the time on the last Caption(s) stored with no end
         time
 
         :type force: bool
         :param force: Set the end time even if there's already an end time
 
-        :type time: int
+        :type end_time: int
+        :param end_time: microseconds; the end of the caption;
         """
-        if not self._collection:
+        if not self._still_editing:
             return
 
         if force:
-            self._collection[-1].end = time
+            captions_to_correct = self._still_editing
         else:
-            caption = self._collection[-1]
-            if caption.end == 0:
-                caption.end = time
+            captions_to_correct = (
+                caption for caption in self._still_editing
+                if caption.end == 0
+            )
+
+        for caption in captions_to_correct:
+            caption.end = end_time
 
     def get_last(self):
         """Returns the last caption stored (for setting the time on it),
@@ -486,6 +495,7 @@ class _CaptionStash(object):
         caption = Caption()
         caption.start = start
         caption.end = 0  # Not yet known; filled in later
+        self._still_editing = [caption]
 
         open_italic = False
 
@@ -496,16 +506,16 @@ class _CaptionStash(object):
 
             elif element.requires_repositioning():
                 self._remove_extra_italics(caption)
-                self._collection.append(caption)
                 caption = Caption()
                 caption.start = start
                 caption.end = 0
+                self._still_editing.append(caption)
 
             # handle line breaks
             elif element.is_explicit_break():
-                new_captions = self._translate_break(caption)
+                new_nodes = self._translate_break(open_italic)
                 open_italic = False
-                caption.nodes.extend(new_captions)
+                caption.nodes.extend(new_nodes)
 
             # handle open italics
             elif element.sets_italics_on():
@@ -524,12 +534,11 @@ class _CaptionStash(object):
             # handle text
             else:
                 # add text
+                layout_info = _get_layout_from_tuple(element.position)
                 caption.nodes.append(
-                    CaptionNode.create_text(
-                        element.get_text(),
-                        layout_info=_get_layout_from_tuple(element.position)),
+                    CaptionNode.create_text(element.get_text(),
+                                            layout_info=layout_info),
                 )
-                # no longer first element
 
         # close any open italics left over
         if open_italic:
@@ -539,7 +548,7 @@ class _CaptionStash(object):
         # remove extraneous italics tags in the same caption
         self._remove_extra_italics(caption)
 
-        self._collection.append(caption)
+        self._collection.extend(self._still_editing)
 
     @staticmethod
     def _translate_break(open_italic):
