@@ -5,19 +5,18 @@ import re
 import math
 import string
 import textwrap
-from .constants import (
-    HEADER, PAC_BYTES_TO_POSITIONING_MAP, CHARACTER_TO_CODE,
-    COMMANDS, CHARACTERS, EXTENDED_CHARS, MICROSECONDS_PER_CODEWORD,
-    PAC_HIGH_BYTE_BY_ROW, PAC_LOW_BYTE_BY_ROW_RESTRICTED,
-    POSITIONING_TO_PAC_MAP, SPECIAL_CHARS, SPECIAL_OR_EXTENDED_CHAR_TO_CODE
-)
 
 from pycaption.base import (
     BaseReader, BaseWriter, Caption, CaptionSet, CaptionNode,
 )
 from pycaption.geometry import Layout, Point, Size, UnitEnum
-from pycaption.exceptions import CaptionReadNoCaptions
-from pycaption.exceptions import CaptionReadSyntaxError
+from pycaption.exceptions import CaptionReadNoCaptions, CaptionReadSyntaxError
+from .constants import (
+    HEADER, COMMANDS, SPECIAL_CHARS, EXTENDED_CHARS, CHARACTERS,
+    MICROSECONDS_PER_CODEWORD, CHARACTER_TO_CODE,
+    SPECIAL_OR_EXTENDED_CHAR_TO_CODE, PAC_BYTES_TO_POSITIONING_MAP,
+    PAC_HIGH_BYTE_BY_ROW, PAC_LOW_BYTE_BY_ROW_RESTRICTED,
+)
 
 
 class SCCReader(BaseReader):
@@ -62,9 +61,8 @@ class SCCReader(BaseReader):
         for line in lines[1:]:
             self._translate_line(line)
 
-        # after converting lines, see if anything is left in paint_buffer
-        # TODO - IMPORTANT!! Pop-Up captions are displayed explicitly (command
-        # 942f [EOC]. Also Roll-up's are explicitly rolled up (with 94ad [CR])
+        # Pop-Up captions are displayed explicitly (command 942f [EOC].
+        # Also Roll-up's are explicitly rolled up (with 94ad [CR])
         # We should however check the paint_buffer for any remaining content
         # and turn that into a caption, or we'll lose the last line of the
         # Paint-on captions.
@@ -75,6 +73,7 @@ class SCCReader(BaseReader):
         if not self.roll_buffer.is_empty():
             self._roll_up()
 
+        # after converting lines, see if anything is left in paint_buffer
         if not self.paint_buffer.is_empty():
             self.caption_stash.create_and_store(
                 self.paint_buffer, self.paint_time)
@@ -93,7 +92,7 @@ class SCCReader(BaseReader):
             return
 
         # split line in timestamp and words
-        r = re.compile(u"([0-9:;]*)([\s\t]*)((.)*)")
+        r = re.compile(r"([0-9:;]*)([\s\t]*)((.)*)")
         parts = r.findall(line.lower())
 
         self.time_translator.start_at(parts[0][0])
@@ -235,22 +234,14 @@ class SCCReader(BaseReader):
         elif word == u'942c':
             self.roll_rows = []
 
-            # xxx - create paint_on functionality, similar to roll_up
-
-            # xxx - we don't use the roll buffer for paint-on's any more
-            # if not self.roll_buffer:
-            #     self._roll_up()
-
             if not self.paint_buffer.is_empty():
                 self.caption_stash.create_and_store(
                     self.paint_buffer, self.paint_time)
                 self.paint_buffer = _InterpretableNodeStash()
 
-            # attempt to add proper end time to last caption
-            last_caption = self.caption_stash.get_last()
-            if last_caption and last_caption.end == 0:
-                last_time = self.time_translator.get_time()
-                last_caption.end = last_time
+            # attempt to add proper end time to last caption(s)
+            self.caption_stash.correct_last_timing(
+                self.time_translator.get_time())
 
         # if command not one of the aforementioned, add to buffer
         else:
@@ -260,7 +251,6 @@ class SCCReader(BaseReader):
             elif self.pop_on:
                 self.pop_buffer.interpret_command(word)
             elif self.roll_on:
-                # self.roll_buffer += COMMANDS[word]
                 self.roll_buffer.interpret_command(word)
 
     def _translate_characters(self, word):
@@ -275,114 +265,32 @@ class SCCReader(BaseReader):
         # xxx - Polymorphism means avoiding conditional chains like this
         # if so, add to buffer
         if self.paint_on:
-            # self.paint_buffer += CHARACTERS[byte1] + CHARACTERS[byte2]
             self.paint_buffer.add_chars(CHARACTERS[byte1], CHARACTERS[byte2])
         elif self.pop_on:
-            # self.pop_buffer += CHARACTERS[byte1] + CHARACTERS[byte2]
             self.pop_buffer.add_chars(CHARACTERS[byte1], CHARACTERS[byte2])
         elif self.roll_on:
-            # self.roll_buffer += CHARACTERS[byte1] + CHARACTERS[byte2]
             self.roll_buffer.add_chars(CHARACTERS[byte1], CHARACTERS[byte2])
 
     def _roll_up(self):
-        if isinstance(self.roll_buffer, _InterpretableNodeStash):
-            self._roll_up_from_buffer()
-            return
-
-        if not self.simulate_roll_up:
-            self.roll_rows = []
-
-        # if rows already filled, drop the top one
-        if len(self.roll_rows) >= self.roll_rows_expected:
-            self.roll_rows.pop(0)
-
-        # add buffer as row to bottom
-        self.roll_rows.append(self.roll_buffer)
-        self.roll_buffer = u' '.join(self.roll_rows)
-
-        # convert buffer and empty
-        self.caption_stash.create_and_store(self.roll_buffer, self.roll_time)
-        self.roll_buffer = u''
-
-        # configure time
-        self.roll_time = self.time_translator.get_time()
-
-        # try to insert the proper ending time for the previous caption
-        try:
-            self.caption_stash.get_last().end = self.roll_time
-        except AttributeError:
-            pass
-
-    def _roll_up_from_buffer(self):
-        if not self.simulate_roll_up:
-            # xxx - does this break the symmetry?
-            # xxx - is this even necessary now? i don't think so.
-            # self.roll_rows = []
-
-            # vwh: convert buffer to Captions
-            self.caption_stash.create_and_store(
-                self.roll_buffer, self.roll_time)
-            # vwh: reset buffer
-            self.roll_buffer = _InterpretableNodeStash()
-
-            # vwh: the time is being corrected when adding to the stash.
-            # why then would this still be necessary?
-            self.roll_time = self.time_translator.get_time()
-            try:
-                self.caption_stash.get_last().end = self.roll_time
-            except AttributeError:
-                pass
-
-        else:
-            if self.roll_rows_expected == 1:
-                # convert buffer and empty
-                self.caption_stash.create_and_store(
-                    self.roll_buffer, self.roll_time)
-                self.roll_buffer = _InterpretableNodeStash()
-
-                # configure time
-                self.roll_time = self.time_translator.get_time()
-
-                # try to insert the proper ending time for the previous caption
-                try:
-                    self.caption_stash.get_last().end = self.roll_time
-                except AttributeError:
-                    pass
-
-            elif self.roll_rows_expected > 1:
-                # xxx - try to orient this towards the objects
-                # xxx - begin
-                # # if rows already filled, drop the top one
-                # if len(self.roll_rows) >= self.roll_rows_expected:
-                #     self.roll_rows.pop(0)
-                #
-                # # add buffer as row to bottom
-                # self.roll_rows.append(self.roll_buffer)
-                # self.roll_buffer = u' '.join(self.roll_rows)
-                # xxx - end
-                # xxx - remake begin
+        if self.simulate_roll_up:
+            if self.roll_rows_expected > 1:
                 if len(self.roll_rows) >= self.roll_rows_expected:
                     self.roll_rows.pop(0)
 
                 self.roll_rows.append(self.roll_buffer)
                 self.roll_buffer = _InterpretableNodeStash.from_list(
                     self.roll_rows)
-                # xxx - remake end
 
-                # convert buffer and empty
-                self.caption_stash.create_and_store(
-                    self.roll_buffer, self.roll_time)
-                self.roll_buffer = _InterpretableNodeStash()
+        # convert buffer and empty
+        self.caption_stash.create_and_store(
+            self.roll_buffer, self.roll_time)
+        self.roll_buffer = _InterpretableNodeStash()
 
-                # configure time
-                self.roll_time = self.time_translator.get_time()
+        # configure time
+        self.roll_time = self.time_translator.get_time()
 
-                # try to insert the proper ending time for the previous caption
-                try:
-                    self.caption_stash.get_last().end = self.roll_time
-                except AttributeError:
-                    pass
-
+        # try to insert the proper ending time for the previous caption
+        self.caption_stash.correct_last_timing(self.roll_time, force=True)
 
 
 class SCCWriter(BaseWriter):
@@ -533,6 +441,25 @@ class _CaptionStash(object):
     def __init__(self):
         self._collection = _TimingCorrectingCaptionList()
 
+    def correct_last_timing(self, time, force=False):
+        """Called to set the time on the last Caption(s) stored with no end
+        time
+
+        :type force: bool
+        :param force: Set the end time even if there's already an end time
+
+        :type time: int
+        """
+        if not self._collection:
+            return
+
+        if force:
+            self._collection[-1].end = time
+        else:
+            caption = self._collection[-1]
+            if caption.end == 0:
+                caption.end = time
+
     def get_last(self):
         """Returns the last caption stored (for setting the time on it),
         or None
@@ -544,75 +471,14 @@ class _CaptionStash(object):
 
         return None
 
-    def create_and_store(self, text_buffer, start):
-        """Creates a Caption from the text buffer and the start, storing it
+    def create_and_store(self, node_buffer, start):
+        """Given the buffer, create one (or multiple) Captions, storing them
         internally
 
-        :type text_buffer: unicode | _InterpretableNodeStash
-        :type start: int
-        """
-        if isinstance(text_buffer, _InterpretableNodeStash):
-            return self._create_and_store_from_buffer(text_buffer, start)
-
-        caption = Caption()
-        caption.start = start
-        caption.end = 0  # Not yet known; filled in later
-
-        open_italic = False
-        first_element = True
-
-        # split into elements (e.g. break, italics, text)
-        for element in text_buffer.split(u'<$>'):
-            # skip empty elements
-            if element.strip() == u'':
-                continue
-
-            # handle line breaks
-            elif element == u'{break}':
-                new_captions, open_italic = (
-                    self._translate_break(
-                        caption, first_element, open_italic)
-                )
-                caption.nodes.extend(new_captions)
-
-            # handle open italics
-            elif element == u'{italic}':
-                # add italics
-                caption.nodes.append(
-                    CaptionNode.create_style(True, {u'italics': True}))
-                # open italics, no longer first element
-                open_italic = True
-                first_element = False
-
-            # handle clone italics
-            elif element == u'{end-italic}' and open_italic:
-                caption.nodes.append(
-                    CaptionNode.create_style(False, {u'italics': True}))
-                open_italic = False
-
-            # handle text
-            else:
-                # add text
-                caption.nodes.append(
-                    CaptionNode.create_text(u' '.join(element.split())))
-                # no longer first element
-                first_element = False
-
-        # close any open italics left over
-        if open_italic:
-            caption.nodes.append(
-                CaptionNode.create_style(False, {u'italics': True}))
-
-        # remove extraneous italics tags in the same caption
-        self._remove_extra_italics(caption)
-
-        self._collection.append(caption)
-
-    def _create_and_store_from_buffer(self, node_buffer, start):
-        """
-
         :type node_buffer: _InterpretableNodeStash
+
         :type start: int
+        :param start: the start time in microseconds
         """
         if node_buffer.is_empty():
             return
@@ -627,6 +493,13 @@ class _CaptionStash(object):
             # skip empty elements
             if element.is_empty():
                 continue
+
+            elif element.requires_repositioning():
+                self._remove_extra_italics(caption)
+                self._collection.append(caption)
+                caption = Caption()
+                caption.start = start
+                caption.end = 0
 
             # handle line breaks
             elif element.is_explicit_break():
@@ -701,8 +574,8 @@ class _CaptionStash(object):
         while i < length:
             if (caption.nodes[i].type_ == CaptionNode.STYLE and
                     caption.nodes[i].content[u'italics'] and
-                        caption.nodes[i + 1].type_ == CaptionNode.BREAK and
-                        caption.nodes[i + 2].type_ == CaptionNode.STYLE and
+                    caption.nodes[i + 1].type_ == CaptionNode.BREAK and
+                    caption.nodes[i + 2].type_ == CaptionNode.STYLE and
                     caption.nodes[i + 2].content[u'italics']):
                 # Remove the two italics style nodes
                 caption.nodes.pop(i)
@@ -812,7 +685,8 @@ class _InterpretableNodeStash(object):
         """This was previously used to discard a mid-row command, but generated
         a bug, by confusing special/extended characters with mid-row commands.
         This method should only discard the last character if it's a mid-row
-        command, and it's equal to the current command
+        command, and it's equal to the current command - that however should
+        be handled by _handle_double_command already
         """
         pass
 
@@ -837,7 +711,8 @@ class _InterpretableNodeStash(object):
         # handle a simple line break
         if self._position_tracer.is_linebreak_required():
             # must insert a line break here
-            self._collection.append(_InterpretableNode.create_break())
+            self._collection.append(_InterpretableNode.create_break(
+                position=current_position))
             node = _InterpretableNode.create_text(current_position)
             self._collection.append(node)
             self._position_tracer.acknowledge_linebreak_consumed()
@@ -845,6 +720,8 @@ class _InterpretableNodeStash(object):
         # handle completely new positioning
         elif self._position_tracer.is_repositioning_required():
             # this node will have a different positioning than the previous one
+            self._collection.append(
+                _InterpretableNode.create_repositioning_command())
             node = _InterpretableNode.create_text(current_position)
             self._collection.append(node)
             self._position_tracer.acknowledge_position_changed()
@@ -872,7 +749,7 @@ class _InterpretableNodeStash(object):
             self._collection.append(
                 _InterpretableNode.create_italics_style(
                     self._position_tracer.get_current_position(),
-                    on=False
+                    turn_on=False
                 )
             )
 
@@ -912,7 +789,7 @@ class _InterpretableNodeStash(object):
         for idx, stash in enumerate(stash_list):
             new_collection.extend(stash._collection)
 
-            # use space to separate the next nodes, but don't add final space
+            # use space to separate the stashes, but don't add final space
             if idx < len(stash_list) - 1:
                 try:
                     instance._collection[-1].add_chars(u' ')
@@ -955,7 +832,7 @@ class _PositioningTracer(object):
             return
 
         row, col = current
-        new_row, new_col = positioning
+        new_row, _ = positioning
 
         # is the new position simply one line below?
         if new_row == row + 1:
@@ -1011,6 +888,7 @@ class _InterpretableNode(object):
     BREAK = 1
     ITALICS_ON = 2
     ITALICS_OFF = 3
+    CHANGE_POSITION = 4
 
     def __init__(self, text=None, position=None, type_=0):
         """
@@ -1067,37 +945,78 @@ class _InterpretableNode(object):
         """
         return self._type == self.ITALICS_OFF
 
+    def requires_repositioning(self):
+        """Whether the node must be interpreted as a change in positioning
+
+        :rtype: bool
+        """
+        return self._type == self.CHANGE_POSITION
+
     def get_text(self):
         """A little legacy code.
         """
         return u' '.join(self.text.split())
 
     @classmethod
-    def create_break(cls):
-        return cls(type_=cls.BREAK)
+    def create_break(cls, position):
+        """Create a node, interpretable as an explicit line break
+
+        :type position: tuple[int]
+        :param position: a tuple (row, col) containing the positioning info
+
+        :rtype: _InterpretableNode
+        """
+        return cls(type_=cls.BREAK, position=position)
 
     @classmethod
     def create_text(cls, position, *chars):
+        """Create a node interpretable as text
+
+        :type position: tuple[int]
+        :param position: a tuple (row, col) to mark the positioning
+
+        :type chars: tuple[unicode]
+        :param chars: characters to add to the text
+
+        :rtype: _InterpretableNode
+        """
         return cls(u''.join(chars), position=position)
 
     @classmethod
-    def create_italics_style(cls, position, on=True):
+    def create_italics_style(cls, position, turn_on=True):
+        """Create a node, interpretable as a command to switch italics on/off
+
+        :type position: tuple[int]
+        :param position: a tuple (row, col) to mark the positioning
+
+        :type turn_on: bool
+        :param turn_on: whether to turn the italics on or off
+
+        :rtype: _InterpretableNode
+        """
         return cls(
-            position=position, type_=cls.ITALICS_ON if on else cls.ITALICS_OFF
+            position=position,
+            type_=cls.ITALICS_ON if turn_on else cls.ITALICS_OFF
         )
+
+    @classmethod
+    def create_repositioning_command(cls):
+        """Create node interpretable as a command to change the current
+        position
+        """
+        return cls(type_=cls.CHANGE_POSITION)
 
     def __repr__(self):
         if self._type == self.BREAK:
             return u'<INode: BR>'
         elif self._type == self.TEXT:
             return u'<INode: "{}">'.format(self.text)
-        else:
+        elif self._type in (self.ITALICS_ON, self.ITALICS_OFF):
             return u'<INode: italics {}>'.format(
                 u'on' if self._type == self.ITALICS_ON else u'off')
+        else:
+            return u'<INode: change position>'
 
-
-class _ItalicStateTracker(object):
-    pass
 
 def _get_italics_state_from_command(command):
     """
