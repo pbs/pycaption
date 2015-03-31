@@ -156,7 +156,7 @@ class SCCReader(BaseReader):
         # add to buffer
         if self.paint_on:
             if not self.paint_buffer.is_empty():
-                self.paint_buffer = self.paint_buffer.discard_last_char()
+                self.paint_buffer.discard_last_char()
             self.paint_buffer.add_chars(EXTENDED_CHARS[word])
         elif self.pop_on:
             if not self.pop_buffer.is_empty():
