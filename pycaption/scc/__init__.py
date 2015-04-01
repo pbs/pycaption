@@ -110,7 +110,7 @@ class SCCReader(BaseReader):
         # first check if word is a command
         # TODO - check that all the positioning commands are here, or use
         # some other strategy to determine if the word is a command.
-        if word in COMMANDS:
+        if word in COMMANDS or _is_pac_command(word):
             self._translate_command(word)
 
         # second, check if word is a special character
@@ -481,8 +481,8 @@ class _CaptionStash(object):
         return None
 
     def create_and_store(self, node_buffer, start):
-        """Given the buffer, create one (or multiple) Captions, storing them
-        internally
+        """Interpreter method, will convert the buffer into one or more Caption
+        objects, storing them internally.
 
         :type node_buffer: _InterpretableNodeStash
 
@@ -536,8 +536,8 @@ class _CaptionStash(object):
                 # add text
                 layout_info = _get_layout_from_tuple(element.position)
                 caption.nodes.append(
-                    CaptionNode.create_text(element.get_text(),
-                                            layout_info=layout_info),
+                    CaptionNode.create_text(
+                        element.get_text(), layout_info=layout_info),
                 )
                 caption.layout_info = layout_info
 
@@ -1042,7 +1042,7 @@ def _get_layout_from_tuple(position_tuple):
     """Create a Layout object from the positioning information given
 
     The row can have a value from 1 to 15 inclusive. (vertical positioning)
-    Toe column can have a value from 0 to 31 inclusive. (horizontal)
+    The column can have a value from 0 to 31 inclusive. (horizontal)
 
     :param position_tuple: a tuple of ints (row, col)
     :type position_tuple: tuple
@@ -1054,5 +1054,27 @@ def _get_layout_from_tuple(position_tuple):
     row, column = position_tuple
 
     horizontal = Size(100 * column / 32.0, UnitEnum.PERCENT)
-    vertical = Size(100 * row / 15.0, UnitEnum.PERCENT)
+    vertical = Size(100 * (row - 1) / 15.0, UnitEnum.PERCENT)
     return Layout(origin=Point(horizontal, vertical))
+
+
+def _is_pac_command(word):
+    """Checks whether the given word is a Preamble Address Code [PAC] command
+
+    :type word: unicode
+    :param word: 4 letter unicode command
+
+    :rtype: bool
+    """
+    if not word or len(word) != 4:
+        return False
+    byte1, byte2 = word[:2], word[2:]
+
+    col_dict = PAC_BYTES_TO_POSITIONING_MAP.get(byte1)
+    if not col_dict:
+        return False
+
+    if byte2 not in col_dict:
+        return False
+
+    return True

@@ -31,10 +31,30 @@ class SCCReaderTestCase(unittest.TestCase):
             CaptionReadNoCaptions,
             SCCReader().read, SAMPLE_SCC_EMPTY.decode(u'utf-8'))
 
-    def test_temporary(self):
-        captions = SCCReader().read(SAMPLE_SCC_POP_ON_TEMPORARY)
+    def test_scc_positioning_is_read(self):
+        captions = SCCReader().read(unicode(SAMPLE_SCC_MULTIPLE_POSITIONING))
 
-        x = 1
+        # SCC generates only, and we always expect it.
+        # no other attributes are generated from SCC at the moment
+        expected_positioning = [
+            ((0.0, u'%'), (80.0, u'%')),
+            ((37.5, u'%'), (0.0, u'%')),
+            ((12.5, u'%'), (46.666666666666664, u'%')),
+            ((12.5, u'%'), (93.33333333333333, u'%')),
+            ((37.5, u'%'), (53.333333333333336, u'%')),
+            ((75.0, u'%'), (13.333333333333334, u'%')),
+            ((12.5, u'%'), (86.66666666666667, u'%')),
+            ((37.5, u'%'), (40.0, u'%')),
+            ((12.5, u'%'), (73.33333333333333, u'%')),
+            ((12.5, u'%'), (33.333333333333336, u'%'))
+        ]
+        actual_positioning = [
+            caption_.layout_info.origin.serialized() for caption_ in
+            captions.get_captions(u'en-US')
+        ]
+
+        self.assertEqual(expected_positioning, actual_positioning)
+
 
 class CoverageOnlyTestCase(unittest.TestCase):
     """In order to refactor safely, we need coverage of 95% or more.
@@ -140,9 +160,26 @@ SAMPLE_SCC_POP_ON = """Scenarist_SCC V1.0
 
 """
 
-SAMPLE_SCC_POP_ON_TEMPORARY = u"""Scenarist_SCC V1.0
+# 6 captions
+#   2 Pop-On captions.
+#       The first has 3 random positions, and thus 3 captions
+#       The second should be interpreted as 1 caption with 2 line breaks
+#   2 Roll-Up captions - same comment
+#   2 Paint-on captions - same comment
+#       - the TAB OVER commands are not interpreted (97A1, 97A2, 9723)
+SAMPLE_SCC_MULTIPLE_POSITIONING = u"""Scenarist_SCC V1.0
 
-00:00:25:16 94ae 94ae 9420 9420 1370 1370 cdc1 ce20 94d0 94d0 49f4 2020 9470 9470 45e9 2020 942c 942c 942f 942f
+00:00:00:16 94ae 94ae 9420 9420 1370 1370 6162 6162 91d6 91d6 e364 e364 927c 927c e5e6 e5e6 942c 942c 942f 942f
+
+00:00:02:16 94ae 94ae 9420 9420 16f2 16f2 6768 6768 9752 9752 e9ea e9ea 97f2 97f2 6bec 6bec 942c 942c 942f 942f
+
+00:00:09:21	9425 9425 94ad 94ad 94f2 94f2 6d6e 6d6e 97d6 97d6 ef70 ef70 92dc 92dc f1f2 f1f2
+
+00:00:11:21 9425 9425 94ad 94ad 15f2 15f2 73f4 73f4 1652 1652 7576 7576 16f2 f7f8 f7f8
+
+00:00:20;02	9429 9429 9452 9452 97A2 97A2 797A 797A 917c 917c B031 B031 16d6 16d6 32B3 32B3
+
+00:00:22;02	9429 9429 1352 1352 97A2 97A2 34B5 34B5 13f2 13f2 B637 B637 9452 9452 38B9 38B9
 
 00:00:36:04 942c 942c
 
