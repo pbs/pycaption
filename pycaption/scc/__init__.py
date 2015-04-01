@@ -7,11 +7,11 @@ import string
 import textwrap
 from itertools import product
 
-from .base import (
+from pycaption.base import (
     BaseReader, BaseWriter, Caption, CaptionSet, CaptionNode,
 )
-from .geometry import Layout, Point, Size, UnitEnum
-from .exceptions import CaptionReadNoCaptions
+from pycaption.geometry import Layout, Point, Size, UnitEnum
+from pycaption.exceptions import CaptionReadNoCaptions
 from pycaption.exceptions import CaptionReadSyntaxError
 
 
