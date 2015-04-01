@@ -9,6 +9,7 @@ from .samples import (
 from .mixins import (
     WebVTTTestingMixIn, DFXPTestingMixIn, SAMITestingMixIn, SRTTestingMixIn
 )
+from tests.samples import SAMPLE_WEBVTT_FROM_WEBVTT
 
 
 class WebVTTConversionTestCase(unittest.TestCase):
@@ -23,7 +24,7 @@ class WebVTTtoWebVTTTestCase(WebVTTConversionTestCase, WebVTTTestingMixIn):
     def test_webvtt_to_webvtt_conversion(self):
         results = WebVTTWriter().write(self.captions)
         self.assertTrue(isinstance(results, unicode))
-        self.assertWebVTTEquals(SAMPLE_WEBVTT.decode(u'utf-8'), results)
+        self.assertWebVTTEquals(SAMPLE_WEBVTT_FROM_WEBVTT.decode(u'utf-8'), results)
 
 #     # TODO: Write a test that includes a WebVTT file with style tags
 #     # That will fail because the styles used in the cues are not tracked.
@@ -40,7 +41,8 @@ class WebVTTtoSAMITestCase(WebVTTConversionTestCase, SAMITestingMixIn):
 class WebVTTtoDFXPTestCase(WebVTTConversionTestCase, DFXPTestingMixIn):
 
     def test_webvtt_to_dfxp_conversion(self):
-        results = DFXPWriter().write(self.captions)
+        caption_set = WebVTTReader().read(SAMPLE_WEBVTT.decode(u'utf-8'))
+        results = DFXPWriter().write(caption_set)
         self.assertTrue(isinstance(results, unicode))
         self.assertDFXPEquals(
             SAMPLE_DFXP_UNICODE, results, ignore_styling=True, ignore_spans=True

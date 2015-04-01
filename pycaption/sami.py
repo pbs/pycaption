@@ -20,7 +20,7 @@ log.setLevel(FATAL)
 SAMI_BASE_MARKUP = u'''
 <sami>
     <head>
-        <style type_="text/css"/>
+        <style type="text/css"/>
     </head>
     <body/>
 </sami>'''
@@ -87,6 +87,9 @@ class SAMIReader(BaseReader):
     def _translate_tag(self, tag):
         # convert text
         if isinstance(tag, NavigableString):
+            # BeautifulSoup apparently handles unescaping character codes
+            # (e.g. &amp;) automatically. The following variable, therefore,
+            # should contain a plain unicode string.
             text = tag.strip()
             if not text:
                 return
@@ -286,7 +289,7 @@ class SAMIWriter(BaseWriter):
 
         for node in caption:
             if node.type_ == CaptionNode.TEXT:
-                line += escape(node.content) + u' '
+                line += self._encode(node.content) + u' '
             elif node.type_ == CaptionNode.BREAK:
                 line = line.rstrip() + u'<br/>\n    '
             elif node.type_ == CaptionNode.STYLE:
@@ -340,6 +343,14 @@ class SAMIWriter(BaseWriter):
             sami_style[u'lang'] = content[u'lang']
 
         return sami_style
+
+    def _encode(self, s):
+        """
+        Encodes plain unicode string to proper SAMI file escaping special
+        characters in case they appear in the string.
+        :type s: unicode
+        """
+        return escape(s)
 
 
 class SAMIParser(HTMLParser):

@@ -392,7 +392,6 @@ It's all about an eternal Einstein.
 
 00:32.200 --> 00:36.200
 <LAUGHING & WHOOPS!>
-
 """
 
 SAMPLE_WEBVTT_OUTPUT = """WEBVTT
@@ -423,9 +422,90 @@ MAN 2:
 It's all about an eternal Einstein.
 
 00:32.200 --> 00:36.200
-<LAUGHING & WHOOPS!>
-
+&lt;LAUGHING &amp; WHOOPS!>
 """
+
+SAMPLE_WEBVTT_FROM_DFXP = """WEBVTT
+
+00:09.209 --> 00:12.312 align:middle
+( clock ticking )
+
+00:14.848 --> 00:17.000 align:middle
+MAN:
+When we think
+♪ ...say bow, wow, ♪
+
+00:17.000 --> 00:18.752 align:right
+we have this vision of Einstein
+
+00:18.752 --> 00:20.887 align:middle
+&nbsp;
+as an old, wrinkly man
+with white hair.
+
+00:20.887 --> 00:26.760 align:middle
+MAN 2:
+E equals m c-squared is
+not about an old Einstein.
+
+00:26.760 --> 00:32.200 align:middle
+MAN 2:
+It's all about an eternal Einstein.
+
+00:32.200 --> 00:36.200 align:middle
+&lt;LAUGHING &amp; WHOOPS!>
+"""
+
+SAMPLE_WEBVTT_FROM_DFXP_WITH_POSITIONING = """WEBVTT
+
+00:01.000 --> 00:03.000 position:25%,start line:25% size:50%
+You might not remember us. We are a typical transparent region with centered text that has an outline.
+
+00:03.500 --> 00:05.000 align:right position:25%,start line:25% size:50%
+had personality.
+
+00:05.500 --> 00:07.000 align:left position:50%,start line:50% size:25%
+Hello there, children! Have you seen any visitors?
+
+00:07.500 --> 00:09.000 align:right position:25%,start line:75% size:25%
+This is
+the last cue
+"""
+
+SAMPLE_WEBVTT_FROM_SRT = """WEBVTT
+
+00:09.209 --> 00:12.312
+( clock ticking )
+
+00:14.848 --> 00:17.000
+MAN:
+When we think
+♪ ...say bow, wow, ♪
+
+00:17.000 --> 00:18.752
+we have this vision of Einstein
+
+00:18.752 --> 00:20.887
+as an old, wrinkly man
+with white hair.
+
+00:20.887 --> 00:26.760
+MAN 2:
+E equals m c-squared is
+not about an old Einstein.
+
+00:26.760 --> 00:32.200
+MAN 2:
+It's all about an eternal Einstein.
+
+00:32.200 --> 00:36.200
+&lt;LAUGHING &amp; WHOOPS!>
+"""
+
+# This is not equal to the input because we accept unescaped illegal characters
+# when reading (because many players do so) but escape them when writing
+# in order to conform to the specification.
+SAMPLE_WEBVTT_FROM_WEBVTT = SAMPLE_WEBVTT_FROM_SRT
 
 SAMPLE_WEBVTT_2 = """WEBVTT
 
@@ -462,21 +542,21 @@ SAMPLE_WEBVTT_EMPTY = """WEBVTT
 """
 
 
-SAMPLE_DFXP_UNICODE = u"""
+SAMPLE_DFXP_UNICODE = u"""\
 <?xml version="1.0" encoding="utf-8"?>
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml"
     xmlns:tts="http://www.w3.org/ns/ttml#styling">
  <head>
   <styling>
-   <style xml:id="p" tts:color="#ffeedd" tts:fontfamily="Arial"
-          tts:fontsize="10pt" tts:textAlign="center"/>
+   <style xml:id="p" tts:color="#ffeedd" tts:fontFamily="Arial"
+          tts:fontSize="10pt" tts:textAlign="center"/>
   </styling>
   <layout>
-  <region tts:displayalign="after" tts:textalign="center" xml:id="bottom"></region>
+  <region tts:displayAlign="after" tts:textAlign="center" xml:id="bottom"></region>
   </layout>
  </head>
  <body>
-  <div xml:lang="en-US">
+  <div xml:lang="en-US" region="bottom">
    <p begin="00:00:09.209" end="00:00:12.312" region="bottom" style="p">
     ( clock ticking )
    </p>
@@ -516,8 +596,8 @@ SAMPLE_DFXP_UTF8 = """
     xmlns:tts="http://www.w3.org/ns/ttml#styling">
  <head>
   <styling>
-   <style xml:id="p" tts:color="#ffeedd" tts:fontfamily="Arial"
-          tts:fontsize="10pt" tts:textAlign="center"/>
+   <style xml:id="p" tts:color="#ffeedd" tts:fontFamily="Arial"
+          tts:fontSize="10pt" tts:textAlign="center"/>
   </styling>
   <layout>
   <region tts:displayAlign="after" tts:textAlign="center" xml:id="bottom"></region>
@@ -534,7 +614,7 @@ SAMPLE_DFXP_UTF8 = """
     ♪ ...say bow, wow, ♪
    </p>
    <p begin="00:00:17.000" end="00:00:18.752" style="p">
-    <span tts:textalign="right">we have this vision of Einstein</span>
+    <span tts:textAlign="right">we have this vision of Einstein</span>
    </p>
    <p begin="00:00:18.752" end="00:00:20.887" style="p">
    <br/>
@@ -556,7 +636,6 @@ SAMPLE_DFXP_UTF8 = """
   </div>
  </body>
 </tt>"""
-
 
 SAMPLE_DFXP_WITHOUT_REGION_AND_STYLE = """
 <?xml version="1.0" encoding="utf-8"?>
@@ -599,7 +678,7 @@ SAMPLE_DFXP_WITHOUT_REGION_AND_STYLE = """
 </tt>"""
 
 
-SAMPLE_DFXP = """
+SAMPLE_DFXP = """\
 <?xml version="1.0" encoding="utf-8"?>
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml"
     xmlns:tts="http://www.w3.org/ns/ttml#styling">
@@ -613,7 +692,7 @@ SAMPLE_DFXP = """
   </layout>
  </head>
  <body>
-  <div xml:lang="en-US">
+  <div xml:lang="en-US" region="bottom">
    <p begin="00:00:09.209" end="00:00:12.312" region="bottom" style="p">
     ( clock ticking )
    </p>
@@ -623,10 +702,10 @@ SAMPLE_DFXP = """
     of "E equals m c-squared",
    </p>
    <p begin="00:00:17.000" end="00:00:18.752" region="bottom" style="p">
-    <span tts:textalign="right">we have this vision of Einstein</span>
+    <span tts:textAlign="right">we have this vision of Einstein</span>
    </p>
    <p begin="00:00:18.752" end="00:00:20.887" region="bottom" style="p">
-   <br/>
+    <br/>
     as an old, wrinkly man<br/>
     with white hair.
    </p>
@@ -642,11 +721,47 @@ SAMPLE_DFXP = """
    <p begin="00:00:32.200" end="00:00:34.400" region="bottom" style="p">
     &lt;LAUGHING &amp; WHOOPS!&gt;
    </p>
-   <p begin="00:00:34.400" end="00:00:38.400" region="bottom" style="p">some more text</p>
+   <p begin="00:00:34.400" end="00:00:38.400" region="bottom" style="p">
+    some more text
+   </p>
   </div>
  </body>
 </tt>"""
 
+SAMPLE_DFXP_WITH_POSITIONING = """<?xml version="1.0" encoding="utf-8"?>
+<tt xml:lang="en-us"
+    xmlns="http://www.w3.org/ns/ttml"
+    xmlns:tts='http://www.w3.org/ns/ttml#styling'
+    >
+<head>
+    <styling>
+        <style xml:id="padded" tts:backgroundColor="yellow" tts:padding="10%"/>
+    </styling>
+    <layout>
+        <region xml:id="regionOne" tts:textAlign='middle' tts:origin='96px 54px' tts:extent='70% 25%' style="padded"/>
+        <region xml:id="regionTwo" tts:backgroundColor="blue" tts:textAlign='right' tts:origin='25% 25%' tts:extent='50% 10%'/>
+        <region xml:id="regionThree" tts:backgroundColor="green" tts:textAlign='left' tts:origin='50% 50%' tts:extent='25% 25%'/>
+        <region xml:id="regionFour" tts:backgroundColor="red" tts:textAlign='right' tts:origin='25% 75%' tts:extent='25% 25%'/>
+    </layout>
+</head>
+<body>
+    <div>
+        <p region="regionOne" tts:backgroundColor="black" begin='00:00:01.000' end='00:00:03.000'>
+        You might not remember us. We are a typical transparent region with centered text that has an outline.
+        </p>
+        <p region="regionTwo" begin='00:00:03.500' end='00:00:05.000'>
+        had <span tts:textDecoration="underline">personality.</span>
+        </p>
+        <p region="regionThree" begin='00:00:05.500' end='00:00:07.000'>
+        Hello there, children! Have you seen any visitors?
+        </p>
+        <p region="regionFour" begin='00:00:07.500' end='00:00:09.000'>
+        This is<br/>
+        the last cue
+        </p>
+    </div>
+</body>
+</tt>"""
 
 SAMPLE_DFXP_EMPTY = """
 <?xml version="1.0" encoding="utf-8"?>
@@ -697,5 +812,4 @@ MAN:
 &nbsp;
 When we think
 of "E equals m c-squared",
-
 """
