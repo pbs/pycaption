@@ -1,3 +1,5 @@
+from .exceptions import RelativizationError
+
 class Enum(object):
     """Generic class that's not easily instantiable, serving as a base for
     the enumeration classes
@@ -401,10 +403,10 @@ class Size(object):
 
         # The input must be valid so that any conversion can be done
         if not (video_width or video_height):
-            raise ValueError(
+            raise RelativizationError(
                 u"Either video width or height must be given as a reference")
         elif video_width and video_height:
-            raise ValueError(
+            raise RelativizationError(
                 u"Only video width or height can be given as reference")
 
         if self.unit == UnitEnum.EM:
@@ -420,7 +422,7 @@ class Size(object):
             # converted to percent. we don't take into consideration the
             # font-size
             self.value = self.value / 72.0 * 96.0
-            self.unit = UnitEnum.PX
+            self.unit = UnitEnum.PIXEL
 
         if self.unit == UnitEnum.PIXEL:
             self.value = self.value * 100 / (video_width or video_height)
@@ -673,6 +675,11 @@ class Layout(object):
         self.extent = extent
         self.padding = padding
         self.alignment = alignment
+
+    def __nonzero__(self):
+        attributes = [self.origin, self.extent, self.padding, self.alignment]
+        all_none = [None, None, None, None]
+        return attributes != all_none
 
     def __repr__(self):
         return (

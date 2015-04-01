@@ -157,6 +157,8 @@ class SAMIReader(BaseReader):
         args = self._translate_attrs(tag)
         # only include span tag if attributes returned
         if args != u'':
+            # XXX: Must add text-align to layout_info somehow
+            # probably using _translate_attrs and _build_layout
             node = CaptionNode.create_style(True, args)
             self.line.append(node)
             # recursively call function for any children elements
@@ -532,15 +534,6 @@ class SAMIParser(HTMLParser):
                 selector = selector[1:]
             # keep any style attributes that are needed
             for prop in rule.style:
-                if prop.name == u'text-align':
-                    new_style[u'text-align'] = prop.value
-                    not_empty = True
-                if prop.name == u'font-family':
-                    new_style[u'font-family'] = prop.value
-                    not_empty = True
-                if prop.name == u'font-size':
-                    new_style[u'font-size'] = prop.value
-                    not_empty = True
                 if prop.name == u'color':
                     cv = cssutils_css.ColorValue(prop.value)
                     # Code for RGB to hex conversion comes from
@@ -548,10 +541,9 @@ class SAMIParser(HTMLParser):
                     new_style[u'color'] = u"#%02x%02x%02x" % (
                         cv.red, cv.green, cv.blue)
                     not_empty = True
-                if prop.name == u'lang':
-                    new_style[u'lang'] = prop.value
-                    not_empty = True
-            if not_empty:
+                else:
+                    new_style[prop.name] = prop.value
+            if new_style:
                 style_sheet[selector] = new_style
 
         return style_sheet

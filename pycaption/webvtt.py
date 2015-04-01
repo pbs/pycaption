@@ -9,7 +9,7 @@ from .geometry import Layout
 
 from .exceptions import (
     CaptionReadError, CaptionReadSyntaxError,
-    CaptionReadNoCaptions
+    CaptionReadNoCaptions, RelativizationError
 )
 
 # A WebVTT timing line has both start/end times and layout related settings
@@ -191,6 +191,11 @@ class WebVTTWriter(BaseWriter):
     def __init__(self, *args, **kwargs):
         self.video_width = kwargs.pop('video_width', None)
         self.video_height = kwargs.pop('video_height', None)
+        # If this is True, the WebVTTWriter will try to relativize
+        # absolute positioning but will leave it blank on failure
+        # instead of raising an exception.
+        self.bypass_relativization_errors = kwargs.pop(
+            'bypass_relativization_errors', False)
 
     def write(self, caption_set):
         """
@@ -267,7 +272,14 @@ class WebVTTWriter(BaseWriter):
         alignment = None
 
         # Ensure that all positioning values are measured using percentage
-        layout.to_percentage_of(self.video_width, self.video_height)
+        try:
+            layout.to_percentage_of(self.video_width, self.video_height)
+        except RelativizationError as e:
+            if self.bypass_relativization_errors:
+                # Don't include any positioning settings for this cue
+                return u''
+            else:
+                raise e
 
         if layout.origin:
             left_offset = layout.origin.x

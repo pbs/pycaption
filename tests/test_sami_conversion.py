@@ -6,7 +6,12 @@ from pycaption import (
 from .samples import (
     SAMPLE_SAMI, SAMPLE_SRT, SAMPLE_DFXP,
     SAMPLE_SAMI_UTF8, SAMPLE_SAMI_UNICODE, SAMPLE_DFXP_UNICODE,
-    SAMPLE_SRT_UNICODE, SAMPLE_SAMI_SYNTAX_ERROR)
+    SAMPLE_SRT_UNICODE, SAMPLE_SAMI_SYNTAX_ERROR,
+    DFXP_FROM_SAMI_WITH_POSITIONING,
+    DFXP_FROM_SAMI_WITH_POSITIONING_UTF8,
+    DFXP_FROM_SAMI_WITH_POSITIONING_UNICODE,
+    SAMPLE_WEBVTT_FROM_SAMI
+)
 from .mixins import SRTTestingMixIn, DFXPTestingMixIn, SAMITestingMixIn, WebVTTTestingMixIn
 
 from tests.samples import SAMPLE_WEBVTT_OUTPUT
@@ -61,17 +66,26 @@ class SAMItoDFXPTestCase(SAMIConversionTestCase, DFXPTestingMixIn):
     def test_sami_to_dfxp_conversion(self):
         results = DFXPWriter().write(self.captions)
         self.assertTrue(isinstance(results, unicode))
-        self.assertDFXPEquals(SAMPLE_DFXP.decode(u'utf-8'), results)
+        self.assertDFXPEquals(
+            DFXP_FROM_SAMI_WITH_POSITIONING.decode(u'utf-8'),
+            results
+        )
 
     def test_sami_to_dfxp_utf8_conversion(self):
         results = DFXPWriter().write(self.captions_utf8)
         self.assertTrue(isinstance(results, unicode))
-        self.assertDFXPEquals(SAMPLE_DFXP_UNICODE, results)
+        self.assertDFXPEquals(
+            DFXP_FROM_SAMI_WITH_POSITIONING_UTF8,
+            results
+        )
 
     def test_sami_to_dfxp_unicode_conversion(self):
         results = DFXPWriter().write(self.captions_unicode)
         self.assertTrue(isinstance(results, unicode))
-        self.assertDFXPEquals(SAMPLE_DFXP_UNICODE, results)
+        self.assertDFXPEquals(
+            DFXP_FROM_SAMI_WITH_POSITIONING_UNICODE,
+            results
+        )
 
     def test_sami_to_dfxp_xml_output(self):
         captions = SAMIReader().read(SAMPLE_SAMI_SYNTAX_ERROR.decode('utf-8'))
@@ -85,15 +99,17 @@ class SAMItoDFXPTestCase(SAMIConversionTestCase, DFXPTestingMixIn):
 class SAMItoWebVTTTestCase(SAMIConversionTestCase, WebVTTTestingMixIn):
 
     def test_sami_to_webvtt_utf8_conversion(self):
-        results = WebVTTWriter().write(self.captions_utf8)
+        results = WebVTTWriter(
+            video_width=640, video_height=360).write(self.captions_utf8)
         self.assertTrue(isinstance(results, unicode))
-        self.assertWebVTTEquals(SAMPLE_WEBVTT_OUTPUT.decode(u'utf-8'),
+        self.assertWebVTTEquals(SAMPLE_WEBVTT_FROM_SAMI.decode(u'utf-8'),
                                 results)
 
     def test_sami_to_webvtt_unicode_conversion(self):
-        results = WebVTTWriter().write(self.captions_unicode)
+        results = WebVTTWriter(
+            video_width=640, video_height=360).write(self.captions_unicode)
         self.assertTrue(isinstance(results, unicode))
-        self.assertWebVTTEquals(SAMPLE_WEBVTT_OUTPUT.decode(u'utf-8'),
+        self.assertWebVTTEquals(SAMPLE_WEBVTT_FROM_SAMI.decode(u'utf-8'),
                                 results)
 
 

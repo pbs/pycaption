@@ -302,3 +302,97 @@ DFXP_FROM_SAMI_WITH_POSITIONING = """\
   </div>
  </body>
 </tt>"""
+
+DFXP_FROM_SAMI_WITH_POSITIONING_UTF8 = """
+<?xml version="1.0" encoding="utf-8"?>
+<tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml"
+    xmlns:tts="http://www.w3.org/ns/ttml#styling">
+ <head>
+  <styling>
+   <style xml:id="p" tts:color="#ffeedd" tts:fontFamily="Arial"
+          tts:fontSize="10pt" tts:textAlign="center"/>
+  </styling>
+  <layout>
+   <region tts:padding="2pt 1pt 2pt 1pt" tts:textalign="center" xml:id="r0"></region>
+  </layout>
+ </head>
+ <body>
+  <div xml:lang="en-US" region="r0">
+   <p begin="00:00:09.209" end="00:00:12.312" region="r0" style="p">
+    ( clock ticking )
+   </p>
+   <p begin="00:00:14.848" end="00:00:17.000" region="r0" style="p">
+    MAN:<br/>
+    When we think<br/>
+    ♪ ...say bow, wow, ♪
+   </p>
+   <p begin="00:00:17.000" end="00:00:18.752" region="r0" style="p">
+    <span tts:textAlign="right">we have this vision of Einstein</span>
+   </p>
+   <p begin="00:00:18.752" end="00:00:20.887" region="r0" style="p">
+   <br/>
+    as an old, wrinkly man<br/>
+    with white hair.
+   </p>
+   <p begin="00:00:20.887" end="00:00:26.760" region="r0" style="p">
+    MAN 2:<br/>
+    E equals m c-squared is<br/>
+    not about an old Einstein.
+   </p>
+   <p begin="00:00:26.760" end="00:00:32.200" region="r0" style="p">
+    MAN 2:<br/>
+    It's all about an eternal Einstein.
+   </p>
+   <p begin="00:00:32.200" end="00:00:36.200" region="r0" style="p">
+    &lt;LAUGHING &amp; WHOOPS!&gt;
+   </p>
+  </div>
+ </body>
+</tt>"""
+
+DFXP_FROM_SAMI_WITH_POSITIONING_UNICODE = u"""\
+<?xml version="1.0" encoding="utf-8"?>
+<tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml"
+    xmlns:tts="http://www.w3.org/ns/ttml#styling">
+ <head>
+  <styling>
+   <style xml:id="p" tts:color="#ffeedd" tts:fontFamily="Arial"
+          tts:fontSize="10pt" tts:textAlign="center"/>
+  </styling>
+  <layout>
+   <region tts:padding="2pt 1pt 2pt 1pt" tts:textalign="center" xml:id="r0"></region>
+  </layout>
+ </head>
+ <body>
+  <div xml:lang="en-US" region="r0">
+   <p begin="00:00:09.209" end="00:00:12.312" region="r0" style="p">
+    ( clock ticking )
+   </p>
+   <p begin="00:00:14.848" end="00:00:17.000" region="r0" style="p">
+    MAN:<br/>
+    When we think<br/>
+    \u266a ...say bow, wow, \u266a
+   </p>
+   <p begin="00:00:17.000" end="00:00:18.752" region="r0" style="p">
+    <span tts:textalign="right">we have this vision of Einstein</span>
+   </p>
+   <p begin="00:00:18.752" end="00:00:20.887" region="r0" style="p">
+   <br/>
+    as an old, wrinkly man<br/>
+    with white hair.
+   </p>
+   <p begin="00:00:20.887" end="00:00:26.760" region="r0" style="p">
+    MAN 2:<br/>
+    E equals m c-squared is<br/>
+    not about an old Einstein.
+   </p>
+   <p begin="00:00:26.760" end="00:00:32.200" region="r0" style="p">
+    MAN 2:<br/>
+    It's all about an eternal Einstein.
+   </p>
+   <p begin="00:00:32.200" end="00:00:36.200" region="r0" style="p">
+    &lt;LAUGHING &amp; WHOOPS!&gt;
+   </p>
+  </div>
+ </body>
+</tt>"""

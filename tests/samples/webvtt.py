@@ -92,6 +92,8 @@ It's all about an eternal Einstein.
 &lt;LAUGHING &amp; WHOOPS!>
 """
 
+SAMPLE_WEBVTT_FROM_SAMI = SAMPLE_WEBVTT_FROM_DFXP
+
 SAMPLE_WEBVTT_FROM_DFXP_WITH_POSITIONING = """WEBVTT
 
 00:01.000 --> 00:03.000 position:25%,start line:25% size:50%
