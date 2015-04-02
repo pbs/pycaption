@@ -28,18 +28,17 @@ class SCCReader(BaseReader):
 
         self.pop_buffer = _InterpretableNodeStash()
         self.pop_on = False
-        self.pop_time = 0
 
         self.paint_buffer = _InterpretableNodeStash()
         self.paint_on = False
-        self.paint_time = 0
 
         self.roll_buffer = _InterpretableNodeStash()
         self.roll_rows = []
         self.roll_rows_expected = 0
         self.roll_on = False
-        self.roll_time = 0
         self.simulate_roll_up = False
+
+        self.time = 0
 
     def detect(self, content):
         lines = content.splitlines()
@@ -76,7 +75,7 @@ class SCCReader(BaseReader):
         # after converting lines, see if anything is left in paint_buffer
         if not self.paint_buffer.is_empty():
             self.caption_stash.create_and_store(
-                self.paint_buffer, self.paint_time)
+                self.paint_buffer, self.time)
 
         captions = CaptionSet()
         captions.set_captions(lang, self.caption_stash.get_all())
@@ -184,11 +183,11 @@ class SCCReader(BaseReader):
             self.roll_rows_expected = 1
             if not self.paint_buffer.is_empty():
                 self.caption_stash.create_and_store(
-                    self.paint_buffer, self.paint_time
+                    self.paint_buffer, self.time
                 )
                 self.paint_buffer = _InterpretableNodeStash()
 
-            self.paint_time = self.time_translator.get_time()
+            self.time = self.time_translator.get_time()
 
         # if command is roll_up 2, 3 or 4 rows
         elif word in (u'9425', u'9426', u'94a7'):
@@ -205,14 +204,14 @@ class SCCReader(BaseReader):
 
             # if content is in the queue, turn it into a caption
             if not self.roll_buffer.is_empty():
-                # convert and empty buffer
                 self.caption_stash.create_and_store(
-                    self.roll_buffer, self.roll_time)
+                    self.roll_buffer, self.time)
                 self.roll_buffer = _InterpretableNodeStash()
 
             # set rows to empty, configure start time for caption
             self.roll_rows = []
-            self.roll_time = self.time_translator.get_time()
+            # self.roll_time = self.time_translator.get_time()
+            self.time = self.time_translator.get_time()
 
         # clear pop_on buffer
         elif word == u'94ae':
@@ -220,8 +219,8 @@ class SCCReader(BaseReader):
 
         # display pop_on buffer [End Of Caption]
         elif word == u'942f':
-            self.pop_time = self.time_translator.get_time()
-            self.caption_stash.create_and_store(self.pop_buffer, self.pop_time)
+            self.time = self.time_translator.get_time()
+            self.caption_stash.create_and_store(self.pop_buffer, self.time)
             self.pop_buffer = _InterpretableNodeStash()
 
         # roll up captions [Carriage Return]
@@ -236,7 +235,7 @@ class SCCReader(BaseReader):
 
             if not self.paint_buffer.is_empty():
                 self.caption_stash.create_and_store(
-                    self.paint_buffer, self.paint_time)
+                    self.paint_buffer, self.time)
                 self.paint_buffer = _InterpretableNodeStash()
 
             # attempt to add proper end time to last caption(s)
@@ -283,14 +282,14 @@ class SCCReader(BaseReader):
 
         # convert buffer and empty
         self.caption_stash.create_and_store(
-            self.roll_buffer, self.roll_time)
+            self.roll_buffer, self.time)
         self.roll_buffer = _InterpretableNodeStash()
 
         # configure time
-        self.roll_time = self.time_translator.get_time()
+        self.time = self.time_translator.get_time()
 
         # try to insert the proper ending time for the previous caption
-        self.caption_stash.correct_last_timing(self.roll_time, force=True)
+        self.caption_stash.correct_last_timing(self.time, force=True)
 
 
 class SCCWriter(BaseWriter):
@@ -506,6 +505,7 @@ class _CaptionStash(object):
 
             elif element.requires_repositioning():
                 self._remove_extra_italics(caption)
+                open_italic = False
                 caption = Caption()
                 caption.start = start
                 caption.end = 0
