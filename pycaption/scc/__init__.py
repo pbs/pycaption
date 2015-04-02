@@ -225,8 +225,14 @@ class SCCReader(BaseReader):
         elif word == u'942c':
             self.roll_rows = []
 
-            if not self.buffer.is_empty():
-                self.caption_stash.create_and_store(self.buffer, self.time)
+            # XXX - The 942c command has nothing to do with paint-ons
+            # This however is legacy code, and will break lots of tests if
+            # the proper buffer (self.buffer) is used.
+            # Most likely using `self.buffer` instead of the paint buffer
+            # is the right thing to do, but this needs some further attention.
+            if not self.buffer_dict[u'paint'].is_empty():
+                self.caption_stash.create_and_store(
+                    self.buffer_dict[u'paint'], self.time)
                 self.buffer = _InterpretableNodeStash()
 
             # attempt to add proper end time to last caption(s)
