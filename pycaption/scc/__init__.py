@@ -26,16 +26,18 @@ class SCCReader(BaseReader):
 
         self.last_command = u''
 
-        self.pop_buffer = _InterpretableNodeStash()
-        self.pop_on = False
+        self.buffer_dict = _NotifyingDict()
 
-        self.paint_buffer = _InterpretableNodeStash()
-        self.paint_on = False
+        self.buffer_dict[u'pop'] = _InterpretableNodeStash()
+        self.buffer_dict[u'paint'] = _InterpretableNodeStash()
+        self.buffer_dict[u'roll'] = _InterpretableNodeStash()
 
-        self.roll_buffer = _InterpretableNodeStash()
+        # Call this method when the active key changes
+        self.buffer_dict.add_change_observer(self._flush_implicit_buffers)
+        self.buffer_dict.set_active(u'pop')
+
         self.roll_rows = []
         self.roll_rows_expected = 0
-        self.roll_on = False
         self.simulate_roll_up = False
 
         self.time = 0
@@ -60,22 +62,7 @@ class SCCReader(BaseReader):
         for line in lines[1:]:
             self._translate_line(line)
 
-        # Pop-Up captions are displayed explicitly (command 942f [EOC].
-        # Also Roll-up's are explicitly rolled up (with 94ad [CR])
-        # We should however check the paint_buffer for any remaining content
-        # and turn that into a caption, or we'll lose the last line of the
-        # Paint-on captions.
-        # ALSO: because the paint and roll buffer were previously mixed, the
-        # library was treating incorrectly the Roll-up's. We shouldn't convert
-        # the characters in the buffer to a caption, but I'd still do that
-        # seeing as though it's legacy behavior.
-        if not self.roll_buffer.is_empty():
-            self._roll_up()
-
-        # after converting lines, see if anything is left in paint_buffer
-        if not self.paint_buffer.is_empty():
-            self.caption_stash.create_and_store(
-                self.paint_buffer, self.time)
+        self._flush_implicit_buffers()
 
         captions = CaptionSet()
         captions.set_captions(lang, self.caption_stash.get_all())
@@ -84,6 +71,30 @@ class SCCReader(BaseReader):
             raise CaptionReadNoCaptions(u"empty caption file")
 
         return captions
+
+    def _flush_implicit_buffers(self, old_key=None, *args):
+        """Convert to Captions those buffers whose behavior is implicit.
+
+        The Paint-On buffer is explicit. New captions are created from it
+        with the command 'End Of Caption' [EOC], '942f'
+
+        The other 2 buffers, Roll-Up and Paint-On we treat as "more" implicit,
+        meaning that they can be displayed by a command on the next row.
+        If they're on the last row however, or if the caption type is changing,
+        we make sure to convert the buffers to text, so we don't lose any info.
+        """
+        if old_key == u'pop':
+            return
+
+        elif old_key is None or old_key == u'roll':
+            if not self.buffer.is_empty():
+                self._roll_up()
+
+        elif old_key is None or old_key == u'paint':
+            # xxx - perhaps the self.buffer property is sufficient
+            if not self.buffer_dict[u'paint'].is_empty():
+                self.caption_stash.create_and_store(
+                    self.buffer_dict[u'paint'], self.time)
 
     def _translate_line(self, line):
         # ignore blank lines
@@ -138,13 +149,7 @@ class SCCReader(BaseReader):
         if self._handle_double_command(word):
             return
 
-        # add to buffer
-        if self.paint_on:
-            self.paint_buffer.add_chars(SPECIAL_CHARS[word])
-        elif self.pop_on:
-            self.pop_buffer.add_chars(SPECIAL_CHARS[word])
-        elif self.roll_on:
-            self.roll_buffer.add_chars(SPECIAL_CHARS[word])
+        self.buffer.add_chars(SPECIAL_CHARS[word])
 
     def _translate_extended_char(self, word):
         # XXX - this looks highly buggy. Why would a special char be ignored
@@ -153,18 +158,9 @@ class SCCReader(BaseReader):
             return
 
         # add to buffer
-        if self.paint_on:
-            if not self.paint_buffer.is_empty():
-                self.paint_buffer.discard_last_char()
-            self.paint_buffer.add_chars(EXTENDED_CHARS[word])
-        elif self.pop_on:
-            if not self.pop_buffer.is_empty():
-                self.pop_buffer.discard_last_char()
-            self.pop_buffer.add_chars(EXTENDED_CHARS[word])
-        elif self.roll_on:
-            if not self.roll_buffer.is_empty():
-                self.roll_buffer.discard_last_char()
-            self.roll_buffer.add_chars(EXTENDED_CHARS[word])
+        if not self.buffer.is_empty():
+            self.buffer.discard_last_char()
+        self.buffer.add_chars(EXTENDED_CHARS[word])
 
     def _translate_command(self, word):
         if self._handle_double_command(word):
@@ -172,27 +168,24 @@ class SCCReader(BaseReader):
 
         # if command is pop_up
         if word == u'9420':
-            self.pop_on = True
-            self.paint_on = self.roll_on = False
+            self.buffer_dict.set_active(u'pop')
 
         # command is paint_on [Resume Direct Captioning]
         elif word == u'9429':
-            self.paint_on = True
-            self.pop_on = self.roll_on = False
+            self.buffer_dict.set_active(u'paint')
 
             self.roll_rows_expected = 1
-            if not self.paint_buffer.is_empty():
+            if not self.buffer.is_empty():
                 self.caption_stash.create_and_store(
-                    self.paint_buffer, self.time
+                    self.buffer, self.time
                 )
-                self.paint_buffer = _InterpretableNodeStash()
+                self.buffer = _InterpretableNodeStash()
 
             self.time = self.time_translator.get_time()
 
         # if command is roll_up 2, 3 or 4 rows
         elif word in (u'9425', u'9426', u'94a7'):
-            self.roll_on = True
-            self.paint_on = self.pop_on = False
+            self.buffer_dict.set_active(u'roll')
 
             # count how many lines are expected
             if word == u'9425':
@@ -203,40 +196,38 @@ class SCCReader(BaseReader):
                 self.roll_rows_expected = 4
 
             # if content is in the queue, turn it into a caption
-            if not self.roll_buffer.is_empty():
+            if not self.buffer.is_empty():
                 self.caption_stash.create_and_store(
-                    self.roll_buffer, self.time)
-                self.roll_buffer = _InterpretableNodeStash()
+                    self.buffer, self.time)
+                self.buffer = _InterpretableNodeStash()
 
             # set rows to empty, configure start time for caption
             self.roll_rows = []
-            # self.roll_time = self.time_translator.get_time()
             self.time = self.time_translator.get_time()
 
         # clear pop_on buffer
         elif word == u'94ae':
-            self.pop_buffer = _InterpretableNodeStash()
+            self.buffer = _InterpretableNodeStash()
 
         # display pop_on buffer [End Of Caption]
         elif word == u'942f':
             self.time = self.time_translator.get_time()
-            self.caption_stash.create_and_store(self.pop_buffer, self.time)
-            self.pop_buffer = _InterpretableNodeStash()
+            self.caption_stash.create_and_store(self.buffer, self.time)
+            self.buffer = _InterpretableNodeStash()
 
         # roll up captions [Carriage Return]
         elif word == u'94ad':
             # display roll-up buffer
-            if not self.roll_buffer.is_empty():
+            if not self.buffer.is_empty():
                 self._roll_up()
 
         # clear screen
         elif word == u'942c':
             self.roll_rows = []
 
-            if not self.paint_buffer.is_empty():
-                self.caption_stash.create_and_store(
-                    self.paint_buffer, self.time)
-                self.paint_buffer = _InterpretableNodeStash()
+            if not self.buffer.is_empty():
+                self.caption_stash.create_and_store(self.buffer, self.time)
+                self.buffer = _InterpretableNodeStash()
 
             # attempt to add proper end time to last caption(s)
             self.caption_stash.correct_last_timing(
@@ -244,13 +235,7 @@ class SCCReader(BaseReader):
 
         # if command not one of the aforementioned, add to buffer
         else:
-            # determine whether the word is a PAC, save it for later
-            if self.paint_on:
-                self.paint_buffer.interpret_command(word)
-            elif self.pop_on:
-                self.pop_buffer.interpret_command(word)
-            elif self.roll_on:
-                self.roll_buffer.interpret_command(word)
+            self.buffer.interpret_command(word)
 
     def _translate_characters(self, word):
         # split word into the 2 bytes
@@ -261,29 +246,39 @@ class SCCReader(BaseReader):
         if byte1 not in CHARACTERS or byte2 not in CHARACTERS:
             return
 
-        # xxx - Polymorphism means avoiding conditional chains like this
-        # if so, add to buffer
-        if self.paint_on:
-            self.paint_buffer.add_chars(CHARACTERS[byte1], CHARACTERS[byte2])
-        elif self.pop_on:
-            self.pop_buffer.add_chars(CHARACTERS[byte1], CHARACTERS[byte2])
-        elif self.roll_on:
-            self.roll_buffer.add_chars(CHARACTERS[byte1], CHARACTERS[byte2])
+        self.buffer.add_chars(CHARACTERS[byte1], CHARACTERS[byte2])
+
+    @property
+    def buffer(self):
+        """Returns the currently active buffer
+        """
+        return self.buffer_dict.get_active()
+
+    @buffer.setter
+    def buffer(self, value):
+        """Sets a new value to the active key
+
+        :param value: any object
+        """
+        try:
+            key = self.buffer_dict.active_key
+            self.buffer_dict[key] = value
+        except TypeError:
+            pass
 
     def _roll_up(self):
+        # We expect the active buffer to be the rol buffer
         if self.simulate_roll_up:
             if self.roll_rows_expected > 1:
                 if len(self.roll_rows) >= self.roll_rows_expected:
                     self.roll_rows.pop(0)
 
-                self.roll_rows.append(self.roll_buffer)
-                self.roll_buffer = _InterpretableNodeStash.from_list(
-                    self.roll_rows)
+                self.roll_rows.append(self.buffer)
+                self.buffer = _InterpretableNodeStash.from_list(self.roll_rows)
 
         # convert buffer and empty
-        self.caption_stash.create_and_store(
-            self.roll_buffer, self.time)
-        self.roll_buffer = _InterpretableNodeStash()
+        self.caption_stash.create_and_store(self.buffer, self.time)
+        self.buffer = _InterpretableNodeStash()
 
         # configure time
         self.time = self.time_translator.get_time()
@@ -1026,6 +1021,56 @@ class _InterpretableNode(object):
                 u'on' if self._type == self.ITALICS_ON else u'off')
         else:
             return u'<INode: change position>'
+
+
+class _NotifyingDict(dict):
+    """Dictionary-like object, that treats one key as 'active',
+    and notifies observers if the active key changed
+    """
+    # need an unhashable object as initial value for the active key
+    _guard = {}
+
+    def __init__(self, *args, **kwargs):
+        super(_NotifyingDict, self).__init__(*args, **kwargs)
+        self.active_key = self._guard
+        self.observers = []
+
+    def set_active(self, key):
+        """Sets the active key
+
+        :param key: any hashable object
+        """
+        if key not in self:
+            raise ValueError(u'No suck key present')
+
+        # Notify observers of the change
+        if key != self.active_key:
+            for observer in self.observers:
+                observer(self.active_key, key)
+
+        self.active_key = key
+
+    def get_active(self):
+        """Returns the value corresponding to the active key
+        """
+        if self.active_key is self._guard:
+            raise KeyError(u'No active key set')
+
+        return self[self.active_key]
+
+    def add_change_observer(self, observer):
+        """Receives a callable function, which it will call if the active
+        element changes.
+
+        The observer will receive 2 positional arguments: the old and new key
+
+        :param observer: any callable that can be called with 2 positional
+            arguments
+        """
+        if not callable(observer):
+            raise TypeError(u'The observer should be callable')
+
+        self.observers.append(observer)
 
 
 def _get_italics_state_from_command(command):
