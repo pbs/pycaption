@@ -678,8 +678,7 @@ class Layout(object):
 
     def __nonzero__(self):
         attributes = [self.origin, self.extent, self.padding, self.alignment]
-        all_none = [None, None, None, None]
-        return attributes != all_none
+        return any(attributes)
 
     def __repr__(self):
         return (
