@@ -20,6 +20,10 @@ from .constants import (
 
 
 class SCCReader(BaseReader):
+    """Converts a given unicode string to a CaptionSet.
+
+    This can be then later used for converting into any other supported formats
+    """
     def __init__(self, *args, **kw):
         self.caption_stash = _CaptionStash()
         self.time_translator = _SccTimeTranslator()
@@ -43,6 +47,12 @@ class SCCReader(BaseReader):
         self.time = 0
 
     def detect(self, content):
+        """Checks whether the given content is a proper SCC file
+
+        :type content: unicode
+
+        :rtype: bool
+        """
         lines = content.splitlines()
         if lines[0] == HEADER:
             return True
@@ -50,6 +60,24 @@ class SCCReader(BaseReader):
             return False
 
     def read(self, content, lang=u'en-US', simulate_roll_up=False, offset=0):
+        """Converts the unicode string into a CaptionSet
+
+        :type content: unicode
+        :param content: The SCC content to be converted to a CaptionSet
+
+        :type lang: unicode
+        :param lang: The language of the caption
+
+        :type simulate_roll_up: bool
+        :param simulate_roll_up: If True, when converting to other formats,
+            the resulting captions will contain all the rows that were visible
+            on the screen when the captions were rolling up.
+
+        :type offset: int
+        :param offset:
+
+        :rtype: CaptionSet
+        """
         if type(content) != unicode:
             raise RuntimeError(u'The content is not a unicode string.')
 
@@ -158,8 +186,6 @@ class SCCReader(BaseReader):
             return
 
         # add to buffer
-        if not self.buffer.is_empty():
-            self.buffer.discard_last_char()
         self.buffer.add_chars(EXTENDED_CHARS[word])
 
     def _translate_command(self, word):
@@ -431,6 +457,10 @@ class _TimingCorrectingCaptionList(list):
             super(_TimingCorrectingCaptionList, self).append(p_object)
 
     def extend(self, iterable):
+        """Adds the elements in the iterable to the list
+
+        :param iterable: any iterable
+        """
         for elem in iterable:
             self.append(elem)
 
@@ -1047,7 +1077,7 @@ class _NotifyingDict(dict):
         :param key: any hashable object
         """
         if key not in self:
-            raise ValueError(u'No suck key present')
+            raise ValueError(u'No such key present')
 
         # Notify observers of the change
         if key != self.active_key:
@@ -1077,16 +1107,6 @@ class _NotifyingDict(dict):
             raise TypeError(u'The observer should be callable')
 
         self.observers.append(observer)
-
-
-def _get_italics_state_from_command(command):
-    """
-    :type command: unicode
-    :rtype: bool
-    """
-    if u'italic' in command:
-        return True
-    return False
 
 
 def _get_layout_from_tuple(position_tuple):
@@ -1119,13 +1139,12 @@ def _is_pac_command(word):
     """
     if not word or len(word) != 4:
         return False
+
     byte1, byte2 = word[:2], word[2:]
 
-    col_dict = PAC_BYTES_TO_POSITIONING_MAP.get(byte1)
-    if not col_dict:
+    try:
+        PAC_BYTES_TO_POSITIONING_MAP[byte1][byte2]
+    except KeyError:
         return False
-
-    if byte2 not in col_dict:
-        return False
-
-    return True
+    else:
+        return True

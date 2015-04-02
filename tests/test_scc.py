@@ -34,19 +34,20 @@ class SCCReaderTestCase(unittest.TestCase):
     def test_scc_positioning_is_read(self):
         captions = SCCReader().read(unicode(SAMPLE_SCC_MULTIPLE_POSITIONING))
 
-        # SCC generates only, and we always expect it.
-        # no other attributes are generated from SCC at the moment
+        # SCC generates only origin, and we always expect it.
         expected_positioning = [
             ((0.0, u'%'), (80.0, u'%')),
             ((37.5, u'%'), (0.0, u'%')),
+            ((75.0, u'%'), (20.0, u'%')),
             ((12.5, u'%'), (46.666666666666664, u'%')),
             ((12.5, u'%'), (93.33333333333333, u'%')),
             ((37.5, u'%'), (53.333333333333336, u'%')),
             ((75.0, u'%'), (13.333333333333334, u'%')),
+            ((12.5, u'%'), (33.333333333333336, u'%')),
             ((12.5, u'%'), (86.66666666666667, u'%')),
+            ((75.0, u'%'), (6.666666666666667, u'%')),
             ((37.5, u'%'), (40.0, u'%')),
-            ((12.5, u'%'), (73.33333333333333, u'%')),
-            ((12.5, u'%'), (33.333333333333336, u'%'))
+            ((12.5, u'%'), (73.33333333333333, u'%'))
         ]
         actual_positioning = [
             caption_.layout_info.origin.serialized() for caption_ in
