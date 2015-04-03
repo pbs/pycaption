@@ -56,6 +56,19 @@ class SCCReaderTestCase(unittest.TestCase):
 
         self.assertEqual(expected_positioning, actual_positioning)
 
+    def test_correct_last_bad_timing(self):
+        # This fix was implemented with a hack. The commands for the Pop-on
+        # captions will have to be reviewed, but until then this is good enough
+        caption_set = SCCReader().read(SAMPLE_SCC_PRODUCES_BAD_LAST_END_TIME)
+
+        expected_timings = [(1408266666.6666667, 1469700000.0),
+                            (3208266666.666667, 3269700000.0)]
+
+        actual_timings = [
+            (c_.start, c_.end) for c_ in caption_set.get_captions(u'en-US')
+        ]
+        self.assertEqual(expected_timings, actual_timings)
+
 
 class CoverageOnlyTestCase(unittest.TestCase):
     """In order to refactor safely, we need coverage of 95% or more.
@@ -225,3 +238,15 @@ Scenarist_SCC V1.0
 00:00:44;08	94a7 94ad 9470 3e3e 20c2 e96b e520 49ef f761 2c20 79ef 75f2 2073 ef75 f2e3 e520 e6ef f280
 """
 
+
+SAMPLE_SCC_PRODUCES_BAD_LAST_END_TIME = u"""\
+Scenarist_SCC V1.0
+
+00:23:28;01	9420 94ae 9154 5245 91f4 c1c2 942c
+
+00:24:29;21	942f
+
+00:53:28;01	9420 94ae 9154 4552 91f4 aeae 942c
+
+00:54:29;21	942f
+"""

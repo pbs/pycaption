@@ -100,6 +100,27 @@ class SCCReader(BaseReader):
 
         return captions
 
+    def _fix_last_timing(self, timing):
+        """HACK HACK: Certain Paint-On captions don't specify the 942f [EOC]
+        (End Of Caption) command on the same line.
+        If this is a 942f line, also simulate a 942c (Erase Displayed Memory)
+        to properly set the timing on the last caption.
+
+        This method needs some serious attention, because it proves the timing
+        calculation is not done well for Pop-On captions
+        """
+        # Calculate the end time from the current line
+        time_translator = _SccTimeTranslator()
+        time_translator.start_at(timing)
+        time_translator.set_offset(self.time_translator._offset)
+
+        # But use the current time translator for the start time
+        self.caption_stash.create_and_store(
+            self.buffer, self.time_translator.get_time())
+
+        self.caption_stash.correct_last_timing(time_translator.get_time())
+        self.buffer = _InterpretableNodeStash()
+
     def _flush_implicit_buffers(self, old_key=None, *args):
         """Convert to Captions those buffers whose behavior is implicit.
 
@@ -132,6 +153,10 @@ class SCCReader(BaseReader):
         # split line in timestamp and words
         r = re.compile(r"([0-9:;]*)([\s\t]*)((.)*)")
         parts = r.findall(line.lower())
+
+        # XXX!!!!!! THESE 2 LINES ARE A HACK
+        if parts[0][2].strip() == u'942f':
+            self._fix_last_timing(timing=parts[0][0])
 
         self.time_translator.start_at(parts[0][0])
 
