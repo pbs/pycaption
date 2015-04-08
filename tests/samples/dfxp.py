@@ -47,7 +47,6 @@ SAMPLE_DFXP_UNICODE = u"""\
  </body>
 </tt>"""
 
-
 SAMPLE_DFXP_UTF8 = """
 <?xml version="1.0" encoding="utf-8"?>
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml"
