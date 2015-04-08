@@ -701,7 +701,6 @@ class Layout(object):
 
     def __eq__(self, other):
         return (
-            other and
             type(self) == type(other) and
             self.origin == other.origin and
             self.extent == other.extent and

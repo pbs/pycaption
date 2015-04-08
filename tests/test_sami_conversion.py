@@ -14,8 +14,6 @@ from .samples import (
 )
 from .mixins import SRTTestingMixIn, DFXPTestingMixIn, SAMITestingMixIn, WebVTTTestingMixIn
 
-from tests.samples import SAMPLE_WEBVTT_OUTPUT
-
 
 class SAMIConversionTestCase(unittest.TestCase):
 
