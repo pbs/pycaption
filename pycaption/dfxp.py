@@ -412,9 +412,9 @@ class LayoutAwareDFXPParser(BeautifulSoup):
         self.read_invalid_positioning = read_invalid_positioning
 
         for div in self.find_all(u'div'):
-            self._post_order_visit(div)
+            self._pre_order_visit(div)
 
-    def _post_order_visit(self, element):
+    def _pre_order_visit(self, element, inherited_layout=None):
         """Process the xml tree elements in post order by adding a .layout_info
         attribute to each of them.
 
@@ -422,16 +422,22 @@ class LayoutAwareDFXPParser(BeautifulSoup):
         for the region attribute this might be irrelevant and any type of tree
         walk might do.
         :param element: a BeautifulSoup Tag or NavigableString.
+        :param inherited_layout: a Layout object with all the layout info
+                inherited from the ancestors of the present node
         """
-        if hasattr(element, 'contents'):
+        if not hasattr(element, 'contents'):
+            # The element is a leaf (e.g. NavigableString or <br>)
+            element.layout_info = inherited_layout
+        else:
+            region_id = self._determine_region_id(element)
+            # TODO - this looks highly cachable. If it turns out too much
+            # memory is being taken up by the caption set, cache this with a
+            # WeakValueDict
+            layout_info = (
+                self._extract_positioning_information(region_id, element))
+            element.layout_info = layout_info
             for child in element.contents:
-                self._post_order_visit(child)
-        region_id = self._determine_region_id(element)
-
-        # TODO - this looks highly cachable. If it turns out too much memory is
-        # being taken up by the caption set, cache this with a WeakValueDict
-        element.layout_info = (
-            self._extract_positioning_information(region_id, element))
+                self._pre_order_visit(child, inherited_layout=layout_info)
 
     @staticmethod
     def _get_region_from_ancestors(element):
@@ -1036,40 +1042,8 @@ def _create_internal_alignment(text_align, display_align):
     if not (text_align or display_align):
         return None
 
-    horizontal = _create_internal_horizontal_alignment(text_align)
-    vertical = _create_internal_vertical_alignment(display_align)
-
-    return Alignment(horizontal, vertical)
-
-
-def _create_internal_horizontal_alignment(text_align):
-    horizontal = None
-
-    if text_align == u'left' or not text_align:
-        horizontal = HorizontalAlignmentEnum.LEFT
-    if text_align == u'start':
-        horizontal = HorizontalAlignmentEnum.START
-    if text_align == u'center':
-        horizontal = HorizontalAlignmentEnum.CENTER
-    if text_align == u'right':
-        horizontal = HorizontalAlignmentEnum.RIGHT
-    if text_align == u'end':
-        horizontal = HorizontalAlignmentEnum.END
-
-    return horizontal
-
-
-def _create_internal_vertical_alignment(display_align):
-    vertical = None
-
-    if display_align == u'before' or not display_align:
-        vertical = VerticalAlignmentEnum.TOP
-    if display_align == u'center':
-        vertical = VerticalAlignmentEnum.CENTER
-    if display_align == u'after':
-        vertical = VerticalAlignmentEnum.BOTTOM
-
-    return vertical
+    return Alignment.from_horizontal_and_vertical_align(
+        text_align, display_align)
 
 
 def _create_external_horizontal_alignment(horizontal_component):

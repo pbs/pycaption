@@ -9,7 +9,7 @@ from .geometry import Layout
 
 from .exceptions import (
     CaptionReadError, CaptionReadSyntaxError,
-    CaptionReadNoCaptions
+    CaptionReadNoCaptions, RelativizationError
 )
 
 # A WebVTT timing line has both start/end times and layout related settings
@@ -19,7 +19,9 @@ TIMING_LINE_PATTERN = re.compile(u'^(\S+)\s+-->\s+(\S+)(?:\s+(.*?))?\s*$')
 TIMESTAMP_PATTERN = re.compile(u'^(\d+):(\d{2})(:\d{2})?\.(\d{3})')
 VOICE_SPAN_PATTERN = re.compile(u'<v(\\.\\w+)* ([^>]*)>')
 OTHER_SPAN_PATTERN = (
-    re.compile(u'</?([cibuv]|ruby|rt|lang|(\d+):(\d{2})(:\d{2})?\.(\d{3})).*?>')
+    re.compile(
+        u'</?([cibuv]|ruby|rt|lang|(\d+):(\d{2})(:\d{2})?\.(\d{3})).*?>'
+    )
 )  # These WebVTT tags are stripped off the cues on conversion
 
 WEBVTT_VERSION_OF = {
@@ -32,8 +34,10 @@ WEBVTT_VERSION_OF = {
 
 DEFAULT_ALIGNMENT = u'middle'
 
+
 def microseconds(h, m, s, f):
     return (int(h) * 3600 + int(m) * 60 + int(s)) * 1000000 + int(f) * 1000
+
 
 class WebVTTReader(BaseReader):
     def __init__(self, ignore_timing_errors=True, *args, **kwargs):
@@ -187,6 +191,11 @@ class WebVTTWriter(BaseWriter):
     def __init__(self, *args, **kwargs):
         self.video_width = kwargs.pop('video_width', None)
         self.video_height = kwargs.pop('video_height', None)
+        # If this is True, the WebVTTWriter will try to relativize
+        # absolute positioning but will leave it blank on failure
+        # instead of raising an exception.
+        self.bypass_relativization_errors = kwargs.pop(
+            'bypass_relativization_errors', False)
 
     def write(self, caption_set):
         """
@@ -263,7 +272,14 @@ class WebVTTWriter(BaseWriter):
         alignment = None
 
         # Ensure that all positioning values are measured using percentage
-        layout.to_percentage_of(self.video_width, self.video_height)
+        try:
+            layout.to_percentage_of(self.video_width, self.video_height)
+        except RelativizationError as e:
+            if self.bypass_relativization_errors:
+                # Don't include any positioning settings for this cue
+                return u''
+            else:
+                raise e
 
         if layout.origin:
             left_offset = layout.origin.x
@@ -274,8 +290,9 @@ class WebVTTWriter(BaseWriter):
 
         if layout.padding:
             if layout.padding.start and left_offset:
-                # Since there is no padding in WebVTT, the left padding is added
-                # to the total left offset (if it is defined and not relative),
+                # Since there is no padding in WebVTT, the left padding is
+                # added to the total left offset (if it is defined and not
+                # relative),
                 if left_offset:
                     left_offset += layout.padding.start
                 # and removed from the total cue width
@@ -289,7 +306,8 @@ class WebVTTWriter(BaseWriter):
             if layout.padding.before and top_offset:
                 top_offset += layout.padding.before
             # and the bottom padding is ignored because the cue box is only as
-            # long vertically as the text it contains and nothing can be cut out
+            # long vertically as the text it contains and nothing can be cut
+            # out
 
         try:
             alignment = WEBVTT_VERSION_OF[layout.alignment.horizontal]
@@ -317,7 +335,7 @@ class WebVTTWriter(BaseWriter):
         if not nodes:
             return []
 
-        current_layout = nodes[0].layout_info
+        current_layout = None
 
         # A list with layout groups. Since WebVTT only support positioning
         # for different cues, each layout group has to be represented in a
@@ -330,24 +348,26 @@ class WebVTTWriter(BaseWriter):
             already_appended = False
             if node.type_ == CaptionNode.TEXT:
                 if s and not node.layout_info == current_layout:
-                    # If the positioning changes from one node to another,
-                    # another WebVTT cue has to be created.
+                    # If the positioning changes from one text node to
+                    # another, a new WebVTT cue has to be created.
                     layout_groups.append((s, current_layout))
                     already_appended = True
-                    current_layout = node.layout_info
                     s = u''
                 # ATTENTION: This is where the plain unicode node content is
                 # finally encoded as WebVTT.
                 s += self._encode(node.content) or u'&nbsp;'
             elif node.type_ == CaptionNode.STYLE:
-                # TODO: Ignoring style so far.
+                # TODO: Refactor pycaption and eliminate the concept of a
+                # "Style node"
                 pass
             elif node.type_ == CaptionNode.BREAK:
-                if i > 0 and nodes[i - 1].type_ == CaptionNode.BREAK:
+                if i > 0 and nodes[i - 1].type_ != CaptionNode.TEXT:
                     s += u'&nbsp;'
                 if i == 0:
                     s += u'&nbsp;'
                 s += u'\n'
+            current_layout = node.layout_info
+
         if not already_appended:
             layout_groups.append((s, current_layout))
         return layout_groups

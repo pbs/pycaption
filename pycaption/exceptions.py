@@ -20,3 +20,8 @@ class CaptionReadSyntaxError(CaptionReadError):
     Error raised when the provided caption file has syntax errors and could
     not be parsed.
     """
+class RelativizationError(Exception):
+    """
+    Error raised when absolute positioning cannot be converted to
+    percentage
+    """

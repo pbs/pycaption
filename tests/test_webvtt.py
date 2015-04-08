@@ -147,5 +147,4 @@ class WebVTTWriterTestCase(unittest.TestCase):
 
     def test_double_br(self):
         captions = SAMIReader().read(SAMPLE_SAMI_DOUBLE_BR.decode(u'utf-8'))
-
         self.assertEqual(SAMPLE_WEBVTT_DOUBLE_BR.decode(u'utf-8'), self.writer.write(captions))

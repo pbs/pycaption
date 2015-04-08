@@ -1,3 +1,5 @@
+from .exceptions import RelativizationError
+
 class Enum(object):
     """Generic class that's not easily instantiable, serving as a base for
     the enumeration classes
@@ -21,6 +23,7 @@ class UnitEnum(Enum):
     EM = u'em'
     PERCENT = u'%'
     CELL = u'c'
+    PT = u'pt'
 
 
 class VerticalAlignmentEnum(Enum):
@@ -82,6 +85,34 @@ class Alignment(object):
         """
         return self.horizontal, self.vertical
 
+    @classmethod
+    def from_horizontal_and_vertical_align(cls, text_align=None,
+                                           display_align=None):
+        horizontal_obj = None
+        vertical_obj = None
+
+        if text_align == u'left':
+            horizontal_obj = HorizontalAlignmentEnum.LEFT
+        if text_align == u'start':
+            horizontal_obj = HorizontalAlignmentEnum.START
+        if text_align == u'center':
+            horizontal_obj = HorizontalAlignmentEnum.CENTER
+        if text_align == u'right':
+            horizontal_obj = HorizontalAlignmentEnum.RIGHT
+        if text_align == u'end':
+            horizontal_obj = HorizontalAlignmentEnum.END
+
+        if display_align == u'before':
+            vertical_obj = VerticalAlignmentEnum.TOP
+        if display_align == u'center':
+            vertical_obj = VerticalAlignmentEnum.CENTER
+        if display_align == u'after':
+            vertical_obj = VerticalAlignmentEnum.BOTTOM
+
+        if not any([horizontal_obj, vertical_obj]):
+            return None
+        return cls(horizontal_obj, vertical_obj)
+
 
 class TwoDimensionalObject(object):
     """Adds a couple useful methods to its subclasses, nothing fancy.
@@ -100,9 +131,6 @@ class TwoDimensionalObject(object):
         vertical = Size.from_string(vertical)
 
         return cls(horizontal, vertical)
-
-    def to_percentage_of(self, video_width, video_height):
-        self._to_percentage_of(video_width, video_height)
 
 
 class Stretch(TwoDimensionalObject):
@@ -375,10 +403,10 @@ class Size(object):
 
         # The input must be valid so that any conversion can be done
         if not (video_width or video_height):
-            raise ValueError(
+            raise RelativizationError(
                 u"Either video width or height must be given as a reference")
         elif video_width and video_height:
-            raise ValueError(
+            raise RelativizationError(
                 u"Only video width or height can be given as reference")
 
         if self.unit == UnitEnum.EM:
@@ -387,6 +415,13 @@ class Size(object):
             # have no access. As a workaround, we presume the font-size is 16px,
             # which is a common default value but not guaranteed.
             self.value *= 16
+            self.unit = UnitEnum.PIXEL
+
+        if self.unit == UnitEnum.PT:
+            # XXX: we will convert first to "px" and from "px" this will be
+            # converted to percent. we don't take into consideration the
+            # font-size
+            self.value = self.value / 72.0 * 96.0
             self.unit = UnitEnum.PIXEL
 
         if self.unit == UnitEnum.PIXEL:
@@ -414,7 +449,7 @@ class Size(object):
         :rtype: Size
         """
         units = [UnitEnum.CELL, UnitEnum.PERCENT, UnitEnum.PIXEL,
-                 UnitEnum.EM]
+                 UnitEnum.EM, UnitEnum.PT]
 
         raw_number = string
         for unit in units:
@@ -641,6 +676,10 @@ class Layout(object):
         self.padding = padding
         self.alignment = alignment
 
+    def __nonzero__(self):
+        attributes = [self.origin, self.extent, self.padding, self.alignment]
+        return any(attributes)
+
     def __repr__(self):
         return (
             u"<Layout (origin: {origin}, extent: {extent}, "
@@ -662,7 +701,6 @@ class Layout(object):
 
     def __eq__(self, other):
         return (
-            other and
             type(self) == type(other) and
             self.origin == other.origin and
             self.extent == other.extent and

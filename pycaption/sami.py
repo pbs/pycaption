@@ -11,6 +11,9 @@ from .base import (
     BaseReader, BaseWriter, CaptionSet, Caption, CaptionNode,
     DEFAULT_LANGUAGE_CODE)
 from .exceptions import CaptionReadNoCaptions, CaptionReadSyntaxError
+from .geometry import (
+    Layout, Alignment, Padding, Size
+)
 
 
 # change cssutils default logging
@@ -44,8 +47,10 @@ class SAMIReader(BaseReader):
         sami_soup = BeautifulSoup(content)
         captions = CaptionSet()
         captions.set_styles(doc_styles)
+        layout_info = self._build_layout(doc_styles.get('p', {}))
 
         for language in doc_langs:
+            captions.set_layout_info(language, layout_info)
             lang_captions = self._translate_lang(language, sami_soup)
             captions.set_captions(language, lang_captions)
 
@@ -53,6 +58,42 @@ class SAMIReader(BaseReader):
             raise CaptionReadNoCaptions(u"empty caption file")
 
         return captions
+
+    def _build_layout(self, styles):
+        """
+        :type styles: dict
+        :param styles: a dictionary CSS-like with styling rules
+        """
+        alignment = Alignment.from_horizontal_and_vertical_align(
+            text_align=styles.get('text-align', None)
+        )
+        layout = Layout(
+            origin=None,
+            extent=None,
+            padding=self._get_padding(styles),
+            alignment=alignment
+        )
+        return layout
+
+    def _get_padding(self, styles):
+        margin_before = self._get_size(styles, 'margin-top')
+        margin_after = self._get_size(styles, 'margin-bottom')
+        margin_start = self._get_size(styles, 'margin-left')
+        margin_end = self._get_size(styles, 'margin-right')
+        if not any([margin_before, margin_after, margin_start, margin_end]):
+            return None
+        return Padding(
+            before=margin_before,  # top
+            after=margin_after,  # bottom
+            start=margin_start,  # left
+            end=margin_end  # right
+        )
+
+    def _get_size(self, styles, style_label):
+        value_from_style = styles.get(style_label, None)
+        if not value_from_style:
+            return None
+        return Size.from_string(value_from_style)
 
     def _translate_lang(self, language, sami_soup):
         captions = []
@@ -67,11 +108,12 @@ class SAMIReader(BaseReader):
                 captions[-1].end = milliseconds * 1000
 
             if p.get_text().strip():
-                self.line = []
-                self._translate_tag(p)
-                text = self.line
                 styles = self._translate_attrs(p)
-                caption = Caption()
+                layout_info = self._build_layout(styles)
+                self.line = []
+                self._translate_tag(p, layout_info)
+                text = self.line
+                caption = Caption(layout_info=layout_info)
                 caption.start = start
                 caption.end = end
                 caption.nodes = text
@@ -84,7 +126,11 @@ class SAMIReader(BaseReader):
 
         return captions
 
-    def _translate_tag(self, tag):
+    def _translate_tag(self, tag, inherited_layout=None):
+        """
+        :param inherited_layout: A Layout object extracted from an ancestor tag
+                to be attached to leaf nodes
+        """
         # convert text
         if isinstance(tag, NavigableString):
             # BeautifulSoup apparently handles unescaping character codes
@@ -93,13 +139,15 @@ class SAMIReader(BaseReader):
             text = tag.strip()
             if not text:
                 return
-            self.line.append(CaptionNode.create_text(text))
+            self.line.append(CaptionNode.create_text(text, inherited_layout))
         # convert line breaks
         elif tag.name == u'br':
-            self.line.append(CaptionNode.create_break())
+            self.line.append(CaptionNode.create_break(inherited_layout))
         # convert italics
         elif tag.name == u'i':
-            self.line.append(CaptionNode.create_style(True, {u'italics': True}))
+            self.line.append(
+                CaptionNode.create_style(True, {u'italics': True})
+            )
             # recursively call function for any children elements
             for a in tag.contents:
                 self._translate_tag(a)
@@ -110,19 +158,24 @@ class SAMIReader(BaseReader):
         else:
             # recursively call function for any children elements
             for a in tag.contents:
-                self._translate_tag(a)
+                self._translate_tag(a, inherited_layout)
 
     def _translate_span(self, tag):
         # convert tag attributes
         args = self._translate_attrs(tag)
         # only include span tag if attributes returned
-        if args != u'':
-            node = CaptionNode.create_style(True, args)
+        if args:
+            layout_info = self._build_layout(args)
+            # OLD: Create legacy style node
+            # NEW: But pass new layout object
+            node = CaptionNode.create_style(True, args, layout_info)
             self.line.append(node)
             # recursively call function for any children elements
             for a in tag.contents:
-                self._translate_tag(a)
-            node = CaptionNode.create_style(False, args)
+                # NEW: Pass the layout along so that it's eventually attached
+                # to leaf nodes (e.g. text or break)
+                self._translate_tag(a, layout_info)
+            node = CaptionNode.create_style(False, args, layout_info)
             self.line.append(node)
         else:
             for a in tag.contents:
@@ -265,9 +318,11 @@ class SAMIWriter(BaseWriter):
                 stylesheet += self._recreate_style_tag(attr, value)
 
         for lang in captions.get_languages():
-            if u'lang: %s' % lang not in stylesheet:
-                stylesheet += u'\n    .%s {\n     lang: %s;\n    }\n' % (lang,
-                                                                        lang)
+            lang_string = u'lang: {}'.format(lang)
+            if lang_string not in stylesheet:
+                stylesheet += (
+                    u'\n    .{lang} {{\n     lang: {lang};\n    }}\n'
+                ).format(lang=lang)
 
         return stylesheet + u'   -->'
 
@@ -444,7 +499,8 @@ class SAMIParser(HTMLParser):
         no_cc = u'no closed captioning available'
 
         if u'<html' in data.lower():
-            raise CaptionReadSyntaxError(u'SAMI File seems to be an HTML file.')
+            raise CaptionReadSyntaxError(
+                u'SAMI File seems to be an HTML file.')
         elif no_cc in data.lower():
             raise CaptionReadSyntaxError(u'SAMI File contains "%s"' % no_cc)
 
@@ -482,33 +538,21 @@ class SAMIParser(HTMLParser):
         style_sheet = {}
 
         for rule in sheet:
-            not_empty = False
             new_style = {}
             selector = rule.selectorText.lower()
             if selector[0] in [u'#', u'.']:
                 selector = selector[1:]
             # keep any style attributes that are needed
             for prop in rule.style:
-                if prop.name == u'text-align':
-                    new_style[u'text-align'] = prop.value
-                    not_empty = True
-                if prop.name == u'font-family':
-                    new_style[u'font-family'] = prop.value
-                    not_empty = True
-                if prop.name == u'font-size':
-                    new_style[u'font-size'] = prop.value
-                    not_empty = True
                 if prop.name == u'color':
                     cv = cssutils_css.ColorValue(prop.value)
                     # Code for RGB to hex conversion comes from
                     # http://bit.ly/1kwfBnQ
                     new_style[u'color'] = u"#%02x%02x%02x" % (
                         cv.red, cv.green, cv.blue)
-                    not_empty = True
-                if prop.name == u'lang':
-                    new_style[u'lang'] = prop.value
-                    not_empty = True
-            if not_empty:
+                else:
+                    new_style[prop.name] = prop.value
+            if new_style:
                 style_sheet[selector] = new_style
 
         return style_sheet
