@@ -173,7 +173,7 @@ class CaptionCreator(object):
                 open_italic = False
 
             # handle text
-            else:
+            elif element.is_text_node():
                 # add text
                 layout_info = _get_layout_from_tuple(element.position)
                 caption.nodes.append(
