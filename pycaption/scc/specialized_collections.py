@@ -269,8 +269,11 @@ class InterpretableNodeCreator(object):
         current_position = self._position_tracer.get_current_position()
 
         # get or create a usable node
-        if self._collection:
-            node = self._collection[-1]
+        text_nodes = [
+            elem_ for elem_ in self._collection if elem_.is_text_node()
+        ]
+        if text_nodes:
+            node = text_nodes[-1]
         else:
             # create first node
             node = _InterpretableNode(position=current_position)

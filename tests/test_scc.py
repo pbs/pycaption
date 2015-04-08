@@ -69,6 +69,32 @@ class SCCReaderTestCase(unittest.TestCase):
         ]
         self.assertEqual(expected_timings, actual_timings)
 
+    def test_italics_are_properly_read(self):
+        def switches_italics(node):
+            """Determine if the current node switches italics on or off, or
+            raise ValueError is it's not a style node
+
+            Style nodes should be deprecated in favor of another model, so this
+            function is expected to go away.
+
+            :type node: pycaption.CaptionNode
+            :rtype: bool
+            """
+            if not node.type_ == node.STYLE:
+                raise ValueError(u"This should be a style node.")
+
+            return node.start
+
+        caption_set = SCCReader().read(SAMPLE_SCC_WITH_ITALICS)
+        nodes = caption_set.get_captions(u'en-US')[0].nodes
+
+        # We assert that the text is specified in italics.
+        # If Style nodes are replaced, the way these 3 assertions are made
+        # will most likely change
+        self.assertEqual(switches_italics(nodes[0]), True)
+        self.assertEqual(switches_italics(nodes[2]), False)
+        self.assertEqual(nodes[1].content, u'abababab')
+
 
 class CoverageOnlyTestCase(unittest.TestCase):
     """In order to refactor safely, we need coverage of 95% or more.
@@ -197,6 +223,17 @@ SAMPLE_SCC_MULTIPLE_POSITIONING = u"""Scenarist_SCC V1.0
 
 00:00:36:04 942c 942c
 
+"""
+
+SAMPLE_SCC_WITH_ITALICS_BKUP = u"""\
+Scenarist_SCC V1.0
+
+00:00:00:01 9420 10d0 97a2 91ae 6162 6162 6162 6162 942c 8080 8080 942f
+"""
+
+SAMPLE_SCC_WITH_ITALICS = u"""\
+
+00:00:00:01 9420 10d0 97a2 91ae 6162 6162 6162 6162 942c 8080 8080 942f
 """
 
 
