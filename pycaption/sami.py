@@ -47,7 +47,7 @@ class SAMIReader(BaseReader):
         sami_soup = BeautifulSoup(content)
         captions = CaptionSet()
         captions.set_styles(doc_styles)
-        layout_info = self._build_layout(doc_styles)
+        layout_info = self._build_layout(doc_styles.get('p', {}))
 
         for language in doc_langs:
             captions.set_layout_info(language, layout_info)
@@ -60,8 +60,12 @@ class SAMIReader(BaseReader):
         return captions
 
     def _build_layout(self, styles):
+        """
+        :type styles: dict
+        :param styles: a dictionary CSS-like with styling rules
+        """
         alignment = Alignment.from_horizontal_and_vertical_align(
-            text_align=styles.get('p', {}).get('text-align', None)
+            text_align=styles.get('text-align', None)
         )
         layout = Layout(
             origin=None,
@@ -86,7 +90,7 @@ class SAMIReader(BaseReader):
         )
 
     def _get_size(self, styles, style_label):
-        value_from_style = styles.get('p', {}).get(style_label, None)
+        value_from_style = styles.get(style_label, None)
         if not value_from_style:
             return None
         return Size.from_string(value_from_style)
@@ -104,11 +108,11 @@ class SAMIReader(BaseReader):
                 captions[-1].end = milliseconds * 1000
 
             if p.get_text().strip():
-                self.line = []
-                self._translate_tag(p)
-                text = self.line
                 styles = self._translate_attrs(p)
                 layout_info = self._build_layout(styles)
+                self.line = []
+                self._translate_tag(p, layout_info)
+                text = self.line
                 caption = Caption(layout_info=layout_info)
                 caption.start = start
                 caption.end = end
@@ -122,7 +126,11 @@ class SAMIReader(BaseReader):
 
         return captions
 
-    def _translate_tag(self, tag):
+    def _translate_tag(self, tag, inherited_layout=None):
+        """
+        :param inherited_layout: A Layout object extracted from an ancestor tag
+                to be attached to leaf nodes
+        """
         # convert text
         if isinstance(tag, NavigableString):
             # BeautifulSoup apparently handles unescaping character codes
@@ -131,10 +139,10 @@ class SAMIReader(BaseReader):
             text = tag.strip()
             if not text:
                 return
-            self.line.append(CaptionNode.create_text(text))
+            self.line.append(CaptionNode.create_text(text, inherited_layout))
         # convert line breaks
         elif tag.name == u'br':
-            self.line.append(CaptionNode.create_break())
+            self.line.append(CaptionNode.create_break(inherited_layout))
         # convert italics
         elif tag.name == u'i':
             self.line.append(
@@ -150,21 +158,24 @@ class SAMIReader(BaseReader):
         else:
             # recursively call function for any children elements
             for a in tag.contents:
-                self._translate_tag(a)
+                self._translate_tag(a, inherited_layout)
 
     def _translate_span(self, tag):
         # convert tag attributes
         args = self._translate_attrs(tag)
         # only include span tag if attributes returned
-        if args != u'':
-            # XXX: Must add text-align to layout_info somehow
-            # probably using _translate_attrs and _build_layout
-            node = CaptionNode.create_style(True, args)
+        if args:
+            layout_info = self._build_layout(args)
+            # OLD: Create legacy style node
+            # NEW: But pass new layout object
+            node = CaptionNode.create_style(True, args, layout_info)
             self.line.append(node)
             # recursively call function for any children elements
             for a in tag.contents:
-                self._translate_tag(a)
-            node = CaptionNode.create_style(False, args)
+                # NEW: Pass the layout along so that it's eventually attached
+                # to leaf nodes (e.g. text or break)
+                self._translate_tag(a, layout_info)
+            node = CaptionNode.create_style(False, args, layout_info)
             self.line.append(node)
         else:
             for a in tag.contents:
@@ -527,7 +538,6 @@ class SAMIParser(HTMLParser):
         style_sheet = {}
 
         for rule in sheet:
-            not_empty = False
             new_style = {}
             selector = rule.selectorText.lower()
             if selector[0] in [u'#', u'.']:
@@ -540,7 +550,6 @@ class SAMIParser(HTMLParser):
                     # http://bit.ly/1kwfBnQ
                     new_style[u'color'] = u"#%02x%02x%02x" % (
                         cv.red, cv.green, cv.blue)
-                    not_empty = True
                 else:
                     new_style[prop.name] = prop.value
             if new_style:

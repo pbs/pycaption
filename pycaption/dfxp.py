@@ -412,9 +412,9 @@ class LayoutAwareDFXPParser(BeautifulSoup):
         self.read_invalid_positioning = read_invalid_positioning
 
         for div in self.find_all(u'div'):
-            self._post_order_visit(div)
+            self._pre_order_visit(div)
 
-    def _post_order_visit(self, element):
+    def _pre_order_visit(self, element, inherited_layout=None):
         """Process the xml tree elements in post order by adding a .layout_info
         attribute to each of them.
 
@@ -422,16 +422,22 @@ class LayoutAwareDFXPParser(BeautifulSoup):
         for the region attribute this might be irrelevant and any type of tree
         walk might do.
         :param element: a BeautifulSoup Tag or NavigableString.
+        :param inherited_layout: a Layout object with all the layout info
+                inherited from the ancestors of the present node
         """
-        if hasattr(element, 'contents'):
+        if not hasattr(element, 'contents'):
+            # The element is a leaf (e.g. NavigableString or <br>)
+            element.layout_info = inherited_layout
+        else:
+            region_id = self._determine_region_id(element)
+            # TODO - this looks highly cachable. If it turns out too much
+            # memory is being taken up by the caption set, cache this with a
+            # WeakValueDict
+            layout_info = (
+                self._extract_positioning_information(region_id, element))
+            element.layout_info = layout_info
             for child in element.contents:
-                self._post_order_visit(child)
-        region_id = self._determine_region_id(element)
-
-        # TODO - this looks highly cachable. If it turns out too much memory is
-        # being taken up by the caption set, cache this with a WeakValueDict
-        element.layout_info = (
-            self._extract_positioning_information(region_id, element))
+                self._pre_order_visit(child, inherited_layout=layout_info)
 
     @staticmethod
     def _get_region_from_ancestors(element):

@@ -335,7 +335,7 @@ class WebVTTWriter(BaseWriter):
         if not nodes:
             return []
 
-        current_layout = nodes[0].layout_info
+        current_layout = None
 
         # A list with layout groups. Since WebVTT only support positioning
         # for different cues, each layout group has to be represented in a
@@ -348,24 +348,26 @@ class WebVTTWriter(BaseWriter):
             already_appended = False
             if node.type_ == CaptionNode.TEXT:
                 if s and not node.layout_info == current_layout:
-                    # If the positioning changes from one node to another,
-                    # another WebVTT cue has to be created.
+                    # If the positioning changes from one text node to
+                    # another, a new WebVTT cue has to be created.
                     layout_groups.append((s, current_layout))
                     already_appended = True
-                    current_layout = node.layout_info
                     s = u''
                 # ATTENTION: This is where the plain unicode node content is
                 # finally encoded as WebVTT.
                 s += self._encode(node.content) or u'&nbsp;'
             elif node.type_ == CaptionNode.STYLE:
-                # TODO: Ignoring style so far.
+                # TODO: Refactor pycaption and eliminate the concept of a
+                # "Style node"
                 pass
             elif node.type_ == CaptionNode.BREAK:
-                if i > 0 and nodes[i - 1].type_ == CaptionNode.BREAK:
+                if i > 0 and nodes[i - 1].type_ != CaptionNode.TEXT:
                     s += u'&nbsp;'
                 if i == 0:
                     s += u'&nbsp;'
                 s += u'\n'
+            current_layout = node.layout_info
+
         if not already_appended:
             layout_groups.append((s, current_layout))
         return layout_groups

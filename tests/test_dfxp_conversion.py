@@ -12,12 +12,12 @@ from pycaption.dfxp import (
 from .samples import (
     SAMPLE_SAMI, SAMPLE_SRT, SAMPLE_DFXP,
     SAMPLE_DFXP_UTF8, SAMPLE_SAMI_UNICODE, SAMPLE_DFXP_UNICODE,
-    SAMPLE_SRT_UNICODE, SAMPLE_DFXP_WITHOUT_REGION_AND_STYLE)
+    SAMPLE_SRT_UNICODE, SAMPLE_DFXP_WITHOUT_REGION_AND_STYLE,
+    SAMPLE_WEBVTT_FROM_DFXP, SAMPLE_DFXP_WITH_POSITIONING,
+    SAMPLE_WEBVTT_FROM_DFXP_WITH_POSITIONING)
+
 from .mixins import (
     SRTTestingMixIn, SAMITestingMixIn, DFXPTestingMixIn, WebVTTTestingMixIn)
-
-from tests.samples import SAMPLE_WEBVTT_FROM_DFXP, SAMPLE_DFXP_WITH_POSITIONING,\
-    SAMPLE_WEBVTT_FROM_DFXP_WITH_POSITIONING
 
 
 class DFXPConversionTestCase(unittest.TestCase):
@@ -224,8 +224,8 @@ SAMPLE_DFXP_INVALID_BUT_SUPPORTED_POSITIONING_OUTPUT = u"""\
    <region tts:displayAlign="after" tts:extent="30% 7.67%" tts:origin="20% 15.67%" tts:textAlign="center" xml:id="r1"/>
    <region tts:displayAlign="after" tts:extent="30% 7.67%" tts:origin="1px 2px" tts:textAlign="center" xml:id="r2"/>
    <region tts:displayAlign="before" tts:extent="60% 22%" tts:textAlign="right" xml:id="r3"/>
-   <region tts:displayAlign="after" tts:origin="11% 11%" tts:textAlign="center" xml:id="r5"/>
-   <region tts:displayAlign="after" tts:origin="11% 11%" tts:textAlign="right" xml:id="r6"/>
+   <region tts:displayAlign="after" tts:origin="11% 11%" tts:textAlign="center" xml:id="r4"/>
+   <region tts:displayAlign="after" tts:origin="11% 11%" tts:textAlign="right" xml:id="r5"/>
   </layout>
  </head>
  <body>
@@ -239,8 +239,8 @@ SAMPLE_DFXP_INVALID_BUT_SUPPORTED_POSITIONING_OUTPUT = u"""\
    <p begin="00:00:07.900" end="00:00:08.900" region="r3" style="p" tts:displayAlign="before" tts:extent="60% 22%" tts:textAlign="right">
     Just fine?
    </p>
-   <p begin="00:00:09.900" end="00:00:10.800" region="r5" style="p" tts:displayAlign="after" tts:origin="11% 11%" tts:textAlign="center">
-    <span tts:textAlign="right" region="r6" tts:origin="11% 11%" tts:textAlign="right" tts:displayAlign="after">&gt;&gt;&gt;Lol, yes!</span>
+   <p begin="00:00:09.900" end="00:00:10.800" region="r4" style="p" tts:displayAlign="after" tts:origin="11% 11%" tts:textAlign="center">
+    <span tts:textAlign="right" region="r5" tts:origin="11% 11%" tts:textAlign="right" tts:displayAlign="after">&gt;&gt;&gt;Lol, yes!</span>
    </p>
   </div>
  </body>
