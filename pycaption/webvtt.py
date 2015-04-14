@@ -368,7 +368,7 @@ class WebVTTWriter(BaseWriter):
                 s += u'\n'
             current_layout = node.layout_info
 
-        if not already_appended:
+        if s and not already_appended:
             layout_groups.append((s, current_layout))
         return layout_groups
 
