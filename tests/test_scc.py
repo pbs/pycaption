@@ -95,6 +95,35 @@ class SCCReaderTestCase(unittest.TestCase):
         self.assertEqual(switches_italics(nodes[2]), False)
         self.assertEqual(nodes[1].content, u'abababab')
 
+    def test_default_positioning_when_no_positioning_is_specified(self):
+        caption_set = SCCReader().read(SAMPLE_NO_POSITIONING_AT_ALL_SCC)
+
+        actual_caption_layouts = [
+            caption.layout_info.serialized()
+            for caption in caption_set.get_captions(u'en-US')
+        ]
+
+        expected_caption_layouts = [
+            (((0.0, u'%'), (86.66666666666667, u'%')), None, None, None),
+            (((0.0, u'%'), (86.66666666666667, u'%')), None, None, None)]
+
+        actual_node_layout_infos = [
+            {idx: [node.layout_info.serialized() for node in caption.nodes]}
+            for idx, caption in enumerate(caption_set.get_captions('en-US'))
+        ]
+
+        expected_node_layout_infos = [
+            {0: [
+                (((0.0, u'%'), (86.66666666666667, u'%')), None, None, None)
+            ]},
+            {1: [
+                (((0.0, u'%'), (86.66666666666667, u'%')), None, None, None)
+            ]}
+        ]
+
+        self.assertEqual(expected_node_layout_infos, actual_node_layout_infos)
+        self.assertEqual(expected_caption_layouts, actual_caption_layouts)
+
 
 class CoverageOnlyTestCase(unittest.TestCase):
     """In order to refactor safely, we need coverage of 95% or more.
@@ -284,6 +313,18 @@ Scenarist_SCC V1.0
 00:24:29;21	942f
 
 00:53:28;01	9420 94ae 9154 4552 91f4 aeae 942c
+
+00:54:29;21	942f
+"""
+
+SAMPLE_NO_POSITIONING_AT_ALL_SCC = u"""\
+Scenarist_SCC V1.0
+
+00:23:28;01	9420 94ae 5245 c1c2 942c
+
+00:24:29;21	942f
+
+00:53:28;01	9420 94ae 4552 aeae 942c
 
 00:54:29;21	942f
 """
