@@ -88,8 +88,6 @@ class DefaultProvidingPositionTracker(_PositioningTracker):
     """A _PositioningTracker that provides if needed a default value (14, 0), or
     uses the last positioning value set anywhere in the document
     """
-    # Set this on the class level, because instances should share this
-    # beyond their garbage collection
     default = (14, 0)
 
     def __init__(self, positioning=None, default=None):
@@ -131,21 +129,3 @@ class DefaultProvidingPositionTracker(_PositioningTracker):
 
         super(DefaultProvidingPositionTracker, self).update_positioning(
             positioning)
-
-    @classmethod
-    def reset_default_positioning(cls):
-        """Resets the previous default value to the original (14, 0)
-
-        When the context changes (a new caption is being processed, the
-        default positioning must NOT be carried over). Needed because we store
-        information at the class level.
-        """
-        cls.default = (14, 0)
-
-
-class DefaultProvidingItalicsTracker(object):
-    """
-    """
-    def asdf(self):
-        pass
-    pass
