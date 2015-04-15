@@ -1,6 +1,7 @@
 import unittest
 
 from pycaption import SCCReader, SCCWriter, SRTReader, SRTWriter, DFXPWriter
+from pycaption.webvtt import WebVTTWriter
 
 from .samples import SAMPLE_SRT
 from .mixins import CaptionSetTestingMixIn
@@ -38,6 +39,18 @@ class SCCtoDFXPTestCase(unittest.TestCase):
         dfxp = DFXPWriter().write(caption_set)
 
         self.assertEqual(SAMPLE_DFXP_FROM_SCC_OUTPUT, dfxp)
+
+
+class SCCToWebVTTTestCase(unittest.TestCase):
+    def test_webvtt_newlines_are_properly_rendered(self):
+        caption_set = SCCReader().read(
+            SAMPLE_WEBVTT_FROM_SCC_PROPERLY_WRITES_NEWLINES)
+        webvtt = WebVTTWriter().write(caption_set)
+
+        self.assertEqual(
+            webvtt,
+            SAMPLE_WEBVTT_FROM_SCC_PROPERLY_WRITES_NEWLINES_OUTPUT
+        )
 
 
 SAMPLE_DFXP_FROM_SCC_OUTPUT = u"""<?xml version="1.0" encoding="utf-8"?>
@@ -109,3 +122,17 @@ SAMPLE_DFXP_FROM_SCC_OUTPUT = u"""<?xml version="1.0" encoding="utf-8"?>
   </div>
  </body>
 </tt>"""
+
+SAMPLE_WEBVTT_FROM_SCC_PROPERLY_WRITES_NEWLINES = u"""\
+Scenarist_SCC V1.0
+
+00:21:29;23	9420 9452 6161 94f4 97a2 6262 942c 942f
+"""
+
+SAMPLE_WEBVTT_FROM_SCC_PROPERLY_WRITES_NEWLINES_OUTPUT = u"""\
+WEBVTT
+
+21:30.033 --> 00:00.000 position:12.5%,start line:86.6666666667%
+aa
+bb
+"""
