@@ -225,3 +225,20 @@ SAMPLE_SAMI_DOUBLE_BR = """
     of "E equals m c-squared",
 </BODY></SAMI>
 """
+
+SAMPLE_SAMI_PARTIAL_MARGINS = u"""
+<SAMI>
+<HEAD>
+   <STYLE TYPE="Text/css">
+   <!--
+      P {margin-left: 29pt; margin-right: 29pt; font-size: 24pt; text-align: center; font-family: Tahoma; font-weight: bold; color: #FFFFFF; background-color: #000000;}
+      .SUBTTL {Name: 'Subtitles'; Lang: en-US; SAMIType: CC;}
+   -->
+   </STYLE>
+</HEAD>
+<BODY>
+   <SYNC START=133>
+      <P CLASS=SUBTTL>>> COMING UP NEXT, IT IS<br>APPLAUSE AMERICA.
+</BODY>
+</SAMI>
+"""
