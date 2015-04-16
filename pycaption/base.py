@@ -63,6 +63,12 @@ class CaptionNode(object):
     """
     A single node within a caption, representing either
     text, a style, or a linebreak.
+
+    Rules:
+        1. All nodes should have the property layout_info set.
+        The value None means specifically that no positioning information
+        should be specified. Each reader is to supply its own default
+        values (if necessary) when reading their respective formats.
     """
 
     TEXT = 1

@@ -154,7 +154,8 @@ class CaptionCreator(object):
 
             # handle line breaks
             elif element.is_explicit_break():
-                new_nodes = self._translate_break(open_italic)
+                new_nodes = self._translate_break(
+                    open_italic, element.position)
                 open_italic = False
                 caption.nodes.extend(new_nodes)
 
@@ -193,7 +194,7 @@ class CaptionCreator(object):
         self._collection.extend(self._still_editing)
 
     @staticmethod
-    def _translate_break(open_italic):
+    def _translate_break(open_italic, positioning):
         """Depending on the context, translates a line break into one or more
         nodes, returning them.
 
@@ -201,13 +202,17 @@ class CaptionCreator(object):
         :rtype: tuple
         """
         new_nodes = []
+        layout_info = _get_layout_from_tuple(positioning)
 
         if open_italic:
             new_nodes.append(CaptionNode.create_style(
-                False, {u'italics': True}))
+                start=False,
+                content={u'italics': True},
+                layout_info=layout_info)
+            )
 
         # add line break
-        new_nodes.append(CaptionNode.create_break())
+        new_nodes.append(CaptionNode.create_break(layout_info=layout_info))
 
         return new_nodes
 
