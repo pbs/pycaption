@@ -519,6 +519,9 @@ class Padding(object):
     """Represents padding information. Consists of 4 Size objects, representing
     padding from (in this order): before (up), after (down), start (left) and
     end (right).
+
+    A valid Padding object must always have all paddings set and different from
+    None. If this is not true Writers may fail for they rely on this assumption.
     """
     def __init__(self, before=None, after=None, start=None, end=None):
         """
@@ -531,6 +534,13 @@ class Padding(object):
         self.after = after
         self.start = start
         self.end = end
+
+        for attr in ['before', 'after', 'start', 'end']:
+            # Ensure that a Padding object always explicitly defines all
+            # four possible paddings
+            if getattr(self, attr) is None:
+                # Sets default padding (0%)
+                setattr(self, attr, Size(0, UnitEnum.PERCENT))
 
     @classmethod
     def from_xml_attribute(cls, attribute):
@@ -624,6 +634,9 @@ class Padding(object):
                     string_list.append(
                         getattr(self, attrib).to_xml_attribute())
         except AttributeError:
+            # A Padding object with attributes set to None is considered
+            # invalid. All four possible paddings must be set. If one of them
+            # is not, this error is raised.
             raise ValueError(u"The attribute order specified is invalid.")
 
         return u' '.join(string_list)
