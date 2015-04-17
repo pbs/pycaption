@@ -1,6 +1,7 @@
 from ..base import Caption, CaptionNode
 from ..exceptions import CaptionReadSyntaxError
-from ..geometry import UnitEnum, Size, Layout, Point
+from ..geometry import (UnitEnum, Size, Layout, Point, Alignment,
+                        VerticalAlignmentEnum, HorizontalAlignmentEnum)
 
 from .constants import PAC_BYTES_TO_POSITIONING_MAP, COMMANDS
 
@@ -392,7 +393,10 @@ def _get_layout_from_tuple(position_tuple):
 
     horizontal = Size(100 * column / 32.0, UnitEnum.PERCENT)
     vertical = Size(100 * (row - 1) / 15.0, UnitEnum.PERCENT)
-    return Layout(origin=Point(horizontal, vertical))
+    return Layout(origin=Point(horizontal, vertical),
+                  alignment=Alignment(HorizontalAlignmentEnum.LEFT,
+                                      VerticalAlignmentEnum.TOP)
+                  )
 
 
 class _PositioningTracer(object):

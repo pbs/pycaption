@@ -53,7 +53,8 @@ class SCCToWebVTTTestCase(unittest.TestCase):
         )
 
 
-SAMPLE_DFXP_FROM_SCC_OUTPUT = u"""<?xml version="1.0" encoding="utf-8"?>
+SAMPLE_DFXP_FROM_SCC_OUTPUT = u"""\
+<?xml version="1.0" encoding="utf-8"?>
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling">
  <head>
   <styling>
@@ -61,18 +62,18 @@ SAMPLE_DFXP_FROM_SCC_OUTPUT = u"""<?xml version="1.0" encoding="utf-8"?>
   </styling>
   <layout>
    <region tts:displayAlign="after" tts:textAlign="center" xml:id="bottom"/>
-   <region tts:origin="0.0% 80.0%" xml:id="r0"/>
-   <region tts:origin="37.5% 0.0%" xml:id="r1"/>
-   <region tts:origin="75.0% 20.0%" xml:id="r2"/>
-   <region tts:origin="12.5% 46.6666666667%" xml:id="r3"/>
-   <region tts:origin="12.5% 93.3333333333%" xml:id="r4"/>
-   <region tts:origin="37.5% 53.3333333333%" xml:id="r5"/>
-   <region tts:origin="75.0% 13.3333333333%" xml:id="r6"/>
-   <region tts:origin="12.5% 33.3333333333%" xml:id="r7"/>
-   <region tts:origin="12.5% 86.6666666667%" xml:id="r8"/>
-   <region tts:origin="75.0% 6.66666666667%" xml:id="r9"/>
-   <region tts:origin="37.5% 40.0%" xml:id="r10"/>
-   <region tts:origin="12.5% 73.3333333333%" xml:id="r11"/>
+   <region tts:displayAlign="before" tts:origin="0.0% 80.0%" tts:textAlign="left" xml:id="r0"/>
+   <region tts:displayAlign="before" tts:origin="37.5% 0.0%" tts:textAlign="left" xml:id="r1"/>
+   <region tts:displayAlign="before" tts:origin="75.0% 20.0%" tts:textAlign="left" xml:id="r2"/>
+   <region tts:displayAlign="before" tts:origin="12.5% 46.6666666667%" tts:textAlign="left" xml:id="r3"/>
+   <region tts:displayAlign="before" tts:origin="12.5% 93.3333333333%" tts:textAlign="left" xml:id="r4"/>
+   <region tts:displayAlign="before" tts:origin="37.5% 53.3333333333%" tts:textAlign="left" xml:id="r5"/>
+   <region tts:displayAlign="before" tts:origin="75.0% 13.3333333333%" tts:textAlign="left" xml:id="r6"/>
+   <region tts:displayAlign="before" tts:origin="12.5% 33.3333333333%" tts:textAlign="left" xml:id="r7"/>
+   <region tts:displayAlign="before" tts:origin="12.5% 86.6666666667%" tts:textAlign="left" xml:id="r8"/>
+   <region tts:displayAlign="before" tts:origin="75.0% 6.66666666667%" tts:textAlign="left" xml:id="r9"/>
+   <region tts:displayAlign="before" tts:origin="37.5% 40.0%" tts:textAlign="left" xml:id="r10"/>
+   <region tts:displayAlign="before" tts:origin="12.5% 73.3333333333%" tts:textAlign="left" xml:id="r11"/>
   </layout>
  </head>
  <body>
@@ -132,7 +133,7 @@ Scenarist_SCC V1.0
 SAMPLE_WEBVTT_FROM_SCC_PROPERLY_WRITES_NEWLINES_OUTPUT = u"""\
 WEBVTT
 
-21:30.033 --> 00:00.000 position:12.5%,start line:86.6666666667%
+21:30.033 --> 00:00.000 align:left position:12.5%,start line:86.6666666667%
 aa
 bb
 """
