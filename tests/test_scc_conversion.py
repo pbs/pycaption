@@ -133,7 +133,7 @@ Scenarist_SCC V1.0
 SAMPLE_WEBVTT_FROM_SCC_PROPERLY_WRITES_NEWLINES_OUTPUT = u"""\
 WEBVTT
 
-21:30.033 --> 00:00.000 align:left position:12.5%,start line:86.67%
+21:30.033 --> 00:00.000 align:left position:12.5%,start line:86.67% size:87.5%
 aa
 bb
 """
