@@ -47,8 +47,30 @@ class BaseReader(object):
 
 
 class BaseWriter(object):
-    def __init__(self, *args, **kwargs):
-        pass
+    def __init__(self, relativize=True, video_width=None, video_height=None,
+                 fit_to_screen=True):
+        """
+        Initialize writer with the given parameters.
+
+        :param relativize: If True (default), converts absolute positioning
+            values (e.g. px) to percentage. ATTENTION: WebVTT does not support
+            absolute positioning. If relativize is set to False and it finds
+            an absolute positioning parameter for a given caption, it will
+            ignore all positioning for that cue and show it in the default
+            position.
+        :param video_width: The width of the video for which the captions being
+            converted were made. This is necessary for relativization.
+        :param video_height: The height of the video for which the captions
+            being converted were made. This is necessary for relativization.
+        :param fit_to_screen: If extent is not set or if origin + extent > 100%,
+            (re)calculate it based on origin. It is a pycaption fix for caption
+            files that are technically valid but contains inconsistent settings
+            that may cause long captions to be cut out of the screen.
+        """
+        self.relativize = relativize
+        self.video_width = video_width
+        self.video_height = video_height
+        self.fit_to_screen = fit_to_screen
 
     def write(self, content):
         return content

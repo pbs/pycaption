@@ -25,6 +25,12 @@ class UnitEnum(Enum):
     CELL = u'c'
     PT = u'pt'
 
+    class __metaclass__(type):
+        def __iter__(self):
+            for attr in dir(UnitEnum):
+                if not attr.startswith("__"):
+                    yield getattr(UnitEnum, attr)
+
 
 class VerticalAlignmentEnum(Enum):
     """Enumeration object, specifying the allowed vertical alignment options
@@ -185,12 +191,25 @@ class Stretch(TwoDimensionalObject):
             67
         )
 
+    def __nonzero__(self):
+        return True if self.horizontal or self.vertical else False
+
     def to_xml_attribute(self, **kwargs):
         """Returns a unicode representation of this object as an xml attribute
         """
         return u'{horizontal} {vertical}'.format(
             horizontal=self.horizontal.to_xml_attribute(),
             vertical=self.vertical.to_xml_attribute()
+        )
+
+    def is_relative(self):
+        """
+        Returns True if all dimensions are expressed as percentages,
+        False otherwise.
+        """
+        return (
+            self.horizontal.is_relative() and
+            self.vertical.is_relative()
         )
 
     def to_percentage_of(self, video_width, video_height):
@@ -301,6 +320,16 @@ class Point(TwoDimensionalObject):
         """
         return Point(self.x + stretch.horizontal, self.y + stretch.vertical)
 
+    def is_relative(self):
+        """
+        Returns True if all dimensions are expressed as percentages,
+        False otherwise.
+        """
+        return (
+            self.x.is_relative() and
+            self.y.is_relative()
+        )
+
     def to_percentage_of(self, video_width, video_height):
         """
         Converts absolute units (e.g. px, pt etc) to percentage
@@ -352,6 +381,9 @@ class Point(TwoDimensionalObject):
             57
         )
 
+    def __nonzero__(self):
+        return True if self.x or self.y else False
+
     def to_xml_attribute(self, **kwargs):
         """Returns a unicode representation of this object as an xml attribute
         """
@@ -369,7 +401,12 @@ class Size(object):
         :param value: A number (float or int will do)
         :param unit: A UnitEnum member
         """
-        self.value = value
+        if value is None:
+            raise ValueError(u"Size must be initialized with a value.")
+        if unit not in UnitEnum:
+            raise ValueError(u"Size must be initialized with a valid unit.")
+
+        self.value = float(value)
         self.unit = unit
 
     def __sub__(self, other):
@@ -392,6 +429,12 @@ class Size(object):
             return Size(self.value + other.value, self.unit)
         else:
             raise ValueError(u"The sizes should have the same measure units.")
+
+    def is_relative(self):
+        """
+        Returns True if value is expressed as percentage, False otherwise.
+        """
+        return self.unit == UnitEnum.PERCENT
 
     def to_percentage_of(self, video_width=None, video_height=None):
         """
@@ -425,7 +468,7 @@ class Size(object):
             self.unit = UnitEnum.PIXEL
 
         if self.unit == UnitEnum.PIXEL:
-            self.value = self.value * 100 / (video_width or video_height)
+            self.value = self.value * 100.0 / (video_width or video_height)
             self.unit = UnitEnum.PERCENT
 
         if self.unit == UnitEnum.CELL:
@@ -433,7 +476,7 @@ class Size(object):
             # (w3.org/TR/ttaf1-dfxp/#parameter-attribute-cellResolution)
             # For now we will use the default values (32 columns and 15 rows)
             cell_reference = 32 if video_width else 15
-            self.value = self.value * 100 / cell_reference
+            self.value = self.value * 100.0 / cell_reference
             self.unit = UnitEnum.PERCENT
         return self
 
@@ -488,7 +531,12 @@ class Size(object):
         )
 
     def __unicode__(self):
-        return u"{}{}".format(self.value, self.unit)
+        value = round(self.value, 2)
+        if value.is_integer():
+            s = u"{}".format(int(value))
+        else:
+            s = u"{:.2f}".format(value).rstrip('0').rstrip('.')
+        return u"{}{}".format(s, self.unit)
 
     def to_xml_attribute(self, **kwargs):
         """Returns a unicode representation of this object, as an xml attribute
@@ -513,6 +561,9 @@ class Size(object):
             hash(self.unit) * 43 +
             47
         )
+
+    def __nonzero__(self):
+        return self.unit in UnitEnum and self.value is not None
 
 
 class Padding(object):
@@ -730,7 +781,59 @@ class Layout(object):
             + 17
         )
 
+    def is_relative(self):
+        """
+        Returns True if all positioning values are expressed as percentages,
+        False otherwise.
+        """
+        return (
+            self.origin.is_relative() and
+            self.extent.is_relative() and
+            self.padding.is_relative()
+        )
+
     def to_percentage_of(self, video_width, video_height):
         for attr in [self.origin, self.extent, self.padding]:
             if attr:
                 attr.to_percentage_of(video_width, video_height)
+
+    def set_extent_from_origin(self):
+        """
+        If extent is not set or if origin + extent > 100%, (re)calculate it
+        based on origin. It is a pycaption fix for caption files that are
+        technically valid but contain inconsistent settings that may cause
+        long captions to be cut out of the screen.
+
+        ATTENTION: This must be called AFTER to_percentage_of. All units are
+        presumed to be percentages.
+        """
+        if self.origin:
+            # Calculated values to be used if replacement is needed
+            diff_horizontal = Size(100 - self.origin.x.value, UnitEnum.PERCENT)
+            diff_vertical = Size(100 - self.origin.y.value, UnitEnum.PERCENT)
+            if not self.extent:
+                # Extent is not set, use the calculated values
+                self.extent = Stretch(diff_horizontal, diff_vertical)
+            else:
+                # Extent is set but may have inconsistent values,
+                # e.g. origin="35% 25%" extent="80% 80%", which would cause
+                # captions to end at 115% and be cut out of the screen. In this
+                # case, the value is corrected so origin + extent = 100%.
+                bottom_left = self.origin.add_stretch(self.extent)
+
+                found_absolute_unit = False
+                if bottom_left.x.unit != UnitEnum.PERCENT:
+                    found_absolute_unit = True
+                elif bottom_left.x.unit != UnitEnum.PERCENT:
+                    found_absolute_unit = True
+
+                if found_absolute_unit:
+                    raise ValueError("Units must be relativized before extent "
+                                     "can be calculated based on origin.")
+
+                # If extent is set but it's inconsistent, replace with
+                # calculated values
+                if bottom_left.x.value > 100:
+                    self.extent.horizontal = diff_horizontal
+                if bottom_left.y.value > 100:
+                    self.extent.vertical = diff_vertical

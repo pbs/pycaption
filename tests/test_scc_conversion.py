@@ -35,9 +35,10 @@ class SRTtoSCCtoSRTTestCase(unittest.TestCase, CaptionSetTestingMixIn):
 
 class SCCtoDFXPTestCase(unittest.TestCase):
     def test_scc_to_dfxp(self):
+        self.maxDiff = None
         caption_set = SCCReader().read(SAMPLE_SCC_MULTIPLE_POSITIONING)
-        dfxp = DFXPWriter().write(caption_set)
-
+        dfxp = DFXPWriter(
+            relativize=False, fit_to_screen=False).write(caption_set)
         self.assertEqual(SAMPLE_DFXP_FROM_SCC_OUTPUT, dfxp)
 
 
@@ -61,18 +62,18 @@ SAMPLE_DFXP_FROM_SCC_OUTPUT = u"""<?xml version="1.0" encoding="utf-8"?>
   </styling>
   <layout>
    <region tts:displayAlign="after" tts:textAlign="center" xml:id="bottom"/>
-   <region tts:origin="0.0% 80.0%" xml:id="r0"/>
-   <region tts:origin="37.5% 0.0%" xml:id="r1"/>
-   <region tts:origin="75.0% 20.0%" xml:id="r2"/>
-   <region tts:origin="12.5% 46.6666666667%" xml:id="r3"/>
-   <region tts:origin="12.5% 93.3333333333%" xml:id="r4"/>
-   <region tts:origin="37.5% 53.3333333333%" xml:id="r5"/>
-   <region tts:origin="75.0% 13.3333333333%" xml:id="r6"/>
-   <region tts:origin="12.5% 33.3333333333%" xml:id="r7"/>
-   <region tts:origin="12.5% 86.6666666667%" xml:id="r8"/>
-   <region tts:origin="75.0% 6.66666666667%" xml:id="r9"/>
-   <region tts:origin="37.5% 40.0%" xml:id="r10"/>
-   <region tts:origin="12.5% 73.3333333333%" xml:id="r11"/>
+   <region tts:origin="0% 80%" xml:id="r0"/>
+   <region tts:origin="37.5% 0%" xml:id="r1"/>
+   <region tts:origin="75% 20%" xml:id="r2"/>
+   <region tts:origin="12.5% 46.67%" xml:id="r3"/>
+   <region tts:origin="12.5% 93.33%" xml:id="r4"/>
+   <region tts:origin="37.5% 53.33%" xml:id="r5"/>
+   <region tts:origin="75% 13.33%" xml:id="r6"/>
+   <region tts:origin="12.5% 33.33%" xml:id="r7"/>
+   <region tts:origin="12.5% 86.67%" xml:id="r8"/>
+   <region tts:origin="75% 6.67%" xml:id="r9"/>
+   <region tts:origin="37.5% 40%" xml:id="r10"/>
+   <region tts:origin="12.5% 73.33%" xml:id="r11"/>
   </layout>
  </head>
  <body>
@@ -132,7 +133,7 @@ Scenarist_SCC V1.0
 SAMPLE_WEBVTT_FROM_SCC_PROPERLY_WRITES_NEWLINES_OUTPUT = u"""\
 WEBVTT
 
-21:30.033 --> 00:00.000 position:12.5%,start line:86.6666666667%
+21:30.033 --> 00:00.000 position:12.5%,start line:86.67% size:87.5%
 aa
 bb
 """

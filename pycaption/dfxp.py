@@ -208,16 +208,29 @@ class DFXPReader(BaseReader):
 
 
 class DFXPWriter(BaseWriter):
-    def __init__(self, *args, **kw):
-        self.write_inline_positioning = kw.get(
+    def __init__(self, *args, **kwargs):
+        self.write_inline_positioning = kwargs.pop(
             u'write_inline_positioning', False)
         self.p_style = False
         self.open_span = False
         self.region_creator = None
+        super(DFXPWriter, self).__init__(*args, **kwargs)
 
     def write(self, captions, force=u''):
         dfxp = BeautifulSoup(DFXP_BASE_MARKUP, u'xml')
         dfxp.find(u'tt')[u'xml:lang'] = u"en"
+
+        langs = captions.get_languages()
+        if force in langs:
+            langs = [force]
+
+        # Loop through all captions/nodes and apply transformations to layout
+        # in function of the provided or default settings
+        for lang in langs:
+            for caption in captions.get_captions(lang):
+                self._apply_transformations_to(caption.layout_info)
+                for node in caption.nodes:
+                    self._apply_transformations_to(node.layout_info)
 
         # Create the styles in the <styling> section, or a default style.
         for style_id, style in captions.get_styles():
@@ -231,9 +244,6 @@ class DFXPWriter(BaseWriter):
         self.region_creator.create_document_regions()
 
         body = dfxp.find(u'body')
-        langs = captions.get_languages()
-        if force in langs:
-            langs = [force]
 
         for lang in langs:
             div = dfxp.new_tag(u'div')
@@ -255,6 +265,16 @@ class DFXPWriter(BaseWriter):
         self.region_creator.cleanup_regions()
         caption_content = dfxp.prettify(formatter=None)
         return caption_content
+
+    def _apply_transformations_to(self, layout_info):
+        if layout_info:
+            if self.relativize:
+                # Transform absolute values (e.g. px) into percentages
+                layout_info.to_percentage_of(
+                    self.video_width, self.video_height)
+            if self.fit_to_screen:
+                # Make sure origin + extent <= 100%
+                layout_info.set_extent_from_origin()
 
     def _assign_positioning_data(self, tag, lang, caption_set=None,
                                  caption=None, caption_node=None):
@@ -312,7 +332,7 @@ class DFXPWriter(BaseWriter):
 
         for node in caption.nodes:
             if node.type_ == CaptionNode.TEXT:
-                line += self._encode(node.content) + u' '
+                line += self._encode(node.content)
 
             elif node.type_ == CaptionNode.BREAK:
                 line = line.rstrip() + u'<br/>\n    '

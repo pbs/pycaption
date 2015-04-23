@@ -14,11 +14,16 @@ from .samples import (
     SAMPLE_DFXP_UTF8, SAMPLE_SAMI_UNICODE, SAMPLE_DFXP_UNICODE,
     SAMPLE_SRT_UNICODE, SAMPLE_DFXP_WITHOUT_REGION_AND_STYLE,
     SAMPLE_WEBVTT_FROM_DFXP, SAMPLE_DFXP_WITH_POSITIONING,
-    SAMPLE_WEBVTT_FROM_DFXP_WITH_POSITIONING)
+    SAMPLE_WEBVTT_FROM_DFXP_WITH_POSITIONING,
+    SAMPLE_DFXP_WITH_RELATIVIZED_POSITIONING, SAMPLE_DFXP_LONG_CUE,
+    SAMPLE_WEBVTT_OUTPUT_LONG_CUE, SAMPLE_DFXP_LONG_CUE_FIT_TO_SCREEN)
 
 from .mixins import (
     SRTTestingMixIn, SAMITestingMixIn, DFXPTestingMixIn, WebVTTTestingMixIn)
 
+# Arbitrary values used to test relativization
+VIDEO_WIDTH = 640
+VIDEO_HEIGHT = 360
 
 class DFXPConversionTestCase(unittest.TestCase):
 
@@ -31,6 +36,7 @@ class DFXPConversionTestCase(unittest.TestCase):
             SAMPLE_DFXP_WITHOUT_REGION_AND_STYLE.decode(u'utf-8'))
         cls.captions_with_positioning = DFXPReader().read(
             SAMPLE_DFXP_WITH_POSITIONING.decode('utf-8'))
+        cls.long_cue = DFXPReader().read(SAMPLE_DFXP_LONG_CUE)
 
 
 class DFXPtoDFXPTestCase(DFXPConversionTestCase, DFXPTestingMixIn):
@@ -97,10 +103,12 @@ class DFXPtoDFXPTestCase(DFXPConversionTestCase, DFXPTestingMixIn):
 
     def test_correct_region_attributes_are_recreated(self):
         caption_set = DFXPReader().read(SAMPLE_DFXP_MULTIPLE_REGIONS_INPUT)
-        result = DFXPWriter().write(caption_set)
+        result = DFXPWriter(
+            relativize=False, fit_to_screen=False).write(caption_set)
         self.assertDFXPEquals(result, SAMPLE_DFXP_MULTIPLE_REGIONS_OUTPUT)
 
     def test_incorrectly_specified_positioning_is_explicitly_accepted(self):
+        self.maxDiff = None
         # The arguments used here illustrate how we will try to read
         # and write incorrectly specified positioning information.
         # By incorrect, I mean the specs say that those attributes should be
@@ -108,7 +116,10 @@ class DFXPtoDFXPTestCase(DFXPConversionTestCase, DFXPTestingMixIn):
         caption_set = DFXPReader(read_invalid_positioning=True).read(
             SAMPLE_DFXP_INVALID_BUT_SUPPORTED_POSITIONING_INPUT
         )
-        result = DFXPWriter(write_inline_positioning=True).write(caption_set)
+        result = DFXPWriter(
+            relativize=False,
+            fit_to_screen=False,
+            write_inline_positioning=True).write(caption_set)
         self.assertEqual(result,
                          SAMPLE_DFXP_INVALID_BUT_SUPPORTED_POSITIONING_OUTPUT)
 
@@ -123,6 +134,22 @@ class DFXPtoDFXPTestCase(DFXPConversionTestCase, DFXPTestingMixIn):
             SAMPLE_DFXP_STYLE_TAG_WITH_NO_XML_ID_INPUT)
         result = DFXPWriter().write(caption_set)
         self.assertEqual(result, SAMPLE_DFXP_STYLE_TAG_WITH_NO_XML_ID_OUTPUT)
+
+    def test_is_relativized(self):
+        # Absolute positioning settings (e.g. px) are converted to percentages
+        result = DFXPWriter(
+            video_width=VIDEO_WIDTH, video_height=VIDEO_HEIGHT
+        ).write(self.captions_with_positioning)
+        self.maxDiff = None
+        self.assertEqual(result, SAMPLE_DFXP_WITH_RELATIVIZED_POSITIONING)
+
+    def test_fit_to_screen(self):
+        # Check if caption width is explicitly set and recalculate it if
+        # necessary. This prevents long captions from being cut out of the
+        # screen.
+        caption_set = DFXPReader().read(SAMPLE_DFXP_LONG_CUE)
+        result = DFXPWriter().write(caption_set)
+        self.assertEqual(result, SAMPLE_DFXP_LONG_CUE_FIT_TO_SCREEN)
 
 
 class DFXPtoSRTTestCase(DFXPConversionTestCase, SRTTestingMixIn):
@@ -175,11 +202,17 @@ class DFXPtoWebVTTTestCase(DFXPConversionTestCase, WebVTTTestingMixIn):
 
     def test_dfxp_with_positioning_to_webvtt_conversion(self):
         results = WebVTTWriter(
-            video_width=638, video_height=360
+            video_width=VIDEO_WIDTH, video_height=VIDEO_HEIGHT
         ).write(self.captions_with_positioning)
         self.assertTrue(isinstance(results, unicode))
         self.assertWebVTTEquals(
             SAMPLE_WEBVTT_FROM_DFXP_WITH_POSITIONING.decode(u'utf-8'), results)
+
+    def test_dfxp_to_webvtt_adds_explicit_size(self):
+        results = WebVTTWriter().write(self.long_cue)
+        self.assertTrue(isinstance(results, unicode))
+        self.assertEquals(
+            SAMPLE_WEBVTT_OUTPUT_LONG_CUE, results)
 
 SAMPLE_DFXP_INVALID_BUT_SUPPORTED_POSITIONING_INPUT = u"""\
 <?xml version="1.0" encoding="utf-8"?>
@@ -234,7 +267,7 @@ SAMPLE_DFXP_INVALID_BUT_SUPPORTED_POSITIONING_OUTPUT = u"""\
     Hello there!
    </p>
    <p begin="00:00:05.700" end="00:00:06.210" region="r1" style="p" tts:displayAlign="after" tts:extent="30% 7.67%" tts:origin="20% 15.67%" tts:textAlign="center">
-    How are you? <span region="r2" tts:origin="1px 2px" tts:textAlign="center" tts:extent="30% 7.67%" tts:displayAlign="after">&gt;&gt;Fine, thx&lt;&lt;</span>
+    How are you?<span region="r2" tts:origin="1px 2px" tts:textAlign="center" tts:extent="30% 7.67%" tts:displayAlign="after">&gt;&gt;Fine, thx&lt;&lt;</span>
    </p>
    <p begin="00:00:07.900" end="00:00:08.900" region="r3" style="p" tts:displayAlign="before" tts:extent="60% 22%" tts:textAlign="right">
     Just fine?
@@ -318,7 +351,7 @@ SAMPLE_DFXP_MULTIPLE_REGIONS_OUTPUT = u"""\
     How are you?
    </p>
    <p begin="00:00:07.700" end="00:00:09.210" region="r2" style="p">
-    &gt;&gt; I'm fine, thank you &lt;&lt; replied someone. <span region="r1">&gt;&gt;And now we're going to have fun&lt;&lt;</span>
+    &gt;&gt; I'm fine, thank you &lt;&lt; replied someone.<span region="r1">&gt;&gt;And now we're going to have fun&lt;&lt;</span>
    </p>
    <p begin="00:00:10.707" end="00:00:11.210" region="r3" style="p">
     What do you have in mind?

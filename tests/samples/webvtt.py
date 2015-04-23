@@ -187,3 +187,15 @@ MAN:
 When we think
 of "E equals m c-squared",
 """
+
+SAMPLE_WEBVTT_OUTPUT_LONG_CUE = u"""WEBVTT
+
+00:01.000 --> 00:02.000 align:middle
+NARRATOR:
+
+00:02.000 --> 00:03.000 align:middle position:25%,start line:25% size:75%
+They built the largest, most incredible, wildest, craziest,
+
+00:03.000 --> 00:04.000 align:middle
+most complex machine in history.
+"""

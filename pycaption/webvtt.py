@@ -188,15 +188,6 @@ class WebVTTWriter(BaseWriter):
     video_width = None
     video_height = None
 
-    def __init__(self, *args, **kwargs):
-        self.video_width = kwargs.pop('video_width', None)
-        self.video_height = kwargs.pop('video_height', None)
-        # If this is True, the WebVTTWriter will try to relativize
-        # absolute positioning but will leave it blank on failure
-        # instead of raising an exception.
-        self.bypass_relativization_errors = kwargs.pop(
-            'bypass_relativization_errors', False)
-
     def write(self, caption_set):
         """
         :type caption_set: CaptionSet
@@ -271,15 +262,27 @@ class WebVTTWriter(BaseWriter):
         cue_width = None
         alignment = None
 
-        # Ensure that all positioning values are measured using percentage
-        try:
-            layout.to_percentage_of(self.video_width, self.video_height)
-        except RelativizationError as e:
-            if self.bypass_relativization_errors:
-                # Don't include any positioning settings for this cue
-                return u''
+        already_relative = False
+        if not self.relativize:
+            if layout.is_relative():
+                already_relative = True
             else:
-                raise e
+                # There are absolute positioning values for this cue but the
+                # Writer is explicitly configured not to do any relativization.
+                # Ignore all positioning for this cue.
+                return u''
+
+        # Ensure that all positioning values are measured using percentage.
+        # This may raise an exception if layout.is_relative() == False
+        # If you want to avoid it, you have to turn off relativization by
+        # initializing this Writer with relativize=False.
+        if not already_relative:
+            layout.to_percentage_of(self.video_width, self.video_height)
+
+        # Ensure that when there's a left offset the caption is not pushed out
+        # of the screen. If the execution got this far it means origin and
+        # extent are already relative by now.
+        layout.set_extent_from_origin()
 
         if layout.origin:
             left_offset = layout.origin.x
