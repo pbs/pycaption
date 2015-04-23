@@ -160,11 +160,11 @@ SAMPLE_DFXP_WITH_PROPERLY_CLOSING_SPANS_OUTPUT = u"""\
   </styling>
   <layout>
    <region tts:displayAlign="after" tts:textAlign="center" xml:id="bottom"/>
-   <region tts:origin="12.5% 86.6666666667%" xml:id="r0"/>
-   <region tts:origin="25.0% 86.6666666667%" xml:id="r1"/>
-   <region tts:origin="50.0% 86.6666666667%" xml:id="r2"/>
-   <region tts:origin="62.5% 86.6666666667%" xml:id="r3"/>
-   <region tts:origin="25.0% 93.3333333333%" xml:id="r4"/>
+   <region tts:displayAlign="before" tts:origin="12.5% 86.6666666667%" tts:textAlign="left" xml:id="r0"/>
+   <region tts:displayAlign="before" tts:origin="25.0% 86.6666666667%" tts:textAlign="left" xml:id="r1"/>
+   <region tts:displayAlign="before" tts:origin="50.0% 86.6666666667%" tts:textAlign="left" xml:id="r2"/>
+   <region tts:displayAlign="before" tts:origin="62.5% 86.6666666667%" tts:textAlign="left" xml:id="r3"/>
+   <region tts:displayAlign="before" tts:origin="25.0% 93.3333333333%" tts:textAlign="left" xml:id="r4"/>
   </layout>
  </head>
  <body>

@@ -106,8 +106,10 @@ class SCCReaderTestCase(unittest.TestCase):
         ]
 
         expected_caption_layouts = [
-            (((0.0, u'%'), (86.66666666666667, u'%')), None, None, None),
-            (((0.0, u'%'), (86.66666666666667, u'%')), None, None, None)]
+            (((0.0, u'%'), (86.66666666666667, u'%')), None, None,
+             (u'left', u'top')),
+            (((0.0, u'%'), (86.66666666666667, u'%')), None, None,
+             (u'left', u'top'))]
 
         actual_node_layout_infos = [
             {idx: [node.layout_info.serialized() for node in caption.nodes]}
@@ -115,12 +117,14 @@ class SCCReaderTestCase(unittest.TestCase):
         ]
 
         expected_node_layout_infos = [
-            {0: [
-                (((0.0, u'%'), (86.66666666666667, u'%')), None, None, None)
-            ]},
-            {1: [
-                (((0.0, u'%'), (86.66666666666667, u'%')), None, None, None)
-            ]}
+            {0: [(((0.0, u'%'), (86.66666666666667, u'%')),
+                  None,
+                  None,
+                  (u'left', u'top'))]},
+            {1: [(((0.0, u'%'), (86.66666666666667, u'%')),
+                  None,
+                  None,
+                  (u'left', u'top'))]}
         ]
 
         self.assertEqual(expected_node_layout_infos, actual_node_layout_infos)
