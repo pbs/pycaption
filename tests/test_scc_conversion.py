@@ -40,6 +40,13 @@ class SCCtoDFXPTestCase(unittest.TestCase):
 
         self.assertEqual(SAMPLE_DFXP_FROM_SCC_OUTPUT, dfxp)
 
+    def test_dfxp_is_valid_xml_when_scc_source_has_weird_italic_commands(self):
+        caption_set = SCCReader().read(
+            SAMPLE_SCC_CREATED_DFXP_WITH_WRONGLY_CLOSING_SPANS)
+        
+        dfxp = DFXPWriter().write(caption_set)
+        self.assertEqual(dfxp, SAMPLE_DFXP_WITH_PROPERLY_CLOSING_SPANS_OUTPUT)
+
 
 class SCCToWebVTTTestCase(unittest.TestCase):
     def test_webvtt_newlines_are_properly_rendered(self):
@@ -119,6 +126,75 @@ SAMPLE_DFXP_FROM_SCC_OUTPUT = u"""\
     4545<br/>
     6767<br/>
     8989
+   </p>
+  </div>
+ </body>
+</tt>"""
+
+SAMPLE_SCC_CREATED_DFXP_WITH_WRONGLY_CLOSING_SPANS = u"""\
+Scenarist_SCC V1.0
+
+00:01:28;09 9420 942f 94ae 9420 9452 97a2 e3e3 e3e3 e3e3 9470 9723 e3a1 e3a1
+
+00:01:31;10 9420 942f 94ae
+
+00:01:31;18 9420 9454 6262 6262 9458 97a1 91ae e3e3 e3e3 9470 97a1 6262 6161
+
+00:01:35;18 9420 942f 94ae
+
+00:01:40;25 942c
+
+00:01:51;18 9420 9452 97a1 6161 94da 97a2 91ae 6262 9470 97a1 e3e3
+
+00:01:55;22 9420 942f 6162 e364 94f4 9723 6162 e364
+
+00:01:59;14 9420 942f 94ae 9420 94f4 6464 6464
+"""
+
+SAMPLE_DFXP_WITH_PROPERLY_CLOSING_SPANS_OUTPUT = u"""\
+<?xml version="1.0" encoding="utf-8"?>
+<tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling">
+ <head>
+  <styling>
+   <style tts:color="white" tts:fontFamily="monospace" tts:fontSize="1c" xml:id="default"/>
+  </styling>
+  <layout>
+   <region tts:displayAlign="after" tts:textAlign="center" xml:id="bottom"/>
+   <region tts:origin="12.5% 86.6666666667%" xml:id="r0"/>
+   <region tts:origin="25.0% 86.6666666667%" xml:id="r1"/>
+   <region tts:origin="50.0% 86.6666666667%" xml:id="r2"/>
+   <region tts:origin="62.5% 86.6666666667%" xml:id="r3"/>
+   <region tts:origin="25.0% 93.3333333333%" xml:id="r4"/>
+  </layout>
+ </head>
+ <body>
+  <div region="bottom" xml:lang="en-US">
+   <p begin="00:01:31.400" end="00:01:35.666" region="r0" style="default">
+    cccccc<br/>
+    c!c!
+   </p>
+   <p begin="00:01:35.666" end="00:01:35.666" region="r1" style="default">
+    bbbb
+   </p>
+   <p begin="00:01:35.666" end="00:01:40.866" region="r2" style="default">
+    <span tts:fontStyle="italic" region="r2">cccc<br/>
+    bbaa</span>
+   </p>
+   <p begin="00:01:55.800" end="00:01:55.800" region="r0" style="default">
+    aa
+   </p>
+   <p begin="00:01:55.800" end="00:01:59.533" region="r3" style="default">
+    <span tts:fontStyle="italic" region="r3">bb<br/>
+    cc</span>
+   </p>
+   <p begin="00:01:59.533" end="00:01:59.533" region="r3" style="default">
+    abcd
+   </p>
+   <p begin="00:01:59.533" end="00:01:59.533" region="r4" style="default">
+    abcd
+   </p>
+   <p begin="00:01:59.533" end="00:01:59.700" region="r4" style="default">
+    dddd
    </p>
   </div>
  </body>

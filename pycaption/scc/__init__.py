@@ -18,7 +18,42 @@ from .constants import (
 )
 from .specialized_collections import (
     TimingCorrectingCaptionList, NotifyingDict, CaptionCreator,
-    InterpretableNodeCreator, DefaultProvidingPositionTracer)
+    InstructionNodeCreator)
+
+from .state_machines import DefaultProvidingPositionTracker
+
+
+class NodeCreatorFactory(object):
+    """Will return instances of the given node_creator.
+
+    This is used as a means of creating new InstructionNodeCreator instances,
+    because these need to share state beyond their garbage collection, but
+    storing the information at the class level is not good either, because
+    this information must be erased after the reader's .read() operation
+    completes.
+    """
+    def __init__(self, position_tracker,
+                 node_creator=InstructionNodeCreator):
+        self.position_tracker = position_tracker
+        self.node_creator = node_creator
+
+    def new_creator(self):
+        """Returns a new instance of self.node_creator, initialized with
+        the same italics_tracker, and position_tracker
+        """
+        return self.node_creator(position_tracker=self.position_tracker)
+
+    def from_list(self, roll_rows):
+        """Wraps the node_creator's method with the same name
+
+        :param roll_rows: list of node_creator instances
+
+        :return: a node_creator instance
+        """
+        return self.node_creator.from_list(
+            roll_rows,
+            position_tracker=self.position_tracker
+        )
 
 
 class SCCReader(BaseReader):
@@ -30,13 +65,17 @@ class SCCReader(BaseReader):
         self.caption_stash = CaptionCreator()
         self.time_translator = _SccTimeTranslator()
 
+        self.node_creator_factory = NodeCreatorFactory(
+            DefaultProvidingPositionTracker()
+        )
+
         self.last_command = u''
 
         self.buffer_dict = NotifyingDict()
 
-        self.buffer_dict[u'pop'] = InterpretableNodeCreator()
-        self.buffer_dict[u'paint'] = InterpretableNodeCreator()
-        self.buffer_dict[u'roll'] = InterpretableNodeCreator()
+        self.buffer_dict[u'pop'] = self.node_creator_factory.new_creator()
+        self.buffer_dict[u'paint'] = self.node_creator_factory.new_creator()
+        self.buffer_dict[u'roll'] = self.node_creator_factory.new_creator()
 
         # Call this method when the active key changes
         self.buffer_dict.add_change_observer(self._flush_implicit_buffers)
@@ -83,10 +122,6 @@ class SCCReader(BaseReader):
         if type(content) != unicode:
             raise RuntimeError(u'The content is not a unicode string.')
 
-        # Preparation. Clear the cached positioning from when processing
-        # other captions
-        DefaultProvidingPositionTracer.reset_default_positioning()
-
         self.simulate_roll_up = simulate_roll_up
         self.time_translator.offset = offset * 1000000
         # split lines
@@ -125,7 +160,7 @@ class SCCReader(BaseReader):
             self.buffer, self.time_translator.get_time())
 
         self.caption_stash.correct_last_timing(time_translator.get_time())
-        self.buffer = InterpretableNodeCreator()
+        self.buffer = self.node_creator_factory.node_creator()
 
     def _flush_implicit_buffers(self, old_key=None, *args):
         """Convert to Captions those buffers whose behavior is implicit.
@@ -236,7 +271,7 @@ class SCCReader(BaseReader):
                 self.caption_stash.create_and_store(
                     self.buffer, self.time
                 )
-                self.buffer = InterpretableNodeCreator()
+                self.buffer = self.node_creator_factory.new_creator()
 
             self.time = self.time_translator.get_time()
 
@@ -256,7 +291,7 @@ class SCCReader(BaseReader):
             if not self.buffer.is_empty():
                 self.caption_stash.create_and_store(
                     self.buffer, self.time)
-                self.buffer = InterpretableNodeCreator()
+                self.buffer = self.node_creator_factory.new_creator()
 
             # set rows to empty, configure start time for caption
             self.roll_rows = []
@@ -264,13 +299,13 @@ class SCCReader(BaseReader):
 
         # clear pop_on buffer
         elif word == u'94ae':
-            self.buffer = InterpretableNodeCreator()
+            self.buffer = self.node_creator_factory.new_creator()
 
         # display pop_on buffer [End Of Caption]
         elif word == u'942f':
             self.time = self.time_translator.get_time()
             self.caption_stash.create_and_store(self.buffer, self.time)
-            self.buffer = InterpretableNodeCreator()
+            self.buffer = self.node_creator_factory.new_creator()
 
         # roll up captions [Carriage Return]
         elif word == u'94ad':
@@ -290,7 +325,7 @@ class SCCReader(BaseReader):
             if not self.buffer_dict[u'paint'].is_empty():
                 self.caption_stash.create_and_store(
                     self.buffer_dict[u'paint'], self.time)
-                self.buffer = InterpretableNodeCreator()
+                self.buffer = self.node_creator_factory.new_creator()
 
             # attempt to add proper end time to last caption(s)
             self.caption_stash.correct_last_timing(
@@ -337,11 +372,12 @@ class SCCReader(BaseReader):
                     self.roll_rows.pop(0)
 
                 self.roll_rows.append(self.buffer)
-                self.buffer = InterpretableNodeCreator.from_list(self.roll_rows)
+                self.buffer = self.node_creator_factory.from_list(
+                    self.roll_rows)
 
         # convert buffer and empty
         self.caption_stash.create_and_store(self.buffer, self.time)
-        self.buffer = InterpretableNodeCreator()
+        self.buffer = self.node_creator_factory.new_creator()
 
         # configure time
         self.time = self.time_translator.get_time()
