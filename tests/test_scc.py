@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import unittest
-from pycaption.scc.specialized_collections import InstructionNodeCreator
+from pycaption.scc.specialized_collections import (InstructionNodeCreator,
+                                                   TimingCorrectingCaptionList)
 
 from pycaption import SCCReader, CaptionReadNoCaptions
 from pycaption.scc.state_machines import DefaultProvidingPositionTracker
@@ -281,6 +282,55 @@ class InterpretableNodeCreatorTestCase(unittest.TestCase):
         self.assertTrue(result[11].is_text_node())
         self.assertTrue(result[12].is_italics_node())
         self.assertTrue(result[12].sets_italics_off())
+
+
+class CaptionDummy(object):
+    """Mock for pycaption.base.Caption
+    """
+    def __init__(self, start=0, end=0, nodes=(1, 2)):
+        self.nodes = nodes
+        self.start = start
+        self.end = end
+
+    def __repr__(self):
+        return u"{start}-->{end}".format(start=self.start, end=self.end)
+
+
+class TimingCorrectingCaptionListTestCase(unittest.TestCase):
+    def test_appending_then_appending(self):
+        caption_list = TimingCorrectingCaptionList()
+
+        caption_list.append(CaptionDummy(start=3))
+        caption_list.append(CaptionDummy(start=6))
+
+        self.assertEqual(caption_list[0].end, 6)
+
+    def test_appending_then_extending(self):
+        caption_list = TimingCorrectingCaptionList()
+
+        caption_list.append(CaptionDummy(start=3))
+        caption_list.extend([CaptionDummy(start=7), CaptionDummy(start=7)])
+
+        self.assertEqual(caption_list[0].end, 7)
+
+    def test_extending_then_appending(self):
+        caption_list = TimingCorrectingCaptionList()
+
+        caption_list.extend([CaptionDummy(start=4), CaptionDummy(start=4)])
+        caption_list.append(CaptionDummy(start=9))
+
+        self.assertEqual(caption_list[0].end, 9)
+        self.assertEqual(caption_list[1].end, 9)
+
+    def test_extending_then_extending(self):
+        caption_list = TimingCorrectingCaptionList()
+
+        caption_list.extend([CaptionDummy(start=4), CaptionDummy(start=4)])
+        caption_list.extend([CaptionDummy(start=7), CaptionDummy(start=7)])
+
+        self.assertEqual(caption_list[0].end, 7)
+        self.assertEqual(caption_list[1].end, 7)
+
 
 SAMPLE_SCC_PRODUCES_CAPTIONS_WITH_START_AND_END_TIME_THE_SAME = u"""\
 Scenarist_SCC V1.0

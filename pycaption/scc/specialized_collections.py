@@ -9,35 +9,69 @@ class TimingCorrectingCaptionList(list):
     """List of captions. Will know to correct the last caption's end time
     when adding a new caption.
 
-    Also, doesn't allow Nones or empty captions
+    List of captions. When appending new elements, it will correct the end time
+    of the last ones, so they end when the new caption gets added.
 
-    Works well for appending, but extending is trickier when creating multiple
-    captions from the same SCC line. This results in multiple captions with
-    start time equal to the end time. This is however handled in
-    CaptionCreator.correct_last_timing, since it's less messier there
+    "last ones" could mean the last caption `append`ed or all of the last
+    captions with which this list was `extended`
+
+    Also, doesn't allow Nones or empty captions
     """
+    def __init__(self, *args, **kwargs):
+        super(TimingCorrectingCaptionList, self).__init__(*args, **kwargs)
+        self._last_batch = ()
+
     def append(self, p_object):
         """When appending a new caption to the list, make sure the last one
         has an end. Also, don't add empty captions
 
         :type p_object: Caption
         """
-        if p_object is None:
+        if p_object is None or not p_object.nodes:
             return
 
-        if len(self) > 0 and self[-1].end == 0:
-            self[-1].end = p_object.start
+        self._update_last_batch(self._last_batch, p_object)
 
-        if p_object.nodes:
-            super(TimingCorrectingCaptionList, self).append(p_object)
+        self._last_batch = (p_object,)
+
+        super(TimingCorrectingCaptionList, self).append(p_object)
 
     def extend(self, iterable):
-        """Adds the elements in the iterable to the list
+        """Adds the elements in the iterable to the list, regarding the first
+        caption's start time as the end time for the previously added
+        caption(s)
 
-        :param iterable: any iterable
+        :param iterable: an iterable of Caption instances
         """
-        for elem in iterable:
-            self.append(elem)
+        self._update_last_batch(self._last_batch, *(tuple(iterable)))
+
+        self._last_batch = tuple(iterable)
+
+        super(TimingCorrectingCaptionList, self).extend(iterable)
+
+    @staticmethod
+    def _update_last_batch(batch, *new_captions):
+        """Given a batch of captions, sets their end time equal to the start
+        time of the first caption in *new_captions
+
+        The start time of the first caption in new_captions should never be 0.
+        This means an invalid SCC file.
+
+        :type batch: tuple[Caption]
+        :type new_captions: tuple[Caption]
+        """
+        if not new_captions:
+            return
+        if not new_captions[0]:
+            return
+        if not new_captions[0].nodes:
+            return
+
+        new_caption = new_captions[0]
+
+        if batch and batch[-1].end == 0:
+            for caption in batch:
+                caption.end = new_caption.start
 
 
 class NotifyingDict(dict):
