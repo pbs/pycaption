@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 import unittest
+from pycaption.scc.specialized_collections import InstructionNodeCreator
 
 from pycaption import SCCReader, CaptionReadNoCaptions
+from pycaption.scc.state_machines import DefaultProvidingPositionTracker
 
 TOLERANCE_MICROSECONDS = 500 * 1000
 
@@ -95,6 +97,39 @@ class SCCReaderTestCase(unittest.TestCase):
         self.assertEqual(switches_italics(nodes[2]), False)
         self.assertEqual(nodes[1].content, u'abababab')
 
+    def test_default_positioning_when_no_positioning_is_specified(self):
+        caption_set = SCCReader().read(SAMPLE_NO_POSITIONING_AT_ALL_SCC)
+
+        actual_caption_layouts = [
+            caption.layout_info.serialized()
+            for caption in caption_set.get_captions(u'en-US')
+        ]
+
+        expected_caption_layouts = [
+            (((0.0, u'%'), (86.66666666666667, u'%')), None, None,
+             (u'left', u'top')),
+            (((0.0, u'%'), (86.66666666666667, u'%')), None, None,
+             (u'left', u'top'))]
+
+        actual_node_layout_infos = [
+            {idx: [node.layout_info.serialized() for node in caption.nodes]}
+            for idx, caption in enumerate(caption_set.get_captions('en-US'))
+        ]
+
+        expected_node_layout_infos = [
+            {0: [(((0.0, u'%'), (86.66666666666667, u'%')),
+                  None,
+                  None,
+                  (u'left', u'top'))]},
+            {1: [(((0.0, u'%'), (86.66666666666667, u'%')),
+                  None,
+                  None,
+                  (u'left', u'top'))]}
+        ]
+
+        self.assertEqual(expected_node_layout_infos, actual_node_layout_infos)
+        self.assertEqual(expected_caption_layouts, actual_caption_layouts)
+
 
 class CoverageOnlyTestCase(unittest.TestCase):
     """In order to refactor safely, we need coverage of 95% or more.
@@ -176,6 +211,63 @@ class CoverageOnlyTestCase(unittest.TestCase):
         actual_timings = [
             (c_.start, c_.end) for c_ in scc1.get_captions(u'en-US')]
         self.assertEqual(expected_timings, actual_timings)
+
+
+class InterpretableNodeCreatorTestCase(unittest.TestCase):
+    def test_italics_commands_are_formatted_properly(self):
+        node_creator = InstructionNodeCreator(
+            position_tracker=(DefaultProvidingPositionTracker()))
+
+        # positioning 1
+        node_creator.interpret_command('9470')  # row 15, col 0
+        node_creator.interpret_command('9120')  # italics off
+        node_creator.interpret_command('9120')  # italics off
+        node_creator.add_chars('a')
+
+        node_creator.interpret_command('9770')  # row 10 col 0
+        node_creator.interpret_command('91ae')  # italics ON
+        node_creator.add_chars('b')
+        node_creator.interpret_command('91ae')  # italics ON
+        node_creator.interpret_command('91ae')  # italics ON
+        node_creator.interpret_command('9120')  # italics OFF
+        node_creator.interpret_command('91ae')  # italics ON
+        node_creator.interpret_command('91ae')  # italics ON again
+        node_creator.add_chars('b')
+        node_creator.interpret_command('91ae')  # italics ON again
+        node_creator.add_chars('b')
+        node_creator.interpret_command('9120')  # italics OFF
+
+        node_creator.interpret_command('1570')  # row 6 col 0
+        node_creator.add_chars('c')
+        node_creator.interpret_command('91ae')  # italics ON
+
+        node_creator.interpret_command('9270')  # row 6 col 0
+        node_creator.add_chars('d')
+
+        result = list(node_creator)
+
+        self.assertTrue(result[0].is_text_node())
+        self.assertTrue(result[1].requires_repositioning())
+        self.assertTrue(result[2].is_italics_node())
+        self.assertTrue(result[2].sets_italics_on())
+
+        self.assertTrue(result[3].is_text_node())
+        self.assertTrue(result[4].is_text_node())
+        self.assertTrue(result[5].is_text_node())
+
+        self.assertTrue(result[6].is_italics_node())
+        self.assertTrue(result[6].sets_italics_off())
+
+        self.assertTrue(result[7].requires_repositioning())
+        self.assertTrue(result[8].is_text_node())
+
+        self.assertTrue(result[9].requires_repositioning())
+        self.assertTrue(result[10].is_italics_node())
+        self.assertTrue(result[10].sets_italics_on())
+
+        self.assertTrue(result[11].is_text_node())
+        self.assertTrue(result[12].is_italics_node())
+        self.assertTrue(result[12].sets_italics_off())
 
 
 SAMPLE_SCC_POP_ON = """Scenarist_SCC V1.0
@@ -286,4 +378,70 @@ Scenarist_SCC V1.0
 00:53:28;01	9420 94ae 9154 4552 91f4 aeae 942c
 
 00:54:29;21	942f
+"""
+
+SAMPLE_NO_POSITIONING_AT_ALL_SCC = u"""\
+Scenarist_SCC V1.0
+
+00:23:28;01	9420 94ae 5245 c1c2 942c
+
+00:24:29;21	942f
+
+00:53:28;01	9420 94ae 4552 aeae 942c
+
+00:54:29;21	942f
+"""
+
+SAMPLE_SCC_NOT_EXPLICITLY_SWITCHING_ITALICS_OFF = u"""\
+Scenarist_SCC V1.0
+
+00:01:28;09	9420 942f 94ae 9420 9452 97a2 b031 6161 9470 9723 b031 6262
+
+00:01:31;10	9420 942f 94ae
+
+00:01:31;18	9420 9454 b032 e3e3 9458 97a1 91ae b032 6464 9470 97a1 b032 e5e5
+
+00:01:35;18	9420 942f 94ae
+
+00:01:40;25	942c
+
+00:01:51;18	9420 9452 97a1 b0b3 6161 94da 97a2 91ae b0b3 6262 9470 97a1 b0b3 e3e3
+
+00:01:55;22	9420 942f b034 6161 94f4 9723 b034 6262
+
+00:01:59;14	9420 942f 94ae 9420 94f4 b034 3180 e3e3
+
+00:02:02;01	9420 942f 94ae 9420 94d0 b0b5 6161 94f2 97a2 b0b5 6262
+
+00:02:04;05	9420 942f 94ae
+
+00:09:53;06	942c 9420 13f4 9723 b0b6 e3e3 9454 97a2 b0b6 6464 9470 97a2 b0b6 e5e5
+
+00:09:56;09	9420 942f 94ae 9420 94f2 b037 6161
+
+00:09:58;18	9420 942f 94ae 9420 9454 b038 6262 9454 97a2 91ae b038 e3e3 94f2 97a1 94f2 97a1 91ae b038 6162 6464
+
+00:09:59;28	9420 942f 94ae 9420 9452 97a2 e5e5 94f4 b0b9 6161
+
+00:10:02;22	9420 942f 94ae 9420 9452 97a1 31b0 e5e5 9470 97a2 31b0 6262
+
+00:10:04;10	9420 942f 94ae
+
+00:52:03;02	9420 9470 97a2 3131 e3e3
+
+00:52:18;20	9420 91d0 9723 3132 6464 9158 97a1 91ae 3132 e5e5 91da 97a2 9120 3132 6161 91f2 9723 3132 6262
+
+00:52:22;22	9420 942c 942f 9420 9152 97a2 31b3 e3e3
+
+00:52:25;04	9420 942c 942f 9420 91d0 97a2 3134 6464 91f2 e5e5
+
+00:52:26;28	9420 942c 942f
+
+00:52:27;18	9420 9152 9152 9152 91ae 31b5 6161 9154 97a1 9120 31b5 6262 9170 9723 31b5 e3e3
+
+00:52:31;22	9420 942c 942f
+
+00:52:34;14	942c
+
+00:53:03;15	9420 94f4 97a1 94f4 97a1 91ae 31b6 6464
 """
