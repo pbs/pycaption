@@ -130,6 +130,19 @@ class SCCReaderTestCase(unittest.TestCase):
         self.assertEqual(expected_node_layout_infos, actual_node_layout_infos)
         self.assertEqual(expected_caption_layouts, actual_caption_layouts)
 
+    def test_timing_is_properly_set_on_split_captions(self):
+        caption_set = SCCReader().read(
+            SAMPLE_SCC_PRODUCES_CAPTIONS_WITH_START_AND_END_TIME_THE_SAME
+        )
+        expected_timings = [(u'00:01:35.666', u'00:01:40.866'),
+                            (u'00:01:35.666', u'00:01:40.866'),
+                            (u'00:01:35.666', u'00:01:40.866')]
+
+        actual_timings = [(c_.format_start(), c_.format_end()) for c_ in
+                          caption_set.get_captions('en-US')]
+
+        self.assertEqual(expected_timings, actual_timings)
+
 
 class CoverageOnlyTestCase(unittest.TestCase):
     """In order to refactor safely, we need coverage of 95% or more.
@@ -269,6 +282,15 @@ class InterpretableNodeCreatorTestCase(unittest.TestCase):
         self.assertTrue(result[12].is_italics_node())
         self.assertTrue(result[12].sets_italics_off())
 
+SAMPLE_SCC_PRODUCES_CAPTIONS_WITH_START_AND_END_TIME_THE_SAME = u"""\
+Scenarist_SCC V1.0
+
+00:01:31;18 9420 9454 6162 9758 97a1 91ae 6261 9170 97a1 e362
+
+00:01:35;18 9420 942f 94ae
+
+00:01:40;25 942c
+"""
 
 SAMPLE_SCC_POP_ON = """Scenarist_SCC V1.0
 

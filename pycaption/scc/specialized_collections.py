@@ -1,5 +1,4 @@
 from ..base import Caption, CaptionNode
-from ..exceptions import CaptionReadSyntaxError
 from ..geometry import (UnitEnum, Size, Layout, Point, Alignment,
                         VerticalAlignmentEnum, HorizontalAlignmentEnum)
 
@@ -11,6 +10,11 @@ class TimingCorrectingCaptionList(list):
     when adding a new caption.
 
     Also, doesn't allow Nones or empty captions
+
+    Works well for appending, but extending is trickier when creating multiple
+    captions from the same SCC line. This results in multiple captions with
+    start time equal to the end time. This is however handled in
+    CaptionCreator.correct_last_timing, since it's less messier there
     """
     def append(self, p_object):
         """When appending a new caption to the list, make sure the last one
@@ -111,12 +115,14 @@ class CaptionCreator(object):
             return
 
         if force:
+            # Select all last captions
+            captions_to_correct = self._still_editing
+        elif self._still_editing[-1].end == 0:
+            # Only select the last captions if they haven't gotten their
+            # end time set yet
             captions_to_correct = self._still_editing
         else:
-            captions_to_correct = (
-                caption for caption in self._still_editing
-                if caption.end == 0
-            )
+            return
 
         for caption in captions_to_correct:
             caption.end = end_time
@@ -308,7 +314,7 @@ class InstructionNodeCreator(object):
         return iter(_format_italics(self._collection))
 
     @classmethod
-    def from_list(cls, stash_list, italics_tracker, position_tracker):
+    def from_list(cls, stash_list, position_tracker):
         """Having received a list of instances of this class, creates a new
         instance that contains all the nodes of the previous instances
         (basically concatenates the many stashes into one)
@@ -326,8 +332,7 @@ class InstructionNodeCreator(object):
 
         :rtype: InstructionNodeCreator
         """
-        instance = cls(italics_tracker=italics_tracker,
-                       position_tracker=position_tracker)
+        instance = cls(position_tracker=position_tracker)
         new_collection = instance._collection
 
         for idx, stash in enumerate(stash_list):

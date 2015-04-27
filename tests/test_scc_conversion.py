@@ -85,10 +85,10 @@ SAMPLE_DFXP_FROM_SCC_OUTPUT = u"""\
  </head>
  <body>
   <div region="bottom" xml:lang="en-US">
-   <p begin="00:00:01.167" end="00:00:01.167" region="r0" style="default">
+   <p begin="00:00:01.167" end="00:00:03.103" region="r0" style="default">
     abab
    </p>
-   <p begin="00:00:01.167" end="00:00:01.167" region="r1" style="default">
+   <p begin="00:00:01.167" end="00:00:03.103" region="r1" style="default">
     cdcd
    </p>
    <p begin="00:00:01.167" end="00:00:03.103" region="r2" style="default">
@@ -173,7 +173,7 @@ SAMPLE_DFXP_WITH_PROPERLY_CLOSING_SPANS_OUTPUT = u"""\
     cccccc<br/>
     c!c!
    </p>
-   <p begin="00:01:35.666" end="00:01:35.666" region="r1" style="default">
+   <p begin="00:01:35.666" end="00:01:40.866" region="r1" style="default">
     bbbb
    </p>
    <p begin="00:01:35.666" end="00:01:40.866" region="r2" style="default">
