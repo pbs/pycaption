@@ -3,6 +3,7 @@ from htmlentitydefs import name2codepoint
 from HTMLParser import HTMLParser, HTMLParseError
 from logging import FATAL
 from xml.sax.saxutils import escape
+from copy import deepcopy
 
 from cssutils import parseString, log, css as cssutils_css
 from bs4 import BeautifulSoup, NavigableString

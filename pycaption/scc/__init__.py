@@ -5,6 +5,7 @@ import re
 import math
 import string
 import textwrap
+from copy import deepcopy
 
 from pycaption.base import (
     BaseReader, BaseWriter, CaptionSet, CaptionNode,
@@ -21,6 +22,7 @@ from .specialized_collections import (
     InstructionNodeCreator)
 
 from .state_machines import DefaultProvidingPositionTracker
+from copy import deepcopy
 
 
 class NodeCreatorFactory(object):
@@ -396,6 +398,8 @@ class SCCWriter(BaseWriter):
 
         if caption_set.is_empty():
             return output
+
+        caption_set = deepcopy(caption_set)
 
         # Only support one language.
         lang = caption_set.get_languages()[0]

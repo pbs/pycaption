@@ -1,5 +1,6 @@
 import sys
 import re
+from copy import deepcopy
 
 from .base import (
     BaseReader, BaseWriter, CaptionSet, Caption, CaptionNode
@@ -196,6 +197,8 @@ class WebVTTWriter(BaseWriter):
 
         if caption_set.is_empty():
             return output
+
+        caption_set = deepcopy(caption_set)
 
         # TODO: styles. These go into a separate CSS file, which doesn't really
         # fit the API here. Figure that out.  Though some style stuff can be

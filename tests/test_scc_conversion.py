@@ -35,7 +35,6 @@ class SRTtoSCCtoSRTTestCase(unittest.TestCase, CaptionSetTestingMixIn):
 
 class SCCtoDFXPTestCase(unittest.TestCase):
     def test_scc_to_dfxp(self):
-        self.maxDiff = None
         caption_set = SCCReader().read(SAMPLE_SCC_MULTIPLE_POSITIONING)
         dfxp = DFXPWriter(
             relativize=False, fit_to_screen=False).write(caption_set)
@@ -44,7 +43,7 @@ class SCCtoDFXPTestCase(unittest.TestCase):
     def test_dfxp_is_valid_xml_when_scc_source_has_weird_italic_commands(self):
         caption_set = SCCReader().read(
             SAMPLE_SCC_CREATED_DFXP_WITH_WRONGLY_CLOSING_SPANS)
-        
+
         dfxp = DFXPWriter().write(caption_set)
         self.assertEqual(dfxp, SAMPLE_DFXP_WITH_PROPERLY_CLOSING_SPANS_OUTPUT)
 
@@ -160,11 +159,11 @@ SAMPLE_DFXP_WITH_PROPERLY_CLOSING_SPANS_OUTPUT = u"""\
   </styling>
   <layout>
    <region tts:displayAlign="after" tts:textAlign="center" xml:id="bottom"/>
-   <region tts:displayAlign="before" tts:origin="12.5% 86.6666666667%" tts:textAlign="left" xml:id="r0"/>
-   <region tts:displayAlign="before" tts:origin="25.0% 86.6666666667%" tts:textAlign="left" xml:id="r1"/>
-   <region tts:displayAlign="before" tts:origin="50.0% 86.6666666667%" tts:textAlign="left" xml:id="r2"/>
-   <region tts:displayAlign="before" tts:origin="62.5% 86.6666666667%" tts:textAlign="left" xml:id="r3"/>
-   <region tts:displayAlign="before" tts:origin="25.0% 93.3333333333%" tts:textAlign="left" xml:id="r4"/>
+   <region tts:displayAlign="before" tts:extent="87.5% 13.33%" tts:origin="12.5% 86.67%" tts:textAlign="left" xml:id="r0"/>
+   <region tts:displayAlign="before" tts:extent="75% 13.33%" tts:origin="25% 86.67%" tts:textAlign="left" xml:id="r1"/>
+   <region tts:displayAlign="before" tts:extent="50% 13.33%" tts:origin="50% 86.67%" tts:textAlign="left" xml:id="r2"/>
+   <region tts:displayAlign="before" tts:extent="37.5% 13.33%" tts:origin="62.5% 86.67%" tts:textAlign="left" xml:id="r3"/>
+   <region tts:displayAlign="before" tts:extent="75% 6.67%" tts:origin="25% 93.33%" tts:textAlign="left" xml:id="r4"/>
   </layout>
  </head>
  <body>
