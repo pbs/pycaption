@@ -232,7 +232,13 @@ class InterpretableNodeCreatorTestCase(unittest.TestCase):
         node_creator = InstructionNodeCreator(
             position_tracker=(DefaultProvidingPositionTracker()))
 
-        # positioning 1
+        # We expect
+        # 1. all the initial italics closing nodes to be removed
+        # 2. all the redundant italic nodes to be trimmed
+        # 3. to get new closing italic nodes before changing position,
+        # 4. to get new opening italic nodes after changing position, if 3
+        # happened
+        # 5. to get a final italic closing node, if one is needed
         node_creator.interpret_command('9470')  # row 15, col 0
         node_creator.interpret_command('9120')  # italics off
         node_creator.interpret_command('9120')  # italics off
@@ -244,19 +250,28 @@ class InterpretableNodeCreatorTestCase(unittest.TestCase):
         node_creator.interpret_command('91ae')  # italics ON
         node_creator.interpret_command('91ae')  # italics ON
         node_creator.interpret_command('9120')  # italics OFF
+        node_creator.interpret_command('9120')  # italics OFF
         node_creator.interpret_command('91ae')  # italics ON
-        node_creator.interpret_command('91ae')  # italics ON again
+        node_creator.interpret_command('91ae')  # italics ON
+        node_creator.interpret_command('91ae')  # italics ON
         node_creator.add_chars('b')
         node_creator.interpret_command('91ae')  # italics ON again
         node_creator.add_chars('b')
+        node_creator.interpret_command('9120')  # italics OFF
         node_creator.interpret_command('9120')  # italics OFF
 
         node_creator.interpret_command('1570')  # row 6 col 0
         node_creator.add_chars('c')
         node_creator.interpret_command('91ae')  # italics ON
 
-        node_creator.interpret_command('9270')  # row 6 col 0
+        node_creator.interpret_command('9270')  # row 4 col 0
         node_creator.add_chars('d')
+
+        node_creator.interpret_command('15d0')  # row 5 col 0 - creates BR
+        node_creator.add_chars('e')
+
+        node_creator.interpret_command('1570')  # row 6 col 0 - creates BR
+        node_creator.add_chars('f')
 
         result = list(node_creator)
 
@@ -280,8 +295,13 @@ class InterpretableNodeCreatorTestCase(unittest.TestCase):
         self.assertTrue(result[10].sets_italics_on())
 
         self.assertTrue(result[11].is_text_node())
-        self.assertTrue(result[12].is_italics_node())
-        self.assertTrue(result[12].sets_italics_off())
+        self.assertTrue(result[12].is_explicit_break())
+        self.assertTrue(result[13].is_text_node())
+        self.assertTrue(result[14].is_explicit_break())
+        self.assertTrue(result[15].is_text_node())
+
+        self.assertTrue(result[16].is_italics_node())
+        self.assertTrue(result[16].sets_italics_off())
 
 
 class CaptionDummy(object):
