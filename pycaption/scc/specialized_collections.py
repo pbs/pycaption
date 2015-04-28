@@ -6,10 +6,7 @@ from .constants import PAC_BYTES_TO_POSITIONING_MAP, COMMANDS
 
 
 class TimingCorrectingCaptionList(list):
-    """List of captions. Will know to correct the last caption's end time
-    when adding a new caption.
-
-    List of captions. When appending new elements, it will correct the end time
+    """List of captions. When appending new elements, it will correct the end time
     of the last ones, so they end when the new caption gets added.
 
     "last ones" could mean the last caption `append`ed or all of the last
