@@ -207,10 +207,12 @@ class Stretch(TwoDimensionalObject):
         Returns True if all dimensions are expressed as percentages,
         False otherwise.
         """
-        return (
-            self.horizontal.is_relative() and
-            self.vertical.is_relative()
-        )
+        is_relative = True
+        if self.horizontal:
+            is_relative &= self.horizontal.is_relative()
+        if self.vertical:
+            is_relative &= self.vertical.is_relative()
+        return is_relative
 
     def to_percentage_of(self, video_width, video_height):
         """
@@ -325,10 +327,12 @@ class Point(TwoDimensionalObject):
         Returns True if all dimensions are expressed as percentages,
         False otherwise.
         """
-        return (
-            self.x.is_relative() and
-            self.y.is_relative()
-        )
+        is_relative = True
+        if self.horizontal:
+            is_relative &= self.x.is_relative()
+        if self.vertical:
+            is_relative &= self.y.is_relative()
+        return is_relative
 
     def to_percentage_of(self, video_width, video_height):
         """
@@ -786,11 +790,14 @@ class Layout(object):
         Returns True if all positioning values are expressed as percentages,
         False otherwise.
         """
-        return (
-            self.origin.is_relative() and
-            self.extent.is_relative() and
-            self.padding.is_relative()
-        )
+        is_relative = True
+        if self.origin:
+            is_relative &= self.origin.is_relative()
+        if self.extent:
+            is_relative &= self.extent.is_relative()
+        if self.padding:
+            is_relative &= self.padding.is_relative()
+        return is_relative
 
     def to_percentage_of(self, video_width, video_height):
         for attr in [self.origin, self.extent, self.padding]:
