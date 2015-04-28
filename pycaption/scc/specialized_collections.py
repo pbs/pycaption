@@ -125,7 +125,11 @@ class CaptionCreator(object):
         """Interpreter method, will convert the buffer into one or more Caption
         objects, storing them internally.
 
-        :type node_buffer: InterpretableNodeCreator
+        This method relies on the InstructionNodeCreator's ability to generate
+        InstructionNodes properly, so at this point we can convert
+        _InstructionNodes nodes almost 1:1 to CaptionNodes
+
+        :type node_buffer: InstructionNodeCreator
 
         :type start: int
         :param start: the start time in microseconds
@@ -138,107 +142,52 @@ class CaptionCreator(object):
         caption.end = 0  # Not yet known; filled in later
         self._still_editing = [caption]
 
-        open_italic = False
-
-        for element in node_buffer:
+        for instruction in node_buffer:
             # skip empty elements
-            if element.is_empty():
+            if instruction.is_empty():
                 continue
 
-            elif element.requires_repositioning():
-                self._remove_extra_italics(caption)
-                open_italic = False
+            elif instruction.requires_repositioning():
                 caption = Caption()
                 caption.start = start
                 caption.end = 0
                 self._still_editing.append(caption)
 
             # handle line breaks
-            elif element.is_explicit_break():
-                new_nodes = self._translate_break(
-                    open_italic, element.position)
-                open_italic = False
-                caption.nodes.extend(new_nodes)
+            elif instruction.is_explicit_break():
+                caption.nodes.append(CaptionNode.create_break(
+                    layout_info=_get_layout_from_tuple(instruction.position)
+                ))
 
             # handle open italics
-            elif element.sets_italics_on():
-                # add italics
+            elif instruction.sets_italics_on():
                 caption.nodes.append(
-                    CaptionNode.create_style(True, {u'italics': True}))
-                # open italics, no longer first element
-                open_italic = True
+                    CaptionNode.create_style(
+                        True, {u'italics': True},
+                        layout_info=_get_layout_from_tuple(
+                            instruction.position
+                        ))
+                )
 
             # handle clone italics
-            elif element.sets_italics_off() and open_italic:
+            elif instruction.sets_italics_off():
                 caption.nodes.append(
-                    CaptionNode.create_style(False, {u'italics': True}))
-                open_italic = False
+                    CaptionNode.create_style(
+                        False, {u'italics': True},
+                        layout_info=_get_layout_from_tuple(
+                            instruction.position)
+                    ))
 
             # handle text
-            elif element.is_text_node():
-                # add text
-                layout_info = _get_layout_from_tuple(element.position)
+            elif instruction.is_text_node():
+                layout_info = _get_layout_from_tuple(instruction.position)
                 caption.nodes.append(
                     CaptionNode.create_text(
-                        element.get_text(), layout_info=layout_info),
+                        instruction.get_text(), layout_info=layout_info),
                 )
                 caption.layout_info = layout_info
 
-        # close any open italics left over
-        if open_italic:
-            caption.nodes.append(
-                CaptionNode.create_style(False, {u'italics': True}))
-
-        # remove extraneous italics tags in the same caption
-        self._remove_extra_italics(caption)
-
         self._collection.extend(self._still_editing)
-
-    @staticmethod
-    def _translate_break(open_italic, positioning):
-        """Depending on the context, translates a line break into one or more
-        nodes, returning them.
-
-        :param open_italic: bool
-        :rtype: tuple
-        """
-        new_nodes = []
-        layout_info = _get_layout_from_tuple(positioning)
-
-        if open_italic:
-            new_nodes.append(CaptionNode.create_style(
-                start=False,
-                content={u'italics': True},
-                layout_info=layout_info)
-            )
-
-        # add line break
-        new_nodes.append(CaptionNode.create_break(layout_info=layout_info))
-
-        return new_nodes
-
-    @staticmethod
-    def _remove_extra_italics(caption):
-        """Legacy logic slightly refactored. Removes STYLE nodes that would
-        surround a BREAK node.
-
-        See CaptionNode
-
-        :type caption: Caption
-        """
-        i = 0
-        length = max(0, len(caption.nodes) - 2)
-        while i < length:
-            if (caption.nodes[i].type_ == CaptionNode.STYLE and
-                    caption.nodes[i].content[u'italics'] and
-                    caption.nodes[i + 1].type_ == CaptionNode.BREAK and
-                    caption.nodes[i + 2].type_ == CaptionNode.STYLE and
-                    caption.nodes[i + 2].content[u'italics']):
-                # Remove the two italics style nodes
-                caption.nodes.pop(i)
-                caption.nodes.pop(i + 1)
-                length -= 2
-            i += 1
 
     def get_all(self):
         """Returns the Caption collection as a list
@@ -248,16 +197,23 @@ class CaptionCreator(object):
         return list(self._collection)
 
 
-class InterpretableNodeCreator(object):
-    """Creates _InterpretableNode instances from characters and commands,
-    and stores them internally in a buffer.
+class InstructionNodeCreator(object):
+    """Creates _InstructionNode instances from characters and commands, storing
+    them internally
     """
-    def __init__(self, collection=None):
+    def __init__(self, collection=None, position_tracker=None):
+        """
+        :param collection: an optional collection of nodes
+
+        :param position_tracker:
+        :return:
+        """
         if not collection:
             self._collection = []
         else:
             self._collection = collection
-        self._position_tracer = DefaultProvidingPositionTracer()
+
+        self._position_tracer = position_tracker
 
     def is_empty(self):
         """Whether any text was added to the buffer
@@ -275,31 +231,31 @@ class InterpretableNodeCreator(object):
         current_position = self._position_tracer.get_current_position()
 
         # get or create a usable node
-        text_nodes = [
-            elem_ for elem_ in self._collection if elem_.is_text_node()
-        ]
-        if text_nodes:
-            node = text_nodes[-1]
+        if (self._collection and self._collection[-1].is_text_node()
+                and not self._position_tracer.is_repositioning_required()):
+            node = self._collection[-1]
         else:
             # create first node
-            node = _InterpretableNode(position=current_position)
+            node = _InstructionNode(position=current_position)
             self._collection.append(node)
 
         # handle a simple line break
         if self._position_tracer.is_linebreak_required():
             # must insert a line break here
-            self._collection.append(_InterpretableNode.create_break(
+            self._collection.append(_InstructionNode.create_break(
                 position=current_position))
-            node = _InterpretableNode.create_text(current_position)
+            node = _InstructionNode.create_text(current_position)
             self._collection.append(node)
             self._position_tracer.acknowledge_linebreak_consumed()
 
         # handle completely new positioning
         elif self._position_tracer.is_repositioning_required():
-            # this node will have a different positioning than the previous one
             self._collection.append(
-                _InterpretableNode.create_repositioning_command())
-            node = _InterpretableNode.create_text(current_position)
+                _InstructionNode.create_repositioning_command(
+                    current_position
+                )
+            )
+            node = _InstructionNode.create_text(current_position)
             self._collection.append(node)
             self._position_tracer.acknowledge_position_changed()
 
@@ -317,18 +273,19 @@ class InterpretableNodeCreator(object):
 
         text = COMMANDS.get(command, u'')
 
-        if u'<$>{italic}<$>' in text:
-            self._collection.append(
-                _InterpretableNode.create_italics_style(
-                    self._position_tracer.get_current_position())
-            )
-        elif u'<$>{end-italic}<$>' in text:
-            self._collection.append(
-                _InterpretableNode.create_italics_style(
-                    self._position_tracer.get_current_position(),
-                    turn_on=False
+        if u'italic' in text:
+            if u'end' not in text:
+                self._collection.append(
+                    _InstructionNode.create_italics_style(
+                        self._position_tracer.get_current_position())
                 )
-            )
+            else:
+                self._collection.append(
+                    _InstructionNode.create_italics_style(
+                        self._position_tracer.get_current_position(),
+                        turn_on=False
+                    )
+                )
 
     def _update_positioning(self, command):
         """Sets the positioning information to use for the next nodes
@@ -348,19 +305,29 @@ class InterpretableNodeCreator(object):
             self._position_tracer.update_positioning(positioning)
 
     def __iter__(self):
-        return iter(self._collection)
+        return iter(_format_italics(self._collection))
 
     @classmethod
-    def from_list(cls, stash_list):
+    def from_list(cls, stash_list, italics_tracker, position_tracker):
         """Having received a list of instances of this class, creates a new
         instance that contains all the nodes of the previous instances
         (basically concatenates the many stashes into one)
 
+        :type stash_list: list[InstructionNodeCreator]
         :param stash_list: a list of instances of this class
-        :type stash_list: list[InterpretableNodeCreator]
-        :rtype: InterpretableNodeCreator
+
+        :type italics_tracker: .state_machines.DefaultProvidingItalicsTracker
+        :param italics_tracker: state machine to be interrogated about
+            the italics state when creating a node
+
+        :type position_tracker: .state_machines.DefaultProvidingPositionTracker
+        :param position_tracker: state machine to be interrogated about the
+            positioning when creating a node
+
+        :rtype: InstructionNodeCreator
         """
-        instance = cls()
+        instance = cls(italics_tracker=italics_tracker,
+                       position_tracker=position_tracker)
         new_collection = instance._collection
 
         for idx, stash in enumerate(stash_list):
@@ -399,151 +366,12 @@ def _get_layout_from_tuple(position_tuple):
                   )
 
 
-class _PositioningTracer(object):
-    """Helps determine the positioning of a node, having kept track of
-    positioning-related commands.
-
-    Acts like a state-machine, with 2
-
-    """
-    def __init__(self, positioning=None):
-        """
-        :param positioning: positioning information (row, column)
-        :type positioning: tuple[int]
-        """
-        self._positions = [positioning]
-        self._break_required = False
-        self._repositioning_required = False
-
-    def update_positioning(self, positioning):
-        """Being notified of a position change, updates the internal state,
-        to as to be able to tell if it was a trivial change (a simple line
-        break) or not.
-
-        :type positioning: tuple[int]
-        :param positioning: a tuple (row, col)
-        """
-        current = self._positions[-1]
-
-        if not current:
-            if positioning:
-                # set the positioning for the first time
-                self._positions = [positioning]
-            return
-
-        row, col = current
-        new_row, _ = positioning
-
-        # is the new position simply one line below?
-        if new_row == row + 1:
-            self._positions.append((new_row, col))
-            self._break_required = True
-        else:
-            # reset the "current" position altogether.
-            self._positions = [positioning]
-            self._repositioning_required = True
-
-    def get_current_position(self):
-        """Returns the current usable position
-
-        :rtype: tuple[int]
-
-        :raise: CaptionReadSyntaxError
-        """
-        if not any(self._positions):
-            raise CaptionReadSyntaxError(
-                u'No Preamble Address Code [PAC] was provided'
-            )
-        else:
-            return self._positions[0]
-
-    def is_repositioning_required(self):
-        """Determines whether the current positioning has changed non-trivially
-
-        Trivial would be mean that a line break should suffice.
-        :rtype: bool
-        """
-        return self._repositioning_required
-
-    def acknowledge_position_changed(self):
-        """Acknowledge the position tracer that the position was changed
-        """
-        self._repositioning_required = False
-
-    def is_linebreak_required(self):
-        """If the current position is simply one line below the previous.
-        :rtype: bool
-        """
-        return self._break_required
-
-    def acknowledge_linebreak_consumed(self):
-        """Call to acknowledge that the line required was consumed
-        """
-        self._break_required = False
-
-
-class DefaultProvidingPositionTracer(_PositioningTracer):
-    """A _PositioningTracer that provides if needed a default value (14, 0), or
-    uses the last positioning value set anywhere in the document
-    """
-    # Set this on the class level, because instances should share this
-    # beyond their garbage collection
-    default = (14, 0)
-
-    def __init__(self, positioning=None, default=None):
-        """
-        :type positioning: tuple[int]
-        :param positioning: a tuple of ints (row, column)
-
-        :type default: tuple[int]
-        :param default: a tuple of ints (row, column) to use as fallback
-        """
-        super(DefaultProvidingPositionTracer, self).__init__(positioning)
-
-        if default and default != DefaultProvidingPositionTracer.default:
-            DefaultProvidingPositionTracer.default = default
-
-    def get_current_position(self):
-        """Returns the currently tracked positioning, the last positioning that
-        was set (anywhere), or the default it was initiated with
-
-        :rtype: tuple[int]
-        """
-        try:
-            return (
-                super(DefaultProvidingPositionTracer, self).
-                get_current_position()
-            )
-        except CaptionReadSyntaxError:
-            return DefaultProvidingPositionTracer.default
-
-    def update_positioning(self, positioning):
-        """If called, sets this positioning as the default, then delegates
-        to the super class.
-
-        :param positioning: a tuple of ints (row, col)
-        :type positioning: tuple[int]
-        """
-        if positioning:
-            DefaultProvidingPositionTracer.default = positioning
-
-        super(DefaultProvidingPositionTracer, self).update_positioning(
-            positioning)
-
-    @classmethod
-    def reset_default_positioning(cls):
-        """Resets the previous default value to the original (14, 0)
-
-        When the context changes (a new caption is being processed, the
-        default positioning must NOT be carried over). Needed because we store
-        information at the class level.
-        """
-        cls.default = (14, 0)
-
-
-class _InterpretableNode(object):
+class _InstructionNode(object):
     """Value object, that can contain text information, or interpretable
-    commands (such as explicit line breaks or turning italics on/off)
+    commands (such as explicit line breaks or turning italics on/off).
+
+    These nodes will be aggregated into a RepresentableNode, which will then
+    be easily converted to a CaptionNode.
     """
     TEXT = 0
     BREAK = 1
@@ -606,6 +434,12 @@ class _InterpretableNode(object):
         """
         return self._type == self.ITALICS_OFF
 
+    def is_italics_node(self):
+        """
+        :rtype: bool
+        """
+        return self._type in (self.ITALICS_OFF, self.ITALICS_ON)
+
     def requires_repositioning(self):
         """Whether the node must be interpreted as a change in positioning
 
@@ -625,7 +459,7 @@ class _InterpretableNode(object):
         :type position: tuple[int]
         :param position: a tuple (row, col) containing the positioning info
 
-        :rtype: _InterpretableNode
+        :rtype: _InstructionNode
         """
         return cls(type_=cls.BREAK, position=position)
 
@@ -639,7 +473,7 @@ class _InterpretableNode(object):
         :type chars: tuple[unicode]
         :param chars: characters to add to the text
 
-        :rtype: _InterpretableNode
+        :rtype: _InstructionNode
         """
         return cls(u''.join(chars), position=position)
 
@@ -653,7 +487,7 @@ class _InterpretableNode(object):
         :type turn_on: bool
         :param turn_on: whether to turn the italics on or off
 
-        :rtype: _InterpretableNode
+        :rtype: _InstructionNode
         """
         return cls(
             position=position,
@@ -661,13 +495,15 @@ class _InterpretableNode(object):
         )
 
     @classmethod
-    def create_repositioning_command(cls):
+    def create_repositioning_command(cls, position=None):
         """Create node interpretable as a command to change the current
         position
-        """
-        return cls(type_=cls.CHANGE_POSITION)
 
-    def __repr__(self):
+        :type position:
+        """
+        return cls(type_=cls.CHANGE_POSITION, position=position)
+
+    def __repr__(self):         # pragma: no cover
         if self._type == self.BREAK:
             extra = u'BR'
         elif self._type == self.TEXT:
@@ -680,3 +516,238 @@ class _InterpretableNode(object):
             extra = u'change position'
 
         return u'<INode: {extra} >'.format(extra=extra)
+
+
+def _format_italics(collection):
+    """Given a raw list of _InstructionNodes, returns a new equivalent list
+    where all the italics nodes properly close and open.
+
+    The list is equivalent in the sense that the SCC commands that would have
+    generated the output list, would have had the exact same visual effect
+    as the ones that generated the output, as far as italics are concerned.
+
+    This is useful because the raw commands read from the SCC can't be used
+    the way they are by the writers for the other formats. Those other writers
+    require the list of CaptionNodes to be formatted in a certain way.
+
+    Note: Using state machines to manage the italics didn't work well because
+    we're using state machines already to track the position, and their
+    interactions got crazy.
+
+    :type collection: list[_InstructionNode]
+    :rtype: list[_InstructionNode]
+    """
+    new_collection = _skip_initial_italics_off_nodes(collection)
+
+    new_collection = _skip_empty_text_nodes(new_collection)
+
+    # after this step we're guaranteed a proper ordering of the nodes
+    new_collection = _skip_redundant_italics_nodes(new_collection)
+
+    # after this, we're guaranteed that the italics are properly contained
+    # within their context
+    new_collection = _close_italics_before_repositioning(new_collection)
+
+    # all nodes will be closed after this step
+    new_collection = _ensure_final_italics_node_closes(new_collection)
+
+    # removes pairs of italics nodes that don't do anything noticeable
+    new_collection = _remove_noop_italics(new_collection)
+
+    return new_collection
+
+
+def _remove_noop_on_off_italics(collection):
+    """Return an equivalent list to `collection`. It removes the italics node
+     pairs that don't surround text nodes, if those nodes are in the order:
+     on, off
+
+    :param collection:
+    :return:
+    """
+    new_collection = []
+    to_commit = None
+
+    for node in collection:
+        if node.is_italics_node() and node.sets_italics_on():
+            to_commit = node
+            continue
+
+        elif node.is_italics_node() and node.sets_italics_off():
+            if to_commit:
+                to_commit = None
+                continue
+        else:
+            if to_commit:
+                new_collection.append(to_commit)
+                to_commit = None
+
+        new_collection.append(node)
+
+    return new_collection
+
+
+def _remove_noon_off_on_italics(collection):
+    """Removes pairs of off-on italics nodes, that don't surround any other
+    node
+
+    :type collection: list[_InstructionNode]
+    :return: list[_InstructionNode]
+    """
+    new_collection = []
+    to_commit = None
+
+    for node in collection:
+        if node.is_italics_node() and node.sets_italics_off():
+            to_commit = node
+            continue
+
+        elif node.is_italics_node() and node.sets_italics_on():
+            if to_commit:
+                to_commit = None
+                continue
+        else:
+            if to_commit:
+                new_collection.append(to_commit)
+                to_commit = None
+
+        new_collection.append(node)
+
+    if to_commit:
+        new_collection.append(to_commit)
+
+    return new_collection
+
+
+def _remove_noop_italics(collection):
+    """Return an equivalent list to `collection`. It removes the italics node
+     pairs that don't surround text nodes
+
+    :type collection: list[_InstructionNode]
+    :rtype: list[_InstructionNode]
+    """
+    new_collection = _remove_noop_on_off_italics(collection)
+
+    new_collection = _remove_noon_off_on_italics(new_collection)
+
+    return new_collection
+
+
+def _skip_initial_italics_off_nodes(collection):
+    """Return a collection like the one given, but without the
+    initial <Italics OFF> nodes
+    """
+    new_collection = []
+    can_add_italics_off_nodes = False
+
+    for node in collection:
+        if node.is_italics_node():
+            if node.sets_italics_on():
+                can_add_italics_off_nodes = True
+                new_collection.append(node)
+            elif can_add_italics_off_nodes:
+                new_collection.append(node)
+        else:
+            new_collection.append(node)
+
+    return new_collection
+
+
+def _skip_empty_text_nodes(collection):
+    """Return an iterable containing all the nodes in the previous
+    collection except for the empty text nodes
+    """
+    return [node for node in collection
+            if not (node.is_text_node() and node.is_empty())]
+
+
+def _skip_redundant_italics_nodes(collection):
+    """Return a list where the <Italics On> nodes only appear after
+    <Italics OFF>, and vice versa. This ignores the other node types, and
+    only removes redundant italic nodes
+    """
+    new_collection = []
+    state = None
+
+    for node in collection:
+        if node.is_italics_node():
+            if state is None:
+                state = node.sets_italics_on()
+                new_collection.append(node)
+                continue
+            # skip the nodes that are like the previous
+            if node.sets_italics_on() is state:
+                continue
+            else:
+                state = node.sets_italics_on()
+        new_collection.append(node)
+
+    return new_collection
+
+
+def _close_italics_before_repositioning(collection):
+    """Make sure that for every opened italic node, there's a corresponding
+     closing node.
+
+     Will insert a closing italic node, before each repositioning node
+
+     :type collection: list[_InstructionNode]
+     :rtype: list[_InstructionNode]
+    """
+    new_collection = []
+
+    italics_on = False
+    last_italics_on_node = None
+
+    for idx, node in enumerate(collection):
+        if node.is_italics_node() and node.sets_italics_on():
+            italics_on = True
+            last_italics_on_node = node
+        if node.is_italics_node() and node.sets_italics_off():
+            italics_on = False
+        if node.requires_repositioning() and italics_on:
+            # Append an italics closing node before the position change
+            new_collection.append(
+                _InstructionNode.create_italics_style(
+                    # The position info of this new node should be the same
+                    position=last_italics_on_node.position,
+                    turn_on=False
+                )
+            )
+            new_collection.append(node)
+            # Append an italics opening node after the positioning change
+            new_collection.append(
+                _InstructionNode.create_italics_style(
+                    position=node.position
+                )
+            )
+            continue
+        new_collection.append(node)
+
+    return new_collection
+
+
+def _ensure_final_italics_node_closes(collection):
+    """The final italics command needs to be closed
+    :rtype: list[_InstructionNode]
+    """
+    new_collection = list(collection)
+
+    italics_on = False
+    last_italics_on_node = None
+
+    for node in collection:
+        if node.is_italics_node() and node.sets_italics_on():
+            italics_on = True
+            last_italics_on_node = node
+        if node.is_italics_node() and node.sets_italics_off():
+            italics_on = False
+
+    if italics_on:
+        new_collection.append(
+            _InstructionNode.create_italics_style(
+                position=last_italics_on_node.position,
+                turn_on=False
+            )
+        )
+    return new_collection
