@@ -25,7 +25,7 @@ class TimingCorrectingCaptionList(list):
         """When appending a new caption to the list, make sure the last one
         has an end. Also, don't add empty captions
 
-        :type p_object: Caption
+        :type p_object: Caption | None
         """
         if p_object is None or not p_object.nodes:
             return
@@ -43,11 +43,12 @@ class TimingCorrectingCaptionList(list):
 
         :param iterable: an iterable of Caption instances
         """
-        self._update_last_batch(self._last_batch, *(tuple(iterable)))
+        appendable_items = [item for item in iterable if item and item.nodes]
+        self._update_last_batch(self._last_batch, *appendable_items)
 
-        self._last_batch = tuple(iterable)
+        self._last_batch = tuple(appendable_items)
 
-        super(TimingCorrectingCaptionList, self).extend(iterable)
+        super(TimingCorrectingCaptionList, self).extend(appendable_items)
 
     @staticmethod
     def _update_last_batch(batch, *new_captions):

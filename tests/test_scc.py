@@ -331,6 +331,21 @@ class TimingCorrectingCaptionListTestCase(unittest.TestCase):
         self.assertEqual(caption_list[0].end, 7)
         self.assertEqual(caption_list[1].end, 7)
 
+    def test_not_appending_none_or_empty_captions(self):
+        caption_list = TimingCorrectingCaptionList()
+
+        caption_list.append(None)
+        caption_list.extend([CaptionDummy(nodes=[])])
+
+        self.assertEqual(len(caption_list), 0)
+
+    def test_not_extending_list_with_nones_or_empty_captions(self):
+        caption_list = TimingCorrectingCaptionList()
+
+        caption_list.extend([None, CaptionDummy(nodes=[])])
+
+        self.assertEqual(len(caption_list), 0)
+
 
 SAMPLE_SCC_PRODUCES_CAPTIONS_WITH_START_AND_END_TIME_THE_SAME = u"""\
 Scenarist_SCC V1.0
