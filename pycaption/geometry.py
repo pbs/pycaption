@@ -328,9 +328,9 @@ class Point(TwoDimensionalObject):
         False otherwise.
         """
         is_relative = True
-        if self.horizontal:
+        if self.x:
             is_relative &= self.x.is_relative()
-        if self.vertical:
+        if self.y:
             is_relative &= self.y.is_relative()
         return is_relative
 
