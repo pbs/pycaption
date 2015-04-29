@@ -764,8 +764,10 @@ class Layout(object):
         self.alignment = alignment
 
     def __nonzero__(self):
-        attributes = [self.origin, self.extent, self.padding, self.alignment]
-        return any(attributes)
+        return any([
+            self.origin, self.extent, self.padding, self.alignment,
+            self.webvtt_positioning
+        ])
 
     def __repr__(self):
         return (
