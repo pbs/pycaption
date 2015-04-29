@@ -26,6 +26,13 @@ class WebVTTtoWebVTTTestCase(WebVTTConversionTestCase, WebVTTTestingMixIn):
         self.assertTrue(isinstance(results, unicode))
         self.assertWebVTTEquals(SAMPLE_WEBVTT_FROM_WEBVTT.decode(u'utf-8'), results)
 
+    def test_cues_are_kept(self):
+        caption_set = WebVTTReader().read(SAMPLE_WEBVTT_WITH_SETTINGS_CUE)
+
+        webvtt = WebVTTWriter().write(caption_set)
+
+        self.assertEqual(SAMPLE_WEBVTT_WITH_SETTINGS_CUE, webvtt)
+
 #     # TODO: Write a test that includes a WebVTT file with style tags
 #     # That will fail because the styles used in the cues are not tracked.
 
@@ -55,3 +62,13 @@ class WebVTTtoSRTTestCase(WebVTTConversionTestCase, SRTTestingMixIn):
         results = SRTWriter().write(self.captions)
         self.assertTrue(isinstance(results, unicode))
         self.assertSRTEquals(SAMPLE_SRT_UNICODE, results)
+
+SAMPLE_WEBVTT_WITH_SETTINGS_CUE = u"""\
+WEBVTT
+
+00:01.000 --> 00:06.000 align:middle position:37%,start line:74%
+37% 74% - NARRATOR:
+
+00:01.000 --> 00:06.000 this is invalid, but will also be kept
+They built the largest,
+"""
