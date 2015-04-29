@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import unittest
-from pycaption.scc.specialized_collections import InstructionNodeCreator
+from pycaption.scc.specialized_collections import (InstructionNodeCreator,
+                                                   TimingCorrectingCaptionList)
 
 from pycaption import SCCReader, CaptionReadNoCaptions
 from pycaption.scc.state_machines import DefaultProvidingPositionTracker
@@ -130,6 +131,19 @@ class SCCReaderTestCase(unittest.TestCase):
         self.assertEqual(expected_node_layout_infos, actual_node_layout_infos)
         self.assertEqual(expected_caption_layouts, actual_caption_layouts)
 
+    def test_timing_is_properly_set_on_split_captions(self):
+        caption_set = SCCReader().read(
+            SAMPLE_SCC_PRODUCES_CAPTIONS_WITH_START_AND_END_TIME_THE_SAME
+        )
+        expected_timings = [(u'00:01:35.666', u'00:01:40.866'),
+                            (u'00:01:35.666', u'00:01:40.866'),
+                            (u'00:01:35.666', u'00:01:40.866')]
+
+        actual_timings = [(c_.format_start(), c_.format_end()) for c_ in
+                          caption_set.get_captions('en-US')]
+
+        self.assertEqual(expected_timings, actual_timings)
+
 
 class CoverageOnlyTestCase(unittest.TestCase):
     """In order to refactor safely, we need coverage of 95% or more.
@@ -218,7 +232,13 @@ class InterpretableNodeCreatorTestCase(unittest.TestCase):
         node_creator = InstructionNodeCreator(
             position_tracker=(DefaultProvidingPositionTracker()))
 
-        # positioning 1
+        # We expect
+        # 1. all the initial italics closing nodes to be removed
+        # 2. all the redundant italic nodes to be trimmed
+        # 3. to get new closing italic nodes before changing position,
+        # 4. to get new opening italic nodes after changing position, if 3
+        # happened
+        # 5. to get a final italic closing node, if one is needed
         node_creator.interpret_command('9470')  # row 15, col 0
         node_creator.interpret_command('9120')  # italics off
         node_creator.interpret_command('9120')  # italics off
@@ -230,19 +250,28 @@ class InterpretableNodeCreatorTestCase(unittest.TestCase):
         node_creator.interpret_command('91ae')  # italics ON
         node_creator.interpret_command('91ae')  # italics ON
         node_creator.interpret_command('9120')  # italics OFF
+        node_creator.interpret_command('9120')  # italics OFF
         node_creator.interpret_command('91ae')  # italics ON
-        node_creator.interpret_command('91ae')  # italics ON again
+        node_creator.interpret_command('91ae')  # italics ON
+        node_creator.interpret_command('91ae')  # italics ON
         node_creator.add_chars('b')
         node_creator.interpret_command('91ae')  # italics ON again
         node_creator.add_chars('b')
+        node_creator.interpret_command('9120')  # italics OFF
         node_creator.interpret_command('9120')  # italics OFF
 
         node_creator.interpret_command('1570')  # row 6 col 0
         node_creator.add_chars('c')
         node_creator.interpret_command('91ae')  # italics ON
 
-        node_creator.interpret_command('9270')  # row 6 col 0
+        node_creator.interpret_command('9270')  # row 4 col 0
         node_creator.add_chars('d')
+
+        node_creator.interpret_command('15d0')  # row 5 col 0 - creates BR
+        node_creator.add_chars('e')
+
+        node_creator.interpret_command('1570')  # row 6 col 0 - creates BR
+        node_creator.add_chars('f')
 
         result = list(node_creator)
 
@@ -266,9 +295,112 @@ class InterpretableNodeCreatorTestCase(unittest.TestCase):
         self.assertTrue(result[10].sets_italics_on())
 
         self.assertTrue(result[11].is_text_node())
-        self.assertTrue(result[12].is_italics_node())
-        self.assertTrue(result[12].sets_italics_off())
+        self.assertTrue(result[12].is_explicit_break())
+        self.assertTrue(result[13].is_text_node())
+        self.assertTrue(result[14].is_explicit_break())
+        self.assertTrue(result[15].is_text_node())
 
+        self.assertTrue(result[16].is_italics_node())
+        self.assertTrue(result[16].sets_italics_off())
+
+
+class CaptionDummy(object):
+    """Mock for pycaption.base.Caption
+    """
+    def __init__(self, start=0, end=0, nodes=(1, 2)):
+        self.nodes = nodes
+        self.start = start
+        self.end = end
+
+    def __repr__(self):
+        return u"{start}-->{end}".format(start=self.start, end=self.end)
+
+
+class TimingCorrectingCaptionListTestCase(unittest.TestCase):
+    def test_appending_then_appending(self):
+        caption_list = TimingCorrectingCaptionList()
+
+        caption_list.append(CaptionDummy(start=3))
+        caption_list.append(CaptionDummy(start=6))
+
+        self.assertEqual(caption_list[0].end, 6)
+
+    def test_appending_then_extending(self):
+        caption_list = TimingCorrectingCaptionList()
+
+        caption_list.append(CaptionDummy(start=3))
+        caption_list.extend([CaptionDummy(start=7), CaptionDummy(start=7)])
+
+        self.assertEqual(caption_list[0].end, 7)
+
+    def test_extending_then_appending(self):
+        caption_list = TimingCorrectingCaptionList()
+
+        caption_list.extend([CaptionDummy(start=4), CaptionDummy(start=4)])
+        caption_list.append(CaptionDummy(start=9))
+
+        self.assertEqual(caption_list[0].end, 9)
+        self.assertEqual(caption_list[1].end, 9)
+
+    def test_extending_then_extending(self):
+        caption_list = TimingCorrectingCaptionList()
+
+        caption_list.extend([CaptionDummy(start=4), CaptionDummy(start=4)])
+        caption_list.extend([CaptionDummy(start=7), CaptionDummy(start=7)])
+
+        self.assertEqual(caption_list[0].end, 7)
+        self.assertEqual(caption_list[1].end, 7)
+
+    def test_not_appending_none_or_empty_captions(self):
+        caption_list = TimingCorrectingCaptionList()
+
+        caption_list.append(None)
+        caption_list.extend([CaptionDummy(nodes=[])])
+
+        self.assertEqual(len(caption_list), 0)
+
+    def test_not_extending_list_with_nones_or_empty_captions(self):
+        caption_list = TimingCorrectingCaptionList()
+
+        caption_list.extend([None, CaptionDummy(nodes=[])])
+
+        self.assertEqual(len(caption_list), 0)
+
+    def test_not_overwriting_end_time(self):
+        # Test here all the 4 cases:
+        caption_list = TimingCorrectingCaptionList()
+
+        caption_list.append(CaptionDummy(start=1, end=3))
+        caption_list.append(CaptionDummy(start=5, end=6))
+
+        # Append then append
+        self.assertEqual(caption_list[-2].end, 3)
+
+        caption_list.extend([CaptionDummy(start=7, end=8)])
+
+        # Append then extend
+        self.assertEqual(caption_list[-2].end, 6)
+
+        caption_list.extend([CaptionDummy(start=9, end=10)])
+
+        # extend then extend
+        self.assertEqual(caption_list[-2].end, 8)
+
+        caption_list.append(CaptionDummy(start=11, end=12))
+
+        # extend then append
+        self.assertEqual(caption_list[-2].end, 10)
+
+
+SAMPLE_SCC_PRODUCES_CAPTIONS_WITH_START_AND_END_TIME_THE_SAME = u"""\
+Scenarist_SCC V1.0
+
+00:01:31;18 9420 9454 6162 9758 97a1 91ae 6261 9170 97a1 e362
+
+00:01:35;18 9420 942f 94ae
+
+00:01:40;25 942c
+"""
 
 SAMPLE_SCC_POP_ON = """Scenarist_SCC V1.0
 
