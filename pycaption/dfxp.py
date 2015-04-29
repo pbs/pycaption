@@ -2,6 +2,7 @@ import re
 
 from bs4 import BeautifulSoup, NavigableString
 from xml.sax.saxutils import escape
+from copy import deepcopy
 
 from .base import (
     BaseReader, BaseWriter, CaptionSet, Caption, CaptionNode,
@@ -208,53 +209,75 @@ class DFXPReader(BaseReader):
 
 
 class DFXPWriter(BaseWriter):
-    def __init__(self, *args, **kw):
-        self.write_inline_positioning = kw.get(
+    def __init__(self, *args, **kwargs):
+        self.write_inline_positioning = kwargs.pop(
             u'write_inline_positioning', False)
         self.p_style = False
         self.open_span = False
         self.region_creator = None
+        super(DFXPWriter, self).__init__(*args, **kwargs)
 
-    def write(self, captions, force=u''):
+    def write(self, caption_set, force=u''):
         dfxp = BeautifulSoup(DFXP_BASE_MARKUP, u'xml')
         dfxp.find(u'tt')[u'xml:lang'] = u"en"
 
+        langs = caption_set.get_languages()
+        if force in langs:
+            langs = [force]
+
+        caption_set = deepcopy(caption_set)
+
+        # Loop through all captions/nodes and apply transformations to layout
+        # in function of the provided or default settings
+        for lang in langs:
+            for caption in caption_set.get_captions(lang):
+                self._apply_transformations_to(caption.layout_info)
+                for node in caption.nodes:
+                    self._apply_transformations_to(node.layout_info)
+
         # Create the styles in the <styling> section, or a default style.
-        for style_id, style in captions.get_styles():
+        for style_id, style in caption_set.get_styles():
             if style != {}:
                 dfxp = self._recreate_styling_tag(style_id, style, dfxp)
-        if not captions.get_styles():
+        if not caption_set.get_styles():
             dfxp = self._recreate_styling_tag(
                 DFXP_DEFAULT_STYLE_ID, DFXP_DEFAULT_STYLE, dfxp)
 
-        self.region_creator = RegionCreator(dfxp, captions)
+        self.region_creator = RegionCreator(dfxp, caption_set)
         self.region_creator.create_document_regions()
 
         body = dfxp.find(u'body')
-        langs = captions.get_languages()
-        if force in langs:
-            langs = [force]
 
         for lang in langs:
             div = dfxp.new_tag(u'div')
             div[u'xml:lang'] = u'%s' % lang
-            self._assign_positioning_data(div, lang, captions)
+            self._assign_positioning_data(div, lang, caption_set)
 
-            for caption in captions.get_captions(lang):
+            for caption in caption_set.get_captions(lang):
                 if caption.style:
                     caption_style = caption.style
                 else:
                     caption_style = {u'class': DFXP_DEFAULT_STYLE_ID}
 
                 p = self._recreate_p_tag(
-                    caption, caption_style, dfxp, captions, lang)
-                self._assign_positioning_data(p, lang, captions, caption)
+                    caption, caption_style, dfxp, caption_set, lang)
+                self._assign_positioning_data(p, lang, caption_set, caption)
                 div.append(p)
 
             body.append(div)
         self.region_creator.cleanup_regions()
         caption_content = dfxp.prettify(formatter=None)
         return caption_content
+
+    def _apply_transformations_to(self, layout_info):
+        if layout_info:
+            if self.relativize:
+                # Transform absolute values (e.g. px) into percentages
+                layout_info.to_percentage_of(
+                    self.video_width, self.video_height)
+            if self.fit_to_screen:
+                # Make sure origin + extent <= 100%
+                layout_info.set_extent_from_origin()
 
     def _assign_positioning_data(self, tag, lang, caption_set=None,
                                  caption=None, caption_node=None):
@@ -312,7 +335,7 @@ class DFXPWriter(BaseWriter):
 
         for node in caption.nodes:
             if node.type_ == CaptionNode.TEXT:
-                line += self._encode(node.content) + u' '
+                line += self._encode(node.content)
 
             elif node.type_ == CaptionNode.BREAK:
                 line = line.rstrip() + u'<br/>\n    '

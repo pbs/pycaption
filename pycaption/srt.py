@@ -1,3 +1,5 @@
+from copy import deepcopy
+
 from .base import (
     BaseReader, BaseWriter, CaptionSet, Caption, CaptionNode)
 from .exceptions import CaptionReadNoCaptions
@@ -76,12 +78,14 @@ class SRTReader(BaseReader):
 
 
 class SRTWriter(BaseWriter):
-    def write(self, captions):
+    def write(self, caption_set):
+        caption_set = deepcopy(caption_set)
+
         srt_captions = []
 
-        for lang in captions.get_languages():
+        for lang in caption_set.get_languages():
             srt_captions.append(
-                self._recreate_lang(captions.get_captions(lang))
+                self._recreate_lang(caption_set.get_captions(lang))
             )
 
         caption_content = u'MULTI-LANGUAGE SRT\n'.join(srt_captions)

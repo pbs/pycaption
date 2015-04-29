@@ -220,6 +220,37 @@ SAMPLE_DFXP_WITH_POSITIONING = """<?xml version="1.0" encoding="utf-8"?>
 </body>
 </tt>"""
 
+SAMPLE_DFXP_WITH_RELATIVIZED_POSITIONING = u"""<?xml version="1.0" encoding="utf-8"?>
+<tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling">
+ <head>
+  <styling/>
+  <layout>
+   <region tts:displayAlign="after" tts:textAlign="center" xml:id="bottom"/>
+   <region tts:displayAlign="after" tts:extent="70% 25%" tts:origin="15% 15%" tts:padding="10% 10% 10% 10%" xml:id="r0"/>
+   <region tts:displayAlign="after" tts:extent="50% 10%" tts:origin="25% 25%" tts:textAlign="right" xml:id="r1"/>
+   <region tts:displayAlign="after" tts:extent="25% 25%" tts:origin="50% 50%" tts:textAlign="left" xml:id="r2"/>
+   <region tts:displayAlign="after" tts:extent="25% 25%" tts:origin="25% 75%" tts:textAlign="right" xml:id="r3"/>
+  </layout>
+ </head>
+ <body>
+  <div region="bottom" xml:lang="en-US">
+   <p begin="00:00:01.000" end="00:00:03.000" region="r0">
+    You might not remember us. We are a typical transparent region with centered text that has an outline.
+   </p>
+   <p begin="00:00:03.500" end="00:00:05.000" region="r1">
+    had <span region="r1">personality.</span>
+   </p>
+   <p begin="00:00:05.500" end="00:00:07.000" region="r2">
+    Hello there, children! Have you seen any visitors?
+   </p>
+   <p begin="00:00:07.500" end="00:00:09.000" region="r3">
+    This is<br/>
+    the last cue
+   </p>
+  </div>
+ </body>
+</tt>"""
+
 SAMPLE_DFXP_EMPTY = """
 <?xml version="1.0" encoding="utf-8"?>
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml"
@@ -391,6 +422,59 @@ DFXP_FROM_SAMI_WITH_POSITIONING_UNICODE = u"""\
    </p>
    <p begin="00:00:32.200" end="00:00:36.200" region="r0" style="p">
     &lt;LAUGHING &amp; WHOOPS!&gt;
+   </p>
+  </div>
+ </body>
+</tt>"""
+
+SAMPLE_DFXP_LONG_CUE = u"""<?xml version="1.0" encoding="utf-8"?>
+<tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling">
+ <head>
+  <styling>
+   <style tts:backgroundColor="black" tts:color="white" tts:fontFamily="monospace" tts:fontSize="8%" xml:id="basic"/>
+  </styling>
+  <layout>
+   <region tts:displayAlign="after" tts:textAlign="center" xml:id="bottom"/>
+   <region tts:origin="25% 25%" tts:textAlign="center" xml:id="r0"/>
+  </layout>
+ </head>
+ <body>
+  <div>
+   <p begin="00:00:01.000" end="00:00:02.000" region="bottom" style="basic">
+    NARRATOR:
+   </p>
+   <p begin="00:00:02.000" end="00:00:03.000" region="r0" style="basic">
+    They built the largest, most incredible, wildest, craziest,
+   </p>
+   <p begin="00:00:03.000" end="00:00:04.000" region="bottom" style="basic">
+    most complex machine in history.
+   </p>
+  </div>
+ </body>
+</tt>
+"""
+
+SAMPLE_DFXP_LONG_CUE_FIT_TO_SCREEN = u"""<?xml version="1.0" encoding="utf-8"?>
+<tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling">
+ <head>
+  <styling>
+   <style tts:color="white" tts:fontFamily="monospace" tts:fontSize="8%" xml:id="basic"/>
+  </styling>
+  <layout>
+   <region tts:displayAlign="after" tts:textAlign="center" xml:id="bottom"/>
+   <region tts:displayAlign="after" tts:extent="75% 75%" tts:origin="25% 25%" tts:textAlign="center" xml:id="r0"/>
+  </layout>
+ </head>
+ <body>
+  <div region="bottom" xml:lang="en-US">
+   <p begin="00:00:01.000" end="00:00:02.000" region="bottom" style="basic">
+    NARRATOR:
+   </p>
+   <p begin="00:00:02.000" end="00:00:03.000" region="r0" style="basic">
+    They built the largest, most incredible, wildest, craziest,
+   </p>
+   <p begin="00:00:03.000" end="00:00:04.000" region="bottom" style="basic">
+    most complex machine in history.
    </p>
   </div>
  </body>
