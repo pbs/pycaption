@@ -150,6 +150,10 @@ class Stretch(TwoDimensionalObject):
         :type horizontal: Size
         :type vertical: Size
         """
+        for parameter in [horizontal, vertical]:
+            if not isinstance(parameter, Size):
+                raise ValueError(u"Stretch must be initialized with two valid "
+                                 u"Size objects.")
         self.horizontal = horizontal
         self.vertical = vertical
 
@@ -308,6 +312,10 @@ class Point(TwoDimensionalObject):
         :type x: Size
         :type y: Size
         """
+        for parameter in [x, y]:
+            if not isinstance(parameter, Size):
+                raise ValueError(u"Point must be initialized with two valid "
+                                 u"Size objects.")
         self.x = x
         self.y = y
 
@@ -593,7 +601,7 @@ class Padding(object):
         for attr in ['before', 'after', 'start', 'end']:
             # Ensure that a Padding object always explicitly defines all
             # four possible paddings
-            if getattr(self, attr) is None:
+            if not isinstance(getattr(self, attr), Size):
                 # Sets default padding (0%)
                 setattr(self, attr, Size(0, UnitEnum.PERCENT))
 
@@ -706,6 +714,17 @@ class Padding(object):
         if self.end:
             self.end.to_percentage_of(video_width=video_width)
 
+    def is_relative(self):
+        is_relative = True
+        if self.before:
+            is_relative &= self.before.is_relative()
+        if self.after:
+            is_relative &= self.after.is_relative()
+        if self.start:
+            is_relative &= self.start.is_relative()
+        if self.end:
+            is_relative &= self.end.is_relative()
+        return is_relative
 
 class Layout(object):
     """Should encapsulate all the information needed to determine (as correctly
