@@ -366,6 +366,31 @@ class TimingCorrectingCaptionListTestCase(unittest.TestCase):
 
         self.assertEqual(len(caption_list), 0)
 
+    def test_not_overwriting_end_time(self):
+        # Test here all the 4 cases:
+        caption_list = TimingCorrectingCaptionList()
+
+        caption_list.append(CaptionDummy(start=1, end=3))
+        caption_list.append(CaptionDummy(start=5, end=6))
+
+        # Append then append
+        self.assertEqual(caption_list[-2].end, 3)
+
+        caption_list.extend([CaptionDummy(start=7, end=8)])
+
+        # Append then extend
+        self.assertEqual(caption_list[-2].end, 6)
+
+        caption_list.extend([CaptionDummy(start=9, end=10)])
+
+        # extend then extend
+        self.assertEqual(caption_list[-2].end, 8)
+
+        caption_list.append(CaptionDummy(start=11, end=12))
+
+        # extend then append
+        self.assertEqual(caption_list[-2].end, 10)
+
 
 SAMPLE_SCC_PRODUCES_CAPTIONS_WITH_START_AND_END_TIME_THE_SAME = u"""\
 Scenarist_SCC V1.0
