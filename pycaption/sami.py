@@ -221,19 +221,20 @@ class SAMIWriter(BaseWriter):
         self.open_span = False
         self.last_time = None
 
-    def write(self, captions):
+    def write(self, caption_set):
+        caption_set = deepcopy(caption_set)
         sami = BeautifulSoup(SAMI_BASE_MARKUP, u"xml")
-        stylesheet = self._recreate_stylesheet(captions)
+        stylesheet = self._recreate_stylesheet(caption_set)
         sami.find(u'style').append(stylesheet)
         primary = None
 
-        for lang in captions.get_languages():
+        for lang in caption_set.get_languages():
             self.last_time = None
             if primary is None:
                 primary = lang
-            for caption in captions.get_captions(lang):
+            for caption in caption_set.get_captions(lang):
                 sami = self._recreate_p_tag(
-                    caption, sami, lang, primary, captions)
+                    caption, sami, lang, primary, caption_set)
 
         a = sami.prettify(formatter=None).split(u'\n')
         caption_content = u'\n'.join(a[1:])
