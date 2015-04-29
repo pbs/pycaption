@@ -1,5 +1,82 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
+"""
+3 types of SCC captions:
+    Roll-Up
+    Paint-On
+    Pop-On
+
+Commands:
+    94ae - [ENM] - Erase Non-displayed(buffer) Memory
+    942c - [EDM] - Erase Displayed Memory
+    9420 - [RCL] - Resume Caption Loading
+    9429 - [RDC] - Resume Direct Captioning
+
+    9425, 9426, 94a7 - [RU2], [RU3], [RU4] (roll up captions 2,3 or 4 rows)
+        - these commands set the number of expected lines
+
+    94ad - (in CEA-608-E: 142d) - [CR] carriage return.
+        - This actually rolls the captions up as many rows as specified by
+        [RU1], [RU2], or [RU3]
+
+    80 - no-op char. Doesn't do anything, but must be used with other
+        characters, to make a 2 byte word
+
+    97a1, 97a2, 9723 - [TO] move 1, 2 or 3 columns - Tab Over command
+        - this moves the positioning 1, 2, or 3 columns to the right
+        - Nothing regarding this is implemented.
+
+    942f - [EOC] - display the buffer on the screen - End Of Caption
+    ... - [PAC] - Preamble address code (can set positioning and style)
+        - All the PACs are specified by the first and second byte combined
+        from pycaption.scc.constants.PAC_BYTES_TO_POSITIONING_MAP
+
+    9429 - [RDC] - Resume Direct Captioning
+    94a4 - (in CEA-608-E: 1424) - [DER] Delete to End of Row
+
+
+Pop-On:
+    The commands should usually appear in this order. Not strict though, and
+    the the commands don't have to necessarily be on the same row.
+
+    1. 94ae [ENM] (erase non displayed memory)
+    2. 9420 [RCL] (resume caption loading => this command here means we're using Pop-On captions)
+    2.1? [ENM] - if step 0 was skipped?
+    3. [PAC] Positioning/ styling command (can position on columns divisible by 4)
+        The control chars is called Preamble Address Code [PAC].
+    4. If positioning needs to be on columns not divisible by 4, use a [TO] command
+    5. text
+    6. 942c [EDM] - optionally, erase the currently displayed caption
+    7. 942f [EOC] display the caption
+
+
+Roll-Up:
+    1. [RU2], [RU3] or [RU4]    - sets Roll-Up style and depth
+        - these set the Roll-Up style: (characteristic command)
+    2. [CR] to roll the display up 1 row...lol?
+    3. [PAC] - sets the indent of the base row
+
+
+Paint-On:
+    1. [RDC] - sets the Paint-On style (characteristic command)
+    2. [PAC]
+    3. text
+    4. [PAC]
+    5. text or [DER]
+
+There are some rules regarding the parity of the commands.
+
+This resource:
+http://www.theneitherworld.com/mcpoodle/SCC_TOOLS/DOCS/SCC_FORMAT.HTML
+ specifies that there are interpreters which only work if the commands have an
+ odd parity. This however is not consistent, and we might not handle well
+ these cases. Odd parity of a command means that, converting toe word into
+ binary, should result in an odd number of '1's. The PAC commands obey this
+ rule, but some do not. Some commands that do not are found in the COMMANDS
+ dictionary. This is legacy logic, that I didn't know how to handle, and
+ just carried over when implementing positioning.
+"""
+
 
 import re
 import math
