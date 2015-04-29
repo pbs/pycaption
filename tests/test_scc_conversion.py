@@ -85,10 +85,10 @@ SAMPLE_DFXP_FROM_SCC_OUTPUT = u"""\
  </head>
  <body>
   <div region="bottom" xml:lang="en-US">
-   <p begin="00:00:01.167" end="00:00:01.167" region="r0" style="default">
+   <p begin="00:00:01.167" end="00:00:03.103" region="r0" style="default">
     abab
    </p>
-   <p begin="00:00:01.167" end="00:00:01.167" region="r1" style="default">
+   <p begin="00:00:01.167" end="00:00:03.103" region="r1" style="default">
     cdcd
    </p>
    <p begin="00:00:01.167" end="00:00:03.103" region="r2" style="default">
@@ -99,10 +99,10 @@ SAMPLE_DFXP_FROM_SCC_OUTPUT = u"""\
     ijij<br/>
     klkl
    </p>
-   <p begin="00:00:09.743" end="00:00:09.743" region="r4" style="default">
+   <p begin="00:00:09.743" end="00:00:11.745" region="r4" style="default">
     mnmn
    </p>
-   <p begin="00:00:09.743" end="00:00:09.743" region="r5" style="default">
+   <p begin="00:00:09.743" end="00:00:11.745" region="r5" style="default">
     opop
    </p>
    <p begin="00:00:09.743" end="00:00:11.745" region="r6" style="default">
@@ -113,10 +113,10 @@ SAMPLE_DFXP_FROM_SCC_OUTPUT = u"""\
     uvuv<br/>
     wxwx
    </p>
-   <p begin="00:00:20.100" end="00:00:20.100" region="r8" style="default">
+   <p begin="00:00:20.100" end="00:00:22.100" region="r8" style="default">
     yzyz
    </p>
-   <p begin="00:00:20.100" end="00:00:20.100" region="r9" style="default">
+   <p begin="00:00:20.100" end="00:00:22.100" region="r9" style="default">
     0101
    </p>
    <p begin="00:00:20.100" end="00:00:22.100" region="r10" style="default">
@@ -173,14 +173,14 @@ SAMPLE_DFXP_WITH_PROPERLY_CLOSING_SPANS_OUTPUT = u"""\
     cccccc<br/>
     c!c!
    </p>
-   <p begin="00:01:35.666" end="00:01:35.666" region="r1" style="default">
+   <p begin="00:01:35.666" end="00:01:40.866" region="r1" style="default">
     bbbb
    </p>
    <p begin="00:01:35.666" end="00:01:40.866" region="r2" style="default">
     <span tts:fontStyle="italic" region="r2">cccc<br/>
     bbaa</span>
    </p>
-   <p begin="00:01:55.800" end="00:01:55.800" region="r0" style="default">
+   <p begin="00:01:55.800" end="00:01:59.533" region="r0" style="default">
     aa
    </p>
    <p begin="00:01:55.800" end="00:01:59.533" region="r3" style="default">

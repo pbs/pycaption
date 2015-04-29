@@ -1,5 +1,4 @@
 from ..base import Caption, CaptionNode
-from ..exceptions import CaptionReadSyntaxError
 from ..geometry import (UnitEnum, Size, Layout, Point, Alignment,
                         VerticalAlignmentEnum, HorizontalAlignmentEnum)
 
@@ -7,33 +6,70 @@ from .constants import PAC_BYTES_TO_POSITIONING_MAP, COMMANDS
 
 
 class TimingCorrectingCaptionList(list):
-    """List of captions. Will know to correct the last caption's end time
-    when adding a new caption.
+    """List of captions. When appending new elements, it will correct the end time
+    of the last ones, so they end when the new caption gets added.
+
+    "last ones" could mean the last caption `append`ed or all of the last
+    captions with which this list was `extended`
 
     Also, doesn't allow Nones or empty captions
     """
+    def __init__(self, *args, **kwargs):
+        super(TimingCorrectingCaptionList, self).__init__(*args, **kwargs)
+        self._last_batch = ()
+
     def append(self, p_object):
         """When appending a new caption to the list, make sure the last one
         has an end. Also, don't add empty captions
 
-        :type p_object: Caption
+        :type p_object: Caption | None
         """
-        if p_object is None:
+        if p_object is None or not p_object.nodes:
             return
 
-        if len(self) > 0 and self[-1].end == 0:
-            self[-1].end = p_object.start
+        self._update_last_batch(self._last_batch, p_object)
 
-        if p_object.nodes:
-            super(TimingCorrectingCaptionList, self).append(p_object)
+        self._last_batch = (p_object,)
+
+        super(TimingCorrectingCaptionList, self).append(p_object)
 
     def extend(self, iterable):
-        """Adds the elements in the iterable to the list
+        """Adds the elements in the iterable to the list, regarding the first
+        caption's start time as the end time for the previously added
+        caption(s)
 
-        :param iterable: any iterable
+        :param iterable: an iterable of Caption instances
         """
-        for elem in iterable:
-            self.append(elem)
+        appendable_items = [item for item in iterable if item and item.nodes]
+        self._update_last_batch(self._last_batch, *appendable_items)
+
+        self._last_batch = tuple(appendable_items)
+
+        super(TimingCorrectingCaptionList, self).extend(appendable_items)
+
+    @staticmethod
+    def _update_last_batch(batch, *new_captions):
+        """Given a batch of captions, sets their end time equal to the start
+        time of the first caption in *new_captions
+
+        The start time of the first caption in new_captions should never be 0.
+        This means an invalid SCC file.
+
+        :type batch: tuple[Caption]
+        :type new_captions: tuple[Caption]
+        """
+        if not new_captions:
+            return
+        if not new_captions[0]:
+            return
+        if not new_captions[0].nodes:
+            return
+
+        new_caption = new_captions[0]
+
+        if batch and batch[-1].end == 0:
+            for caption in batch:
+                caption.end = new_caption.start
 
 
 class NotifyingDict(dict):
@@ -111,12 +147,14 @@ class CaptionCreator(object):
             return
 
         if force:
+            # Select all last captions
+            captions_to_correct = self._still_editing
+        elif self._still_editing[-1].end == 0:
+            # Only select the last captions if they haven't gotten their
+            # end time set yet
             captions_to_correct = self._still_editing
         else:
-            captions_to_correct = (
-                caption for caption in self._still_editing
-                if caption.end == 0
-            )
+            return
 
         for caption in captions_to_correct:
             caption.end = end_time
@@ -308,7 +346,7 @@ class InstructionNodeCreator(object):
         return iter(_format_italics(self._collection))
 
     @classmethod
-    def from_list(cls, stash_list, italics_tracker, position_tracker):
+    def from_list(cls, stash_list, position_tracker):
         """Having received a list of instances of this class, creates a new
         instance that contains all the nodes of the previous instances
         (basically concatenates the many stashes into one)
@@ -326,8 +364,7 @@ class InstructionNodeCreator(object):
 
         :rtype: InstructionNodeCreator
         """
-        instance = cls(italics_tracker=italics_tracker,
-                       position_tracker=position_tracker)
+        instance = cls(position_tracker=position_tracker)
         new_collection = instance._collection
 
         for idx, stash in enumerate(stash_list):

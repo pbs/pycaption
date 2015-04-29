@@ -4,9 +4,6 @@ from ..exceptions import CaptionReadSyntaxError
 class _PositioningTracker(object):
     """Helps determine the positioning of a node, having kept track of
     positioning-related commands.
-
-    Acts like a state-machine, with 2
-
     """
     def __init__(self, positioning=None):
         """
