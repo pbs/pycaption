@@ -82,7 +82,6 @@ import re
 import math
 import string
 import textwrap
-from copy import deepcopy
 
 from pycaption.base import (
     BaseReader, BaseWriter, CaptionSet, CaptionNode,
