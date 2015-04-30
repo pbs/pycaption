@@ -44,8 +44,9 @@ class SAMIReader(BaseReader):
         if type(content) != unicode:
             raise RuntimeError('The content is not a unicode string.')
 
-        content, doc_styles, doc_langs = SAMIParser().feed(content)
-        sami_soup = BeautifulSoup(content)
+        content, doc_styles, doc_langs = (
+            self._get_sami_parser_class()().feed(content))
+        sami_soup = self._get_xml_parser_class()(content)
         captions = CaptionSet()
         captions.set_styles(doc_styles)
         layout_info = self._build_layout(doc_styles.get('p', {}))
@@ -60,6 +61,16 @@ class SAMIReader(BaseReader):
 
         return captions
 
+    @staticmethod
+    def _get_sami_parser_class():
+        """Hook method for providing custom SAMIParser classes"""
+        return SAMIParser
+
+    @staticmethod
+    def _get_xml_parser_class():
+        """Hook method for providing a custom XML parser class"""
+        return BeautifulSoup
+
     def _build_layout(self, styles):
         """
         :type styles: dict
@@ -68,13 +79,18 @@ class SAMIReader(BaseReader):
         alignment = Alignment.from_horizontal_and_vertical_align(
             text_align=styles.get('text-align', None)
         )
-        layout = Layout(
+        layout = self._get_layout_class()(
             origin=None,
             extent=None,
             padding=self._get_padding(styles),
             alignment=alignment
         )
         return layout
+
+    @staticmethod
+    def _get_layout_class():
+        """Hook method for providing a custom Layout class"""
+        return Layout
 
     def _get_padding(self, styles):
         margin_before = self._get_size(styles, 'margin-top')
