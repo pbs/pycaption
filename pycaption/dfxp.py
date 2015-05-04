@@ -57,7 +57,7 @@ class DFXPReader(BaseReader):
         if type(content) != unicode:
             raise RuntimeError(u'The content is not a unicode string.')
 
-        dfxp_document = LayoutAwareDFXPParser(
+        dfxp_document = self._get_dfxp_parser_class()(
             content, read_invalid_positioning=self.read_invalid_positioning)
         captions = CaptionSet()
 
@@ -81,6 +81,12 @@ class DFXPReader(BaseReader):
             raise CaptionReadNoCaptions(u"empty caption file")
 
         return captions
+
+    @staticmethod
+    def _get_dfxp_parser_class():
+        """Hook method for providing a custom DFXP parser
+        """
+        return LayoutAwareDFXPParser
 
     def _translate_div(self, div):
         captions = []
@@ -244,7 +250,7 @@ class DFXPWriter(BaseWriter):
             dfxp = self._recreate_styling_tag(
                 DFXP_DEFAULT_STYLE_ID, DFXP_DEFAULT_STYLE, dfxp)
 
-        self.region_creator = RegionCreator(dfxp, caption_set)
+        self.region_creator = self._get_region_creator_class()(dfxp, caption_set)
         self.region_creator.create_document_regions()
 
         body = dfxp.find(u'body')
@@ -269,6 +275,22 @@ class DFXPWriter(BaseWriter):
         self.region_creator.cleanup_regions()
         caption_content = dfxp.prettify(formatter=None)
         return caption_content
+
+    @staticmethod
+    def _get_region_creator_class():
+        """Hook method for providing a custom RegionCreator
+        """
+        return RegionCreator
+
+    def _apply_transformations_to(self, layout_info):
+        if layout_info:
+            if self.relativize:
+                # Transform absolute values (e.g. px) into percentages
+                layout_info.to_percentage_of(
+                    self.video_width, self.video_height)
+            if self.fit_to_screen:
+                # Make sure origin + extent <= 100%
+                layout_info.set_extent_from_origin()
 
     def _assign_positioning_data(self, tag, lang, caption_set=None,
                                  caption=None, caption_node=None):
@@ -533,7 +555,8 @@ class LayoutAwareDFXPParser(BeautifulSoup):
         if region_id is not None:
             region_tag = self.find(u'region', {u'xml:id': region_id})
 
-        region_scraper = LayoutInfoScraper(self, region_tag)
+        region_scraper = (
+            self._get_layout_info_scraper_class()(self, region_tag))
 
         layout_info = region_scraper.scrape_positioning_info(
             element, self.read_invalid_positioning
@@ -541,10 +564,22 @@ class LayoutAwareDFXPParser(BeautifulSoup):
 
         if layout_info and any(layout_info):
             # layout_info contains information?
-            return Layout(*layout_info)
+            return self._get_layout_class()(*layout_info)
         else:
             # layout_info doesn't contain any information
             return self.NO_POSITIONING_INFO
+
+    @staticmethod
+    def _get_layout_info_scraper_class():
+        """Hook method for getting an implementation of a LayoutInfoScraper.
+        """
+        return LayoutInfoScraper
+
+    @staticmethod
+    def _get_layout_class():
+        """Hook method for providing the Layout class to use
+        """
+        return Layout
 
 
 class LayoutInfoScraper(object):
