@@ -255,8 +255,6 @@ class SAMIWriter(BaseWriter):
 
         self._relativize_and_fit_to_screen(caption_set.layout_info)
 
-        stylesheet = self._recreate_stylesheet(caption_set)
-        sami.find(u'style').append(stylesheet)
         primary = None
 
         for lang in caption_set.get_languages():
@@ -266,7 +264,6 @@ class SAMIWriter(BaseWriter):
 
             caption_set_layout = caption_set.get_layout_info(lang)
             self._relativize_and_fit_to_screen(caption_set_layout)
-
             for caption in caption_set.get_captions(lang):
                 # Loop through all captions/nodes and apply transformations to
                 # layout in function of the provided or default settings
@@ -276,11 +273,26 @@ class SAMIWriter(BaseWriter):
                 sami = self._recreate_p_tag(
                     caption, sami, lang, primary, caption_set)
 
+        stylesheet = self._recreate_stylesheet(caption_set)
+        sami.find(u'style').append(stylesheet)
+
         a = sami.prettify(formatter=None).split(u'\n')
         caption_content = u'\n'.join(a[1:])
         return caption_content
 
     def _recreate_p_tag(self, caption, sami, lang, primary, captions):
+        """
+        Creates a p tag for the given caption, attach it to the sami object
+        and return it.
+
+        :type caption: Caption
+        :type sami: BeautifulSoup
+        :type lang: unicode
+        :type primary: unicode
+        :type captions: CaptionSet
+
+        :rtype: BeautifulSoup
+        """
         time = caption.start / 1000
 
         if self.last_time and time != self.last_time:
@@ -307,6 +319,18 @@ class SAMIWriter(BaseWriter):
         return sami
 
     def _recreate_sync(self, sami, lang, primary, time):
+        """
+        Creates a sync tag for a given language and timing (if it doesn't
+        already exist), attach it to the sami body and return the sami
+        BeautifulSoupobject.
+
+        :type sami: BeautifulSoup
+        :type lang: unicode
+        :type primary: unicode
+        :type time: int
+
+        :rtype: BeautifulSoup
+        """
         if lang == primary:
             sync = sami.new_tag(u"sync", start=u"%s" % time)
             sami.body.append(sync)
@@ -363,9 +387,8 @@ class SAMIWriter(BaseWriter):
         for lang in caption_set.get_languages():
             lang_string = u'lang: {}'.format(lang)
             if lang_string not in stylesheet:
-                stylesheet += (
-                    u'\n    .{lang} {{\n     lang: {lang};\n    }}\n'
-                ).format(lang=lang)
+                stylesheet += self._recreate_style_block(
+                    lang, {u'lang': lang}, caption_set.get_layout_info(lang))
 
         return stylesheet + u'   -->'
 

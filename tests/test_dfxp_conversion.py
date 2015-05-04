@@ -186,6 +186,17 @@ class DFXPtoSAMITestCase(DFXPConversionTestCase, SAMITestingMixIn):
         self.assertTrue(isinstance(results, unicode))
         self.assertSAMIEquals(SAMPLE_SAMI_UNICODE, results)
 
+    def test_dfxp_to_sami_with_margins(self):
+        caption_set = DFXPReader().read(SAMPLE_DFXP_FROM_SAMI_WITH_MARGINS)
+        results = SAMIWriter(video_width=VIDEO_WIDTH,
+                             video_height=VIDEO_HEIGHT).write(caption_set)
+        margins = [u"margin-right: 6.04%;",
+                   u"margin-bottom: 0%;",
+                   u"margin-top: 0%;",
+                   u"margin-left: 6.04%;"]
+        for margin in margins:
+            self.assertIn(margin, results)
+
 
 class DFXPtoWebVTTTestCase(DFXPConversionTestCase, WebVTTTestingMixIn):
 
