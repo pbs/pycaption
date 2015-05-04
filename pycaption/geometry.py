@@ -1,4 +1,6 @@
 from .exceptions import RelativizationError
+from IPython.lib.deepreload import deep_import_hook
+from copy import deepcopy
 
 class Enum(object):
     """Generic class that's not easily instantiable, serving as a base for
@@ -593,10 +595,10 @@ class Padding(object):
         :type start: Size
         :type end: Size
         """
-        self.before = before
-        self.after = after
-        self.start = start
-        self.end = end
+        self.before = before  # top
+        self.after = after  # bottom
+        self.start = start  # left
+        self.end = end  # right
 
         for attr in ['before', 'after', 'start', 'end']:
             # Ensure that a Padding object always explicitly defines all
@@ -865,3 +867,20 @@ class Layout(object):
                     self.extent.horizontal = diff_horizontal
                 if bottom_left.y.value > 100:
                     self.extent.vertical = diff_vertical
+
+    def update(self, new_layout):
+        """
+        Like a dict.update, adds positioning information to the current Layout
+        object and in the case of conflicting (not None) values, uses the ones
+        in new_layout.
+        :param new_layout: A new Layout object whose not None values should
+            override the present object's values.
+        """
+        if new_layout.origin:
+            self.origin = new_layout.origin
+        if new_layout.extent:
+            self.extent = new_layout.extent
+        if new_layout.padding:
+            self.padding = new_layout.padding
+        if new_layout.alignment:
+            self.alignment = new_layout.alignment

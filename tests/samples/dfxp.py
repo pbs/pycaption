@@ -479,3 +479,23 @@ SAMPLE_DFXP_LONG_CUE_FIT_TO_SCREEN = u"""<?xml version="1.0" encoding="utf-8"?>
   </div>
  </body>
 </tt>"""
+
+SAMPLE_DFXP_FROM_SAMI_WITH_MARGINS = u"""<?xml version="1.0" encoding="utf-8"?>
+<tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling">
+ <head>
+  <styling>
+   <style tts:color="#ffffff" tts:fontFamily="Tahoma" tts:fontSize="24pt" tts:textAlign="center" xml:id="p"/>
+  </styling>
+  <layout>
+   <region tts:padding="0% 29pt 0% 29pt" tts:textAlign="center" xml:id="r0"/>
+  </layout>
+ </head>
+ <body>
+  <div region="r0" xml:lang="en-US">
+   <p begin="00:00:00.133" end="00:00:04.133" region="r0" style="p">
+    &gt;&gt; COMING UP NEXT, IT IS<br/>
+    APPLAUSE AMERICA.
+   </p>
+  </div>
+ </body>
+</tt>"""

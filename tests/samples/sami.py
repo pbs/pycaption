@@ -242,3 +242,43 @@ SAMPLE_SAMI_PARTIAL_MARGINS = u"""
 </BODY>
 </SAMI>
 """
+
+SAMPLE_SAMI_PARTIAL_MARGINS_RELATIVIZED = u"""\
+<sami>
+ <head>
+  <style type="text/css">
+   <!--
+    .subttl {
+     lang: en-US;
+     name: "Subtitles";
+     margin-left: 6.04%;
+     margin-bottom: 0%;
+     margin-top: 0%;
+     margin-right: 6.04%;
+     samitype: CC;
+    }
+
+    p {
+     font-size: 24pt;
+     font-family: Tahoma;
+     color: #ffffff;
+     margin-right: 6.04%;
+     margin-bottom: 0%;
+     margin-top: 0%;
+     margin-left: 6.04%;
+     font-weight: bold;
+     background-color: #000;
+     text-align: center;
+    }
+   -->
+  </style>
+ </head>
+ <body>
+  <sync start="133">
+   <p class="subttl" p_style="class:subttl;">
+    &gt;&gt; COMING UP NEXT, IT IS<br/>
+    APPLAUSE AMERICA.
+   </p>
+  </sync>
+ </body>
+</sami>"""

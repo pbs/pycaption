@@ -7,13 +7,16 @@ from .samples import (
     SAMPLE_SAMI, SAMPLE_SRT, SAMPLE_DFXP,
     SAMPLE_SAMI_UTF8, SAMPLE_SAMI_UNICODE, SAMPLE_DFXP_UNICODE,
     SAMPLE_SRT_UNICODE, SAMPLE_SAMI_SYNTAX_ERROR,
-    DFXP_FROM_SAMI_WITH_POSITIONING,
-    DFXP_FROM_SAMI_WITH_POSITIONING_UTF8,
-    DFXP_FROM_SAMI_WITH_POSITIONING_UNICODE,
-    SAMPLE_WEBVTT_FROM_SAMI
+    DFXP_FROM_SAMI_WITH_POSITIONING, DFXP_FROM_SAMI_WITH_POSITIONING_UTF8,
+    DFXP_FROM_SAMI_WITH_POSITIONING_UNICODE, SAMPLE_WEBVTT_FROM_SAMI,
+    SAMPLE_SAMI_PARTIAL_MARGINS, SAMPLE_SAMI_PARTIAL_MARGINS_RELATIVIZED,
+    SAMPLE_DFXP_FROM_SAMI_WITH_MARGINS
 )
 from .mixins import SRTTestingMixIn, DFXPTestingMixIn, SAMITestingMixIn, WebVTTTestingMixIn
 
+# Arbitrary values used to test relativization
+VIDEO_WIDTH = 640
+VIDEO_HEIGHT = 360
 
 class SAMIConversionTestCase(unittest.TestCase):
 
@@ -26,19 +29,30 @@ class SAMIConversionTestCase(unittest.TestCase):
 class SAMItoSAMITestCase(SAMIConversionTestCase, SAMITestingMixIn):
 
     def test_sami_to_sami_conversion(self):
-        results = SAMIWriter().write(self.captions)
+        results = SAMIWriter(relativize=False,
+                             fit_to_screen=False).write(self.captions)
         self.assertTrue(isinstance(results, unicode))
         self.assertSAMIEquals(SAMPLE_SAMI.decode(u'utf-8'), results)
 
     def test_sami_to_sami_utf8_conversion(self):
-        results = SAMIWriter().write(self.captions_utf8)
+        results = SAMIWriter(relativize=False,
+                             fit_to_screen=False).write(self.captions_utf8)
         self.assertTrue(isinstance(results, unicode))
         self.assertSAMIEquals(SAMPLE_SAMI_UNICODE, results)
 
     def test_sami_to_sami_unicode_conversion(self):
-        results = SAMIWriter().write(self.captions_unicode)
+        results = SAMIWriter(relativize=False,
+                             fit_to_screen=False).write(self.captions_unicode)
         self.assertTrue(isinstance(results, unicode))
         self.assertSAMIEquals(SAMPLE_SAMI_UNICODE, results)
+
+    def test_is_relativized(self):
+        # Absolute positioning settings (e.g. px) are converted to percentages
+        caption_set = SAMIReader().read(SAMPLE_SAMI_PARTIAL_MARGINS)
+        result = SAMIWriter(
+            video_width=VIDEO_WIDTH, video_height=VIDEO_HEIGHT
+        ).write(caption_set)
+        self.assertEqual(result, SAMPLE_SAMI_PARTIAL_MARGINS_RELATIVIZED)
 
 
 class SAMItoSRTTestCase(SAMIConversionTestCase, SRTTestingMixIn):
@@ -93,6 +107,15 @@ class SAMItoDFXPTestCase(SAMIConversionTestCase, DFXPTestingMixIn):
         self.assertTrue(isinstance(results, unicode))
         self.assertDFXPEquals(
             DFXP_FROM_SAMI_WITH_POSITIONING_UNICODE,
+            results
+        )
+
+    def test_sami_to_dfxp_with_margin_conversion(self):
+        caption_set = SAMIReader().read(SAMPLE_SAMI_PARTIAL_MARGINS)
+        results = DFXPWriter(
+            relativize=False, fit_to_screen=False).write(caption_set)
+        self.assertDFXPEquals(
+            SAMPLE_DFXP_FROM_SAMI_WITH_MARGINS,
             results
         )
 
