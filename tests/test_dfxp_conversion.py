@@ -5,10 +5,10 @@ from bs4 import BeautifulSoup
 from pycaption import (
     DFXPReader, DFXPWriter, SRTWriter, SAMIWriter, WebVTTWriter)
 
-from pycaption.dfxp import (
-    DFXP_DEFAULT_STYLE, DFXP_DEFAULT_STYLE_ID,
-    DFXP_DEFAULT_REGION, DFXP_DEFAULT_REGION_ID, _recreate_style,
-    _convert_layout_to_attributes)
+from pycaption.dfxp.base import (
+    DFXP_DEFAULT_STYLE, DFXP_DEFAULT_STYLE_ID, DFXP_DEFAULT_REGION,
+    DFXP_DEFAULT_REGION_ID, _recreate_style, _convert_layout_to_attributes
+)
 from .samples import (
     SAMPLE_SAMI, SAMPLE_SRT, SAMPLE_DFXP,
     SAMPLE_DFXP_UTF8, SAMPLE_SAMI_UNICODE, SAMPLE_DFXP_UNICODE,

@@ -140,7 +140,7 @@ class CaptionCreator(object):
         :type force: bool
         :param force: Set the end time even if there's already an end time
 
-        :type end_time: int
+        :type end_time: float
         :param end_time: microseconds; the end of the caption;
         """
         if not self._still_editing:
@@ -169,7 +169,7 @@ class CaptionCreator(object):
 
         :type node_buffer: InstructionNodeCreator
 
-        :type start: int
+        :type start: float
         :param start: the start time in microseconds
         """
         if node_buffer.is_empty():
@@ -353,10 +353,6 @@ class InstructionNodeCreator(object):
 
         :type stash_list: list[InstructionNodeCreator]
         :param stash_list: a list of instances of this class
-
-        :type italics_tracker: .state_machines.DefaultProvidingItalicsTracker
-        :param italics_tracker: state machine to be interrogated about
-            the italics state when creating a node
 
         :type position_tracker: .state_machines.DefaultProvidingPositionTracker
         :param position_tracker: state machine to be interrogated about the
@@ -599,8 +595,8 @@ def _remove_noop_on_off_italics(collection):
      pairs that don't surround text nodes, if those nodes are in the order:
      on, off
 
-    :param collection:
-    :return:
+    :type collection: list[_InstructionNode]
+    :rtype: list[_InstructionNode]
     """
     new_collection = []
     to_commit = None
@@ -673,6 +669,9 @@ def _remove_noop_italics(collection):
 def _skip_initial_italics_off_nodes(collection):
     """Return a collection like the one given, but without the
     initial <Italics OFF> nodes
+
+    :type collection: list[_InstructionNode]
+    :rtype: list[_InstructionNode]
     """
     new_collection = []
     can_add_italics_off_nodes = False
@@ -693,6 +692,9 @@ def _skip_initial_italics_off_nodes(collection):
 def _skip_empty_text_nodes(collection):
     """Return an iterable containing all the nodes in the previous
     collection except for the empty text nodes
+
+    :type collection: list[_InstructionNode]
+    :rtype: list[_InstructionNode]
     """
     return [node for node in collection
             if not (node.is_text_node() and node.is_empty())]
@@ -702,6 +704,9 @@ def _skip_redundant_italics_nodes(collection):
     """Return a list where the <Italics On> nodes only appear after
     <Italics OFF>, and vice versa. This ignores the other node types, and
     only removes redundant italic nodes
+
+    :type collection: list[_InstructionNode]
+    :rtype: list[_InstructionNode]
     """
     new_collection = []
     state = None
@@ -766,6 +771,8 @@ def _close_italics_before_repositioning(collection):
 
 def _ensure_final_italics_node_closes(collection):
     """The final italics command needs to be closed
+
+    :type collection: list[_InstructionNode]
     :rtype: list[_InstructionNode]
     """
     new_collection = list(collection)
