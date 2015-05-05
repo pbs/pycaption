@@ -4,15 +4,19 @@ from bs4 import BeautifulSoup, NavigableString
 from xml.sax.saxutils import escape
 from copy import deepcopy
 
-from .base import (
+from ..base import (
     BaseReader, BaseWriter, CaptionSet, Caption, CaptionNode,
     DEFAULT_LANGUAGE_CODE)
-from .exceptions import CaptionReadNoCaptions, CaptionReadSyntaxError
-from .geometry import (
+from ..exceptions import CaptionReadNoCaptions, CaptionReadSyntaxError
+from ..geometry import (
     Point, Stretch, UnitEnum, Padding, VerticalAlignmentEnum,
     HorizontalAlignmentEnum, Alignment)
 from pycaption.geometry import Layout
 
+__all__ = [
+    'DFXP_BASE_MARKUP', 'DFXP_DEFAULT_STYLE', 'DFXP_DEFAULT_STYLE_ID',
+    'DFXP_DEFAULT_REGION_ID', 'DFXPReader', 'DFXPWriter', 'DFXP_DEFAULT_REGION'
+]
 
 DFXP_BASE_MARKUP = u'''
 <tt xmlns="http://www.w3.org/ns/ttml"
@@ -224,6 +228,13 @@ class DFXPWriter(BaseWriter):
         super(DFXPWriter, self).__init__(*args, **kwargs)
 
     def write(self, caption_set, force=u''):
+        """Converts a CaptionSet into an equivalent corresponding DFXP file
+
+        :type caption_set: pycaption.base.CaptionSet
+        :param force: only use this language, if available in the caption_set
+
+        :rtype: unicode
+        """
         dfxp = BeautifulSoup(DFXP_BASE_MARKUP, u'xml')
         dfxp.find(u'tt')[u'xml:lang'] = u"en"
 
@@ -1095,6 +1106,12 @@ def _create_internal_alignment(text_align, display_align):
 
 
 def _create_external_horizontal_alignment(horizontal_component):
+    """From an internal horizontal alignment value, create a value to be used
+    in the dfxp output file.
+
+    :type horizontal_component: unicode
+    :rtype: unicode
+    """
     result = None
 
     if horizontal_component == HorizontalAlignmentEnum.LEFT:
@@ -1112,6 +1129,12 @@ def _create_external_horizontal_alignment(horizontal_component):
 
 
 def _create_external_vertical_alignment(vertical_component):
+    """Given an alignment value used in the internal representation of the
+    caption, return a value usable in the actual dfxp output file.
+
+    :type vertical_component: unicode
+    :rtype: unicode
+    """
     result = None
 
     if vertical_component == VerticalAlignmentEnum.TOP:
