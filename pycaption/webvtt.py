@@ -282,7 +282,8 @@ class WebVTTWriter(BaseWriter):
         # If you want to avoid it, you have to turn off relativization by
         # initializing this Writer with relativize=False.
         if not already_relative:
-            layout.to_percentage_of(self.video_width, self.video_height)
+            layout = layout.as_percentage_of(
+                self.video_width, self.video_height)
 
         # Ensure that when there's a left offset the caption is not pushed out
         # of the screen. If the execution got this far it means origin and

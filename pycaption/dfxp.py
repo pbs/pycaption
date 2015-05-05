@@ -238,9 +238,11 @@ class DFXPWriter(BaseWriter):
         # in function of the provided or default settings
         for lang in langs:
             for caption in caption_set.get_captions(lang):
-                self._relativize_and_fit_to_screen(caption.layout_info)
+                caption.layout_info = self._relativize_and_fit_to_screen(
+                    caption.layout_info)
                 for node in caption.nodes:
-                    self._relativize_and_fit_to_screen(node.layout_info)
+                    node.layout_info = self._relativize_and_fit_to_screen(
+                        node.layout_info)
 
         # Create the styles in the <styling> section, or a default style.
         for style_id, style in caption_set.get_styles():
@@ -281,16 +283,6 @@ class DFXPWriter(BaseWriter):
         """Hook method for providing a custom RegionCreator
         """
         return RegionCreator
-
-    def _apply_transformations_to(self, layout_info):
-        if layout_info:
-            if self.relativize:
-                # Transform absolute values (e.g. px) into percentages
-                layout_info.to_percentage_of(
-                    self.video_width, self.video_height)
-            if self.fit_to_screen:
-                # Make sure origin + extent <= 100%
-                layout_info.set_extent_from_origin()
 
     def _assign_positioning_data(self, tag, lang, caption_set=None,
                                  caption=None, caption_node=None):

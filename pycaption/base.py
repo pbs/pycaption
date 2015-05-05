@@ -76,11 +76,12 @@ class BaseWriter(object):
         if layout_info:
             if self.relativize:
                 # Transform absolute values (e.g. px) into percentages
-                layout_info.to_percentage_of(
+                layout_info = layout_info.as_percentage_of(
                     self.video_width, self.video_height)
             if self.fit_to_screen:
                 # Make sure origin + extent <= 100%
                 layout_info.set_extent_from_origin()
+        return layout_info
 
     def write(self, content):
         return content

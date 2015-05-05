@@ -269,7 +269,8 @@ class SAMIWriter(BaseWriter):
         caption_set = deepcopy(caption_set)
         sami = BeautifulSoup(SAMI_BASE_MARKUP, u"xml")
 
-        self._relativize_and_fit_to_screen(caption_set.layout_info)
+        caption_set.layout_info = self._relativize_and_fit_to_screen(
+            caption_set.layout_info)
 
         primary = None
 
@@ -278,14 +279,20 @@ class SAMIWriter(BaseWriter):
             if primary is None:
                 primary = lang
 
-            caption_set_layout = caption_set.get_layout_info(lang)
-            self._relativize_and_fit_to_screen(caption_set_layout)
+            caption_set.set_layout_info(
+                lang,
+                self._relativize_and_fit_to_screen(
+                    caption_set.get_layout_info(lang))
+            )
+
             for caption in caption_set.get_captions(lang):
                 # Loop through all captions/nodes and apply transformations to
                 # layout in function of the provided or default settings
-                self._relativize_and_fit_to_screen(caption.layout_info)
+                caption.layout_info = self._relativize_and_fit_to_screen(
+                    caption.layout_info)
                 for node in caption.nodes:
-                    self._relativize_and_fit_to_screen(node.layout_info)
+                    node.layout_info = self._relativize_and_fit_to_screen(
+                        node.layout_info)
                 sami = self._recreate_p_tag(
                     caption, sami, lang, primary, caption_set)
 
