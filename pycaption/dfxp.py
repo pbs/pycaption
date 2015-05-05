@@ -414,9 +414,14 @@ class LayoutAwareDFXPParser(BeautifulSoup):
     """This makes the xml instance capable of providing layout information
     for every one of its nodes (it adds a 'layout_info' attribute on each node)
 
-    It parses the element tree in post-order-like fashion (as dictated by the
-    dfxp specs http://www.w3.org/TR/ttaf1-dfxp/#semantics-region-layout-step-1)
-    for determining the layout information
+    It parses the element tree in pre-order-like fashion as dictated by the
+    dfxp specs here:
+    http://www.w3.org/TR/ttaf1-dfxp/#semantics-style-resolution-process-overall
+
+    TODO: Some sections require pre-order traversal, others post-order (e.g.
+    http://www.w3.org/TR/ttaf1-dfxp/#semantics-region-layout-step-1). For the
+    features we support, it was easier to use pre-order and it seems to have
+    been enough. It should be clarified whether this is ok or not.
     """
     # A lot of elements will have no positioning info. Use this flyweight
     # to save memory
@@ -451,7 +456,7 @@ class LayoutAwareDFXPParser(BeautifulSoup):
             self._pre_order_visit(div)
 
     def _pre_order_visit(self, element, inherited_layout=None):
-        """Process the xml tree elements in post order by adding a .layout_info
+        """Process the xml tree elements in pre order by adding a .layout_info
         attribute to each of them.
 
         The specs say this is how the attributes should be determined, but
