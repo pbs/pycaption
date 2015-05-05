@@ -1,6 +1,4 @@
 from .exceptions import RelativizationError
-from IPython.lib.deepreload import deep_import_hook
-from copy import deepcopy
 
 class Enum(object):
     """Generic class that's not easily instantiable, serving as a base for
