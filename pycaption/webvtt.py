@@ -289,7 +289,7 @@ class WebVTTWriter(BaseWriter):
         # of the screen. If the execution got this far it means origin and
         # extent are already relative by now.
         if self.fit_to_screen:
-            layout.set_extent_from_origin()
+            layout = layout.fit_to_screen()
 
         if layout.origin:
             left_offset = layout.origin.x

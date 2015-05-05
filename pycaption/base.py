@@ -80,7 +80,7 @@ class BaseWriter(object):
                     self.video_width, self.video_height)
             if self.fit_to_screen:
                 # Make sure origin + extent <= 100%
-                layout_info.set_extent_from_origin()
+                layout_info = layout_info.fit_to_screen()
         return layout_info
 
     def write(self, content):

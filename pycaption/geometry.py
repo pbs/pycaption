@@ -845,7 +845,7 @@ class Layout(object):
                                                           video_height)
         return Layout(**params)
 
-    def set_extent_from_origin(self):
+    def fit_to_screen(self):
         """
         If extent is not set or if origin + extent > 100%, (re)calculate it
         based on origin. It is a pycaption fix for caption files that are
@@ -855,13 +855,14 @@ class Layout(object):
         ATTENTION: This must be called on relativized objects (such as the one
         returned by as_percentage_of). All units are presumed to be percentages.
         """
+
         if self.origin:
             # Calculated values to be used if replacement is needed
             diff_horizontal = Size(100 - self.origin.x.value, UnitEnum.PERCENT)
             diff_vertical = Size(100 - self.origin.y.value, UnitEnum.PERCENT)
             if not self.extent:
                 # Extent is not set, use the calculated values
-                self.extent = Stretch(diff_horizontal, diff_vertical)
+                new_extent = Stretch(diff_horizontal, diff_vertical)
             else:
                 # Extent is set but may have inconsistent values,
                 # e.g. origin="35% 25%" extent="80% 80%", which would cause
@@ -879,12 +880,25 @@ class Layout(object):
                     raise ValueError("Units must be relativized before extent "
                                      "can be calculated based on origin.")
 
+                new_horizontal = self.extent.horizontal
+                new_vertical = self.extent.vertical
                 # If extent is set but it's inconsistent, replace with
                 # calculated values
                 if bottom_left.x.value > 100:
-                    self.extent.horizontal = diff_horizontal
+                    new_horizontal = diff_horizontal
                 if bottom_left.y.value > 100:
-                    self.extent.vertical = diff_vertical
+                    new_vertical = diff_vertical
+
+                new_extent = Stretch(new_horizontal, new_vertical)
+
+            return Layout(
+                origin=self.origin,
+                extent=new_extent,
+                padding=self.padding,
+                alignment=self.alignment
+            )
+
+        return self
 
     def update(self, new_layout):
         """
