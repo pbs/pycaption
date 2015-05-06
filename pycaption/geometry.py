@@ -848,6 +848,10 @@ class Layout(object):
 
     def as_percentage_of(self, video_width, video_height):
         params = {'alignment': self.alignment}
+        # We don't need to preserve webvtt_positioning on Layout
+        # transformations because, if it is set, the WebVTT writer
+        # returns as soon as it's found and the transformations are
+        # never triggered.
         for attr_name in ['origin', 'extent', 'padding']:
             attr = getattr(self, attr_name)
             if attr:
@@ -906,6 +910,10 @@ class Layout(object):
                 extent=new_extent,
                 padding=self.padding,
                 alignment=self.alignment
+                # We don't need to preserve webvtt_positioning on Layout
+                # transformations because, if it is set, the WebVTT writer
+                # returns as soon as it's found and the transformations are
+                # never triggered.
             )
 
         return self

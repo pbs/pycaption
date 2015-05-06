@@ -4,12 +4,12 @@ from pycaption import (
     WebVTTReader, WebVTTWriter, SRTWriter, SAMIWriter, DFXPWriter)
 
 from .samples import (
-    SAMPLE_WEBVTT, SAMPLE_DFXP_UNICODE, SAMPLE_SRT_UNICODE, SAMPLE_SAMI_UNICODE
+    SAMPLE_WEBVTT, SAMPLE_DFXP_UNICODE, SAMPLE_SRT_UNICODE, SAMPLE_SAMI_UNICODE,
+    SAMPLE_WEBVTT_FROM_WEBVTT, SAMPLE_WEBVTT_FROM_DFXP_WITH_POSITIONING
 )
 from .mixins import (
     WebVTTTestingMixIn, DFXPTestingMixIn, SAMITestingMixIn, SRTTestingMixIn
 )
-from tests.samples import SAMPLE_WEBVTT_FROM_WEBVTT
 
 
 class WebVTTConversionTestCase(unittest.TestCase):
@@ -32,6 +32,13 @@ class WebVTTtoWebVTTTestCase(WebVTTConversionTestCase, WebVTTTestingMixIn):
         webvtt = WebVTTWriter().write(caption_set)
 
         self.assertEqual(SAMPLE_WEBVTT_WITH_SETTINGS_CUE, webvtt)
+
+    def test_positioning_is_kept(self):
+        caption_set = WebVTTReader().read(
+            SAMPLE_WEBVTT_FROM_DFXP_WITH_POSITIONING.decode(u'utf-8'))
+        results = WebVTTWriter().write(caption_set)
+        self.assertEquals(
+            SAMPLE_WEBVTT_FROM_DFXP_WITH_POSITIONING.decode(u'utf-8'), results)
 
 #     # TODO: Write a test that includes a WebVTT file with style tags
 #     # That will fail because the styles used in the cues are not tracked.
