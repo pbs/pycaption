@@ -96,16 +96,13 @@ class SAMIReader(BaseReader):
         alignment = Alignment.from_horizontal_and_vertical_align(
             text_align=styles.get('text-align', None)
         )
-        new_layout = self._get_layout_class()(
+        return self._get_layout_class()(
             origin=None,
             extent=None,
             padding=self._get_padding(styles),
-            alignment=alignment
+            alignment=alignment,
+            inherit_from=inherit_from
         )
-        if inherit_from:
-            parent_layout = deepcopy(inherit_from)
-            new_layout = parent_layout.update(new_layout)
-        return new_layout
 
     @staticmethod
     def _get_layout_class():

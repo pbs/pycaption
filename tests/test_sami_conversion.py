@@ -123,7 +123,8 @@ class SAMItoDFXPTestCase(unittest.TestCase, DFXPTestingMixIn):
 
     def test_sami_to_dfxp_xml_output(self):
         captions = SAMIReader().read(SAMPLE_SAMI_SYNTAX_ERROR.decode('utf-8'))
-        results = DFXPWriter().write(captions)
+        results = DFXPWriter(relativize=False,
+                             fit_to_screen=False).write(captions)
         self.assertTrue(isinstance(results, unicode))
         self.assertTrue(u'xmlns="http://www.w3.org/ns/ttml"' in results)
         self.assertTrue(

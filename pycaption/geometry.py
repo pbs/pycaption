@@ -750,7 +750,7 @@ class Layout(object):
      specific for each caption type.
     """
     def __init__(self, origin=None, extent=None, padding=None, alignment=None,
-                 webvtt_positioning=None):
+                 webvtt_positioning=None, inherit_from=None):
         """
         :type origin: Point
         :param origin: The point on the screen which is the top left vertex
@@ -771,13 +771,23 @@ class Layout(object):
             This is used so that WebVTT positioning isn't lost on conversion
             from WebVTT to WebVTT. It is needed only because pycaption
             currently doesn't support reading positioning from WebVTT.
+
+        :type inherit_from: Layout
+        :param inherit_from: A Layout with the positioning parameters to be
+            used if not specified by the positioning arguments,
         """
 
-        self.webvtt_positioning = webvtt_positioning
         self.origin = origin
         self.extent = extent
         self.padding = padding
         self.alignment = alignment
+        self.webvtt_positioning = webvtt_positioning
+
+        if inherit_from:
+            for attr_name in ['origin', 'extent', 'padding', 'alignment']:
+                attr = getattr(self, attr_name)
+                if not attr:
+                    setattr(self, attr_name, getattr(inherit_from, attr_name))
 
     def __nonzero__(self):
         return any([
@@ -899,20 +909,3 @@ class Layout(object):
             )
 
         return self
-
-    def update(self, new_layout):
-        """
-        Like a dict.update, adds positioning information to the current Layout
-        object and in the case of conflicting (not None) values, uses the ones
-        in new_layout.
-        :param new_layout: A new Layout object whose not None values should
-            override the present object's values.
-        """
-        if new_layout.origin:
-            self.origin = new_layout.origin
-        if new_layout.extent:
-            self.extent = new_layout.extent
-        if new_layout.padding:
-            self.padding = new_layout.padding
-        if new_layout.alignment:
-            self.alignment = new_layout.alignment
