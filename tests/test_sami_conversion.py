@@ -10,7 +10,8 @@ from .samples import (
     DFXP_FROM_SAMI_WITH_POSITIONING, DFXP_FROM_SAMI_WITH_POSITIONING_UTF8,
     DFXP_FROM_SAMI_WITH_POSITIONING_UNICODE, SAMPLE_WEBVTT_FROM_SAMI,
     SAMPLE_SAMI_PARTIAL_MARGINS, SAMPLE_SAMI_PARTIAL_MARGINS_RELATIVIZED,
-    SAMPLE_DFXP_FROM_SAMI_WITH_MARGINS
+    SAMPLE_DFXP_FROM_SAMI_WITH_MARGINS, SAMPLE_SAMI_LANG_MARGIN,
+    SAMPLE_DFXP_FROM_SAMI_WITH_LANG_MARGINS
 )
 from .mixins import SRTTestingMixIn, DFXPTestingMixIn, SAMITestingMixIn, WebVTTTestingMixIn
 
@@ -118,6 +119,15 @@ class SAMItoDFXPTestCase(unittest.TestCase, DFXPTestingMixIn):
             relativize=False, fit_to_screen=False).write(caption_set)
         self.assertDFXPEquals(
             SAMPLE_DFXP_FROM_SAMI_WITH_MARGINS,
+            results
+        )
+
+    def test_sami_to_dfxp_with_margin_for_language_conversion(self):
+        caption_set = SAMIReader().read(SAMPLE_SAMI_LANG_MARGIN)
+        results = DFXPWriter(
+            relativize=False, fit_to_screen=False).write(caption_set)
+        self.assertDFXPEquals(
+            SAMPLE_DFXP_FROM_SAMI_WITH_LANG_MARGINS,
             results
         )
 

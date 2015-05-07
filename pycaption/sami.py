@@ -49,14 +49,12 @@ class SAMIReader(BaseReader):
         sami_soup = self._get_xml_parser_class()(content)
         caption_set = CaptionSet()
         caption_set.set_styles(doc_styles)
+        # Get the global layout that applies to all <p> tags
         layout_info = self._build_layout(doc_styles.get('p', {}))
         caption_set.layout_info = layout_info
 
         for language in doc_langs:
             lang_layout = None
-            lang_captions = self._translate_lang(
-                language, sami_soup, layout_info)
-            caption_set.set_captions(language, lang_captions)
             for target, styling in doc_styles.items():
                 if target not in [u'p', u'sync', u'span']:
                     if styling.get(u'lang', None) == language:
@@ -65,8 +63,11 @@ class SAMIReader(BaseReader):
                             inherit_from=layout_info
                         )
                         break
-            lang_layout = lang_layout or deepcopy(layout_info)
+            lang_layout = lang_layout or layout_info
             caption_set.set_layout_info(language, lang_layout)
+            lang_captions = self._translate_lang(
+                language, sami_soup, lang_layout)
+            caption_set.set_captions(language, lang_captions)
 
         if caption_set.is_empty():
             raise CaptionReadNoCaptions(u"empty caption file")

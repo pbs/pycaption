@@ -270,7 +270,7 @@ class DFXPWriter(BaseWriter):
 
         for lang in langs:
             div = dfxp.new_tag(u'div')
-            div[u'xml:lang'] = u'%s' % lang
+            div[u'xml:lang'] = unicode(lang)
             self._assign_positioning_data(div, lang, caption_set)
 
             for caption in caption_set.get_captions(lang):
@@ -1024,6 +1024,8 @@ class RegionCreator(object):
 
         if not layout_info and caption_set:
             layout_info = caption_set.get_layout_info(lang)
+            if not layout_info:
+                layout_info = caption_set.layout_info
 
         region_id = self._region_map.get(layout_info)
 
