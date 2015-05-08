@@ -72,6 +72,17 @@ class BaseWriter(object):
         self.video_height = video_height
         self.fit_to_screen = fit_to_screen
 
+    def _relativize_and_fit_to_screen(self, layout_info):
+        if layout_info:
+            if self.relativize:
+                # Transform absolute values (e.g. px) into percentages
+                layout_info = layout_info.as_percentage_of(
+                    self.video_width, self.video_height)
+            if self.fit_to_screen:
+                # Make sure origin + extent <= 100%
+                layout_info = layout_info.fit_to_screen()
+        return layout_info
+
     def write(self, content):
         return content
 
@@ -217,6 +228,9 @@ class CaptionSet(object):
     def __init__(self):
         self._styles = {}
 
+        # Base layout to be inherited by all languages
+        self.layout_info = None
+
         # For individual languages, represents inheritable layout-related
         # information
         self._layout_info = {}
@@ -233,11 +247,21 @@ class CaptionSet(object):
     def get_captions(self, lang):
         return self._captions.get(lang, [])
 
-    def add_style(self, id, style):
-        self._styles[id] = style
+    def add_style(self, selector, rules):
+        """
+        :param selector: The selector indicating the elements to which the
+            rules should be applied.
+        :param rules: A dictionary with CSS-like styling rules.
+        """
+        self._styles[selector] = rules
 
-    def get_style(self, style):
-        return self._styles.get(style, [])
+    def get_style(self, selector):
+        """
+        Returns a dictionary with CSS-like styling rules for a given selector.
+        :param selector: The selector whose rules should be returned (e.g. an
+            element or class name).
+        """
+        return self._styles.get(selector, [])
 
     def get_styles(self):
         return self._styles.items()

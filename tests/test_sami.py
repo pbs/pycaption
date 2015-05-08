@@ -47,10 +47,10 @@ class SAMIReaderTestCase(unittest.TestCase):
         self.assertEquals(2, len(captions.get_captions(u"en-US")))
 
     def test_partial_margins(self):
-        captions = SAMIReader().read(SAMPLE_SAMI_PARTIAL_MARGINS)
+        caption_set = SAMIReader().read(SAMPLE_SAMI_PARTIAL_MARGINS)
         # Ensure that undefined margins are converted to explicitly nil padding
         # (i.e. "0%")
         self.assertEquals(
-            captions.get_layout_info('en-US').padding.to_xml_attribute(),
+            caption_set.layout_info.padding.to_xml_attribute(),
             u'0% 29pt 0% 29pt'
         )

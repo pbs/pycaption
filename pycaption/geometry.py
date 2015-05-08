@@ -1,3 +1,13 @@
+"""
+This module implements the classes used to represent positioning information.
+
+CONVENTIONS:
+* None of the methods should modify the state of the objects on which they're
+  called. If the values of an object need to be recalculated, the method
+  responsible for the recalculation should return a new object with the
+  necessary modifications.
+"""
+
 from .exceptions import RelativizationError
 
 class Enum(object):
@@ -218,12 +228,14 @@ class Stretch(TwoDimensionalObject):
             is_relative &= self.vertical.is_relative()
         return is_relative
 
-    def to_percentage_of(self, video_width, video_height):
+    def as_percentage_of(self, video_width, video_height):
         """
         Converts absolute units (e.g. px, pt etc) to percentage
         """
-        self.horizontal.to_percentage_of(video_width=video_width)
-        self.vertical.to_percentage_of(video_height=video_height)
+        return Stretch(
+            self.horizontal.as_percentage_of(video_width=video_width),
+            self.vertical.as_percentage_of(video_height=video_height)
+        )
 
 
 class Region(object):
@@ -342,12 +354,14 @@ class Point(TwoDimensionalObject):
             is_relative &= self.y.is_relative()
         return is_relative
 
-    def to_percentage_of(self, video_width, video_height):
+    def as_percentage_of(self, video_width, video_height):
         """
         Converts absolute units (e.g. px, pt etc) to percentage
         """
-        self.x.to_percentage_of(video_width=video_width)
-        self.y.to_percentage_of(video_height=video_height)
+        return Point(
+            self.x.as_percentage_of(video_width=video_width),
+            self.y.as_percentage_of(video_height=video_height)
+        )
 
     @classmethod
     def align_from_origin(cls, p1, p2):
@@ -448,13 +462,16 @@ class Size(object):
         """
         return self.unit == UnitEnum.PERCENT
 
-    def to_percentage_of(self, video_width=None, video_height=None):
+    def as_percentage_of(self, video_width=None, video_height=None):
         """
         :param video_width: An integer representing a width in pixels
         :param video_height: An integer representing a height in pixels
         """
-        if self.unit == UnitEnum.PERCENT:
-            return  # Nothing to do here
+        value = self.value
+        unit = self.unit
+
+        if unit == UnitEnum.PERCENT:
+            return self  # Nothing to do here
 
         # The input must be valid so that any conversion can be done
         if not (video_width or video_height):
@@ -464,33 +481,34 @@ class Size(object):
             raise RelativizationError(
                 u"Only video width or height can be given as reference")
 
-        if self.unit == UnitEnum.EM:
+        if unit == UnitEnum.EM:
             # TODO: Implement proper conversion of em in function of font-size
             # The em unit is relative to the font-size, to which we currently
             # have no access. As a workaround, we presume the font-size is 16px,
             # which is a common default value but not guaranteed.
-            self.value *= 16
-            self.unit = UnitEnum.PIXEL
+            value *= 16
+            unit = UnitEnum.PIXEL
 
-        if self.unit == UnitEnum.PT:
+        if unit == UnitEnum.PT:
             # XXX: we will convert first to "px" and from "px" this will be
             # converted to percent. we don't take into consideration the
             # font-size
-            self.value = self.value / 72.0 * 96.0
-            self.unit = UnitEnum.PIXEL
+            value = value / 72.0 * 96.0
+            unit = UnitEnum.PIXEL
 
-        if self.unit == UnitEnum.PIXEL:
-            self.value = self.value * 100.0 / (video_width or video_height)
-            self.unit = UnitEnum.PERCENT
+        if unit == UnitEnum.PIXEL:
+            value = value * 100.0 / (video_width or video_height)
+            unit = UnitEnum.PERCENT
 
-        if self.unit == UnitEnum.CELL:
+        if unit == UnitEnum.CELL:
             # TODO: Implement proper cell resolution
             # (w3.org/TR/ttaf1-dfxp/#parameter-attribute-cellResolution)
             # For now we will use the default values (32 columns and 15 rows)
             cell_reference = 32 if video_width else 15
-            self.value = self.value * 100.0 / cell_reference
-            self.unit = UnitEnum.PERCENT
-        return self
+            value = value * 100.0 / cell_reference
+            unit = UnitEnum.PERCENT
+
+        return Size(value, unit)
 
     @classmethod
     # TODO - this also looks highly cachable. Should use a WeakValueDict here
@@ -593,10 +611,10 @@ class Padding(object):
         :type start: Size
         :type end: Size
         """
-        self.before = before
-        self.after = after
-        self.start = start
-        self.end = end
+        self.before = before  # top
+        self.after = after  # bottom
+        self.start = start  # left
+        self.end = end  # right
 
         for attr in ['before', 'after', 'start', 'end']:
             # Ensure that a Padding object always explicitly defines all
@@ -704,15 +722,13 @@ class Padding(object):
 
         return u' '.join(string_list)
 
-    def to_percentage_of(self, video_width, video_height):
-        if self.before:
-            self.before.to_percentage_of(video_height=video_height)
-        if self.after:
-            self.after.to_percentage_of(video_height=video_height)
-        if self.start:
-            self.start.to_percentage_of(video_width=video_width)
-        if self.end:
-            self.end.to_percentage_of(video_width=video_width)
+    def as_percentage_of(self, video_width, video_height):
+        return Padding(
+            self.before.as_percentage_of(video_height=video_height),
+            self.after.as_percentage_of(video_height=video_height),
+            self.start.as_percentage_of(video_width=video_width),
+            self.end.as_percentage_of(video_width=video_width)
+        )
 
     def is_relative(self):
         is_relative = True
@@ -734,7 +750,7 @@ class Layout(object):
      specific for each caption type.
     """
     def __init__(self, origin=None, extent=None, padding=None, alignment=None,
-                 webvtt_positioning=None):
+                 webvtt_positioning=None, inherit_from=None):
         """
         :type origin: Point
         :param origin: The point on the screen which is the top left vertex
@@ -755,13 +771,23 @@ class Layout(object):
             This is used so that WebVTT positioning isn't lost on conversion
             from WebVTT to WebVTT. It is needed only because pycaption
             currently doesn't support reading positioning from WebVTT.
+
+        :type inherit_from: Layout
+        :param inherit_from: A Layout with the positioning parameters to be
+            used if not specified by the positioning arguments,
         """
 
-        self.webvtt_positioning = webvtt_positioning
         self.origin = origin
         self.extent = extent
         self.padding = padding
         self.alignment = alignment
+        self.webvtt_positioning = webvtt_positioning
+
+        if inherit_from:
+            for attr_name in ['origin', 'extent', 'padding', 'alignment']:
+                attr = getattr(self, attr_name)
+                if not attr:
+                    setattr(self, attr_name, getattr(inherit_from, attr_name))
 
     def __nonzero__(self):
         return any([
@@ -820,28 +846,37 @@ class Layout(object):
             is_relative &= self.padding.is_relative()
         return is_relative
 
-    def to_percentage_of(self, video_width, video_height):
-        for attr in [self.origin, self.extent, self.padding]:
+    def as_percentage_of(self, video_width, video_height):
+        params = {'alignment': self.alignment}
+        # We don't need to preserve webvtt_positioning on Layout
+        # transformations because, if it is set, the WebVTT writer
+        # returns as soon as it's found and the transformations are
+        # never triggered.
+        for attr_name in ['origin', 'extent', 'padding']:
+            attr = getattr(self, attr_name)
             if attr:
-                attr.to_percentage_of(video_width, video_height)
+                params[attr_name] = attr.as_percentage_of(video_width,
+                                                          video_height)
+        return Layout(**params)
 
-    def set_extent_from_origin(self):
+    def fit_to_screen(self):
         """
         If extent is not set or if origin + extent > 100%, (re)calculate it
         based on origin. It is a pycaption fix for caption files that are
         technically valid but contain inconsistent settings that may cause
         long captions to be cut out of the screen.
 
-        ATTENTION: This must be called AFTER to_percentage_of. All units are
-        presumed to be percentages.
+        ATTENTION: This must be called on relativized objects (such as the one
+        returned by as_percentage_of). All units are presumed to be percentages.
         """
+
         if self.origin:
             # Calculated values to be used if replacement is needed
             diff_horizontal = Size(100 - self.origin.x.value, UnitEnum.PERCENT)
             diff_vertical = Size(100 - self.origin.y.value, UnitEnum.PERCENT)
             if not self.extent:
                 # Extent is not set, use the calculated values
-                self.extent = Stretch(diff_horizontal, diff_vertical)
+                new_extent = Stretch(diff_horizontal, diff_vertical)
             else:
                 # Extent is set but may have inconsistent values,
                 # e.g. origin="35% 25%" extent="80% 80%", which would cause
@@ -859,9 +894,26 @@ class Layout(object):
                     raise ValueError("Units must be relativized before extent "
                                      "can be calculated based on origin.")
 
+                new_horizontal = self.extent.horizontal
+                new_vertical = self.extent.vertical
                 # If extent is set but it's inconsistent, replace with
                 # calculated values
                 if bottom_left.x.value > 100:
-                    self.extent.horizontal = diff_horizontal
+                    new_horizontal = diff_horizontal
                 if bottom_left.y.value > 100:
-                    self.extent.vertical = diff_vertical
+                    new_vertical = diff_vertical
+
+                new_extent = Stretch(new_horizontal, new_vertical)
+
+            return Layout(
+                origin=self.origin,
+                extent=new_extent,
+                padding=self.padding,
+                alignment=self.alignment
+                # We don't need to preserve webvtt_positioning on Layout
+                # transformations because, if it is set, the WebVTT writer
+                # returns as soon as it's found and the transformations are
+                # never triggered.
+            )
+
+        return self

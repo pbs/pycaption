@@ -1,5 +1,7 @@
 import re
 
+from copy import deepcopy
+
 from bs4 import BeautifulSoup, NavigableString
 from xml.sax.saxutils import escape
 from copy import deepcopy
@@ -10,8 +12,7 @@ from ..base import (
 from ..exceptions import CaptionReadNoCaptions, CaptionReadSyntaxError
 from ..geometry import (
     Point, Stretch, UnitEnum, Padding, VerticalAlignmentEnum,
-    HorizontalAlignmentEnum, Alignment)
-from pycaption.geometry import Layout
+    HorizontalAlignmentEnum, Alignment, Layout)
 
 __all__ = [
     'DFXP_BASE_MARKUP', 'DFXP_DEFAULT_STYLE', 'DFXP_DEFAULT_STYLE_ID',
@@ -248,9 +249,11 @@ class DFXPWriter(BaseWriter):
         # in function of the provided or default settings
         for lang in langs:
             for caption in caption_set.get_captions(lang):
-                self._apply_transformations_to(caption.layout_info)
+                caption.layout_info = self._relativize_and_fit_to_screen(
+                    caption.layout_info)
                 for node in caption.nodes:
-                    self._apply_transformations_to(node.layout_info)
+                    node.layout_info = self._relativize_and_fit_to_screen(
+                        node.layout_info)
 
         # Create the styles in the <styling> section, or a default style.
         for style_id, style in caption_set.get_styles():
@@ -267,7 +270,7 @@ class DFXPWriter(BaseWriter):
 
         for lang in langs:
             div = dfxp.new_tag(u'div')
-            div[u'xml:lang'] = u'%s' % lang
+            div[u'xml:lang'] = unicode(lang)
             self._assign_positioning_data(div, lang, caption_set)
 
             for caption in caption_set.get_captions(lang):
@@ -291,16 +294,6 @@ class DFXPWriter(BaseWriter):
         """Hook method for providing a custom RegionCreator
         """
         return RegionCreator
-
-    def _apply_transformations_to(self, layout_info):
-        if layout_info:
-            if self.relativize:
-                # Transform absolute values (e.g. px) into percentages
-                layout_info.to_percentage_of(
-                    self.video_width, self.video_height)
-            if self.fit_to_screen:
-                # Make sure origin + extent <= 100%
-                layout_info.set_extent_from_origin()
 
     def _assign_positioning_data(self, tag, lang, caption_set=None,
                                  caption=None, caption_node=None):
@@ -424,9 +417,14 @@ class LayoutAwareDFXPParser(BeautifulSoup):
     """This makes the xml instance capable of providing layout information
     for every one of its nodes (it adds a 'layout_info' attribute on each node)
 
-    It parses the element tree in post-order-like fashion (as dictated by the
-    dfxp specs http://www.w3.org/TR/ttaf1-dfxp/#semantics-region-layout-step-1)
-    for determining the layout information
+    It parses the element tree in pre-order-like fashion as dictated by the
+    dfxp specs here:
+    http://www.w3.org/TR/ttaf1-dfxp/#semantics-style-resolution-process-overall
+
+    TODO: Some sections require pre-order traversal, others post-order (e.g.
+    http://www.w3.org/TR/ttaf1-dfxp/#semantics-region-layout-step-1). For the
+    features we support, it was easier to use pre-order and it seems to have
+    been enough. It should be clarified whether this is ok or not.
     """
     # A lot of elements will have no positioning info. Use this flyweight
     # to save memory
@@ -461,7 +459,7 @@ class LayoutAwareDFXPParser(BeautifulSoup):
             self._pre_order_visit(div)
 
     def _pre_order_visit(self, element, inherited_layout=None):
-        """Process the xml tree elements in post order by adding a .layout_info
+        """Process the xml tree elements in pre order by adding a .layout_info
         attribute to each of them.
 
         The specs say this is how the attributes should be determined, but
@@ -1026,6 +1024,8 @@ class RegionCreator(object):
 
         if not layout_info and caption_set:
             layout_info = caption_set.get_layout_info(lang)
+            if not layout_info:
+                layout_info = caption_set.layout_info
 
         region_id = self._region_map.get(layout_info)
 

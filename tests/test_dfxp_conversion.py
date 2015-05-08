@@ -16,7 +16,8 @@ from .samples import (
     SAMPLE_WEBVTT_FROM_DFXP, SAMPLE_DFXP_WITH_POSITIONING,
     SAMPLE_WEBVTT_FROM_DFXP_WITH_POSITIONING,
     SAMPLE_DFXP_WITH_RELATIVIZED_POSITIONING, SAMPLE_DFXP_LONG_CUE,
-    SAMPLE_WEBVTT_OUTPUT_LONG_CUE, SAMPLE_DFXP_LONG_CUE_FIT_TO_SCREEN)
+    SAMPLE_WEBVTT_OUTPUT_LONG_CUE, SAMPLE_DFXP_LONG_CUE_FIT_TO_SCREEN,
+    SAMPLE_DFXP_FROM_SAMI_WITH_MARGINS)
 
 from .mixins import (
     SRTTestingMixIn, SAMITestingMixIn, DFXPTestingMixIn, WebVTTTestingMixIn)
@@ -108,7 +109,6 @@ class DFXPtoDFXPTestCase(DFXPConversionTestCase, DFXPTestingMixIn):
         self.assertDFXPEquals(result, SAMPLE_DFXP_MULTIPLE_REGIONS_OUTPUT)
 
     def test_incorrectly_specified_positioning_is_explicitly_accepted(self):
-        self.maxDiff = None
         # The arguments used here illustrate how we will try to read
         # and write incorrectly specified positioning information.
         # By incorrect, I mean the specs say that those attributes should be
@@ -140,7 +140,6 @@ class DFXPtoDFXPTestCase(DFXPConversionTestCase, DFXPTestingMixIn):
         result = DFXPWriter(
             video_width=VIDEO_WIDTH, video_height=VIDEO_HEIGHT
         ).write(self.captions_with_positioning)
-        self.maxDiff = None
         self.assertEqual(result, SAMPLE_DFXP_WITH_RELATIVIZED_POSITIONING)
 
     def test_fit_to_screen(self):
@@ -186,6 +185,17 @@ class DFXPtoSAMITestCase(DFXPConversionTestCase, SAMITestingMixIn):
         results = SAMIWriter().write(self.captions_unicode)
         self.assertTrue(isinstance(results, unicode))
         self.assertSAMIEquals(SAMPLE_SAMI_UNICODE, results)
+
+    def test_dfxp_to_sami_with_margins(self):
+        caption_set = DFXPReader().read(SAMPLE_DFXP_FROM_SAMI_WITH_MARGINS)
+        results = SAMIWriter(video_width=VIDEO_WIDTH,
+                             video_height=VIDEO_HEIGHT).write(caption_set)
+        margins = [u"margin-right: 6.04%;",
+                   u"margin-bottom: 0%;",
+                   u"margin-top: 0%;",
+                   u"margin-left: 6.04%;"]
+        for margin in margins:
+            self.assertIn(margin, results)
 
 
 class DFXPtoWebVTTTestCase(DFXPConversionTestCase, WebVTTTestingMixIn):

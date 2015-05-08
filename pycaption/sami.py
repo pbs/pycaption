@@ -47,19 +47,32 @@ class SAMIReader(BaseReader):
         content, doc_styles, doc_langs = (
             self._get_sami_parser_class()().feed(content))
         sami_soup = self._get_xml_parser_class()(content)
-        captions = CaptionSet()
-        captions.set_styles(doc_styles)
+        caption_set = CaptionSet()
+        caption_set.set_styles(doc_styles)
+        # Get the global layout that applies to all <p> tags
         layout_info = self._build_layout(doc_styles.get('p', {}))
+        caption_set.layout_info = layout_info
 
         for language in doc_langs:
-            captions.set_layout_info(language, layout_info)
-            lang_captions = self._translate_lang(language, sami_soup)
-            captions.set_captions(language, lang_captions)
+            lang_layout = None
+            for target, styling in doc_styles.items():
+                if target not in [u'p', u'sync', u'span']:
+                    if styling.get(u'lang', None) == language:
+                        lang_layout = self._build_layout(
+                            doc_styles.get(target, {}),
+                            inherit_from=layout_info
+                        )
+                        break
+            lang_layout = lang_layout or layout_info
+            caption_set.set_layout_info(language, lang_layout)
+            lang_captions = self._translate_lang(
+                language, sami_soup, lang_layout)
+            caption_set.set_captions(language, lang_captions)
 
-        if captions.is_empty():
+        if caption_set.is_empty():
             raise CaptionReadNoCaptions(u"empty caption file")
 
-        return captions
+        return caption_set
 
     @staticmethod
     def _get_sami_parser_class():
@@ -71,21 +84,26 @@ class SAMIReader(BaseReader):
         """Hook method for providing a custom XML parser class"""
         return BeautifulSoup
 
-    def _build_layout(self, styles):
+    def _build_layout(self, styles, inherit_from=None):
         """
         :type styles: dict
-        :param styles: a dictionary CSS-like with styling rules
+        :param styles: a dictionary with CSS-like styling rules
+
+        :type inherit_from: Layout
+        :param inherit_from: The Layout with values to be used in case the
+            positioning settings in the styles parameter don't specify
+            something.
         """
         alignment = Alignment.from_horizontal_and_vertical_align(
             text_align=styles.get('text-align', None)
         )
-        layout = self._get_layout_class()(
+        return self._get_layout_class()(
             origin=None,
             extent=None,
             padding=self._get_padding(styles),
-            alignment=alignment
+            alignment=alignment,
+            inherit_from=inherit_from
         )
-        return layout
 
     @staticmethod
     def _get_layout_class():
@@ -112,7 +130,13 @@ class SAMIReader(BaseReader):
             return None
         return Size.from_string(value_from_style)
 
-    def _translate_lang(self, language, sami_soup):
+    def _translate_lang(self, language, sami_soup, parent_layout):
+        """
+        For a given language, translate the SAMI XML to internal list of
+        captions.
+
+        :rtype: list
+        """
         captions = []
         milliseconds = 0
 
@@ -126,7 +150,8 @@ class SAMIReader(BaseReader):
 
             if p.get_text().strip():
                 styles = self._translate_attrs(p)
-                layout_info = self._build_layout(styles)
+                layout_info = self._build_layout(styles,
+                                                 inherit_from=parent_layout)
                 self.line = []
                 self._translate_tag(p, layout_info)
                 text = self.line
@@ -233,30 +258,62 @@ class SAMIReader(BaseReader):
 
 
 class SAMIWriter(BaseWriter):
-    def __init__(self, *args, **kw):
+    def __init__(self, *args, **kwargs):
+        super(SAMIWriter, self).__init__(*args, **kwargs)
         self.open_span = False
         self.last_time = None
 
     def write(self, caption_set):
         caption_set = deepcopy(caption_set)
         sami = BeautifulSoup(SAMI_BASE_MARKUP, u"xml")
-        stylesheet = self._recreate_stylesheet(caption_set)
-        sami.find(u'style').append(stylesheet)
+
+        caption_set.layout_info = self._relativize_and_fit_to_screen(
+            caption_set.layout_info)
+
         primary = None
 
         for lang in caption_set.get_languages():
             self.last_time = None
             if primary is None:
                 primary = lang
+
+            caption_set.set_layout_info(
+                lang,
+                self._relativize_and_fit_to_screen(
+                    caption_set.get_layout_info(lang))
+            )
+
             for caption in caption_set.get_captions(lang):
+                # Loop through all captions/nodes and apply transformations to
+                # layout in function of the provided or default settings
+                caption.layout_info = self._relativize_and_fit_to_screen(
+                    caption.layout_info)
+                for node in caption.nodes:
+                    node.layout_info = self._relativize_and_fit_to_screen(
+                        node.layout_info)
                 sami = self._recreate_p_tag(
                     caption, sami, lang, primary, caption_set)
+
+        stylesheet = self._recreate_stylesheet(caption_set)
+        sami.find(u'style').append(stylesheet)
 
         a = sami.prettify(formatter=None).split(u'\n')
         caption_content = u'\n'.join(a[1:])
         return caption_content
 
     def _recreate_p_tag(self, caption, sami, lang, primary, captions):
+        """
+        Creates a p tag for the given caption, attach it to the sami object
+        and return it.
+
+        :type caption: Caption
+        :type sami: BeautifulSoup
+        :type lang: unicode
+        :type primary: unicode
+        :type captions: CaptionSet
+
+        :rtype: BeautifulSoup
+        """
         time = caption.start / 1000
 
         if self.last_time and time != self.last_time:
@@ -283,6 +340,18 @@ class SAMIWriter(BaseWriter):
         return sami
 
     def _recreate_sync(self, sami, lang, primary, time):
+        """
+        Creates a sync tag for a given language and timing (if it doesn't
+        already exist), attach it to the sami body and return the sami
+        BeautifulSoupobject.
+
+        :type sami: BeautifulSoup
+        :type lang: unicode
+        :type primary: unicode
+        :type time: int
+
+        :rtype: BeautifulSoup
+        """
         if lang == primary:
             sync = sami.new_tag(u"sync", start=u"%s" % time)
             sami.body.append(sync)
@@ -328,32 +397,49 @@ class SAMIWriter(BaseWriter):
             pass
         return lang
 
-    def _recreate_stylesheet(self, captions):
+    def _recreate_stylesheet(self, caption_set):
         stylesheet = u'<!--'
 
-        for attr, value in captions.get_styles():
+        for attr, value in caption_set.get_styles():
             if value != {}:
-                stylesheet += self._recreate_style_tag(attr, value)
+                stylesheet += self._recreate_style_block(
+                    attr, value, caption_set.layout_info)
 
-        for lang in captions.get_languages():
+        for lang in caption_set.get_languages():
             lang_string = u'lang: {}'.format(lang)
             if lang_string not in stylesheet:
-                stylesheet += (
-                    u'\n    .{lang} {{\n     lang: {lang};\n    }}\n'
-                ).format(lang=lang)
+                stylesheet += self._recreate_style_block(
+                    lang, {u'lang': lang}, caption_set.get_layout_info(lang))
 
         return stylesheet + u'   -->'
 
-    def _recreate_style_tag(self, style, content):
-        if style not in [u'p', u'sync', u'span']:
-            element = u'.'
+    def _recreate_style_block(self, target, rules, layout_info):
+        """
+        :param target: A unicode string representing the target of the styling
+            rules.
+        :param rules: A dictionary with CSS-like styling rules.
+
+        :param layout_info: A Layout object providing positioning information
+            to be converted to CSS
+        """
+        if target not in [u'p', u'sync', u'span']:
+            # If it's not a valid SAMI element, then it's a custom class name
+            selector = u'.{}'.format(target)
         else:
-            element = u''
+            selector = target
 
-        sami_style = u'\n    %s%s {\n    ' % (element, style)
+        sami_style = u'\n    {} {{\n    '.format(selector)
 
-        for attr, value in self._recreate_style(content).items():
-            sami_style += u' %s: %s;\n    ' % (attr, value)
+        if layout_info and layout_info.padding:
+            rules.update({
+                'margin-top': unicode(layout_info.padding.before),
+                'margin-right': unicode(layout_info.padding.end),
+                'margin-bottom': unicode(layout_info.padding.after),
+                'margin-left': unicode(layout_info.padding.start),
+            })
+
+        for attr, value in self._recreate_style(rules).items():
+            sami_style += u' {}: {};\n    '.format(attr, value)
 
         return sami_style + u'}\n'
 
@@ -399,21 +485,17 @@ class SAMIWriter(BaseWriter):
 
         return line
 
-    def _recreate_style(self, content):
+    def _recreate_style(self, rules):
+        """
+        :param rules: A dictionary with CSS-like styling rules
+        """
         sami_style = {}
 
-        if u'text-align' in content:
-            sami_style[u'text-align'] = content[u'text-align']
-        if u'italics' in content:
+        for key, value in rules.items():
+            sami_style[key] = value
+
+        if u'italics' in rules:
             sami_style[u'font-style'] = u'italic'
-        if u'font-family' in content:
-            sami_style[u'font-family'] = content[u'font-family']
-        if u'font-size' in content:
-            sami_style[u'font-size'] = content[u'font-size']
-        if u'color' in content:
-            sami_style[u'color'] = content[u'color']
-        if u'lang' in content:
-            sami_style[u'lang'] = content[u'lang']
 
         return sami_style
 
@@ -433,13 +515,17 @@ class SAMIParser(HTMLParser):
         self.line = u''
         self.styles = {}
         self.queue = deque()
-        self.langs = {}
+        self.langs = set()
         self.last_element = u''
         self.name2codepoint = name2codepoint.copy()
         self.name2codepoint[u'apos'] = 0x0027
 
-    # override the parser's handling of starttags
     def handle_starttag(self, tag, attrs):
+        """
+        Override the parser's handling of starttags
+        :param tag: unicode string indicating the tag type (e.g. "head" or "p")
+        :param tag: list of attribute tuples of type (u'name', u'value')
+        """
         self.last_element = tag
 
         # treat divs as spans
@@ -457,7 +543,7 @@ class SAMIParser(HTMLParser):
             # if no language detected, set it as the default
             lang = lang or DEFAULT_LANGUAGE_CODE
             attrs.append((u'lang', lang))
-            self.langs[lang] = 1
+            self.langs.add(lang)
 
         # clean-up line breaks
         if tag == u'br':
@@ -514,6 +600,10 @@ class SAMIParser(HTMLParser):
 
     # override the parser's feed function
     def feed(self, data):
+        """
+        :param data: Raw SAMI unicode string
+        :returns: tuple (unicode, dict, set)
+        """
         no_cc = u'no closed captioning available'
 
         if u'<html' in data.lower():
@@ -551,7 +641,10 @@ class SAMIParser(HTMLParser):
 
     # parse the SAMI's stylesheet
     def _css_parse(self, css):
-        # parse via cssutils modules
+        """
+        Parse styling via cssutils modules
+        :rtype: dict
+        """
         sheet = parseString(css)
         style_sheet = {}
 

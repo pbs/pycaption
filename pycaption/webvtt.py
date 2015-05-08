@@ -2,6 +2,8 @@ import sys
 import re
 from copy import deepcopy
 
+from copy import deepcopy
+
 from .base import (
     BaseReader, BaseWriter, CaptionSet, Caption, CaptionNode
 )
@@ -280,12 +282,14 @@ class WebVTTWriter(BaseWriter):
         # If you want to avoid it, you have to turn off relativization by
         # initializing this Writer with relativize=False.
         if not already_relative:
-            layout.to_percentage_of(self.video_width, self.video_height)
+            layout = layout.as_percentage_of(
+                self.video_width, self.video_height)
 
         # Ensure that when there's a left offset the caption is not pushed out
         # of the screen. If the execution got this far it means origin and
         # extent are already relative by now.
-        layout.set_extent_from_origin()
+        if self.fit_to_screen:
+            layout = layout.fit_to_screen()
 
         if layout.origin:
             left_offset = layout.origin.x
@@ -322,7 +326,7 @@ class WebVTTWriter(BaseWriter):
 
         cue_settings = u''
 
-        if alignment:
+        if alignment and alignment != u'middle':
             cue_settings += u" align:" + alignment
         if left_offset:
             cue_settings += u" position:{},start".format(unicode(left_offset))
