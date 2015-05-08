@@ -1,3 +1,42 @@
+"""
+The classes in this module handle SAMI reading and writing. It supports several
+CSS attributes, some of which are handled as positioning settings (and applied
+to Layout objects) and others as simple styling (applied to legacy style nodes).
+
+The following attributes are handled as positioning:
+
+    'text-align' # Converted to Alignment
+    'margin-top'
+    'margin-right'
+    'margin-bottom'
+    'margin-left'
+
+OBS:
+    * Margins are converted to Padding
+    * Margins defined inline are not supported
+      TODO: Add support for inline margins
+
+Any other CSS the BeautifulSoup library manages to parse is handled as simple
+styling and applied to style nodes. However, apparently only these are actually
+used by writers on conversion:
+
+    'font-family'
+    'font-size'
+    'font-style'
+    'color'
+OBS:
+    * Other parameters are preserved, but not if they're specified inline.
+    TODO:
+      Make this less confusing. Confirm whether these really are the only
+      supported styling attributes and make it more clear, perhaps by listing
+      them in constants in the beginning of the file and using them to filter
+      out unneeded attributes either everywhere in the code or not at all, but
+      most importantly regardless of whether they're defined inline or not,
+      because this is irrelevant.
+
+"""
+import re
+
 from collections import deque
 from htmlentitydefs import name2codepoint
 from HTMLParser import HTMLParser, HTMLParseError
@@ -33,6 +72,7 @@ SAMI_BASE_MARKUP = u'''
 class SAMIReader(BaseReader):
     def __init__(self, *args, **kw):
         self.line = []
+        self.first_span_alignment = None
 
     def detect(self, content):
         if u'<sami' in content.lower():
@@ -95,7 +135,7 @@ class SAMIReader(BaseReader):
             something.
         """
         alignment = Alignment.from_horizontal_and_vertical_align(
-            text_align=styles.get('text-align', None)
+            text_align=styles.get('text-align')
         )
         return self._get_layout_class()(
             origin=None,
@@ -153,12 +193,19 @@ class SAMIReader(BaseReader):
                 layout_info = self._build_layout(styles,
                                                  inherit_from=parent_layout)
                 self.line = []
+
+                self.first_span_alignment = None
                 self._translate_tag(p, layout_info)
-                text = self.line
-                caption = Caption(layout_info=layout_info)
+                caption_layout = self._get_layout_class()(
+                    alignment=self.first_span_alignment,
+                    inherit_from=layout_info
+                )
+                caption = Caption(layout_info=caption_layout)
+                self.first_span_alignment = None
+
                 caption.start = start
                 caption.end = end
-                caption.nodes = text
+                caption.nodes = self.line
                 caption.style = styles
                 captions.append(caption)
 
@@ -168,9 +215,9 @@ class SAMIReader(BaseReader):
 
         return captions
 
-    def _translate_tag(self, tag, inherited_layout=None):
+    def _translate_tag(self, tag, inherit_from=None):
         """
-        :param inherited_layout: A Layout object extracted from an ancestor tag
+        :param inherit_from: A Layout object extracted from an ancestor tag
                 to be attached to leaf nodes
         """
         # convert text
@@ -178,13 +225,16 @@ class SAMIReader(BaseReader):
             # BeautifulSoup apparently handles unescaping character codes
             # (e.g. &amp;) automatically. The following variable, therefore,
             # should contain a plain unicode string.
-            text = tag.strip()
-            if not text:
+            # strips indentation whitespace only
+            pattern = re.compile(u"^(?:[\n\r]+\s*)?(.+)")
+            result = pattern.search(tag)
+            if not result:
                 return
-            self.line.append(CaptionNode.create_text(text, inherited_layout))
+            tag_text = result.groups()[0]
+            self.line.append(CaptionNode.create_text(tag_text, inherit_from))
         # convert line breaks
         elif tag.name == u'br':
-            self.line.append(CaptionNode.create_break(inherited_layout))
+            self.line.append(CaptionNode.create_break(inherit_from))
         # convert italics
         elif tag.name == u'i':
             self.line.append(
@@ -196,18 +246,18 @@ class SAMIReader(BaseReader):
             self.line.append(
                 CaptionNode.create_style(False, {u'italics': True}))
         elif tag.name == u'span':
-            self._translate_span(tag)
+            self._translate_span(tag, inherit_from)
         else:
             # recursively call function for any children elements
             for a in tag.contents:
-                self._translate_tag(a, inherited_layout)
+                self._translate_tag(a, inherit_from)
 
-    def _translate_span(self, tag):
+    def _translate_span(self, tag, inherit_from=None):
         # convert tag attributes
         args = self._translate_attrs(tag)
         # only include span tag if attributes returned
         if args:
-            layout_info = self._build_layout(args)
+            layout_info = self._build_layout(args, inherit_from)
             # OLD: Create legacy style node
             # NEW: But pass new layout object
             node = CaptionNode.create_style(True, args, layout_info)
@@ -237,13 +287,11 @@ class SAMIReader(BaseReader):
 
         return attrs
 
-    # convert attributes from CSS
+    # convert attributes from inline CSS
     def _translate_style(self, attrs, styles):
         for style in styles:
             style = style.split(u':')
-            if style[0] == u'text-align':
-                attrs[u'text-align'] = style[1].strip()
-            elif style[0] == u'font-family':
+            if style[0] == u'font-family':
                 attrs[u'font-family'] = style[1].strip()
             elif style[0] == u'font-size':
                 attrs[u'font-size'] = style[1].strip()
@@ -253,8 +301,30 @@ class SAMIReader(BaseReader):
                 attrs[u'lang'] = style[1].strip()
             elif style[0] == u'color':
                 attrs[u'color'] = style[1].strip()
+            elif style[0] == u'text-align':
+                self._save_first_span_alignment(style[1].strip())
 
         return attrs
+
+    def _save_first_span_alignment(self, align):
+        """
+        Unlike the other CSS attributes parsed in _translate_styles (at span
+        level), the 'text-align' setting must be applied to a Layout and not
+        to a style because it affects positioning. This Layout must be assigned
+        to the Caption object, and not a Node, because it doesn't make sense
+        to have spans in the same caption with different alignments. Even though
+        the SAMI format seems to in principle accept it, pycaption normalizes to
+        something it can make sense of internally and convert to other formats.
+
+        If there are multiple spans in the same line with differnt alignment,
+        only the first alignment is taken into account.
+
+        :param align: A unicode string representing a CSS text-align value
+        """
+        if not self.first_span_alignment:
+            self.first_span_alignment = Alignment.from_horizontal_and_vertical_align(
+                text_align=align
+            )
 
 
 class SAMIWriter(BaseWriter):

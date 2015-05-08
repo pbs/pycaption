@@ -11,7 +11,10 @@ from .samples import (
     DFXP_FROM_SAMI_WITH_POSITIONING_UNICODE, SAMPLE_WEBVTT_FROM_SAMI,
     SAMPLE_SAMI_PARTIAL_MARGINS, SAMPLE_SAMI_PARTIAL_MARGINS_RELATIVIZED,
     SAMPLE_DFXP_FROM_SAMI_WITH_MARGINS, SAMPLE_SAMI_LANG_MARGIN,
-    SAMPLE_DFXP_FROM_SAMI_WITH_LANG_MARGINS
+    SAMPLE_DFXP_FROM_SAMI_WITH_LANG_MARGINS, SAMPLE_SAMI_WITH_SPAN,
+    SAMPLE_DFXP_FROM_SAMI_WITH_SPAN, SAMPLE_SAMI_WITH_BAD_SPAN_ALIGN,
+    SAMPLE_DFXP_FROM_SAMI_WITH_BAD_SPAN_ALIGN,
+    SAMPLE_SAMI_WITH_MULTIPLE_SPAN_ALIGNS
 )
 from .mixins import SRTTestingMixIn, DFXPTestingMixIn, SAMITestingMixIn, WebVTTTestingMixIn
 
@@ -74,46 +77,18 @@ class SAMItoSRTTestCase(unittest.TestCase, SRTTestingMixIn):
 
 
 class SAMItoDFXPTestCase(unittest.TestCase, DFXPTestingMixIn):
-    """
-    SAMI to DFXP conversion has been wrong since previous versions of
-    pycaption.  SAMI spans with the CSS "text-align" property are converted
-    to a DFXP span with the tt:textAlign property. This property, however, only
-    applies to <p> tags in DFXP according to the documentation. Fixing this
-    will require a considerable amount of refactoring.
 
-    See more: http://www.w3.org/TR/ttaf1-dfxp/#style-attribute-textAlign
-    """
-    @unittest.skip("To be fixed.")
-    def test_sami_to_dfxp_conversion(self):
-        caption_set = SAMIReader().read(SAMPLE_SAMI_UTF8.decode(u'utf-8'))
-        results = DFXPWriter().write(caption_set)
-        self.assertTrue(isinstance(results, unicode))
-        self.assertDFXPEquals(
-            DFXP_FROM_SAMI_WITH_POSITIONING.decode(u'utf-8'),
-            results
-        )
-
-    @unittest.skip("To be fixed.")
-    def test_sami_to_dfxp_utf8_conversion(self):
-        caption_set = SAMIReader().read(SAMPLE_SAMI_UTF8.decode(u'utf-8'))
-        results = DFXPWriter().write(caption_set)
-        self.assertTrue(isinstance(results, unicode))
-        self.assertDFXPEquals(
-            DFXP_FROM_SAMI_WITH_POSITIONING_UTF8,
-            results
-        )
-
-    @unittest.skip("To be fixed.")
     def test_sami_to_dfxp_unicode_conversion(self):
         caption_set = SAMIReader().read(SAMPLE_SAMI_UNICODE)
-        results = DFXPWriter().write(caption_set)
+        results = DFXPWriter(relativize=False,
+                             fit_to_screen=False).write(caption_set)
         self.assertTrue(isinstance(results, unicode))
         self.assertDFXPEquals(
             DFXP_FROM_SAMI_WITH_POSITIONING_UNICODE,
             results
         )
 
-    def test_sami_to_dfxp_with_margin_conversion(self):
+    def test_sami_to_dfxp_with_margin(self):
         caption_set = SAMIReader().read(SAMPLE_SAMI_PARTIAL_MARGINS)
         results = DFXPWriter(
             relativize=False, fit_to_screen=False).write(caption_set)
@@ -122,12 +97,39 @@ class SAMItoDFXPTestCase(unittest.TestCase, DFXPTestingMixIn):
             results
         )
 
-    def test_sami_to_dfxp_with_margin_for_language_conversion(self):
+    def test_sami_to_dfxp_with_margin_for_language(self):
         caption_set = SAMIReader().read(SAMPLE_SAMI_LANG_MARGIN)
         results = DFXPWriter(
             relativize=False, fit_to_screen=False).write(caption_set)
         self.assertDFXPEquals(
             SAMPLE_DFXP_FROM_SAMI_WITH_LANG_MARGINS,
+            results
+        )
+
+    def test_sami_to_dfxp_with_span(self):
+        caption_set = SAMIReader().read(SAMPLE_SAMI_WITH_SPAN)
+        results = DFXPWriter(
+            relativize=False, fit_to_screen=False).write(caption_set)
+        self.assertDFXPEquals(
+            SAMPLE_DFXP_FROM_SAMI_WITH_SPAN,
+            results
+        )
+
+    def test_sami_to_dfxp_with_bad_span_align(self):
+        caption_set = SAMIReader().read(SAMPLE_SAMI_WITH_BAD_SPAN_ALIGN)
+        results = DFXPWriter(
+            relativize=False, fit_to_screen=False).write(caption_set)
+        self.assertDFXPEquals(
+            SAMPLE_DFXP_FROM_SAMI_WITH_BAD_SPAN_ALIGN,
+            results
+        )
+
+    def test_sami_to_dfxp_ignores_multiple_span_aligns(self):
+        caption_set = SAMIReader().read(SAMPLE_SAMI_WITH_MULTIPLE_SPAN_ALIGNS)
+        results = DFXPWriter(
+            relativize=False, fit_to_screen=False).write(caption_set)
+        self.assertDFXPEquals(
+            SAMPLE_DFXP_FROM_SAMI_WITH_BAD_SPAN_ALIGN,
             results
         )
 

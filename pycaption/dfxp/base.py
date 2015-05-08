@@ -4,7 +4,6 @@ from copy import deepcopy
 
 from bs4 import BeautifulSoup, NavigableString
 from xml.sax.saxutils import escape
-from copy import deepcopy
 
 from ..base import (
     BaseReader, BaseWriter, CaptionSet, Caption, CaptionNode,
