@@ -299,3 +299,65 @@ SAMPLE_SAMI_LANG_MARGIN = u"""
 </BODY>
 </SAMI>
 """
+
+SAMPLE_SAMI_WITH_SPAN = u"""
+<SAMI>
+<HEAD>
+    <STYLE TYPE="Text/css">
+    <!--
+        P {font-size: 24pt; text-align: center; font-family: Tahoma; font-weight: bold; color: #FFFFFF; background-color: #000000;}
+        .SUBTTL {Name: 'Subtitles'; Lang: en-US; SAMIType: CC; margin-top: 20px; margin-right: 20px; margin-bottom: 20px; margin-left: 20px;}
+    -->
+    </STYLE>
+</HEAD>
+<BODY>
+    <SYNC start="133">
+        <P class="ENCC">
+            <SPAN Style="font-size:36pt;">we have this vision of Einstein</SPAN>
+        </P>
+    </SYNC>
+</BODY>
+</SAMI>
+"""
+
+SAMPLE_SAMI_WITH_BAD_SPAN_ALIGN = u"""
+<SAMI>
+<HEAD>
+    <STYLE TYPE="Text/css">
+    <!--
+        P {font-size: 24pt; text-align: center; font-family: Tahoma; font-weight: bold; color: #FFFFFF; background-color: #000000;}
+        .SUBTTL {Name: 'Subtitles'; Lang: en-US; SAMIType: CC; margin-top: 20px; margin-right: 20px; margin-bottom: 20px; margin-left: 20px;}
+    -->
+    </STYLE>
+</HEAD>
+<BODY>
+    <SYNC start="133">
+        <P class="ENCC">
+            Some say <SPAN Style="text-align:right;">we have this vision of Einstein</SPAN> as an old, wrinkly man
+        </P>
+    </SYNC>
+</BODY>
+</SAMI>
+"""
+
+SAMPLE_SAMI_WITH_MULTIPLE_SPAN_ALIGNS = u"""
+<SAMI>
+<HEAD>
+    <STYLE TYPE="Text/css">
+    <!--
+        P {font-size: 24pt; text-align: center; font-family: Tahoma; font-weight: bold; color: #FFFFFF; background-color: #000000;}
+        .SUBTTL {Name: 'Subtitles'; Lang: en-US; SAMIType: CC; margin-top: 20px; margin-right: 20px; margin-bottom: 20px; margin-left: 20px;}
+    -->
+    </STYLE>
+</HEAD>
+<BODY>
+    <SYNC start="133">
+        <P class="ENCC">
+            <SPAN Style="text-align:right">Some say </SPAN>
+            <SPAN Style="text-align:left;">we have this vision of Einstein </SPAN>
+            as an old, wrinkly man
+        </P>
+    </SYNC>
+</BODY>
+</SAMI>
+"""

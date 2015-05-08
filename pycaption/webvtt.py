@@ -2,8 +2,6 @@ import sys
 import re
 from copy import deepcopy
 
-from copy import deepcopy
-
 from .base import (
     BaseReader, BaseWriter, CaptionSet, Caption, CaptionNode
 )
