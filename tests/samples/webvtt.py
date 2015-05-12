@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-SAMPLE_WEBVTT = """WEBVTT
+SAMPLE_WEBVTT = u"""WEBVTT
 
 00:09.209 --> 00:12.312
 ( clock ticking )
@@ -30,38 +30,7 @@ It's all about an eternal Einstein.
 <LAUGHING & WHOOPS!>
 """
 
-SAMPLE_WEBVTT_OUTPUT = """WEBVTT
-
-00:09.209 --> 00:12.312
-( clock ticking )
-
-00:14.848 --> 00:17.000
-MAN:
-When we think
-♪ ...say bow, wow, ♪
-
-00:17.000 --> 00:18.752
-we have this vision of Einstein
-
-00:18.752 --> 00:20.887
-&nbsp;
-as an old, wrinkly man
-with white hair.
-
-00:20.887 --> 00:26.760
-MAN 2:
-E equals m c-squared is
-not about an old Einstein.
-
-00:26.760 --> 00:32.200
-MAN 2:
-It's all about an eternal Einstein.
-
-00:32.200 --> 00:36.200
-&lt;LAUGHING &amp; WHOOPS!>
-"""
-
-SAMPLE_WEBVTT_FROM_DFXP = """WEBVTT
+SAMPLE_WEBVTT_FROM_DFXP = u"""WEBVTT
 
 00:09.209 --> 00:12.312
 ( clock ticking )
@@ -94,7 +63,7 @@ It's all about an eternal Einstein.
 
 SAMPLE_WEBVTT_FROM_SAMI = SAMPLE_WEBVTT_FROM_DFXP
 
-SAMPLE_WEBVTT_FROM_DFXP_WITH_POSITIONING = """WEBVTT
+SAMPLE_WEBVTT_FROM_DFXP_WITH_POSITIONING = u"""WEBVTT
 
 00:01.000 --> 00:03.000 position:25%,start line:25% size:50%
 You might not remember us. We are a typical transparent region with centered text that has an outline.
@@ -110,7 +79,7 @@ This is
 the last cue
 """
 
-SAMPLE_WEBVTT_FROM_SRT = """WEBVTT
+SAMPLE_WEBVTT_FROM_SRT = u"""WEBVTT
 
 00:09.209 --> 00:12.312
 ( clock ticking )
@@ -145,7 +114,7 @@ It's all about an eternal Einstein.
 # in order to conform to the specification.
 SAMPLE_WEBVTT_FROM_WEBVTT = SAMPLE_WEBVTT_FROM_SRT
 
-SAMPLE_WEBVTT_2 = """WEBVTT
+SAMPLE_WEBVTT_2 = u"""WEBVTT
 
 1
 00:00:00.000 --> 00:00:43.000
@@ -176,10 +145,10 @@ ON TONIGHT'S SHOW...
 HEY. WATCH THIS.
 """
 
-SAMPLE_WEBVTT_EMPTY = """WEBVTT
+SAMPLE_WEBVTT_EMPTY = u"""WEBVTT
 """
 
-SAMPLE_WEBVTT_DOUBLE_BR = """WEBVTT
+SAMPLE_WEBVTT_DOUBLE_BR = u"""WEBVTT
 
 00:14.848 --> 00:18.848
 MAN:
@@ -208,4 +177,22 @@ IT'S WORD GIRL♫
 00:08.537 --> 00:10.841
 ♫WORD UP,
 IT'S WORD GIRL♫
+"""
+
+SAMPLE_WEBVTT_WITH_SETTINGS_CUE = u"""\
+WEBVTT
+
+00:01.000 --> 00:06.000 align:middle position:37%,start line:74%
+37% 74% - NARRATOR:
+
+00:01.000 --> 00:06.000 this is invalid, but will also be kept
+They built the largest,
+"""
+
+SAMPLE_WEBVTT_FROM_SCC_PROPERLY_WRITES_NEWLINES_OUTPUT = u"""\
+WEBVTT
+
+21:30.033 --> 00:00.000 align:left position:12.5%,start line:86.67% size:87.5%
+aa
+bb
 """
