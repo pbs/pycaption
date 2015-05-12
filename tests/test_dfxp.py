@@ -103,6 +103,8 @@ SAMPLE_DFXP_INVALID_POSITIONING_VALUE_TEMPLATE = u"""\
  </body>
 </tt>"""
 
+# TODO - notice that there's no "bottom" region specified in the <layout>
+# region, but it's referenced by the <div>. Decide if this is ok enough
 SAMPLE_DFXP_MULTIPLE_CAPTIONS_WITH_THE_SAME_TIMING = u"""\
 <?xml version="1.0" encoding="utf-8"?>
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling">

@@ -1,17 +1,22 @@
 import re
 
+from copy import deepcopy
+
 from bs4 import BeautifulSoup, NavigableString
 from xml.sax.saxutils import escape
 
-from .base import (
+from ..base import (
     BaseReader, BaseWriter, CaptionSet, Caption, CaptionNode,
     DEFAULT_LANGUAGE_CODE)
-from .exceptions import CaptionReadNoCaptions, CaptionReadSyntaxError
-from .geometry import (
+from ..exceptions import CaptionReadNoCaptions, CaptionReadSyntaxError
+from ..geometry import (
     Point, Stretch, UnitEnum, Padding, VerticalAlignmentEnum,
-    HorizontalAlignmentEnum, Alignment)
-from pycaption.geometry import Layout
+    HorizontalAlignmentEnum, Alignment, Layout)
 
+__all__ = [
+    'DFXP_BASE_MARKUP', 'DFXP_DEFAULT_STYLE', 'DFXP_DEFAULT_STYLE_ID',
+    'DFXP_DEFAULT_REGION_ID', 'DFXPReader', 'DFXPWriter', 'DFXP_DEFAULT_REGION'
+]
 
 DFXP_BASE_MARKUP = u'''
 <tt xmlns="http://www.w3.org/ns/ttml"
@@ -55,7 +60,7 @@ class DFXPReader(BaseReader):
         if type(content) != unicode:
             raise RuntimeError(u'The content is not a unicode string.')
 
-        dfxp_document = LayoutAwareDFXPParser(
+        dfxp_document = self._get_dfxp_parser_class()(
             content, read_invalid_positioning=self.read_invalid_positioning)
         captions = CaptionSet()
 
@@ -79,6 +84,12 @@ class DFXPReader(BaseReader):
             raise CaptionReadNoCaptions(u"empty caption file")
 
         return captions
+
+    @staticmethod
+    def _get_dfxp_parser_class():
+        """Hook method for providing a custom DFXP parser
+        """
+        return LayoutAwareDFXPParser
 
     def _translate_div(self, div):
         captions = []
@@ -208,53 +219,80 @@ class DFXPReader(BaseReader):
 
 
 class DFXPWriter(BaseWriter):
-    def __init__(self, *args, **kw):
-        self.write_inline_positioning = kw.get(
+    def __init__(self, *args, **kwargs):
+        self.write_inline_positioning = kwargs.pop(
             u'write_inline_positioning', False)
         self.p_style = False
         self.open_span = False
         self.region_creator = None
+        super(DFXPWriter, self).__init__(*args, **kwargs)
 
-    def write(self, captions, force=u''):
+    def write(self, caption_set, force=u''):
+        """Converts a CaptionSet into an equivalent corresponding DFXP file
+
+        :type caption_set: pycaption.base.CaptionSet
+        :param force: only use this language, if available in the caption_set
+
+        :rtype: unicode
+        """
         dfxp = BeautifulSoup(DFXP_BASE_MARKUP, u'xml')
         dfxp.find(u'tt')[u'xml:lang'] = u"en"
 
-        # Create the styles in the <styling> section, or a default style.
-        for style_id, style in captions.get_styles():
-            if style != {}:
-                dfxp = self._recreate_styling_tag(style_id, style, dfxp)
-        if not captions.get_styles():
-            dfxp = self._recreate_styling_tag(
-                DFXP_DEFAULT_STYLE_ID, DFXP_DEFAULT_STYLE, dfxp)
-
-        self.region_creator = RegionCreator(dfxp, captions)
-        self.region_creator.create_document_regions()
-
-        body = dfxp.find(u'body')
-        langs = captions.get_languages()
+        langs = caption_set.get_languages()
         if force in langs:
             langs = [force]
 
+        caption_set = deepcopy(caption_set)
+
+        # Loop through all captions/nodes and apply transformations to layout
+        # in function of the provided or default settings
+        for lang in langs:
+            for caption in caption_set.get_captions(lang):
+                caption.layout_info = self._relativize_and_fit_to_screen(
+                    caption.layout_info)
+                for node in caption.nodes:
+                    node.layout_info = self._relativize_and_fit_to_screen(
+                        node.layout_info)
+
+        # Create the styles in the <styling> section, or a default style.
+        for style_id, style in caption_set.get_styles():
+            if style != {}:
+                dfxp = self._recreate_styling_tag(style_id, style, dfxp)
+        if not caption_set.get_styles():
+            dfxp = self._recreate_styling_tag(
+                DFXP_DEFAULT_STYLE_ID, DFXP_DEFAULT_STYLE, dfxp)
+
+        self.region_creator = self._get_region_creator_class()(dfxp, caption_set)
+        self.region_creator.create_document_regions()
+
+        body = dfxp.find(u'body')
+
         for lang in langs:
             div = dfxp.new_tag(u'div')
-            div[u'xml:lang'] = u'%s' % lang
-            self._assign_positioning_data(div, lang, captions)
+            div[u'xml:lang'] = unicode(lang)
+            self._assign_positioning_data(div, lang, caption_set)
 
-            for caption in captions.get_captions(lang):
+            for caption in caption_set.get_captions(lang):
                 if caption.style:
                     caption_style = caption.style
                 else:
                     caption_style = {u'class': DFXP_DEFAULT_STYLE_ID}
 
                 p = self._recreate_p_tag(
-                    caption, caption_style, dfxp, captions, lang)
-                self._assign_positioning_data(p, lang, captions, caption)
+                    caption, caption_style, dfxp, caption_set, lang)
+                self._assign_positioning_data(p, lang, caption_set, caption)
                 div.append(p)
 
             body.append(div)
         self.region_creator.cleanup_regions()
         caption_content = dfxp.prettify(formatter=None)
         return caption_content
+
+    @staticmethod
+    def _get_region_creator_class():
+        """Hook method for providing a custom RegionCreator
+        """
+        return RegionCreator
 
     def _assign_positioning_data(self, tag, lang, caption_set=None,
                                  caption=None, caption_node=None):
@@ -312,7 +350,7 @@ class DFXPWriter(BaseWriter):
 
         for node in caption.nodes:
             if node.type_ == CaptionNode.TEXT:
-                line += self._encode(node.content) + u' '
+                line += self._encode(node.content)
 
             elif node.type_ == CaptionNode.BREAK:
                 line = line.rstrip() + u'<br/>\n    '
@@ -378,9 +416,14 @@ class LayoutAwareDFXPParser(BeautifulSoup):
     """This makes the xml instance capable of providing layout information
     for every one of its nodes (it adds a 'layout_info' attribute on each node)
 
-    It parses the element tree in post-order-like fashion (as dictated by the
-    dfxp specs http://www.w3.org/TR/ttaf1-dfxp/#semantics-region-layout-step-1)
-    for determining the layout information
+    It parses the element tree in pre-order-like fashion as dictated by the
+    dfxp specs here:
+    http://www.w3.org/TR/ttaf1-dfxp/#semantics-style-resolution-process-overall
+
+    TODO: Some sections require pre-order traversal, others post-order (e.g.
+    http://www.w3.org/TR/ttaf1-dfxp/#semantics-region-layout-step-1). For the
+    features we support, it was easier to use pre-order and it seems to have
+    been enough. It should be clarified whether this is ok or not.
     """
     # A lot of elements will have no positioning info. Use this flyweight
     # to save memory
@@ -415,7 +458,7 @@ class LayoutAwareDFXPParser(BeautifulSoup):
             self._pre_order_visit(div)
 
     def _pre_order_visit(self, element, inherited_layout=None):
-        """Process the xml tree elements in post order by adding a .layout_info
+        """Process the xml tree elements in pre order by adding a .layout_info
         attribute to each of them.
 
         The specs say this is how the attributes should be determined, but
@@ -519,7 +562,8 @@ class LayoutAwareDFXPParser(BeautifulSoup):
         if region_id is not None:
             region_tag = self.find(u'region', {u'xml:id': region_id})
 
-        region_scraper = LayoutInfoScraper(self, region_tag)
+        region_scraper = (
+            self._get_layout_info_scraper_class()(self, region_tag))
 
         layout_info = region_scraper.scrape_positioning_info(
             element, self.read_invalid_positioning
@@ -527,10 +571,22 @@ class LayoutAwareDFXPParser(BeautifulSoup):
 
         if layout_info and any(layout_info):
             # layout_info contains information?
-            return Layout(*layout_info)
+            return self._get_layout_class()(*layout_info)
         else:
             # layout_info doesn't contain any information
             return self.NO_POSITIONING_INFO
+
+    @staticmethod
+    def _get_layout_info_scraper_class():
+        """Hook method for getting an implementation of a LayoutInfoScraper.
+        """
+        return LayoutInfoScraper
+
+    @staticmethod
+    def _get_layout_class():
+        """Hook method for providing the Layout class to use
+        """
+        return Layout
 
 
 class LayoutInfoScraper(object):
@@ -967,6 +1023,8 @@ class RegionCreator(object):
 
         if not layout_info and caption_set:
             layout_info = caption_set.get_layout_info(lang)
+            if not layout_info:
+                layout_info = caption_set.layout_info
 
         region_id = self._region_map.get(layout_info)
 
@@ -1047,6 +1105,12 @@ def _create_internal_alignment(text_align, display_align):
 
 
 def _create_external_horizontal_alignment(horizontal_component):
+    """From an internal horizontal alignment value, create a value to be used
+    in the dfxp output file.
+
+    :type horizontal_component: unicode
+    :rtype: unicode
+    """
     result = None
 
     if horizontal_component == HorizontalAlignmentEnum.LEFT:
@@ -1064,6 +1128,12 @@ def _create_external_horizontal_alignment(horizontal_component):
 
 
 def _create_external_vertical_alignment(vertical_component):
+    """Given an alignment value used in the internal representation of the
+    caption, return a value usable in the actual dfxp output file.
+
+    :type vertical_component: unicode
+    :rtype: unicode
+    """
     result = None
 
     if vertical_component == VerticalAlignmentEnum.TOP:

@@ -1,5 +1,82 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
+"""
+3 types of SCC captions:
+    Roll-Up
+    Paint-On
+    Pop-On
+
+Commands:
+    94ae - [ENM] - Erase Non-displayed(buffer) Memory
+    942c - [EDM] - Erase Displayed Memory
+    9420 - [RCL] - Resume Caption Loading
+    9429 - [RDC] - Resume Direct Captioning
+
+    9425, 9426, 94a7 - [RU2], [RU3], [RU4] (roll up captions 2,3 or 4 rows)
+        - these commands set the number of expected lines
+
+    94ad - (in CEA-608-E: 142d) - [CR] carriage return.
+        - This actually rolls the captions up as many rows as specified by
+        [RU1], [RU2], or [RU3]
+
+    80 - no-op char. Doesn't do anything, but must be used with other
+        characters, to make a 2 byte word
+
+    97a1, 97a2, 9723 - [TO] move 1, 2 or 3 columns - Tab Over command
+        - this moves the positioning 1, 2, or 3 columns to the right
+        - Nothing regarding this is implemented.
+
+    942f - [EOC] - display the buffer on the screen - End Of Caption
+    ... - [PAC] - Preamble address code (can set positioning and style)
+        - All the PACs are specified by the first and second byte combined
+        from pycaption.scc.constants.PAC_BYTES_TO_POSITIONING_MAP
+
+    9429 - [RDC] - Resume Direct Captioning
+    94a4 - (in CEA-608-E: 1424) - [DER] Delete to End of Row
+
+
+Pop-On:
+    The commands should usually appear in this order. Not strict though, and
+    the the commands don't have to necessarily be on the same row.
+
+    1. 94ae [ENM] (erase non displayed memory)
+    2. 9420 [RCL] (resume caption loading => this command here means we're using Pop-On captions)
+    2.1? [ENM] - if step 0 was skipped?
+    3. [PAC] Positioning/ styling command (can position on columns divisible by 4)
+        The control chars is called Preamble Address Code [PAC].
+    4. If positioning needs to be on columns not divisible by 4, use a [TO] command
+    5. text
+    6. 942c [EDM] - optionally, erase the currently displayed caption
+    7. 942f [EOC] display the caption
+
+
+Roll-Up:
+    1. [RU2], [RU3] or [RU4]    - sets Roll-Up style and depth
+        - these set the Roll-Up style: (characteristic command)
+    2. [CR] to roll the display up 1 row...lol?
+    3. [PAC] - sets the indent of the base row
+
+
+Paint-On:
+    1. [RDC] - sets the Paint-On style (characteristic command)
+    2. [PAC]
+    3. text
+    4. [PAC]
+    5. text or [DER]
+
+There are some rules regarding the parity of the commands.
+
+This resource:
+http://www.theneitherworld.com/mcpoodle/SCC_TOOLS/DOCS/SCC_FORMAT.HTML
+ specifies that there are interpreters which only work if the commands have an
+ odd parity. This however is not consistent, and we might not handle well
+ these cases. Odd parity of a command means that, converting toe word into
+ binary, should result in an odd number of '1's. The PAC commands obey this
+ rule, but some do not. Some commands that do not are found in the COMMANDS
+ dictionary. This is legacy logic, that I didn't know how to handle, and
+ just carried over when implementing positioning.
+"""
+
 
 import re
 import math
@@ -18,7 +95,43 @@ from .constants import (
 )
 from .specialized_collections import (
     TimingCorrectingCaptionList, NotifyingDict, CaptionCreator,
-    InterpretableNodeCreator, DefaultProvidingPositionTracer)
+    InstructionNodeCreator)
+
+from .state_machines import DefaultProvidingPositionTracker
+from copy import deepcopy
+
+
+class NodeCreatorFactory(object):
+    """Will return instances of the given node_creator.
+
+    This is used as a means of creating new InstructionNodeCreator instances,
+    because these need to share state beyond their garbage collection, but
+    storing the information at the class level is not good either, because
+    this information must be erased after the reader's .read() operation
+    completes.
+    """
+    def __init__(self, position_tracker,
+                 node_creator=InstructionNodeCreator):
+        self.position_tracker = position_tracker
+        self.node_creator = node_creator
+
+    def new_creator(self):
+        """Returns a new instance of self.node_creator, initialized with
+        the same italics_tracker, and position_tracker
+        """
+        return self.node_creator(position_tracker=self.position_tracker)
+
+    def from_list(self, roll_rows):
+        """Wraps the node_creator's method with the same name
+
+        :param roll_rows: list of node_creator instances
+
+        :return: a node_creator instance
+        """
+        return self.node_creator.from_list(
+            roll_rows,
+            position_tracker=self.position_tracker
+        )
 
 
 class SCCReader(BaseReader):
@@ -30,13 +143,17 @@ class SCCReader(BaseReader):
         self.caption_stash = CaptionCreator()
         self.time_translator = _SccTimeTranslator()
 
+        self.node_creator_factory = NodeCreatorFactory(
+            DefaultProvidingPositionTracker()
+        )
+
         self.last_command = u''
 
         self.buffer_dict = NotifyingDict()
 
-        self.buffer_dict[u'pop'] = InterpretableNodeCreator()
-        self.buffer_dict[u'paint'] = InterpretableNodeCreator()
-        self.buffer_dict[u'roll'] = InterpretableNodeCreator()
+        self.buffer_dict[u'pop'] = self.node_creator_factory.new_creator()
+        self.buffer_dict[u'paint'] = self.node_creator_factory.new_creator()
+        self.buffer_dict[u'roll'] = self.node_creator_factory.new_creator()
 
         # Call this method when the active key changes
         self.buffer_dict.add_change_observer(self._flush_implicit_buffers)
@@ -83,10 +200,6 @@ class SCCReader(BaseReader):
         if type(content) != unicode:
             raise RuntimeError(u'The content is not a unicode string.')
 
-        # Preparation. Clear the cached positioning from when processing
-        # other captions
-        DefaultProvidingPositionTracer.reset_default_positioning()
-
         self.simulate_roll_up = simulate_roll_up
         self.time_translator.offset = offset * 1000000
         # split lines
@@ -125,7 +238,7 @@ class SCCReader(BaseReader):
             self.buffer, self.time_translator.get_time())
 
         self.caption_stash.correct_last_timing(time_translator.get_time())
-        self.buffer = InterpretableNodeCreator()
+        self.buffer = self.node_creator_factory.node_creator()
 
     def _flush_implicit_buffers(self, old_key=None, *args):
         """Convert to Captions those buffers whose behavior is implicit.
@@ -236,7 +349,7 @@ class SCCReader(BaseReader):
                 self.caption_stash.create_and_store(
                     self.buffer, self.time
                 )
-                self.buffer = InterpretableNodeCreator()
+                self.buffer = self.node_creator_factory.new_creator()
 
             self.time = self.time_translator.get_time()
 
@@ -256,7 +369,7 @@ class SCCReader(BaseReader):
             if not self.buffer.is_empty():
                 self.caption_stash.create_and_store(
                     self.buffer, self.time)
-                self.buffer = InterpretableNodeCreator()
+                self.buffer = self.node_creator_factory.new_creator()
 
             # set rows to empty, configure start time for caption
             self.roll_rows = []
@@ -264,13 +377,13 @@ class SCCReader(BaseReader):
 
         # clear pop_on buffer
         elif word == u'94ae':
-            self.buffer = InterpretableNodeCreator()
+            self.buffer = self.node_creator_factory.new_creator()
 
         # display pop_on buffer [End Of Caption]
         elif word == u'942f':
             self.time = self.time_translator.get_time()
             self.caption_stash.create_and_store(self.buffer, self.time)
-            self.buffer = InterpretableNodeCreator()
+            self.buffer = self.node_creator_factory.new_creator()
 
         # roll up captions [Carriage Return]
         elif word == u'94ad':
@@ -290,7 +403,7 @@ class SCCReader(BaseReader):
             if not self.buffer_dict[u'paint'].is_empty():
                 self.caption_stash.create_and_store(
                     self.buffer_dict[u'paint'], self.time)
-                self.buffer = InterpretableNodeCreator()
+                self.buffer = self.node_creator_factory.new_creator()
 
             # attempt to add proper end time to last caption(s)
             self.caption_stash.correct_last_timing(
@@ -337,11 +450,12 @@ class SCCReader(BaseReader):
                     self.roll_rows.pop(0)
 
                 self.roll_rows.append(self.buffer)
-                self.buffer = InterpretableNodeCreator.from_list(self.roll_rows)
+                self.buffer = self.node_creator_factory.from_list(
+                    self.roll_rows)
 
         # convert buffer and empty
         self.caption_stash.create_and_store(self.buffer, self.time)
-        self.buffer = InterpretableNodeCreator()
+        self.buffer = self.node_creator_factory.new_creator()
 
         # configure time
         self.time = self.time_translator.get_time()
@@ -360,6 +474,8 @@ class SCCWriter(BaseWriter):
 
         if caption_set.is_empty():
             return output
+
+        caption_set = deepcopy(caption_set)
 
         # Only support one language.
         lang = caption_set.get_languages()[0]

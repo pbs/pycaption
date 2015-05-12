@@ -63,10 +63,10 @@ It's all about an eternal Einstein.
 
 SAMPLE_WEBVTT_FROM_DFXP = """WEBVTT
 
-00:09.209 --> 00:12.312 align:middle
+00:09.209 --> 00:12.312
 ( clock ticking )
 
-00:14.848 --> 00:17.000 align:middle
+00:14.848 --> 00:17.000
 MAN:
 When we think
 ♪ ...say bow, wow, ♪
@@ -74,21 +74,21 @@ When we think
 00:17.000 --> 00:18.752 align:right
 we have this vision of Einstein
 
-00:18.752 --> 00:20.887 align:middle
+00:18.752 --> 00:20.887
 &nbsp;
 as an old, wrinkly man
 with white hair.
 
-00:20.887 --> 00:26.760 align:middle
+00:20.887 --> 00:26.760
 MAN 2:
 E equals m c-squared is
 not about an old Einstein.
 
-00:26.760 --> 00:32.200 align:middle
+00:26.760 --> 00:32.200
 MAN 2:
 It's all about an eternal Einstein.
 
-00:32.200 --> 00:36.200 align:middle
+00:32.200 --> 00:36.200
 &lt;LAUGHING &amp; WHOOPS!>
 """
 
@@ -186,4 +186,16 @@ MAN:
 &nbsp;
 When we think
 of "E equals m c-squared",
+"""
+
+SAMPLE_WEBVTT_OUTPUT_LONG_CUE = u"""WEBVTT
+
+00:01.000 --> 00:02.000
+NARRATOR:
+
+00:02.000 --> 00:03.000 position:25%,start line:25% size:75%
+They built the largest, most incredible, wildest, craziest,
+
+00:03.000 --> 00:04.000
+most complex machine in history.
 """
