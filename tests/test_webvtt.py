@@ -1,11 +1,15 @@
 import unittest
 
 from pycaption import (
-    WebVTTReader, WebVTTWriter, SAMIReader,
+    WebVTTReader, WebVTTWriter, SAMIReader, DFXPReader,
     CaptionReadNoCaptions, CaptionReadError, CaptionReadSyntaxError
 )
 
-from .samples import *  # noqa
+from .samples import (
+    SAMPLE_WEBVTT, SAMPLE_WEBVTT_2, SAMPLE_WEBVTT_EMPTY, SAMPLE_WEBVTT_DOUBLE_BR,
+    SAMPLE_SAMI_DOUBLE_BR, SAMPLE_SRT, DFXP_STYLE_REGION_ALIGN_CONFLICT,
+    WEBVTT_FROM_DFXP_WITH_CONFLICTING_ALIGN
+)
 
 
 class WebVTTReaderTestCase(unittest.TestCase):
@@ -94,7 +98,7 @@ class WebVTTReaderTestCase(unittest.TestCase):
                 (u"\n"
                  u"00:00:20,000 --> 00:00:10,000\n"
                  u"Start time is greater than end time.\n")
-        )
+            )
         except CaptionReadError:
             self.fail(u"Shouldn't raise CaptionReadError")
 
@@ -107,7 +111,7 @@ class WebVTTReaderTestCase(unittest.TestCase):
                  u"00:00:10,000 --> 00:00:20,000\n"
                  u"This cue starts before the previous one.\n")
 
-        )
+            )
         except CaptionReadError:
             self.fail(u"Shouldn't raise CaptionReadError")
 
@@ -116,27 +120,27 @@ class WebVTTReaderTestCase(unittest.TestCase):
             CaptionReadSyntaxError,
             WebVTTReader().read,
             (u"\nNOTE Cues without text are invalid.\n"
-            u"00:00:20,000 --> 00:00:30,000\n"
-            u"\n"
-            u"00:00:40,000 --> 00:00:50,000\n"
-            u"foo bar baz\n")
+                u"00:00:20,000 --> 00:00:30,000\n"
+                u"\n"
+                u"00:00:40,000 --> 00:00:50,000\n"
+                u"foo bar baz\n")
         )
 
         self.assertRaises(
             CaptionReadError,
             WebVTTReader(ignore_timing_errors=False).read,
             (u"00:00:20,000 --> 00:00:10,000\n"
-            u"Start time is greater than end time.")
+                u"Start time is greater than end time.")
         )
 
         self.assertRaises(
             CaptionReadError,
             WebVTTReader(ignore_timing_errors=False).read,
             (u"00:00:20,000 --> 00:00:30,000\n"
-            u"Start times should be consecutive.\n"
-            u"\n"
-            u"00:00:10,000 --> 00:00:20,000\n"
-            u"This cue starts before the previous one.\n")
+                u"Start times should be consecutive.\n"
+                u"\n"
+                u"00:00:10,000 --> 00:00:20,000\n"
+                u"This cue starts before the previous one.\n")
         )
 
 
@@ -148,3 +152,9 @@ class WebVTTWriterTestCase(unittest.TestCase):
     def test_double_br(self):
         captions = SAMIReader().read(SAMPLE_SAMI_DOUBLE_BR.decode(u'utf-8'))
         self.assertEqual(SAMPLE_WEBVTT_DOUBLE_BR.decode(u'utf-8'), self.writer.write(captions))
+
+    def test_break_node_positioning_is_ignored(self):
+        caption_set = DFXPReader().read(DFXP_STYLE_REGION_ALIGN_CONFLICT)
+        results = WebVTTWriter().write(caption_set)
+        self.assertEquals(
+            WEBVTT_FROM_DFXP_WITH_CONFLICTING_ALIGN, results)
