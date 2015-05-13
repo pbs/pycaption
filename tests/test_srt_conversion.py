@@ -12,14 +12,7 @@ from .mixins import (
     SRTTestingMixIn, DFXPTestingMixIn, SAMITestingMixIn, WebVTTTestingMixIn)
 
 
-class SRTConversionTestCase(unittest.TestCase):
-
-    @classmethod
-    def setUpClass(cls):
-        cls.captions_unicode = SRTReader().read(SAMPLE_SRT)
-
-
-class SRTtoSRTTestCase(SRTConversionTestCase, SRTTestingMixIn):
+class SRTtoSRTTestCase(unittest.TestCase, SRTTestingMixIn):
 
     def test_srt_to_srt_conversion(self):
         caption_set = SRTReader().read(SAMPLE_SRT)
@@ -28,7 +21,7 @@ class SRTtoSRTTestCase(SRTConversionTestCase, SRTTestingMixIn):
         self.assertSRTEquals(SAMPLE_SRT, results)
 
 
-class SRTtoSAMITestCase(SRTConversionTestCase, SAMITestingMixIn):
+class SRTtoSAMITestCase(unittest.TestCase, SAMITestingMixIn):
 
     def test_srt_to_sami_conversion(self):
         caption_set = SRTReader().read(SAMPLE_SRT)
@@ -37,7 +30,7 @@ class SRTtoSAMITestCase(SRTConversionTestCase, SAMITestingMixIn):
         self.assertSAMIEquals(SAMPLE_SAMI, results)
 
 
-class SRTtoDFXPTestCase(SRTConversionTestCase, DFXPTestingMixIn):
+class SRTtoDFXPTestCase(unittest.TestCase, DFXPTestingMixIn):
 
     def test_srt_to_dfxp_conversion(self):
         caption_set = SRTReader().read(SAMPLE_SRT)
@@ -49,7 +42,7 @@ class SRTtoDFXPTestCase(SRTConversionTestCase, DFXPTestingMixIn):
         )
 
 
-class SRTtoWebVTTTestCase(SRTConversionTestCase, WebVTTTestingMixIn):
+class SRTtoWebVTTTestCase(unittest.TestCase, WebVTTTestingMixIn):
 
     def test_srt_to_webvtt_conversion(self):
         caption_set = SRTReader().read(SAMPLE_SRT)

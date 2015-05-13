@@ -86,7 +86,7 @@ import textwrap
 from pycaption.base import (
     BaseReader, BaseWriter, CaptionSet, CaptionNode,
 )
-from pycaption.exceptions import CaptionReadNoCaptions
+from pycaption.exceptions import CaptionReadNoCaptions, InvalidInputError
 from .constants import (
     HEADER, COMMANDS, SPECIAL_CHARS, EXTENDED_CHARS, CHARACTERS,
     MICROSECONDS_PER_CODEWORD, CHARACTER_TO_CODE,
@@ -198,7 +198,7 @@ class SCCReader(BaseReader):
         :rtype: CaptionSet
         """
         if type(content) != unicode:
-            raise RuntimeError(u'The content is not a unicode string.')
+            raise InvalidInputError(u'The content is not a unicode string.')
 
         self.simulate_roll_up = simulate_roll_up
         self.time_translator.offset = offset * 1000000
