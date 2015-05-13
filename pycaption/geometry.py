@@ -823,6 +823,9 @@ class Layout(object):
             self.alignment == other.alignment
         )
 
+    def __ne__(self, other):
+        return not self == other
+
     def __hash__(self):
         return hash(
             hash(self.origin) * 7

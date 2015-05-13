@@ -12,6 +12,7 @@ from ..exceptions import CaptionReadNoCaptions, CaptionReadSyntaxError
 from ..geometry import (
     Point, Stretch, UnitEnum, Padding, VerticalAlignmentEnum,
     HorizontalAlignmentEnum, Alignment, Layout)
+from ..utils import is_leaf
 
 __all__ = [
     'DFXP_BASE_MARKUP', 'DFXP_DEFAULT_STYLE', 'DFXP_DEFAULT_STYLE_ID',
@@ -457,7 +458,7 @@ class LayoutAwareDFXPParser(BeautifulSoup):
         for div in self.find_all(u'div'):
             self._pre_order_visit(div)
 
-    def _pre_order_visit(self, element, inherited_layout=None):
+    def _pre_order_visit(self, element, inherit_from=None):
         """Process the xml tree elements in pre order by adding a .layout_info
         attribute to each of them.
 
@@ -465,12 +466,12 @@ class LayoutAwareDFXPParser(BeautifulSoup):
         for the region attribute this might be irrelevant and any type of tree
         walk might do.
         :param element: a BeautifulSoup Tag or NavigableString.
-        :param inherited_layout: a Layout object with all the layout info
+        :param inherit_from: a Layout object with all the layout info
                 inherited from the ancestors of the present node
         """
-        if not hasattr(element, 'contents'):
+        if is_leaf(element):
             # The element is a leaf (e.g. NavigableString or <br>)
-            element.layout_info = inherited_layout
+            element.layout_info = inherit_from
         else:
             region_id = self._determine_region_id(element)
             # TODO - this looks highly cachable. If it turns out too much
@@ -480,7 +481,7 @@ class LayoutAwareDFXPParser(BeautifulSoup):
                 self._extract_positioning_information(region_id, element))
             element.layout_info = layout_info
             for child in element.contents:
-                self._pre_order_visit(child, inherited_layout=layout_info)
+                self._pre_order_visit(child, inherit_from=layout_info)
 
     @staticmethod
     def _get_region_from_ancestors(element):
@@ -503,7 +504,8 @@ class LayoutAwareDFXPParser(BeautifulSoup):
         could be different. If this happens, discard region data
         """
         # element might be a NavigableString, not a Tag.
-        if not hasattr(element, u'findChildren'):
+        # if is_leaf(element):
+        if isinstance(element, NavigableString):
             return None
 
         region_id = None
