@@ -17,7 +17,8 @@ from .samples import (
     SAMPLE_WEBVTT_FROM_DFXP_WITH_POSITIONING,
     SAMPLE_DFXP_WITH_RELATIVIZED_POSITIONING, SAMPLE_DFXP_LONG_CUE,
     SAMPLE_WEBVTT_OUTPUT_LONG_CUE, SAMPLE_DFXP_LONG_CUE_FIT_TO_SCREEN,
-    SAMPLE_DFXP_FROM_SAMI_WITH_MARGINS)
+    SAMPLE_DFXP_FROM_SAMI_WITH_MARGINS, DFXP_STYLE_REGION_ALIGN_CONFLICT,
+    WEBVTT_FROM_DFXP_WITH_CONFLICTING_ALIGN)
 
 from .mixins import (
     SRTTestingMixIn, SAMITestingMixIn, DFXPTestingMixIn, WebVTTTestingMixIn)
@@ -223,6 +224,15 @@ class DFXPtoWebVTTTestCase(DFXPConversionTestCase, WebVTTTestingMixIn):
         self.assertTrue(isinstance(results, unicode))
         self.assertEquals(
             SAMPLE_WEBVTT_OUTPUT_LONG_CUE, results)
+
+    def test_dfxp_to_webvtt_preserves_proper_alignment(self):
+        # This failed at one point when the CaptionSet had node breaks with
+        # different positioning. It was fixed both at the DFXPReader AND the
+        # WebVTTWriter.
+        caption_set = DFXPReader().read(DFXP_STYLE_REGION_ALIGN_CONFLICT)
+        results = WebVTTWriter().write(caption_set)
+        self.assertEquals(
+            WEBVTT_FROM_DFXP_WITH_CONFLICTING_ALIGN, results)
 
 SAMPLE_DFXP_INVALID_BUT_SUPPORTED_POSITIONING_INPUT = u"""\
 <?xml version="1.0" encoding="utf-8"?>

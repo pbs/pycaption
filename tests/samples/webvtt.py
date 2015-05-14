@@ -199,3 +199,13 @@ They built the largest, most incredible, wildest, craziest,
 00:03.000 --> 00:04.000
 most complex machine in history.
 """
+
+WEBVTT_FROM_DFXP_WITH_CONFLICTING_ALIGN = u"""WEBVTT
+
+00:04.537 --> 00:07.841
+IT'S WORD GIRL♫
+
+00:08.537 --> 00:10.841
+♫WORD UP,
+IT'S WORD GIRL♫
+"""

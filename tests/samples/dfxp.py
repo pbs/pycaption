@@ -559,3 +559,27 @@ SAMPLE_DFXP_FROM_SAMI_WITH_BAD_SPAN_ALIGN = u"""<?xml version="1.0" encoding="ut
   </div>
  </body>
 </tt>"""
+
+DFXP_STYLE_REGION_ALIGN_CONFLICT = u"""<?xml version="1.0" encoding="utf-8"?>
+<tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling">
+ <head>
+  <styling>
+   <style tts:color="#ffffff" tts:fontFamily="Arial" tts:fontSize="10pt" tts:textAlign="center" xml:id="p"/>
+  </styling>
+  <layout>
+   <region tts:textAlign="left" xml:id="r0"/>
+  </layout>
+ </head>
+ <body>
+  <div region="r0" xml:lang="en-US">
+   <p begin="00:00:04.537" end="00:00:07.841" region="r0" style="p">
+    IT'S WORD GIRL♫
+   </p>
+   <p begin="00:00:08.537" end="00:00:10.841" region="r0" style="p">
+    ♫WORD UP,<br/>
+    IT'S WORD GIRL♫
+   </p>
+  </div>
+ </body>
+</tt>
+"""
