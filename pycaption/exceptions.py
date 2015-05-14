@@ -26,6 +26,6 @@ class RelativizationError(Exception):
     percentage
     """
 
-class InvalidInputError(Exception):
+class InvalidInputError(RuntimeError):
     """ Error raised when the input is invalid (i.e. a unicode string)
     """
