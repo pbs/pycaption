@@ -6,7 +6,7 @@ from .base import (
     BaseReader, BaseWriter, CaptionSet, Caption, CaptionNode
 )
 
-from .geometry import Layout
+from .geometry import Layout, Size
 
 from .exceptions import (
     CaptionReadError, CaptionReadSyntaxError, CaptionReadNoCaptions,
@@ -260,11 +260,6 @@ class WebVTTWriter(BaseWriter):
         if layout.webvtt_positioning:
             return u' {}'.format(layout.webvtt_positioning)
 
-        left_offset = None
-        top_offset = None
-        cue_width = None
-        alignment = None
-
         already_relative = False
         if not self.relativize:
             if layout.is_relative():
@@ -289,30 +284,37 @@ class WebVTTWriter(BaseWriter):
         if self.fit_to_screen:
             layout = layout.fit_to_screen()
 
+        left_offset = 0
+        top_offset = 100
+        cue_width = 100
+        alignment = None
+
         if layout.origin:
-            left_offset = layout.origin.x
-            top_offset = layout.origin.y
+            left_offset = layout.origin.x.value
+            top_offset = layout.origin.y.value
 
         if layout.extent:
-            cue_width = layout.extent.horizontal
+            cue_width = layout.extent.horizontal.value
 
         if layout.padding:
-            if layout.padding.start and left_offset:
+            if layout.padding.start:
                 # Since there is no padding in WebVTT, the left padding is
                 # added to the total left offset (if it is defined and not
                 # relative),
-                if left_offset:
-                    left_offset += layout.padding.start
+                left_offset += layout.padding.start.value
                 # and removed from the total cue width
-                if cue_width:
-                    cue_width -= layout.padding.start
+                cue_width -= layout.padding.start.value
             # the right padding is cut out of the total cue width,
-            if layout.padding.end and cue_width:
-                cue_width -= layout.padding.end
+            if layout.padding.end:
+                cue_width -= layout.padding.end.value
             # the top padding is added to the top offset
             # (if it is defined and not relative)
             if layout.padding.before and top_offset:
-                top_offset += layout.padding.before
+                new_top_offset = top_offset + layout.padding.before.value
+                if new_top_offset <= 100:
+                    top_offset = new_top_offset
+                else:
+                    top_offset = 100
             # and the bottom padding is ignored because the cue box is only as
             # long vertically as the text it contains and nothing can be cut
             # out
@@ -324,14 +326,25 @@ class WebVTTWriter(BaseWriter):
 
         cue_settings = u''
 
+        # Assume align:middle (default) and calculate position using the middle
+        # of the cue box as reference (conform specification)
+        position = left_offset + cue_width / 2
+
         if alignment and alignment != u'middle':
+            if alignment in [u'start', u'left']:
+                # Calculate position using the left of the cue box as reference
+                position = left_offset
+            elif alignment in [u'end', u'right']:
+                # Calculate position using the right of the cue box as reference
+                position = left_offset + cue_width
             cue_settings += u" align:" + alignment
-        if left_offset:
-            cue_settings += u" position:{},start".format(unicode(left_offset))
-        if top_offset:
-            cue_settings += u" line:" + unicode(top_offset)
-        if cue_width:
-            cue_settings += u" size:" + unicode(cue_width)
+            cue_settings += u" position:" + unicode(Size(position, u'%'))
+        elif round(position, 2) != 50:
+            cue_settings += u" position:" + unicode(Size(position, u'%'))
+        if round(top_offset, 2) != 100:
+            cue_settings += u" line:" + unicode(Size(top_offset, u'%'))
+        if round(cue_width, 2) != 100:
+            cue_settings += u" size:" + unicode(Size(cue_width, u'%'))
 
         return cue_settings
 
