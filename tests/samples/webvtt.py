@@ -94,16 +94,16 @@ It's all about an eternal Einstein.
 
 SAMPLE_WEBVTT_FROM_DFXP_WITH_POSITIONING = u"""WEBVTT
 
-00:01.000 --> 00:03.000 line:25% size:50%
+00:01.000 --> 00:03.000 line:4 size:50%
 You might not remember us. We are a typical transparent region with centered text that has an outline.
 
-00:03.500 --> 00:05.000 align:right position:75% line:25% size:50%
+00:03.500 --> 00:05.000 align:right position:75% line:4 size:50%
 had personality.
 
-00:05.500 --> 00:07.000 align:left position:50% line:50% size:25%
+00:05.500 --> 00:07.000 align:left position:50% line:8 size:25%
 Hello there, children! Have you seen any visitors?
 
-00:07.500 --> 00:09.000 align:right position:50% line:75% size:25%
+00:07.500 --> 00:09.000 align:right position:50% line:13 size:25%
 This is
 the last cue
 """
@@ -191,7 +191,7 @@ SAMPLE_WEBVTT_OUTPUT_LONG_CUE = u"""WEBVTT
 00:01.000 --> 00:02.000
 NARRATOR:
 
-00:02.000 --> 00:03.000 position:62.5% line:25% size:75%
+00:02.000 --> 00:03.000 position:62.5% line:4 size:75%
 They built the largest, most incredible, wildest, craziest,
 
 00:03.000 --> 00:04.000
@@ -211,7 +211,7 @@ IT'S WORD GIRL♫
 SAMPLE_WEBVTT_WITH_SETTINGS_CUE = u"""\
 WEBVTT
 
-00:01.000 --> 00:06.000 position:68.5% line:74% size:63%
+00:01.000 --> 00:06.000 position:68.5% line:13 size:63%
 37% 74% - NARRATOR:
 
 00:01.000 --> 00:06.000 this is invalid, but will also be kept
@@ -221,7 +221,7 @@ They built the largest,
 SAMPLE_WEBVTT_FROM_SCC_PROPERLY_WRITES_NEWLINES_OUTPUT = u"""\
 WEBVTT
 
-21:30.033 --> 00:00.000 align:left position:12.5% line:86.67% size:87.5%
+21:30.033 --> 00:00.000 align:left position:12.5% line:15 size:87.5%
 aa
 bb
 """

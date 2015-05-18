@@ -342,7 +342,15 @@ class WebVTTWriter(BaseWriter):
         elif round(position, 2) != 50:
             cue_settings += u" position:" + unicode(Size(position, u'%'))
         if round(top_offset, 2) != 100:
-            cue_settings += u" line:" + unicode(Size(top_offset, u'%'))
+            # Most players are not up to date with the WebVTT specs and for
+            # some reason don't play well with line values expressed as
+            # percentages. We therefore convert these values to line numbers.
+            # The spec states that the line-height is 5.33vh, so the top_offset
+            # /5.33 should be ok. Experimentally though, this seemed to result
+            # in the cue being placed a bit too low in most players. The -1
+            # is a quick fix but seems to work pretty well.
+            line = top_offset / 5.33 - 1
+            cue_settings += u" line:" + unicode(int(round(line, 0)))
         if round(cue_width, 2) != 100:
             cue_settings += u" size:" + unicode(Size(cue_width, u'%'))
 
