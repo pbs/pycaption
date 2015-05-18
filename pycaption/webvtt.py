@@ -9,8 +9,8 @@ from .base import (
 from .geometry import Layout
 
 from .exceptions import (
-    CaptionReadError, CaptionReadSyntaxError,
-    CaptionReadNoCaptions, RelativizationError
+    CaptionReadError, CaptionReadSyntaxError, CaptionReadNoCaptions,
+    InvalidInputError
 )
 
 # A WebVTT timing line has both start/end times and layout related settings
@@ -55,7 +55,7 @@ class WebVTTReader(BaseReader):
 
     def read(self, content, lang=u'en-US'):
         if type(content) != unicode:
-            raise RuntimeError('The content is not a unicode string.')
+            raise InvalidInputError('The content is not a unicode string.')
 
         caption_set = CaptionSet()
         caption_set.set_captions(lang, self._parse(content.splitlines()))

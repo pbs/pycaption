@@ -50,7 +50,8 @@ from bs4 import BeautifulSoup, NavigableString
 from .base import (
     BaseReader, BaseWriter, CaptionSet, Caption, CaptionNode,
     DEFAULT_LANGUAGE_CODE)
-from .exceptions import CaptionReadNoCaptions, CaptionReadSyntaxError
+from .exceptions import (
+    CaptionReadNoCaptions, CaptionReadSyntaxError, InvalidInputError)
 from .geometry import (
     Layout, Alignment, Padding, Size
 )
@@ -82,7 +83,7 @@ class SAMIReader(BaseReader):
 
     def read(self, content):
         if type(content) != unicode:
-            raise RuntimeError('The content is not a unicode string.')
+            raise InvalidInputError('The content is not a unicode string.')
 
         content, doc_styles, doc_langs = (
             self._get_sami_parser_class()().feed(content))

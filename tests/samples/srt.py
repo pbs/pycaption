@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-SAMPLE_SRT_UNICODE = u"""1
+SAMPLE_SRT = u"""1
 00:00:09,209 --> 00:00:12,312
 ( clock ticking )
 
@@ -35,44 +35,7 @@ It's all about an eternal Einstein.
 <LAUGHING & WHOOPS!>
 """
 
-
-SAMPLE_SRT_UTF8 = """1
-00:00:09,209 --> 00:00:12,312
-( clock ticking )
-
-2
-00:00:14,848 --> 00:00:17,000
-MAN:
-When we think
-♪ ...say bow, wow, ♪
-
-3
-00:00:17,000 --> 00:00:18,752
-we have this vision of Einstein
-
-4
-00:00:18,752 --> 00:00:20,887
-as an old, wrinkly man
-with white hair.
-
-5
-00:00:20,887 --> 00:00:26,760
-MAN 2:
-E equals m c-squared is
-not about an old Einstein.
-
-6
-00:00:26,760 --> 00:00:32,200
-MAN 2:
-It's all about an eternal Einstein.
-
-7
-00:00:32,200 --> 00:00:36,200
-<LAUGHING & WHOOPS!>
-"""
-
-
-SAMPLE_SRT = """1
+SAMPLE_SRT_ASCII = u"""1
 00:00:09,209 --> 00:00:12,312
 ( clock ticking )
 
@@ -111,8 +74,7 @@ It's all about an eternal Einstein.
 some more text
 """
 
-
-SAMPLE_SRT_NUMERIC = """35
+SAMPLE_SRT_NUMERIC = u"""35
 00:00:32,290 --> 00:00:32,890
 TO  FIND  HIM.            IF
 
@@ -142,5 +104,5 @@ STD  OUT
 """
 
 
-SAMPLE_SRT_EMPTY = """
+SAMPLE_SRT_EMPTY = u"""
 """

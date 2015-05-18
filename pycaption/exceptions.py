@@ -25,3 +25,7 @@ class RelativizationError(Exception):
     Error raised when absolute positioning cannot be converted to
     percentage
     """
+
+class InvalidInputError(RuntimeError):
+    """ Error raised when the input is invalid (i.e. a unicode string)
+    """

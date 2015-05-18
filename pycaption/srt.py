@@ -2,7 +2,7 @@ from copy import deepcopy
 
 from .base import (
     BaseReader, BaseWriter, CaptionSet, Caption, CaptionNode)
-from .exceptions import CaptionReadNoCaptions
+from .exceptions import CaptionReadNoCaptions, InvalidInputError
 
 
 class SRTReader(BaseReader):
@@ -15,7 +15,7 @@ class SRTReader(BaseReader):
 
     def read(self, content, lang=u'en-US'):
         if type(content) != unicode:
-            raise RuntimeError('The content is not a unicode string.')
+            raise InvalidInputError('The content is not a unicode string.')
 
         caption_set = CaptionSet()
         lines = content.splitlines()
