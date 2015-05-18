@@ -131,9 +131,9 @@ class DFXPtoDFXPTestCase(unittest.TestCase, DFXPTestingMixIn):
         self.assertEqual(result, SAMPLE_DFXP_WITH_RELATIVIZED_POSITIONING)
 
     def test_fit_to_screen(self):
-        # Check if caption width is explicitly set and recalculate it if
-        # necessary. This prevents long captions from being cut out of the
-        # screen.
+        # Check if caption width and height are is explicitly set and
+        # recalculate it if necessary. This prevents long captions from being
+        # cut out of the screen.
         caption_set = DFXPReader().read(SAMPLE_DFXP_LONG_CUE)
         result = DFXPWriter().write(caption_set)
         self.assertEqual(result, SAMPLE_DFXP_LONG_CUE_FIT_TO_SCREEN)
