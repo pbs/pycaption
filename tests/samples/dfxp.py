@@ -538,6 +538,35 @@ SAMPLE_DFXP_MULTIPLE_REGIONS_OUTPUT = u"""\
  </body>
 </tt>"""
 
+SAMPLE_DFXP_TO_RENDER_WITH_ONLY_DEFAULT_POSITIONING_INPUT = u"""\
+<?xml version="1.0" encoding="utf-8"?>
+<tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling">
+ <head>
+  <styling>
+   <style tts:color="#ffeedd" tts:fontFamily="Arial" tts:fontSize="10pt" tts:textAlign="center" xml:id="p" tts:origin="10% 20%" tts:extent="10% 30%"/>
+   <style tts:color="#ffeedd" tts:fontFamily="Arial" tts:fontSize="10pt" tts:textAlign="left" xml:id="p2"/>
+  </styling>
+  <layout>
+   <region tts:displayAlign="after" tts:textAlign="center" xml:id="bottom"/>
+   <region tts:displayAlign="after" tts:extent="30px 40px" tts:origin="40px 50px" tts:textAlign="center" xml:id="r0"/>
+   <region tts:displayAlign="after" tts:extent="50% 50%" tts:origin="10% 30%" tts:textAlign="center" xml:id="r1"/>
+   <region tts:displayAlign="after" tts:padding="2c 2c 2c 2c" tts:textAlign="center" xml:id="r2"/>
+   <region tts:displayAlign="after" tts:extent="3em 4em" tts:padding="3px 4px 5px 4px" tts:textAlign="center" xml:id="r3"/>
+   <region tts:displayAlign="after" tts:textAlign="start" xml:id="r4"/>
+  </layout>
+ </head>
+ <body>
+  <div region="bottom" xml:lang="en-US">
+   <p begin="00:00:02.700" end="00:00:05.700" region="r0" style="p">
+    Hello there!
+   </p>
+   <p begin="00:00:05.700" end="00:00:06.210" region="r1" style="p2">
+    How are you?
+   </p>
+  </div>
+ </body>
+</tt>"""
+
 ##
 # When converting from DFXP to DFXP, notice the extra region "r0" is added, to
 # support the spam that sets the "tts:textAlign" attribute.

@@ -9,10 +9,14 @@ from pycaption.geometry import (
 
 from pycaption.dfxp.base import _create_internal_alignment
 
+from samples.dfxp import (
+    SAMPLE_DFXP_TO_RENDER_WITH_ONLY_DEFAULT_POSITIONING_INPUT)
+
 
 class SinglePositioningDFXPWRiterTestCase(unittest.TestCase):
     def test_only_the_default_region_is_created(self):
-        caption_set = DFXPReader().read(SAMPLE_DFXP_MULTIPLE_REGIONS_OUTPUT)
+        caption_set = DFXPReader().read(
+            SAMPLE_DFXP_TO_RENDER_WITH_ONLY_DEFAULT_POSITIONING_INPUT)
 
         dfxp = SinglePositioningDFXPWriter().write(caption_set)
         layout = BeautifulSoup(dfxp, features='html.parser').findChild('layout')  # noqa
@@ -20,7 +24,8 @@ class SinglePositioningDFXPWRiterTestCase(unittest.TestCase):
         self.assertEqual(len(layout.findChildren('region')), 1)
 
     def test_only_the_default_region_is_referenced(self):
-        caption_set = DFXPReader().read(SAMPLE_DFXP_MULTIPLE_REGIONS_OUTPUT)
+        caption_set = DFXPReader().read(
+            SAMPLE_DFXP_TO_RENDER_WITH_ONLY_DEFAULT_POSITIONING_INPUT)
 
         dfxp = SinglePositioningDFXPWriter().write(caption_set)
 
@@ -31,7 +36,8 @@ class SinglePositioningDFXPWRiterTestCase(unittest.TestCase):
                 self.assertEqual(elem['region'], DFXP_DEFAULT_REGION_ID)
 
     def test_only_the_custom_region_is_created(self):
-        caption_set = DFXPReader().read(SAMPLE_DFXP_MULTIPLE_REGIONS_OUTPUT)
+        caption_set = DFXPReader().read(
+            SAMPLE_DFXP_TO_RENDER_WITH_ONLY_DEFAULT_POSITIONING_INPUT)
 
         new_region = Layout(
             alignment=Alignment(
@@ -56,7 +62,8 @@ class SinglePositioningDFXPWRiterTestCase(unittest.TestCase):
         self.assertEqual(internal_alignment.vertical, VerticalAlignmentEnum.TOP)  # noqa
 
     def test_only_the_specified_custom_attributes_are_created_for_the_region(self):  # noqa
-        caption_set = DFXPReader().read(SAMPLE_DFXP_MULTIPLE_REGIONS_OUTPUT)
+        caption_set = DFXPReader().read(
+            SAMPLE_DFXP_TO_RENDER_WITH_ONLY_DEFAULT_POSITIONING_INPUT)
 
         new_region = Layout(
             alignment=Alignment(
@@ -72,7 +79,8 @@ class SinglePositioningDFXPWRiterTestCase(unittest.TestCase):
         self.assertEqual(len(region.attrs), 3)
 
     def test_only_the_custom_region_is_referenced(self):
-        caption_set = DFXPReader().read(SAMPLE_DFXP_MULTIPLE_REGIONS_OUTPUT)
+        caption_set = DFXPReader().read(
+            SAMPLE_DFXP_TO_RENDER_WITH_ONLY_DEFAULT_POSITIONING_INPUT)
 
         # it's easier to copy this than create a new one
         new_region = deepcopy(DFXP_DEFAULT_REGION)
@@ -95,40 +103,13 @@ class SinglePositioningDFXPWRiterTestCase(unittest.TestCase):
         self.assertEqual(len(referenced_region_ids), 1)
         self.assertEqual(referenced_region_ids.pop(), created_region_id)
 
+    def test_styles_dont_contain_text_align_attribute(self):
+        caption_set = DFXPReader().read(
+            SAMPLE_DFXP_TO_RENDER_WITH_ONLY_DEFAULT_POSITIONING_INPUT)
 
-SAMPLE_DFXP_MULTIPLE_REGIONS_OUTPUT = u"""\
-<?xml version="1.0" encoding="utf-8"?>
-<tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling">
- <head>
-  <styling>
-   <style tts:color="#ffeedd" tts:fontFamily="Arial" tts:fontSize="10pt" tts:textAlign="center" xml:id="p"/>
-  </styling>
-  <layout>
-   <region tts:displayAlign="after" tts:textAlign="center" xml:id="bottom"/>
-   <region tts:displayAlign="after" tts:extent="30px 40px" tts:origin="40px 50px" tts:textAlign="center" xml:id="r0"/>
-   <region tts:displayAlign="after" tts:extent="50% 50%" tts:origin="10% 30%" tts:textAlign="center" xml:id="r1"/>
-   <region tts:displayAlign="after" tts:padding="2c 2c 2c 2c" tts:textAlign="center" xml:id="r2"/>
-   <region tts:displayAlign="after" tts:extent="3em 4em" tts:padding="3px 4px 5px 4px" tts:textAlign="center" xml:id="r3"/>
-   <region tts:displayAlign="after" tts:textAlign="start" xml:id="r4"/>
-  </layout>
- </head>
- <body>
-  <div region="bottom" xml:lang="en-US">
-   <p begin="00:00:02.700" end="00:00:05.700" region="r0" style="p">
-    Hello there!
-   </p>
-   <p begin="00:00:05.700" end="00:00:06.210" region="r1" style="p">
-    How are you?
-   </p>
-   <p begin="00:00:07.700" end="00:00:09.210" region="r2" style="p">
-    &gt;&gt; I'm fine, thank you &lt;&lt; replied someone.<span region="r1">&gt;&gt;And now we're going to have fun&lt;&lt;</span>
-   </p>
-   <p begin="00:00:10.707" end="00:00:11.210" region="r3" style="p">
-    What do you have in mind?
-   </p>
-   <p begin="00:00:12.900" end="00:00:13.900" region="r4" style="p" tts:textAlign="start">
-    To write random words here!
-   </p>
-  </div>
- </body>
-</tt>"""
+        result = SinglePositioningDFXPWriter().write(caption_set)
+
+        caption_set = DFXPReader().read(result)
+
+        for _, style in caption_set.get_styles():
+            self.assertFalse('text-align' in style)

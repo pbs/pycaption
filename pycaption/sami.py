@@ -323,7 +323,7 @@ class SAMIReader(BaseReader):
         :param align: A unicode string representing a CSS text-align value
         """
         if not self.first_span_alignment:
-            self.first_span_alignment = Alignment.from_horizontal_and_vertical_align(
+            self.first_span_alignment = Alignment.from_horizontal_and_vertical_align(  # noqa
                 text_align=align
             )
 
