@@ -27,25 +27,25 @@ class SinglePositioningDFXPWriter(DFXPWriter):
         return super(SinglePositioningDFXPWriter, self).write(captions_set, force)  # noqa
 
     @staticmethod
-    def _create_single_positioning_caption_set(captions_set, positioning):
+    def _create_single_positioning_caption_set(caption_set, positioning):
         """Return a caption where all the positioning information was
         replaced from positioning
 
-        :type captions_set: pycaption.base.CaptionSet
+        :type caption_set: pycaption.base.CaptionSet
         :rtype: pycaption.base.CaptionSet
         """
         # If SinglePositioningDFXPWriter would modify the state of the caption
         # set, any writer using the same caption_set thereafter would be
         # affected. At the moment we know we don't use any other writers, but
         # this is important and mustn't be neglected
-        captions_set = deepcopy(captions_set)
+        caption_set = deepcopy(caption_set)
 
-        captions_set.layout_info = positioning
+        caption_set.layout_info = positioning
 
-        for lang in captions_set.get_languages():
-            captions_set.set_layout_info(lang, positioning)
+        for lang in caption_set.get_languages():
+            caption_set.set_layout_info(lang, positioning)
 
-            caption_list = captions_set.get_captions(lang)
+            caption_list = caption_set.get_captions(lang)
             for caption in caption_list:
                 caption.layout_info = positioning
 
@@ -53,4 +53,8 @@ class SinglePositioningDFXPWriter(DFXPWriter):
                     if hasattr(node, 'layout_info'):
                         node.layout_info = positioning
 
-        return captions_set
+        for style_name, style in caption_set.get_styles():
+            if 'text-align' in style:
+                style.pop('text-align')
+
+        return caption_set
