@@ -233,6 +233,26 @@ SAMPLE_SAMI_WITH_BAD_SPAN_ALIGN = u"""
 </SAMI>
 """
 
+SAMPLE_SAMI_WITH_BAD_DIV_ALIGN = u"""
+<SAMI>
+<HEAD>
+    <STYLE TYPE="Text/css">
+    <!--
+        P {font-size: 24pt; text-align: center; font-family: Tahoma; font-weight: bold; color: #FFFFFF; background-color: #000000;}
+        .SUBTTL {Name: 'Subtitles'; Lang: en-US; SAMIType: CC; margin-top: 20px; margin-right: 20px; margin-bottom: 20px; margin-left: 20px;}
+    -->
+    </STYLE>
+</HEAD>
+<BODY>
+    <SYNC start="133">
+        <P class="ENCC">
+            Some say <DIV Style="text-align:right;">we have this vision of Einstein</DIV> as an old, wrinkly man
+        </P>
+    </SYNC>
+</BODY>
+</SAMI>
+"""
+
 SAMPLE_SAMI_WITH_MULTIPLE_SPAN_ALIGNS = u"""
 <SAMI>
 <HEAD>
