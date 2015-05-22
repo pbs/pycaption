@@ -202,6 +202,11 @@ class SAMIReader(BaseReader):
                     inherit_from=layout_info
                 )
                 caption = Caption(layout_info=caption_layout)
+                for node in self.line:
+                    node.layout_info = Layout(
+                        alignment=self.first_span_alignment,
+                        inherit_from=node.layout_info
+                    )
                 self.first_span_alignment = None
 
                 caption.start = start
@@ -243,7 +248,7 @@ class SAMIReader(BaseReader):
             )
             # recursively call function for any children elements
             for a in tag.contents:
-                self._translate_tag(a)
+                self._translate_tag(a, inherit_from)
             self.line.append(
                 CaptionNode.create_style(False, {u'italics': True}))
         elif tag.name == u'span':
@@ -272,7 +277,7 @@ class SAMIReader(BaseReader):
             self.line.append(node)
         else:
             for a in tag.contents:
-                self._translate_tag(a)
+                self._translate_tag(a, inherit_from)
 
     def _translate_attrs(self, tag):
         attrs = {}
