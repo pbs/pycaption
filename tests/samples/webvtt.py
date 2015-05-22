@@ -40,7 +40,7 @@ MAN:
 When we think
 ♪ ...say bow, wow, ♪
 
-00:17.000 --> 00:18.752 align:right position:100%
+00:17.000 --> 00:18.752 align:right
 we have this vision of Einstein
 
 00:18.752 --> 00:20.887
@@ -61,49 +61,20 @@ It's all about an eternal Einstein.
 &lt;LAUGHING &amp; WHOOPS!>
 """
 
-SAMPLE_WEBVTT_FROM_SAMI = u"""WEBVTT
-
-00:09.209 --> 00:12.312 size:99.58%
-( clock ticking )
-
-00:14.848 --> 00:17.000 size:99.58%
-MAN:
-When we think
-♪ ...say bow, wow, ♪
-
-00:17.000 --> 00:18.752 align:right position:99.79% size:99.58%
-we have this vision of Einstein
-
-00:18.752 --> 00:20.887 size:99.58%
-&nbsp;
-as an old, wrinkly man
-with white hair.
-
-00:20.887 --> 00:26.760 size:99.58%
-MAN 2:
-E equals m c-squared is
-not about an old Einstein.
-
-00:26.760 --> 00:32.200 size:99.58%
-MAN 2:
-It's all about an eternal Einstein.
-
-00:32.200 --> 00:36.200 size:99.58%
-&lt;LAUGHING &amp; WHOOPS!>
-"""
+SAMPLE_WEBVTT_FROM_SAMI = SAMPLE_WEBVTT_FROM_DFXP
 
 SAMPLE_WEBVTT_FROM_DFXP_WITH_POSITIONING = u"""WEBVTT
 
-00:01.000 --> 00:03.000 line:4 size:50%
+00:01.000 --> 00:03.000 position:25%,start line:25% size:50%
 You might not remember us. We are a typical transparent region with centered text that has an outline.
 
-00:03.500 --> 00:05.000 align:right position:75% line:4 size:50%
+00:03.500 --> 00:05.000 align:right position:25%,start line:25% size:50%
 had personality.
 
-00:05.500 --> 00:07.000 align:left position:50% line:8 size:25%
+00:05.500 --> 00:07.000 align:left position:50%,start line:50% size:25%
 Hello there, children! Have you seen any visitors?
 
-00:07.500 --> 00:09.000 align:right position:50% line:13 size:25%
+00:07.500 --> 00:09.000 align:right position:25%,start line:75% size:25%
 This is
 the last cue
 """
@@ -191,7 +162,7 @@ SAMPLE_WEBVTT_OUTPUT_LONG_CUE = u"""WEBVTT
 00:01.000 --> 00:02.000
 NARRATOR:
 
-00:02.000 --> 00:03.000 position:62.5% line:4 size:75%
+00:02.000 --> 00:03.000 position:25%,start line:25% size:75%
 They built the largest, most incredible, wildest, craziest,
 
 00:03.000 --> 00:04.000
@@ -211,7 +182,7 @@ IT'S WORD GIRL♫
 SAMPLE_WEBVTT_WITH_SETTINGS_CUE = u"""\
 WEBVTT
 
-00:01.000 --> 00:06.000 position:68.5% line:13 size:63%
+00:01.000 --> 00:06.000 align:middle position:37%,start line:74%
 37% 74% - NARRATOR:
 
 00:01.000 --> 00:06.000 this is invalid, but will also be kept
@@ -221,7 +192,7 @@ They built the largest,
 SAMPLE_WEBVTT_FROM_SCC_PROPERLY_WRITES_NEWLINES_OUTPUT = u"""\
 WEBVTT
 
-21:30.033 --> 00:00.000 align:left position:12.5% line:15 size:87.5%
+21:30.033 --> 00:00.000 align:left position:12.5%,start line:86.67% size:87.5%
 aa
 bb
 """
