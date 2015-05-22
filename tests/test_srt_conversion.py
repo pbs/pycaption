@@ -3,94 +3,49 @@ import unittest
 from pycaption import (
     SRTReader, SRTWriter, SAMIWriter, DFXPWriter, WebVTTWriter)
 
-from .samples import (
-    SAMPLE_SAMI, SAMPLE_SRT, SAMPLE_DFXP,
-    SAMPLE_SRT_UTF8, SAMPLE_SAMI_UNICODE, SAMPLE_SRT_UNICODE,
-    SAMPLE_DFXP_UNICODE
-)
+from .samples.dfxp import SAMPLE_DFXP
+from .samples.srt import SAMPLE_SRT
+from .samples.sami import SAMPLE_SAMI
+from .samples.webvtt import SAMPLE_WEBVTT_FROM_SRT
+
 from .mixins import (
     SRTTestingMixIn, DFXPTestingMixIn, SAMITestingMixIn, WebVTTTestingMixIn)
-from tests.samples import SAMPLE_WEBVTT_FROM_SRT
 
 
-class SRTConversionTestCase(unittest.TestCase):
-
-    @classmethod
-    def setUpClass(cls):
-        cls.captions = SRTReader().read(SAMPLE_SRT.decode(u'utf-8'))
-        cls.captions_utf8 = SRTReader().read(SAMPLE_SRT_UTF8.decode(u'utf-8'))
-        cls.captions_unicode = SRTReader().read(SAMPLE_SRT_UNICODE)
-
-
-class SRTtoSRTTestCase(SRTConversionTestCase, SRTTestingMixIn):
+class SRTtoSRTTestCase(unittest.TestCase, SRTTestingMixIn):
 
     def test_srt_to_srt_conversion(self):
-        results = SRTWriter().write(self.captions)
+        caption_set = SRTReader().read(SAMPLE_SRT)
+        results = SRTWriter().write(caption_set)
         self.assertTrue(isinstance(results, unicode))
-        self.assertSRTEquals(SAMPLE_SRT.decode(u'utf-8'), results)
-
-    def test_srt_to_srt_utf8_conversion(self):
-        results = SRTWriter().write(self.captions_utf8)
-        self.assertTrue(isinstance(results, unicode))
-        self.assertSRTEquals(SAMPLE_SRT_UNICODE, results)
-
-    def test_srt_to_srt_unicode_conversion(self):
-        results = SRTWriter().write(self.captions_unicode)
-        self.assertTrue(isinstance(results, unicode))
-        self.assertSRTEquals(SAMPLE_SRT_UNICODE, results)
+        self.assertSRTEquals(SAMPLE_SRT, results)
 
 
-class SRTtoSAMITestCase(SRTConversionTestCase, SAMITestingMixIn):
+class SRTtoSAMITestCase(unittest.TestCase, SAMITestingMixIn):
 
     def test_srt_to_sami_conversion(self):
-        results = SAMIWriter().write(self.captions)
+        caption_set = SRTReader().read(SAMPLE_SRT)
+        results = SAMIWriter().write(caption_set)
         self.assertTrue(isinstance(results, unicode))
-        self.assertSAMIEquals(SAMPLE_SAMI.decode(u'utf-8'), results)
-
-    def test_srt_to_sami_utf8_conversion(self):
-        results = SAMIWriter().write(self.captions_utf8)
-        self.assertTrue(isinstance(results, unicode))
-        self.assertSAMIEquals(SAMPLE_SAMI_UNICODE, results)
-
-    def test_srt_to_sami_unicode_conversion(self):
-        results = SAMIWriter().write(self.captions_unicode)
-        self.assertTrue(isinstance(results, unicode))
-        self.assertSAMIEquals(SAMPLE_SAMI_UNICODE, results)
+        self.assertSAMIEquals(SAMPLE_SAMI, results)
 
 
-class SRTtoDFXPTestCase(SRTConversionTestCase, DFXPTestingMixIn):
+class SRTtoDFXPTestCase(unittest.TestCase, DFXPTestingMixIn):
 
     def test_srt_to_dfxp_conversion(self):
-        results = DFXPWriter().write(self.captions)
+        caption_set = SRTReader().read(SAMPLE_SRT)
+        results = DFXPWriter().write(caption_set)
         self.assertTrue(isinstance(results, unicode))
         self.assertDFXPEquals(
-            SAMPLE_DFXP.decode(u'utf-8'), results, ignore_styling=True, ignore_spans=True
-        )
-
-    def test_srt_to_dfxp_utf8_conversion(self):
-        results = DFXPWriter().write(self.captions_utf8)
-        self.assertTrue(isinstance(results, unicode))
-        self.assertDFXPEquals(
-            SAMPLE_DFXP_UNICODE, results, ignore_styling=True, ignore_spans=True
-        )
-
-    def test_srt_to_dfxp_unicode_conversion(self):
-        results = DFXPWriter().write(self.captions_unicode)
-        self.assertTrue(isinstance(results, unicode))
-        self.assertDFXPEquals(
-            SAMPLE_DFXP_UNICODE, results,
+            SAMPLE_DFXP, results,
             ignore_styling=True, ignore_spans=True
         )
 
 
-class SRTtoWebVTTTestCase(SRTConversionTestCase, WebVTTTestingMixIn):
+class SRTtoWebVTTTestCase(unittest.TestCase, WebVTTTestingMixIn):
 
     def test_srt_to_webvtt_conversion(self):
-        results = WebVTTWriter().write(self.captions_utf8)
+        caption_set = SRTReader().read(SAMPLE_SRT)
+        results = WebVTTWriter().write(caption_set)
         self.assertTrue(isinstance(results, unicode))
-        self.assertWebVTTEquals(SAMPLE_WEBVTT_FROM_SRT.decode(u'utf-8'), results)
-
-    def test_srt_to_webvtt_unicode_conversion(self):
-        results = WebVTTWriter().write(self.captions_unicode)
-        self.assertTrue(isinstance(results, unicode))
-        self.assertWebVTTEquals(SAMPLE_WEBVTT_FROM_SRT.decode(u'utf-8'), results)
+        self.assertWebVTTEquals(SAMPLE_WEBVTT_FROM_SRT, results)

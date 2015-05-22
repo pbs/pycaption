@@ -5,9 +5,11 @@ from pycaption import (
     CaptionReadNoCaptions, CaptionReadError, CaptionReadSyntaxError
 )
 
-from .samples import (
+from .samples.dfxp import DFXP_STYLE_REGION_ALIGN_CONFLICT
+from .samples.sami import SAMPLE_SAMI_DOUBLE_BR
+from .samples.srt import SAMPLE_SRT
+from .samples.webvtt import (
     SAMPLE_WEBVTT, SAMPLE_WEBVTT_2, SAMPLE_WEBVTT_EMPTY, SAMPLE_WEBVTT_DOUBLE_BR,
-    SAMPLE_SAMI_DOUBLE_BR, SAMPLE_SRT, DFXP_STYLE_REGION_ALIGN_CONFLICT,
     WEBVTT_FROM_DFXP_WITH_CONFLICTING_ALIGN
 )
 
@@ -18,21 +20,21 @@ class WebVTTReaderTestCase(unittest.TestCase):
         self.reader = WebVTTReader()
 
     def test_positive_answer_for_detection(self):
-        self.assertTrue(self.reader.detect(SAMPLE_WEBVTT.decode(u'utf-8')))
+        self.assertTrue(self.reader.detect(SAMPLE_WEBVTT))
 
     def test_negative_answer_for_detection(self):
-        self.assertFalse(self.reader.detect(SAMPLE_SRT.decode(u'utf-8')))
+        self.assertFalse(self.reader.detect(SAMPLE_SRT))
 
     def test_caption_length(self):
-        captions = self.reader.read(SAMPLE_WEBVTT_2.decode(u'utf-8'))
+        captions = self.reader.read(SAMPLE_WEBVTT_2)
         self.assertEqual(len(captions.get_captions(u'en-US')), 7)
 
     def test_read_supports_multiple_languages(self):
-        captions = self.reader.read(SAMPLE_WEBVTT.decode(u'utf-8'), lang=u'es')
+        captions = self.reader.read(SAMPLE_WEBVTT, lang=u'es')
         self.assertIsNotNone(captions.get_captions(u'es'))
 
     def test_proper_timestamps(self):
-        captions = self.reader.read(SAMPLE_WEBVTT.decode(u'utf-8'))
+        captions = self.reader.read(SAMPLE_WEBVTT)
         cue = captions.get_captions(u'en-US')[2]
         self.assertEqual(cue.start, 17000000)
         self.assertEqual(cue.end, 18752000)
@@ -55,7 +57,7 @@ class WebVTTReaderTestCase(unittest.TestCase):
     def test_empty_file(self):
         self.assertRaises(
             CaptionReadNoCaptions,
-            WebVTTReader().read, SAMPLE_WEBVTT_EMPTY.decode(u'utf-8'))
+            WebVTTReader().read, SAMPLE_WEBVTT_EMPTY)
 
     def test_not_ignoring_timing_errors(self):
         self.assertRaises(
@@ -150,8 +152,9 @@ class WebVTTWriterTestCase(unittest.TestCase):
         self.writer = WebVTTWriter()
 
     def test_double_br(self):
-        captions = SAMIReader().read(SAMPLE_SAMI_DOUBLE_BR.decode(u'utf-8'))
-        self.assertEqual(SAMPLE_WEBVTT_DOUBLE_BR.decode(u'utf-8'), self.writer.write(captions))
+        caption_set = SAMIReader().read(SAMPLE_SAMI_DOUBLE_BR)
+        results = WebVTTWriter().write(caption_set)
+        self.assertEqual(SAMPLE_WEBVTT_DOUBLE_BR, results)
 
     def test_break_node_positioning_is_ignored(self):
         caption_set = DFXPReader().read(DFXP_STYLE_REGION_ALIGN_CONFLICT)

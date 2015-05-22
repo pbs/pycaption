@@ -1,5 +1,3 @@
-from bs4 import BeautifulSoup
-
 def is_leaf(element):
     """
     Return True if the element is a leaf, False otherwise. The element is

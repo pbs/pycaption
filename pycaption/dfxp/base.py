@@ -8,7 +8,8 @@ from xml.sax.saxutils import escape
 from ..base import (
     BaseReader, BaseWriter, CaptionSet, Caption, CaptionNode,
     DEFAULT_LANGUAGE_CODE)
-from ..exceptions import CaptionReadNoCaptions, CaptionReadSyntaxError
+from ..exceptions import (
+    CaptionReadNoCaptions, CaptionReadSyntaxError, InvalidInputError)
 from ..geometry import (
     Point, Stretch, UnitEnum, Padding, VerticalAlignmentEnum,
     HorizontalAlignmentEnum, Alignment, Layout)
@@ -59,7 +60,7 @@ class DFXPReader(BaseReader):
 
     def read(self, content):
         if type(content) != unicode:
-            raise RuntimeError(u'The content is not a unicode string.')
+            raise InvalidInputError(u'The content is not a unicode string.')
 
         dfxp_document = self._get_dfxp_parser_class()(
             content, read_invalid_positioning=self.read_invalid_positioning)

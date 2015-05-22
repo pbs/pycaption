@@ -50,7 +50,8 @@ from bs4 import BeautifulSoup, NavigableString
 from .base import (
     BaseReader, BaseWriter, CaptionSet, Caption, CaptionNode,
     DEFAULT_LANGUAGE_CODE)
-from .exceptions import CaptionReadNoCaptions, CaptionReadSyntaxError
+from .exceptions import (
+    CaptionReadNoCaptions, CaptionReadSyntaxError, InvalidInputError)
 from .geometry import (
     Layout, Alignment, Padding, Size
 )
@@ -82,7 +83,7 @@ class SAMIReader(BaseReader):
 
     def read(self, content):
         if type(content) != unicode:
-            raise RuntimeError('The content is not a unicode string.')
+            raise InvalidInputError('The content is not a unicode string.')
 
         content, doc_styles, doc_langs = (
             self._get_sami_parser_class()().feed(content))
@@ -201,6 +202,11 @@ class SAMIReader(BaseReader):
                     inherit_from=layout_info
                 )
                 caption = Caption(layout_info=caption_layout)
+                for node in self.line:
+                    node.layout_info = Layout(
+                        alignment=self.first_span_alignment,
+                        inherit_from=node.layout_info
+                    )
                 self.first_span_alignment = None
 
                 caption.start = start
@@ -242,7 +248,7 @@ class SAMIReader(BaseReader):
             )
             # recursively call function for any children elements
             for a in tag.contents:
-                self._translate_tag(a)
+                self._translate_tag(a, inherit_from)
             self.line.append(
                 CaptionNode.create_style(False, {u'italics': True}))
         elif tag.name == u'span':
@@ -271,7 +277,7 @@ class SAMIReader(BaseReader):
             self.line.append(node)
         else:
             for a in tag.contents:
-                self._translate_tag(a)
+                self._translate_tag(a, inherit_from)
 
     def _translate_attrs(self, tag):
         attrs = {}
@@ -322,7 +328,7 @@ class SAMIReader(BaseReader):
         :param align: A unicode string representing a CSS text-align value
         """
         if not self.first_span_alignment:
-            self.first_span_alignment = Alignment.from_horizontal_and_vertical_align(
+            self.first_span_alignment = Alignment.from_horizontal_and_vertical_align(  # noqa
                 text_align=align
             )
 

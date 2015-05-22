@@ -883,14 +883,16 @@ class Layout(object):
             else:
                 # Extent is set but may have inconsistent values,
                 # e.g. origin="35% 25%" extent="80% 80%", which would cause
-                # captions to end at 115% and be cut out of the screen. In this
-                # case, the value is corrected so origin + extent = 100%.
-                bottom_left = self.origin.add_stretch(self.extent)
+                # captions to end horizontally at 115% and vertically at 105%,
+                # which would result in them being cut out of the screen.
+                # In this case, the horizontal and vertical values are
+                # corrected so that origin + extent = 100%.
+                bottom_right = self.origin.add_stretch(self.extent)
 
                 found_absolute_unit = False
-                if bottom_left.x.unit != UnitEnum.PERCENT:
+                if bottom_right.x.unit != UnitEnum.PERCENT:
                     found_absolute_unit = True
-                elif bottom_left.x.unit != UnitEnum.PERCENT:
+                elif bottom_right.x.unit != UnitEnum.PERCENT:
                     found_absolute_unit = True
 
                 if found_absolute_unit:
@@ -901,9 +903,9 @@ class Layout(object):
                 new_vertical = self.extent.vertical
                 # If extent is set but it's inconsistent, replace with
                 # calculated values
-                if bottom_left.x.value > 100:
+                if bottom_right.x.value > 100:
                     new_horizontal = diff_horizontal
-                if bottom_left.y.value > 100:
+                if bottom_right.y.value > 100:
                     new_vertical = diff_vertical
 
                 new_extent = Stretch(new_horizontal, new_vertical)
