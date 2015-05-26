@@ -13,12 +13,15 @@ from .samples.sami import (
     SAMPLE_SAMI_PARTIAL_MARGINS_RELATIVIZED, SAMPLE_SAMI_LANG_MARGIN,
     SAMPLE_SAMI_WITH_SPAN, SAMPLE_SAMI_WITH_BAD_SPAN_ALIGN,
     SAMPLE_SAMI_WITH_MULTIPLE_SPAN_ALIGNS, SAMPLE_SAMI_NO_LANG,
-    SAMPLE_SAMI_WITH_LANG, SAMPLE_SAMI_WITH_BAD_DIV_ALIGN
+    SAMPLE_SAMI_WITH_LANG, SAMPLE_SAMI_WITH_BAD_DIV_ALIGN,
+    SAMPLE_SAMI_WITH_P_ALIGN, SAMPLE_SAMI_WITH_P_AND_SPAN_ALIGN
 )
 from .samples.srt import SAMPLE_SRT
 from .samples.webvtt import (
     SAMPLE_WEBVTT_FROM_SAMI, SAMPLE_WEBVTT_FROM_SAMI_WITH_BAD_SPAN_ALIGN,
-    SAMPLE_WEBVTT_FROM_SAMI_WITH_BAD_DIV_ALIGN
+    SAMPLE_WEBVTT_FROM_SAMI_WITH_BAD_DIV_ALIGN,
+    SAMPLE_WEBVTT_FROM_SAMI_WITH_P_ALIGN,
+    SAMPLE_WEBVTT_FROM_SAMI_WITH_P_AND_SPAN_ALIGN
 )
 
 from .mixins import SRTTestingMixIn, DFXPTestingMixIn, SAMITestingMixIn, WebVTTTestingMixIn
@@ -146,6 +149,26 @@ class SAMItoWebVTTTestCase(unittest.TestCase, WebVTTTestingMixIn):
             video_width=640, video_height=360).write(caption_set)
         self.assertWebVTTEquals(
             SAMPLE_WEBVTT_FROM_SAMI_WITH_BAD_DIV_ALIGN,
+            results
+        )
+
+    def test_sami_to_webvtt_with_p_align(self):
+        caption_set = SAMIReader().read(SAMPLE_SAMI_WITH_P_ALIGN)
+        results = WebVTTWriter(
+            video_width=640, video_height=360).write(caption_set)
+        self.assertWebVTTEquals(
+            SAMPLE_WEBVTT_FROM_SAMI_WITH_P_ALIGN,
+            results
+        )
+
+    def test_sami_to_webvtt_p_and_span_align(self):
+        """ <span> align DOES NOT override <p> align if it is specified inline.
+        """
+        caption_set = SAMIReader().read(SAMPLE_SAMI_WITH_P_AND_SPAN_ALIGN)
+        results = WebVTTWriter(
+            video_width=640, video_height=360).write(caption_set)
+        self.assertWebVTTEquals(
+            SAMPLE_WEBVTT_FROM_SAMI_WITH_P_AND_SPAN_ALIGN,
             results
         )
 
