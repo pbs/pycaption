@@ -196,11 +196,3 @@ WEBVTT
 aa
 bb
 """
-
-SAMPLE_WEBVTT_FROM_SAMI_WITH_BAD_SPAN_ALIGN = u"""WEBVTT
-
-00:00.133 --> 00:04.133 align:right
-Some say we have this vision of Einstein as an old, wrinkly man
-"""
-
-SAMPLE_WEBVTT_FROM_SAMI_WITH_BAD_DIV_ALIGN = SAMPLE_WEBVTT_FROM_SAMI_WITH_BAD_SPAN_ALIGN

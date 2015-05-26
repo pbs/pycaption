@@ -73,7 +73,7 @@ SAMI_BASE_MARKUP = u'''
 class SAMIReader(BaseReader):
     def __init__(self, *args, **kw):
         self.line = []
-        self.first_span_alignment = None
+        self.first_alignment = None
 
     def detect(self, content):
         if u'<sami' in content.lower():
@@ -190,24 +190,24 @@ class SAMIReader(BaseReader):
                 captions[-1].end = milliseconds * 1000
 
             if p.get_text().strip():
+                self.first_alignment = None
                 styles = self._translate_attrs(p)
                 layout_info = self._build_layout(styles,
                                                  inherit_from=parent_layout)
                 self.line = []
 
-                self.first_span_alignment = None
                 self._translate_tag(p, layout_info)
                 caption_layout = self._get_layout_class()(
-                    alignment=self.first_span_alignment,
+                    alignment=self.first_alignment,
                     inherit_from=layout_info
                 )
                 caption = Caption(layout_info=caption_layout)
                 for node in self.line:
                     node.layout_info = Layout(
-                        alignment=self.first_span_alignment,
+                        alignment=self.first_alignment,
                         inherit_from=node.layout_info
                     )
-                self.first_span_alignment = None
+                self.first_alignment = None
 
                 caption.start = start
                 caption.end = end
@@ -297,38 +297,45 @@ class SAMIReader(BaseReader):
     def _translate_style(self, attrs, styles):
         for style in styles:
             style = style.split(u':')
-            if style[0] == u'font-family':
-                attrs[u'font-family'] = style[1].strip()
-            elif style[0] == u'font-size':
-                attrs[u'font-size'] = style[1].strip()
-            elif style[0] == u'font-style' and style[1].strip() == u'italic':
+            if len(style) == 2:
+                css_property, value = style
+            else:
+                continue
+            if css_property == u'font-family':
+                attrs[u'font-family'] = value.strip()
+            elif css_property == u'font-size':
+                attrs[u'font-size'] = value.strip()
+            elif css_property == u'font-style' and value.strip() == u'italic':
                 attrs[u'italics'] = True
-            elif style[0] == u'lang':
-                attrs[u'lang'] = style[1].strip()
-            elif style[0] == u'color':
-                attrs[u'color'] = style[1].strip()
-            elif style[0] == u'text-align':
-                self._save_first_span_alignment(style[1].strip())
+            elif css_property == u'lang':
+                attrs[u'lang'] = value.strip()
+            elif css_property == u'color':
+                attrs[u'color'] = value.strip()
+            elif css_property == u'text-align':
+                self._save_first_alignment(value.strip())
 
         return attrs
 
-    def _save_first_span_alignment(self, align):
+    def _save_first_alignment(self, align):
         """
-        Unlike the other CSS attributes parsed in _translate_styles (at span
-        level), the 'text-align' setting must be applied to a Layout and not
-        to a style because it affects positioning. This Layout must be assigned
-        to the Caption object, and not a Node, because it doesn't make sense
-        to have spans in the same caption with different alignments. Even though
-        the SAMI format seems to in principle accept it, pycaption normalizes to
+        Unlike the other inline CSS attributes parsed in _translate_styles, the
+        'text-align' setting must be applied to a Layout and not to a style
+        because it affects positioning. This Layout must be assigned to the
+        Caption object, and not a Node, because it doesn't make sense to have
+        spans in the same caption with different alignments. Even though the
+        SAMI format seems to in principle accept it, pycaption normalizes to
         something it can make sense of internally and convert to other formats.
 
-        If there are multiple spans in the same line with differnt alignment,
-        only the first alignment is taken into account.
+        If there are multiple elements (span, div, etc) in the same line with
+        different alignments, only the first alignment is taken into account.
+
+        If the root element of the caption (sync's first child) has an inline
+        text-align, it is preserved and any children alignment is ignored.
 
         :param align: A unicode string representing a CSS text-align value
         """
-        if not self.first_span_alignment:
-            self.first_span_alignment = Alignment.from_horizontal_and_vertical_align(  # noqa
+        if not self.first_alignment:
+            self.first_alignment = Alignment.from_horizontal_and_vertical_align(  # noqa
                 text_align=align
             )
 
