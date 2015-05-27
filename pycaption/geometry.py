@@ -174,8 +174,8 @@ class Stretch(TwoDimensionalObject):
         :return: True/False
         """
         return (
-            self.horizontal.unit == measure_unit
-            and self.vertical.unit == measure_unit
+            self.horizontal.unit == measure_unit and
+            self.vertical.unit == measure_unit
         )
 
     def __repr__(self):

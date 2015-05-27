@@ -179,7 +179,7 @@ IT'S WORD GIRL♫
 IT'S WORD GIRL♫
 """
 
-SAMPLE_WEBVTT_WITH_SETTINGS_CUE = u"""\
+SAMPLE_WEBVTT_WITH_CUE_SETTINGS = u"""\
 WEBVTT
 
 00:01.000 --> 00:06.000 align:middle position:37%,start line:74%

@@ -4,6 +4,20 @@ from ..geometry import (UnitEnum, Size, Layout, Point, Alignment,
 
 from .constants import PAC_BYTES_TO_POSITIONING_MAP, COMMANDS
 
+class PreCaption(object):
+
+    def __init__(self, start=0, end=0):
+        self.start = start
+        self.end = end
+        self.nodes = []
+        self.style = {}
+        self.layout_info = None
+
+    def to_real_caption(self):
+        return Caption(
+            self.start, self.end, self.nodes, self.style, self.layout_info
+        )
+
 
 class TimingCorrectingCaptionList(list):
     """List of captions. When appending new elements, it will correct the end time
@@ -175,7 +189,7 @@ class CaptionCreator(object):
         if node_buffer.is_empty():
             return
 
-        caption = Caption()
+        caption = PreCaption()
         caption.start = start
         caption.end = 0  # Not yet known; filled in later
         self._still_editing = [caption]
@@ -186,7 +200,7 @@ class CaptionCreator(object):
                 continue
 
             elif instruction.requires_repositioning():
-                caption = Caption()
+                caption = PreCaption()
                 caption.start = start
                 caption.end = 0
                 self._still_editing.append(caption)
@@ -232,7 +246,7 @@ class CaptionCreator(object):
 
         :rtype: list
         """
-        return list(self._collection)
+        return [precap.to_real_caption() for precap in self._collection]
 
 
 class InstructionNodeCreator(object):

@@ -157,11 +157,25 @@ class Caption(object):
     A single caption, including the time and styling information
     for its display.
     """
-    def __init__(self, layout_info=None):
-        self.start = 0
-        self.end = 0
-        self.nodes = []
-        self.style = {}
+    def __init__(self, start, end, nodes, style={}, layout_info=None):
+        """
+        Initialize the Caption object
+        :param start: The start time in microseconds
+        :type start: int
+        :param end: The end time in microseconds
+        :type end: int
+        :param nodes: A list of CaptionNodes
+        :type nodes: list
+        :param style: A dictionary with CSS-like styling rules
+        :type style: dict
+        :param layout_info: A Layout object with the necessary positioning
+            information
+        :type layout_info: Layout
+        """
+        self.start = start
+        self.end = end
+        self.nodes = nodes
+        self.style = style
         self.layout_info = layout_info
 
     def is_empty(self):

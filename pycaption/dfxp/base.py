@@ -105,11 +105,8 @@ class DFXPReader(BaseReader):
         self._translate_tag(p_tag)
         styles = self._translate_style(p_tag)
 
-        caption = Caption(layout_info=p_tag.layout_info)
-        caption.start = start
-        caption.end = end
-        caption.nodes = self.nodes
-        caption.style = styles
+        caption = Caption(start, end, self.nodes, style=styles,
+                          layout_info=p_tag.layout_info)
         return caption
 
     def _find_times(self, p_tag):

@@ -201,7 +201,6 @@ class SAMIReader(BaseReader):
                     alignment=self.first_alignment,
                     inherit_from=layout_info
                 )
-                caption = Caption(layout_info=caption_layout)
                 for node in self.line:
                     node.layout_info = Layout(
                         alignment=self.first_alignment,
@@ -209,10 +208,7 @@ class SAMIReader(BaseReader):
                     )
                 self.first_alignment = None
 
-                caption.start = start
-                caption.end = end
-                caption.nodes = self.line
-                caption.style = styles
+                caption = Caption(start, end, self.line, styles, caption_layout)
                 captions.append(caption)
 
         if captions and captions[-1].end == 0:
