@@ -1,6 +1,8 @@
 from collections import defaultdict
 from datetime import timedelta
+from numbers import Number
 
+from .exceptions import CaptionReadError, CaptionReadTimingError
 
 DEFAULT_LANGUAGE_CODE = u'en-US'
 
@@ -161,9 +163,9 @@ class Caption(object):
         """
         Initialize the Caption object
         :param start: The start time in microseconds
-        :type start: int
+        :type start: Number
         :param end: The end time in microseconds
-        :type end: int
+        :type end: Number
         :param nodes: A list of CaptionNodes
         :type nodes: list
         :param style: A dictionary with CSS-like styling rules
@@ -172,6 +174,14 @@ class Caption(object):
             information
         :type layout_info: Layout
         """
+        if not isinstance(start, Number):
+            raise CaptionReadTimingError(u"Captions must be initialized with a"
+                                         u" valid start time")
+        if not isinstance(end, Number):
+            raise CaptionReadTimingError(u"Captions must be initialized with a"
+                                         u" valid end time")
+        if not nodes:
+            raise CaptionReadError(u"Node list cannot be empty")
         self.start = start
         self.end = end
         self.nodes = nodes
