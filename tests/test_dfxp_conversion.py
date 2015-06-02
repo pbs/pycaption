@@ -5,6 +5,8 @@ from bs4 import BeautifulSoup
 from pycaption import (
     DFXPReader, DFXPWriter, SRTWriter, SAMIWriter, WebVTTWriter)
 
+from pycaption.dfxp.extras import LegacyDFXPWriter
+
 from pycaption.dfxp.base import (
     DFXP_DEFAULT_STYLE, DFXP_DEFAULT_STYLE_ID, DFXP_DEFAULT_REGION,
     DFXP_DEFAULT_REGION_ID, _recreate_style, _convert_layout_to_attributes
@@ -19,7 +21,8 @@ from .samples.dfxp import (
     SAMPLE_DFXP_MULTIPLE_REGIONS_INPUT, SAMPLE_DFXP_MULTIPLE_REGIONS_OUTPUT,
     SAMPLE_DFXP_OUTPUT, SAMPLE_DFXP_STYLE_TAG_WITH_NO_XML_ID_INPUT,
     SAMPLE_DFXP_STYLE_TAG_WITH_NO_XML_ID_OUTPUT,
-    SAMPLE_DFXP_LONG_CUE_FIT_TO_SCREEN,
+    SAMPLE_DFXP_LONG_CUE_FIT_TO_SCREEN, SAMPLE_DFXP_FOR_LEGACY_WRITER_INPUT,
+SAMPLE_DFXP_FOR_LEGACY_WRITER_OUTPUT
 )
 from .samples.sami import SAMPLE_SAMI
 from .samples.srt import SAMPLE_SRT
@@ -201,3 +204,13 @@ class DFXPtoWebVTTTestCase(unittest.TestCase, WebVTTTestingMixIn):
         results = WebVTTWriter().write(caption_set)
         self.assertEquals(
             WEBVTT_FROM_DFXP_WITH_CONFLICTING_ALIGN, results)
+
+
+class LegacyDFXPTestCase(unittest.TestCase):
+    def test_legacy_convert(self):
+        caption_set = DFXPReader(read_invalid_positioning=True).read(
+            SAMPLE_DFXP_FOR_LEGACY_WRITER_INPUT)
+
+        result = LegacyDFXPWriter().write(caption_set)
+
+        self.assertEqual(result, SAMPLE_DFXP_FOR_LEGACY_WRITER_OUTPUT)
