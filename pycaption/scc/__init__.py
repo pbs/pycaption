@@ -211,8 +211,7 @@ class SCCReader(BaseReader):
 
         self._flush_implicit_buffers()
 
-        captions = CaptionSet()
-        captions.set_captions(lang, self.caption_stash.get_all())
+        captions = CaptionSet({lang: self.caption_stash.get_all()})
 
         if captions.is_empty():
             raise CaptionReadNoCaptions(u"empty caption file")

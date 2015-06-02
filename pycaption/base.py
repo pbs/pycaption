@@ -1,4 +1,3 @@
-from collections import defaultdict
 from datetime import timedelta
 from numbers import Number
 
@@ -241,6 +240,15 @@ class Caption(object):
         return u'0' + str_value
 
 
+class CaptionList(list):
+    """ A list of captions with a layout object attached to it """
+    def __init__(self, layout_info=None):
+        """
+        :param Layout layout_info: A Layout object with the positioning info
+        """
+        self.layout_info = layout_info
+
+
 class CaptionSet(object):
     """
     A set of captions in potentially multiple languages,
@@ -249,18 +257,15 @@ class CaptionSet(object):
     The .layout_info attribute, keeps information that should be inherited
     by all the children.
     """
-    def __init__(self):
-        self._styles = {}
-
-        # Base layout to be inherited by all languages
-        self.layout_info = None
-
-        # For individual languages, represents inheritable layout-related
-        # information
-        self._layout_info = {}
-
-        # Captions by language.
-        self._captions = defaultdict(list)
+    def __init__(self, captions, styles={}, layout_info=None):
+        """
+        :param captions: A dictionary of the format {'language': [CaptionList]}
+        :param styles: A dictionary with CSS-like styling rules
+        :param Layout layout_info: A Layout object with the positioning info
+        """
+        self._captions = captions
+        self._styles = styles
+        self.layout_info = layout_info
 
     def set_captions(self, lang, captions):
         self._captions[lang] = captions
@@ -299,10 +304,13 @@ class CaptionSet(object):
         )
 
     def set_layout_info(self, lang, layout_info):
-        self._layout_info[lang] = layout_info
+        self._captions[lang].layout_info = layout_info
 
     def get_layout_info(self, lang):
-        return self._layout_info.get(lang)
+        caption_list = self._captions.get(lang)
+        if caption_list:
+            return caption_list.layout_info
+        return None
 
     def adjust_caption_timing(self, offset=0, rate_skew=1.0):
         """

@@ -1,4 +1,4 @@
-from ..base import Caption, CaptionNode
+from ..base import CaptionList, Caption, CaptionNode
 from ..geometry import (UnitEnum, Size, Layout, Point, Alignment,
                         VerticalAlignmentEnum, HorizontalAlignmentEnum)
 
@@ -242,11 +242,14 @@ class CaptionCreator(object):
         self._collection.extend(self._still_editing)
 
     def get_all(self):
-        """Returns the Caption collection as a list
+        """Returns the Caption collection as a CaptionList
 
-        :rtype: list
+        :rtype: CaptionList
         """
-        return [precap.to_real_caption() for precap in self._collection]
+        caption_list = CaptionList()
+        for precap in self._collection:
+            caption_list.append(precap.to_real_caption())
+        return caption_list
 
 
 class InstructionNodeCreator(object):
