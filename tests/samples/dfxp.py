@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
+from __future__ import unicode_literals
 
-SAMPLE_DFXP = u"""\
+SAMPLE_DFXP = """\
 <?xml version="1.0" encoding="utf-8"?>
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml"
     xmlns:tts="http://www.w3.org/ns/ttml#styling">
@@ -47,7 +48,7 @@ SAMPLE_DFXP = u"""\
  </body>
 </tt>"""
 
-SAMPLE_DFXP_WITHOUT_REGION_AND_STYLE = u"""
+SAMPLE_DFXP_WITHOUT_REGION_AND_STYLE = """
 <?xml version="1.0" encoding="utf-8"?>
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml"
     xmlns:tts="http://www.w3.org/ns/ttml#styling">
@@ -87,7 +88,7 @@ SAMPLE_DFXP_WITHOUT_REGION_AND_STYLE = u"""
  </body>
 </tt>"""
 
-SAMPLE_DFXP_WITH_POSITIONING = u"""<?xml version="1.0" encoding="utf-8"?>
+SAMPLE_DFXP_WITH_POSITIONING = """<?xml version="1.0" encoding="utf-8"?>
 <tt xml:lang="en-us"
     xmlns="http://www.w3.org/ns/ttml"
     xmlns:tts='http://www.w3.org/ns/ttml#styling'
@@ -122,7 +123,7 @@ SAMPLE_DFXP_WITH_POSITIONING = u"""<?xml version="1.0" encoding="utf-8"?>
 </body>
 </tt>"""
 
-SAMPLE_DFXP_WITH_RELATIVIZED_POSITIONING = u"""<?xml version="1.0" encoding="utf-8"?>
+SAMPLE_DFXP_WITH_RELATIVIZED_POSITIONING = """<?xml version="1.0" encoding="utf-8"?>
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling">
  <head>
   <styling/>
@@ -153,7 +154,7 @@ SAMPLE_DFXP_WITH_RELATIVIZED_POSITIONING = u"""<?xml version="1.0" encoding="utf
  </body>
 </tt>"""
 
-SAMPLE_DFXP_EMPTY = u"""
+SAMPLE_DFXP_EMPTY = """
 <?xml version="1.0" encoding="utf-8"?>
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml"
     xmlns:tts="http://www.w3.org/ns/ttml#styling">
@@ -173,7 +174,7 @@ SAMPLE_DFXP_EMPTY = u"""
 """
 
 
-SAMPLE_DFXP_SYNTAX_ERROR = u"""
+SAMPLE_DFXP_SYNTAX_ERROR = """
 <?xml version="1.0" encoding="UTF-16"?>
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml">
 <body>
@@ -185,7 +186,7 @@ SAMPLE_DFXP_SYNTAX_ERROR = u"""
 </tt>
 """
 
-DFXP_FROM_SAMI_WITH_POSITIONING = u"""\
+DFXP_FROM_SAMI_WITH_POSITIONING = """\
 <?xml version="1.0" encoding="utf-8"?>
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml"
     xmlns:tts="http://www.w3.org/ns/ttml#styling">
@@ -233,7 +234,7 @@ DFXP_FROM_SAMI_WITH_POSITIONING = u"""\
  </body>
 </tt>"""
 
-SAMPLE_DFXP_LONG_CUE = u"""<?xml version="1.0" encoding="utf-8"?>
+SAMPLE_DFXP_LONG_CUE = """<?xml version="1.0" encoding="utf-8"?>
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling">
  <head>
   <styling>
@@ -260,7 +261,7 @@ SAMPLE_DFXP_LONG_CUE = u"""<?xml version="1.0" encoding="utf-8"?>
 </tt>
 """
 
-SAMPLE_DFXP_LONG_CUE_FIT_TO_SCREEN = u"""<?xml version="1.0" encoding="utf-8"?>
+SAMPLE_DFXP_LONG_CUE_FIT_TO_SCREEN = """<?xml version="1.0" encoding="utf-8"?>
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling">
  <head>
   <styling>
@@ -286,7 +287,7 @@ SAMPLE_DFXP_LONG_CUE_FIT_TO_SCREEN = u"""<?xml version="1.0" encoding="utf-8"?>
  </body>
 </tt>"""
 
-SAMPLE_DFXP_FROM_SAMI_WITH_MARGINS = u"""<?xml version="1.0" encoding="utf-8"?>
+SAMPLE_DFXP_FROM_SAMI_WITH_MARGINS = """<?xml version="1.0" encoding="utf-8"?>
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling">
  <head>
   <styling>
@@ -306,7 +307,7 @@ SAMPLE_DFXP_FROM_SAMI_WITH_MARGINS = u"""<?xml version="1.0" encoding="utf-8"?>
  </body>
 </tt>"""
 
-SAMPLE_DFXP_FROM_SAMI_WITH_LANG_MARGINS = u"""<?xml version="1.0" encoding="utf-8"?>
+SAMPLE_DFXP_FROM_SAMI_WITH_LANG_MARGINS = """<?xml version="1.0" encoding="utf-8"?>
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling">
  <head>
   <styling>
@@ -326,7 +327,7 @@ SAMPLE_DFXP_FROM_SAMI_WITH_LANG_MARGINS = u"""<?xml version="1.0" encoding="utf-
  </body>
 </tt>"""
 
-SAMPLE_DFXP_FROM_SAMI_WITH_SPAN = u"""<?xml version="1.0" encoding="utf-8"?>
+SAMPLE_DFXP_FROM_SAMI_WITH_SPAN = """<?xml version="1.0" encoding="utf-8"?>
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling">
  <head>
   <styling>
@@ -345,7 +346,7 @@ SAMPLE_DFXP_FROM_SAMI_WITH_SPAN = u"""<?xml version="1.0" encoding="utf-8"?>
  </body>
 </tt>"""
 
-SAMPLE_DFXP_FROM_SAMI_WITH_BAD_SPAN_ALIGN = u"""<?xml version="1.0" encoding="utf-8"?>
+SAMPLE_DFXP_FROM_SAMI_WITH_BAD_SPAN_ALIGN = """<?xml version="1.0" encoding="utf-8"?>
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling">
  <head>
   <styling>
@@ -365,7 +366,7 @@ SAMPLE_DFXP_FROM_SAMI_WITH_BAD_SPAN_ALIGN = u"""<?xml version="1.0" encoding="ut
  </body>
 </tt>"""
 
-DFXP_STYLE_REGION_ALIGN_CONFLICT = u"""<?xml version="1.0" encoding="utf-8"?>
+DFXP_STYLE_REGION_ALIGN_CONFLICT = """<?xml version="1.0" encoding="utf-8"?>
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling">
  <head>
   <styling>
@@ -389,7 +390,7 @@ DFXP_STYLE_REGION_ALIGN_CONFLICT = u"""<?xml version="1.0" encoding="utf-8"?>
 </tt>
 """
 
-SAMPLE_DFXP_INVALID_BUT_SUPPORTED_POSITIONING_INPUT = u"""\
+SAMPLE_DFXP_INVALID_BUT_SUPPORTED_POSITIONING_INPUT = """\
 <?xml version="1.0" encoding="utf-8"?>
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml"
     xmlns:tts="http://www.w3.org/ns/ttml#styling">
@@ -419,7 +420,7 @@ SAMPLE_DFXP_INVALID_BUT_SUPPORTED_POSITIONING_INPUT = u"""\
  </body>
 </tt>"""
 
-SAMPLE_DFXP_INVALID_BUT_SUPPORTED_POSITIONING_OUTPUT = u"""\
+SAMPLE_DFXP_INVALID_BUT_SUPPORTED_POSITIONING_OUTPUT = """\
 <?xml version="1.0" encoding="utf-8"?>
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling">
  <head>
@@ -455,7 +456,7 @@ SAMPLE_DFXP_INVALID_BUT_SUPPORTED_POSITIONING_OUTPUT = u"""\
 </tt>"""
 
 
-SAMPLE_DFXP_MULTIPLE_REGIONS_INPUT = u"""
+SAMPLE_DFXP_MULTIPLE_REGIONS_INPUT = """
 <?xml version="1.0" encoding="utf-8"?>
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml"
     xmlns:tts="http://www.w3.org/ns/ttml#styling">
@@ -501,7 +502,7 @@ SAMPLE_DFXP_MULTIPLE_REGIONS_INPUT = u"""
 </tt>
 """
 
-SAMPLE_DFXP_MULTIPLE_REGIONS_OUTPUT = u"""\
+SAMPLE_DFXP_MULTIPLE_REGIONS_OUTPUT = """\
 <?xml version="1.0" encoding="utf-8"?>
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling">
  <head>
@@ -575,7 +576,7 @@ SAMPLE_DFXP_TO_RENDER_WITH_ONLY_DEFAULT_POSITIONING_INPUT = u"""\
 # conform to the specs.
 
 # UNUSED SAMPLE
-SAMPLE_DFXP_TO_DFXP_OUTPUT = u"""\
+SAMPLE_DFXP_TO_DFXP_OUTPUT = """\
 <?xml version="1.0" encoding="utf-8"?>
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling">
  <head>
@@ -624,7 +625,7 @@ SAMPLE_DFXP_TO_DFXP_OUTPUT = u"""\
  </body>
 </tt>"""
 
-SAMPLE_DFXP_OUTPUT = u"""\
+SAMPLE_DFXP_OUTPUT = """\
 <?xml version="1.0" encoding="utf-8"?>
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling">
  <head>
@@ -670,7 +671,7 @@ SAMPLE_DFXP_OUTPUT = u"""\
  </body>
 </tt>"""
 
-SAMPLE_DFXP_STYLE_TAG_WITH_NO_XML_ID_INPUT = u"""\
+SAMPLE_DFXP_STYLE_TAG_WITH_NO_XML_ID_INPUT = """\
 <?xml version="1.0" encoding="utf-8"?>
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling">
  <head>
@@ -699,7 +700,7 @@ SAMPLE_DFXP_STYLE_TAG_WITH_NO_XML_ID_INPUT = u"""\
 </tt>
 """
 
-SAMPLE_DFXP_STYLE_TAG_WITH_NO_XML_ID_OUTPUT = u"""\
+SAMPLE_DFXP_STYLE_TAG_WITH_NO_XML_ID_OUTPUT = """\
 <?xml version="1.0" encoding="utf-8"?>
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling">
  <head>
@@ -725,7 +726,7 @@ SAMPLE_DFXP_STYLE_TAG_WITH_NO_XML_ID_OUTPUT = u"""\
  </body>
 </tt>"""
 
-SAMPLE_DFXP_FROM_SCC_OUTPUT = u"""<?xml version="1.0" encoding="utf-8"?>
+SAMPLE_DFXP_FROM_SCC_OUTPUT = """<?xml version="1.0" encoding="utf-8"?>
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling">
  <head>
   <styling>
@@ -795,7 +796,7 @@ SAMPLE_DFXP_FROM_SCC_OUTPUT = u"""<?xml version="1.0" encoding="utf-8"?>
  </body>
 </tt>"""
 
-SAMPLE_DFXP_WITH_PROPERLY_CLOSING_SPANS_OUTPUT = u"""\
+SAMPLE_DFXP_WITH_PROPERLY_CLOSING_SPANS_OUTPUT = """\
 <?xml version="1.0" encoding="utf-8"?>
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling">
  <head>
@@ -839,6 +840,101 @@ SAMPLE_DFXP_WITH_PROPERLY_CLOSING_SPANS_OUTPUT = u"""\
    </p>
    <p begin="00:01:59.533" end="00:01:59.700" region="r4" style="default">
     dddd
+   </p>
+  </div>
+ </body>
+</tt>"""
+
+
+SAMPLE_DFXP_FOR_LEGACY_WRITER_INPUT = """
+<?xml version="1.0" encoding="utf-8"?>
+<tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml"
+    xmlns:tts="http://www.w3.org/ns/ttml#styling">
+ <head>
+  <styling>
+   <style xml:id="p" tts:color="#ffeedd" tts:fontfamily="Arial"
+          tts:fontsize="10pt" tts:textAlign="center"/>
+  </styling>
+  <layout>
+   <region xml:id="r0" tts:origin="20% 30%" tts:extent="30% 30%"/>
+  </layout>
+ </head>
+ <body>
+  <div xml:lang="en-US">
+   <p begin="00:00:09.209" end="00:00:12.312" style="p">
+    ( clock ticking )
+   </p>
+   <p begin="00:00:14.848" end="00:00:17.000" region="r0" style="p">
+    MAN:<br/>
+    When we think<br/>
+    of "E equals m c-squared",
+   </p>
+   <p begin="00:00:17.000" end="00:00:18.752" style="p">
+    <span tts:textAlign="right">we have this vision of Einstein</span>
+   </p>
+   <p begin="00:00:18.752" end="00:00:20.887" style="p">
+    as an old, wrinkly man<br/>
+    with white hair.
+   </p>
+   <p begin="00:00:20.887" end="00:00:26.760" tts:origin="10% 10%" style="p">
+    MAN 2:<br/>
+    E equals m c-squared is<br/>
+    not about an old Einstein.
+   </p>
+   <p begin="00:00:26.760" end="00:00:32.200" tts:testAlign="left" style="p">
+    MAN 2:<br/>
+    It's all about an eternal Einstein.
+   </p>
+   <p begin="00:00:32.200" end="00:00:34.400" style="p">
+    &lt;LAUGHING &amp; WHOOPS!&gt;
+   </p>
+   <p begin="00:00:34.400" end="00:00:38.400" style="p">some more text</p>
+  </div>
+ </body>
+</tt>"""
+
+SAMPLE_DFXP_FOR_LEGACY_WRITER_OUTPUT = """\
+<?xml version="1.0" encoding="utf-8"?>
+<tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling">
+ <head>
+  <styling>
+   <style tts:color="#ffeedd" tts:fontFamily="Arial" tts:fontSize="10pt" tts:textAlign="center" xml:id="p"/>
+  </styling>
+  <layout>
+   <region tts:displayAlign="after" tts:textAlign="center" xml:id="bottom"/>
+  </layout>
+ </head>
+ <body>
+  <div xml:lang="en-US">
+   <p begin="00:00:09.209" end="00:00:12.312" region="bottom" style="p">
+    ( clock ticking )
+   </p>
+   <p begin="00:00:14.848" end="00:00:17.000" region="bottom" style="p">
+    MAN:<br/>
+    When we think<br/>
+    of "E equals m c-squared",
+   </p>
+   <p begin="00:00:17.000" end="00:00:18.752" region="bottom" style="p">
+    <span tts:textAlign="right">we have this vision of Einstein</span>
+   </p>
+   <p begin="00:00:18.752" end="00:00:20.887" region="bottom" style="p">
+    as an old, wrinkly man<br/>
+    with white hair.
+   </p>
+   <p begin="00:00:20.887" end="00:00:26.760" region="bottom" style="p">
+    MAN 2:<br/>
+    E equals m c-squared is<br/>
+    not about an old Einstein.
+   </p>
+   <p begin="00:00:26.760" end="00:00:32.200" region="bottom" style="p">
+    MAN 2:<br/>
+    It's all about an eternal Einstein.
+   </p>
+   <p begin="00:00:32.200" end="00:00:34.400" region="bottom" style="p">
+    &lt;LAUGHING &amp; WHOOPS!&gt;
+   </p>
+   <p begin="00:00:34.400" end="00:00:38.400" region="bottom" style="p">
+    some more text
    </p>
   </div>
  </body>
