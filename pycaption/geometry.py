@@ -476,10 +476,12 @@ class Size(object):
         # The input must be valid so that any conversion can be done
         if not (video_width or video_height):
             raise RelativizationError(
-                u"Either video width or height must be given as a reference")
+                u"At least one of video width or height"
+                u" must be given as a reference")
         elif video_width and video_height:
             raise RelativizationError(
-                u"Only video width or height can be given as reference")
+                u"Only one of video width or height can be given as reference"
+                u" per value being converted")
 
         if unit == UnitEnum.EM:
             # TODO: Implement proper conversion of em in function of font-size
