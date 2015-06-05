@@ -297,3 +297,47 @@ class CaptionSet(object):
                 if caption.start >= 0:
                     out_captions.append(caption)
             self.set_captions(lang, out_captions)
+
+# Functions
+def merge_concurrent_captions(caption_set):
+    """Merge captions that have the same start and end times"""
+    for lang in caption_set.get_languages():
+        captions = caption_set.get_captions(lang)
+        last_caption = None
+        concurrent_captions = []
+        merged_captions = []
+        for caption in captions:
+            if last_caption:
+                last_timespan = last_caption.start, last_caption.end
+                current_timespan = caption.start, caption.end
+                if current_timespan == last_timespan:
+                    concurrent_captions.append(caption)
+                    last_caption = caption
+                    continue
+                else:
+                    merged_captions.append(merge(concurrent_captions))
+            concurrent_captions = [caption]
+            last_caption = caption
+
+        if concurrent_captions:
+            merged_captions.append(merge(concurrent_captions))
+        if merged_captions:
+            caption_set.set_captions(lang, merged_captions)
+    return caption_set
+
+def merge(captions):
+    """
+    Merge list of captions into one caption. The start/end times from the first
+    caption are kept.
+    """
+    new_nodes = []
+    for caption in captions:
+        if new_nodes:
+            new_nodes.append(CaptionNode.create_break())
+        for node in caption.nodes:
+            new_nodes.append(node)
+    caption = Caption()
+    caption.start = captions[0].start
+    caption.end = captions[0].end
+    caption.nodes = new_nodes
+    return caption
