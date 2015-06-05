@@ -4,7 +4,7 @@
 from copy import deepcopy
 
 from .base import DFXPWriter, DFXP_DEFAULT_REGION
-from ..base import BaseWriter, CaptionNode
+from ..base import BaseWriter, CaptionNode, merge_concurrent_captions
 
 from xml.sax.saxutils import escape
 from bs4 import BeautifulSoup
@@ -68,7 +68,7 @@ class SinglePositioningDFXPWriter(DFXPWriter):
         # affected. At the moment we know we don't use any other writers, but
         # this is important and mustn't be neglected
         caption_set = deepcopy(caption_set)
-
+        caption_set = merge_concurrent_captions(caption_set)
         caption_set.layout_info = positioning
 
         for lang in caption_set.get_languages():
@@ -82,12 +82,11 @@ class SinglePositioningDFXPWriter(DFXPWriter):
                     if hasattr(node, 'layout_info'):
                         node.layout_info = positioning
 
-        for style_name, style in caption_set.get_styles():
+        for _, style in caption_set.get_styles():
             if 'text-align' in style:
                 style.pop('text-align')
 
         return caption_set
-
 
 class LegacyDFXPWriter(BaseWriter):
     """Ported the legacy DFXPWriter from 0.4.5"""
