@@ -939,3 +939,35 @@ SAMPLE_DFXP_FOR_LEGACY_WRITER_OUTPUT = """\
   </div>
  </body>
 </tt>"""
+
+DFXP_WITH_CONCURRENT_CAPTIONS = u"""\
+<tt xml:lang="en-us"
+    xmlns="http://www.w3.org/ns/ttml"
+    xmlns:tts='http://www.w3.org/ns/ttml#styling'
+    >
+<head>
+    <layout>
+        <region xml:id="r0" tts:textAlign="center" tts:displayAlign="after" tts:origin="5% 5%" tts:extent="90% 90%"/>
+        <region xml:id="r1" tts:textAlign="center" tts:displayAlign="after" tts:origin="5% 15%" tts:extent="90% 80%"/>
+    </layout>
+</head>
+<body>
+    <div>
+        <p region="r0" begin='00:00:01.000' end='00:00:03.000'>
+        When we think
+        </p>
+        <p region="r1" begin='00:00:01.000' end='00:00:03.000'>
+        of "E equals m c-squared",
+        </p>
+        <p region="r0" begin='00:00:03.000' end='00:00:04.000'>
+        we have this vision of Einstein
+        </p>
+        <p region="r0" begin='00:00:04.000' end='00:00:05.000'>
+        as an old, wrinkly man
+        </p>
+        <p region="r1" begin='00:00:04.000' end='00:00:05.000'>
+        with white hair.
+        </p>
+    </div>
+</body>
+</tt>"""
