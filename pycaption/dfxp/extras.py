@@ -94,14 +94,17 @@ class LegacyDFXPWriter(BaseWriter):
         self.p_style = False
         self.open_span = False
 
-    def write(self, captions, force=u''):
+    def write(self, caption_set, force=u''):
+        caption_set = deepcopy(caption_set)
+        caption_set = merge_concurrent_captions(caption_set)
+
         dfxp = BeautifulSoup(LEGACY_DFXP_BASE_MARKUP, u'xml')
         dfxp.find(u'tt')[u'xml:lang'] = u"en"
 
-        for style_id, style in captions.get_styles():
+        for style_id, style in caption_set.get_styles():
             if style != {}:
                 dfxp = self._recreate_styling_tag(style_id, style, dfxp)
-        if not captions.get_styles():
+        if not caption_set.get_styles():
             dfxp = self._recreate_styling_tag(
                 LEGACY_DFXP_DEFAULT_STYLE_ID, LEGACY_DFXP_DEFAULT_STYLE, dfxp)
 
@@ -113,15 +116,15 @@ class LegacyDFXPWriter(BaseWriter):
         body = dfxp.find(u'body')
 
         if force:
-            langs = [self._force_language(force, captions.get_languages())]
+            langs = [self._force_language(force, caption_set.get_languages())]
         else:
-            langs = captions.get_languages()
+            langs = caption_set.get_languages()
 
         for lang in langs:
             div = dfxp.new_tag(u'div')
             div[u'xml:lang'] = u'%s' % lang
 
-            for caption in captions.get_captions(lang):
+            for caption in caption_set.get_captions(lang):
                 if caption.style:
                     caption_style = caption.style
                     caption_style.update({u'region': LEGACY_DFXP_DEFAULT_REGION_ID})
