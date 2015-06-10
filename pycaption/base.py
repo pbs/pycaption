@@ -339,5 +339,6 @@ def merge(captions):
     caption = Caption()
     caption.start = captions[0].start
     caption.end = captions[0].end
+    caption.style = captions[0].style
     caption.nodes = new_nodes
     return caption
