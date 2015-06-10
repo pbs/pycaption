@@ -971,3 +971,27 @@ DFXP_WITH_CONCURRENT_CAPTIONS = u"""\
     </div>
 </body>
 </tt>"""
+
+# 'style_name' is the template parameter to use in str.format
+DFXP_WITH_TEMPLATED_STYLE = """\
+<tt xml:lang="en-us"
+    xmlns="http://www.w3.org/ns/ttml"
+    xmlns:tts='http://www.w3.org/ns/ttml#styling'
+    >
+<head>
+    <layout>
+        <region xml:id="r0" tts:textAlign="center" tts:displayAlign="after" tts:origin="5% 5%" tts:extent="90% 90%"/>
+    </layout>
+    <styling>
+        <style tts:color="#ffeedd" tts:fontFamily="Arial" tts:fontSize="10pt" tts:textAlign="center" xml:id="{style_name}"/>
+    </styling>
+</head>
+<body>
+    <div>
+        <p region="r0" begin="00:00:01.000" end="00:00:03.000" style="{style_name}">
+        When we think
+        </p>
+    </div>
+</body>
+</tt>
+"""
