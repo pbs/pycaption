@@ -1,16 +1,19 @@
+# -*- coding: utf-8 -*-
 import unittest
 from copy import deepcopy
 from bs4 import BeautifulSoup
 
-from pycaption.dfxp import (SinglePositioningDFXPWriter, DFXPReader,
-                            DFXP_DEFAULT_REGION, DFXP_DEFAULT_REGION_ID)
+from pycaption.dfxp import (
+    SinglePositioningDFXPWriter, DFXPReader, DFXP_DEFAULT_REGION,
+    DFXP_DEFAULT_REGION_ID, LegacyDFXPWriter)
 from pycaption.geometry import (
     HorizontalAlignmentEnum, VerticalAlignmentEnum, Layout, Alignment)
 
 from pycaption.dfxp.base import _create_internal_alignment
 
 from samples.dfxp import (
-    SAMPLE_DFXP_TO_RENDER_WITH_ONLY_DEFAULT_POSITIONING_INPUT)
+    SAMPLE_DFXP_TO_RENDER_WITH_ONLY_DEFAULT_POSITIONING_INPUT,
+    DFXP_WITH_TEMPLATED_STYLE)
 
 
 class SinglePositioningDFXPWRiterTestCase(unittest.TestCase):
@@ -113,3 +116,13 @@ class SinglePositioningDFXPWRiterTestCase(unittest.TestCase):
 
         for _, style in caption_set.get_styles():
             self.assertFalse('text-align' in style)
+
+
+class LegacyDFXPWriterTestCase(unittest.TestCase):
+    def test_default_style_is_written_to_output_file(self):
+        caption_set = DFXPReader(read_invalid_positioning=True).read(
+            DFXP_WITH_TEMPLATED_STYLE.format(style_name="foxy_the_squirrel"))
+
+        result = LegacyDFXPWriter().write(caption_set)
+
+        self.assertEqual(result.count('foxy_the_squirrel'), 2)
