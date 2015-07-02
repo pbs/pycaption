@@ -764,6 +764,19 @@ MICROSECONDS_PER_CODEWORD = 1000.0 * 1000.0 / (30.0 * 1000.0 / 1001.0)
 HEADER = u'Scenarist_SCC V1.0'
 
 
+def get_corrected_end_time(caption):
+    """If the last caption was never explicitly ended, set its end time to
+    start + 4 seconds
+
+    :param Caption caption: the caption to modify
+    :rtype: int
+    """
+    if caption.end:
+        return caption.end
+
+    return caption.start + 4 * 1000 * 1000
+
+
 class SCCReader(BaseReader):
     def __init__(self, *args, **kw):
         self.scc = []
@@ -808,6 +821,8 @@ class SCCReader(BaseReader):
 
         if captions.is_empty():
             raise CaptionReadNoCaptions(u"empty caption file")
+        else:
+            self.scc[-1].end = get_corrected_end_time(self.scc[-1])
 
         return captions
 
