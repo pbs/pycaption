@@ -134,6 +134,20 @@ class NodeCreatorFactory(object):
         )
 
 
+def get_corrected_end_time(caption):
+    """If the last caption was never explicitly ended, set its end time to
+    start + 4 seconds
+
+    :param Caption caption: the last caption
+    :rtype: int
+    """
+    if caption.end:
+        return caption.end
+
+    return caption.start + 4 * 1000 * 1000
+
+
+
 class SCCReader(BaseReader):
     """Converts a given unicode string to a CaptionSet.
 
@@ -216,6 +230,9 @@ class SCCReader(BaseReader):
 
         if captions.is_empty():
             raise CaptionReadNoCaptions(u"empty caption file")
+        else:
+            last_caption = captions.get_captions(lang)[-1]
+            last_caption.end = get_corrected_end_time(last_caption)
 
         return captions
 

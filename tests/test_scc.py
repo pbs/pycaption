@@ -10,7 +10,8 @@ from .samples.scc import (
     SAMPLE_SCC_PRODUCES_CAPTIONS_WITH_START_AND_END_TIME_THE_SAME,
     SAMPLE_SCC_POP_ON, SAMPLE_SCC_MULTIPLE_POSITIONING,
     SAMPLE_SCC_WITH_ITALICS, SAMPLE_SCC_EMPTY, SAMPLE_SCC_ROLL_UP_RU2,
-    SAMPLE_SCC_PRODUCES_BAD_LAST_END_TIME, SAMPLE_NO_POSITIONING_AT_ALL_SCC
+    SAMPLE_SCC_PRODUCES_BAD_LAST_END_TIME, SAMPLE_NO_POSITIONING_AT_ALL_SCC,
+    SAMPLE_SCC_NO_EXPLICIT_END_TO_LAST_CAPTION
 )
 
 TOLERANCE_MICROSECONDS = 500 * 1000
@@ -397,3 +398,11 @@ class TimingCorrectingCaptionListTestCase(unittest.TestCase):
 
         # extend then append
         self.assertEqual(caption_list[-2].end, 10)
+
+    def test_last_caption_zero_end_time_is_corrected(self):
+        caption_set = SCCReader().read(SAMPLE_SCC_NO_EXPLICIT_END_TO_LAST_CAPTION)  # noqa
+
+        last_caption = caption_set.get_captions('en-US')[-1]
+        self.assertEqual(
+            last_caption.end, last_caption.start + 4 * 1000 * 1000
+        )
