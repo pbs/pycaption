@@ -31,3 +31,22 @@ class SCCReaderTestCase(unittest.TestCase):
             CaptionReadNoCaptions,
             SCCReader().read, SAMPLE_SCC_EMPTY.decode(u'utf-8'))
 
+    def test_last_caption_zero_end_time_is_corrected(self):
+        caption_set = SCCReader().read(SAMPLE_SCC_NO_EXPLICIT_END_TO_LAST_CAPTION)  # noqa
+
+        last_caption = caption_set.get_captions('en-US')[-1]
+
+        self.assertEqual(
+            last_caption.end, last_caption.start + 4 * 1000 * 1000
+        )
+
+
+SAMPLE_SCC_NO_EXPLICIT_END_TO_LAST_CAPTION = u"""\
+Scenarist_SCC V1.0
+
+00:00:00;00	73e9 e329 942f
+
+00:00:06;01	942c
+
+00:24:55;14	9420 94ae 9470 97a2 a875 7062 e561 f420 f2ef e36b 206d 7573 e9e3 2980 942f
+"""
