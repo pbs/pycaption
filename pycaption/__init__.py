@@ -1,5 +1,6 @@
 from .base import CaptionConverter, Caption, CaptionSet, CaptionNode
 from .dfxp import DFXPWriter, DFXPReader
+from .microdvd import MicroDVDReader, MicroDVDWriter
 from .sami import SAMIReader, SAMIWriter
 from .srt import SRTReader, SRTWriter
 from .scc import SCCReader, SCCWriter
@@ -17,7 +18,7 @@ __all__ = [
 ]
 
 SUPPORTED_READERS = (
-    DFXPReader, WebVTTReader, SAMIReader, SRTReader, SCCReader)
+    DFXPReader, MicroDVDReader, WebVTTReader, SAMIReader, SRTReader, SCCReader)
 
 
 def detect_format(caps):
