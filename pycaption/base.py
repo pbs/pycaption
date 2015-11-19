@@ -322,7 +322,7 @@ class CaptionSet(object):
         """
         for lang in self.get_languages():
             captions = self.get_captions(lang)
-            out_captions = []
+            out_captions = CaptionList()
             for caption in captions:
                 caption.start = caption.start * rate_skew + offset
                 caption.end = caption.end * rate_skew + offset
@@ -336,8 +336,8 @@ def merge_concurrent_captions(caption_set):
     for lang in caption_set.get_languages():
         captions = caption_set.get_captions(lang)
         last_caption = None
-        concurrent_captions = []
-        merged_captions = []
+        concurrent_captions = CaptionList()
+        merged_captions = CaptionList()
         for caption in captions:
             if last_caption:
                 last_timespan = last_caption.start, last_caption.end
@@ -368,9 +368,6 @@ def merge(captions):
             new_nodes.append(CaptionNode.create_break())
         for node in caption.nodes:
             new_nodes.append(node)
-    caption = Caption()
-    caption.start = captions[0].start
-    caption.end = captions[0].end
-    caption.style = captions[0].style
-    caption.nodes = new_nodes
+    caption = Caption(
+        captions[0].start, captions[0].end, new_nodes, captions[0].style)
     return caption
