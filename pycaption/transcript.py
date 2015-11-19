@@ -4,7 +4,7 @@ try:
     import nltk.data
 except ImportError:
     raise ImportError(u'You must install nltk==2.0.4 and numpy==1.7.1 to be able to use this.')
-from pycaption import BaseWriter, CaptionNode
+from pycaption.base import BaseWriter, CaptionNode
 
 
 class TranscriptWriter(BaseWriter):
