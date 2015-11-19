@@ -192,7 +192,7 @@ They built the largest,
 SAMPLE_WEBVTT_FROM_SCC_PROPERLY_WRITES_NEWLINES_OUTPUT = u"""\
 WEBVTT
 
-21:30.033 --> 00:00.000 align:left position:12.5%,start line:86.67% size:87.5%
+21:30.033 --> 21:34.033 align:left position:12.5%,start line:86.67% size:87.5%
 aa
 bb
 """
