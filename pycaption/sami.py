@@ -182,7 +182,7 @@ class SAMIReader(BaseReader):
 
         :rtype: list
         """
-        captions = CaptionList(parent_layout)
+        captions = CaptionList(layout_info=parent_layout)
         milliseconds = 0
 
         for p in sami_soup.select(u'p[lang|=%s]' % language):

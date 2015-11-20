@@ -98,10 +98,10 @@ class DFXPReader(BaseReader):
         return LayoutAwareDFXPParser
 
     def _translate_div(self, div):
-        captions = CaptionList(div.layout_info)
-        for p_tag in div.find_all(u'p'):
-            captions.append(self._translate_p_tag(p_tag))
-        return captions
+        return CaptionList(
+            [self._translate_p_tag(p_tag) for p_tag in div.find_all(u'p')],
+            div.layout_info
+        )
 
     def _translate_p_tag(self, p_tag):
         start, end = self._find_times(p_tag)
@@ -109,9 +109,8 @@ class DFXPReader(BaseReader):
         self._translate_tag(p_tag)
         styles = self._translate_style(p_tag)
 
-        caption = Caption(start, end, self.nodes, style=styles,
-                          layout_info=p_tag.layout_info)
-        return caption
+        return Caption(
+            start, end, self.nodes, style=styles, layout_info=p_tag.layout_info)
 
     def _find_times(self, p_tag):
         start = self._translate_time(p_tag[u'begin'])

@@ -242,11 +242,37 @@ class Caption(object):
 
 class CaptionList(list):
     """ A list of captions with a layout object attached to it """
-    def __init__(self, layout_info=None):
+    def __init__(self, iterable=None, layout_info=None):
         """
+        :param iterator: An iterator used to populate the caption list
         :param Layout layout_info: A Layout object with the positioning info
         """
         self.layout_info = layout_info
+        args = [iterable] if iterable else []
+        super(CaptionList, self).__init__(*args)
+
+    def __getslice__(self, i, j):
+        return CaptionList(
+            list.__getslice__(self, i, j), layout_info=self.layout_info)
+
+    def __add__(self, other):
+        add_is_safe = (
+            not hasattr(other, 'layout_info') or
+            not other.layout_info or
+            self.layout_info == other.layout_info
+        )
+        if add_is_safe:
+            return CaptionList(
+                list.__add__(self, other), layout_info=self.layout_info)
+        else:
+            raise ValueError(
+                "Cannot add CaptionList objects with different layout_info")
+
+    def __mul__(self, other):
+        return CaptionList(
+            list.__mul__(self, other), layout_info=self.layout_info)
+
+    __rmul__ = __mul__
 
 
 class CaptionSet(object):
