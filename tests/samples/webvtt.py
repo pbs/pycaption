@@ -69,6 +69,22 @@ SAMPLE_WEBVTT_FROM_DFXP_WITH_POSITIONING = u"""WEBVTT
 You might not remember us. We are a typical transparent region with centered text that has an outline.
 
 00:03.500 --> 00:05.000 align:right position:25%,start line:25% size:50%
+had <u>personality.</u>
+
+00:05.500 --> 00:07.000 align:left position:50%,start line:50% size:25%
+Hello there, children! Have you seen any visitors?
+
+00:07.500 --> 00:09.000 align:right position:25%,start line:75% size:25%
+This is
+the last cue
+"""
+
+SAMPLE_WEBVTT_FROM_DFXP_WITH_POSITIONING_WITHOUT_STYLE = u"""WEBVTT
+
+00:01.000 --> 00:03.000 position:25%,start line:25% size:50%
+You might not remember us. We are a typical transparent region with centered text that has an outline.
+
+00:03.500 --> 00:05.000 align:right position:25%,start line:25% size:50%
 had personality.
 
 00:05.500 --> 00:07.000 align:left position:50%,start line:50% size:25%
