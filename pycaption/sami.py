@@ -221,6 +221,16 @@ class SAMIReader(BaseReader):
 
         return captions
 
+    def _get_style_name_from_tag(self, tag):
+        if tag == u'i':
+            return u'italics'
+        elif tag == u'b':
+            return u'bold'
+        elif tag == u'u':
+            return u'underline'
+        else:
+            raise RuntimeError("Unknown style tag")
+
     def _translate_tag(self, tag, inherit_from=None):
         """
         :param inherit_from: A Layout object extracted from an ancestor tag
@@ -242,15 +252,16 @@ class SAMIReader(BaseReader):
         elif tag.name == u'br':
             self.line.append(CaptionNode.create_break(inherit_from))
         # convert italics
-        elif tag.name == u'i':
+        elif tag.name == u'i' or tag.name == u'b' or tag.name == u'u':
+            style_name = self._get_style_name_from_tag(tag.name)
             self.line.append(
-                CaptionNode.create_style(True, {u'italics': True})
+                CaptionNode.create_style(True, {style_name: True})
             )
             # recursively call function for any children elements
             for a in tag.contents:
                 self._translate_tag(a, inherit_from)
             self.line.append(
-                CaptionNode.create_style(False, {u'italics': True}))
+                CaptionNode.create_style(False, {style_name: True}))
         elif tag.name == u'span':
             self._translate_span(tag, inherit_from)
         else:
@@ -307,6 +318,10 @@ class SAMIReader(BaseReader):
                 attrs[u'font-size'] = value.strip()
             elif css_property == u'font-style' and value.strip() == u'italic':
                 attrs[u'italics'] = True
+            elif css_property == u'text-decoration' and value.strip() == u'underline':
+                attrs[u'underline'] = True
+            elif css_property == u'font-weight' and value.strip() == u'bold':
+                attrs[u'bold'] = True
             elif css_property == u'lang':
                 attrs[u'lang'] = value.strip()
             elif css_property == u'color':
