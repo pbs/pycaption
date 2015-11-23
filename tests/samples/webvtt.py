@@ -196,3 +196,8 @@ WEBVTT
 aa
 bb
 """
+
+SAMPLE_WEBVTT_LAST_CUE_ZERO_START = u"""WEBVTT
+
+00:00.000 --> 00:12.312
+( clock ticking )"""

@@ -10,7 +10,7 @@ from .samples.sami import SAMPLE_SAMI_DOUBLE_BR
 from .samples.srt import SAMPLE_SRT
 from .samples.webvtt import (
     SAMPLE_WEBVTT, SAMPLE_WEBVTT_2, SAMPLE_WEBVTT_EMPTY, SAMPLE_WEBVTT_DOUBLE_BR,
-    WEBVTT_FROM_DFXP_WITH_CONFLICTING_ALIGN
+    WEBVTT_FROM_DFXP_WITH_CONFLICTING_ALIGN, SAMPLE_WEBVTT_LAST_CUE_ZERO_START
 )
 
 
@@ -152,6 +152,11 @@ class WebVTTReaderTestCase(unittest.TestCase):
                 u"00:00:10.000 --> 00:00:20.000\n"
                 u"This cue starts before the previous one.\n")
         )
+
+    def test_zero_start(self):
+        captions = self.reader.read(SAMPLE_WEBVTT_LAST_CUE_ZERO_START)
+        cue = captions.get_captions(u'en-US')[0]
+        self.assertEquals(cue.start, 0)
 
 
 class WebVTTWriterTestCase(unittest.TestCase):

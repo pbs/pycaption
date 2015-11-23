@@ -107,7 +107,8 @@ class WebVTTReader(BaseReader):
                     # it's a comment or some metadata; ignore it
                     pass
 
-        if all([start, end, nodes]):
+        # Add a last caption if there are remaining nodes
+        if None not in [start, end, nodes]:
             caption = Caption(start, end, nodes, layout_info=layout_info)
             captions.append(caption)
 
