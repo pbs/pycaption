@@ -134,7 +134,7 @@ class WebVTTReader(BaseReader):
 
     def _parse_timing_line(self, line, last_start_time):
         """
-        :returns: Caption
+        :returns: Tuple (int, int, Layout)
         """
         m = TIMING_LINE_PATTERN.search(line)
         if not m:
@@ -145,7 +145,6 @@ class WebVTTReader(BaseReader):
         end = self._parse_timestamp(m.group(2))
 
         cue_settings = m.group(3)
-
 
         if not self.ignore_timing_errors:
             self._validate_timings(start, end, last_start_time)
