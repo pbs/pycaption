@@ -285,7 +285,7 @@ class CaptionSet(object):
     """
     def __init__(self, captions, styles={}, layout_info=None):
         """
-        :param captions: A dictionary of the format {'language': [CaptionList]}
+        :param captions: A dictionary of the format {'language': CaptionList}
         :param styles: A dictionary with CSS-like styling rules
         :param Layout layout_info: A Layout object with the positioning info
         """
