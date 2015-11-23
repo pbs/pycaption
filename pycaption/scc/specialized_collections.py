@@ -4,7 +4,15 @@ from ..geometry import (UnitEnum, Size, Layout, Point, Alignment,
 
 from .constants import PAC_BYTES_TO_POSITIONING_MAP, COMMANDS
 
+
 class PreCaption(object):
+    """
+    The Caption class has been refactored and now its instances must be used as
+    immutable objects. Some of the code in this module, however, relied on the
+    fact that Caption instances were mutable. For backwards compatibility,
+    therefore, this class was created to work as a mutable caption data holder
+    used to eventually instantiate an actual Caption object.
+    """
 
     def __init__(self, start=0, end=0):
         self.start = start
