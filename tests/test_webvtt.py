@@ -10,7 +10,7 @@ from .samples.sami import SAMPLE_SAMI_DOUBLE_BR
 from .samples.srt import SAMPLE_SRT
 from .samples.webvtt import (
     SAMPLE_WEBVTT, SAMPLE_WEBVTT_2, SAMPLE_WEBVTT_EMPTY, SAMPLE_WEBVTT_DOUBLE_BR,
-    WEBVTT_FROM_DFXP_WITH_CONFLICTING_ALIGN
+    WEBVTT_FROM_DFXP_WITH_CONFLICTING_ALIGN, SAMPLE_WEBVTT_LAST_CUE_ZERO_START
 )
 
 
@@ -61,44 +61,52 @@ class WebVTTReaderTestCase(unittest.TestCase):
 
     def test_not_ignoring_timing_errors(self):
         self.assertRaises(
-            CaptionReadSyntaxError,
+            CaptionReadError,
             WebVTTReader(ignore_timing_errors=False).read,
             (u"\n"
-             u"00:00:20,000 --> 00:00:10,000\n"
+             u"00:00:20.000 --> 00:00:10.000\n"
              u"foo bar baz")
         )
 
         self.assertRaises(
             CaptionReadError,
             WebVTTReader(ignore_timing_errors=False).read,
-            (u"00:00:20,000 --> 00:00:10,000\n"
+            (u"00:00:20.000 --> 00:00:10.000\n"
              u"Start time is greater than end time.\n")
         )
 
         self.assertRaises(
             CaptionReadError,
             WebVTTReader(ignore_timing_errors=False).read,
-            (u"00:00:20,000 --> 00:00:30,000\n"
+            (u"00:00:20.000 --> 00:00:30.000\n"
              u"Start times should be consecutive.\n"
              u"\n"
-             u"00:00:10,000 --> 00:00:20,000\n"
+             u"00:00:10.000 --> 00:00:20.000\n"
              u"This cue starts before the previous one.\n")
         )
 
     def test_ignoring_timing_errors(self):
-        # Even if timing errors are ignored, this is worse
+        # Even if timing errors are ignored, this has to raise an exception
         self.assertRaises(
             CaptionReadSyntaxError,
             WebVTTReader().read,
             (u"\nNOTE invalid cue stamp\n"
-             u"00:00:20,000 --> \n"
+             u"00:00:20.000 --> \n"
              u"foo bar baz\n")
+        )
+
+        # And this too
+        self.assertRaises(
+            CaptionReadSyntaxError,
+            WebVTTReader().read,
+            (u"\n00:00:20,000 --> 00:00:22,000\n"
+             u"Note the comma instead of point.\n")
         )
 
         try:
             WebVTTReader().read(
                 (u"\n"
-                 u"00:00:20,000 --> 00:00:10,000\n"
+                 u"00:00:20.000 --> 00:00:10.000\n"
                  u"Start time is greater than end time.\n")
             )
         except CaptionReadError:
@@ -107,10 +115,10 @@ class WebVTTReaderTestCase(unittest.TestCase):
         try:
             WebVTTReader().read(
                 (u"\n"
-                 u"00:00:20,000 --> 00:00:30,000\n"
+                 u"00:00:20.000 --> 00:00:30.000\n"
                  u"Start times should be consecutive.\n"
                  u"\n"
-                 u"00:00:10,000 --> 00:00:20,000\n"
+                 u"00:00:10.000 --> 00:00:20.000\n"
                  u"This cue starts before the previous one.\n")
 
             )
@@ -122,28 +130,33 @@ class WebVTTReaderTestCase(unittest.TestCase):
             CaptionReadSyntaxError,
             WebVTTReader().read,
             (u"\nNOTE Cues without text are invalid.\n"
-                u"00:00:20,000 --> 00:00:30,000\n"
+                u"00:00:20.000 --> 00:00:30.000\n"
                 u"\n"
-                u"00:00:40,000 --> 00:00:50,000\n"
+                u"00:00:40.000 --> 00:00:50.000\n"
                 u"foo bar baz\n")
         )
 
         self.assertRaises(
             CaptionReadError,
             WebVTTReader(ignore_timing_errors=False).read,
-            (u"00:00:20,000 --> 00:00:10,000\n"
+            (u"00:00:20.000 --> 00:00:10.000\n"
                 u"Start time is greater than end time.")
         )
 
         self.assertRaises(
             CaptionReadError,
             WebVTTReader(ignore_timing_errors=False).read,
-            (u"00:00:20,000 --> 00:00:30,000\n"
+            (u"00:00:20.000 --> 00:00:30.000\n"
                 u"Start times should be consecutive.\n"
                 u"\n"
-                u"00:00:10,000 --> 00:00:20,000\n"
+                u"00:00:10.000 --> 00:00:20.000\n"
                 u"This cue starts before the previous one.\n")
         )
+
+    def test_zero_start(self):
+        captions = self.reader.read(SAMPLE_WEBVTT_LAST_CUE_ZERO_START)
+        cue = captions.get_captions(u'en-US')[0]
+        self.assertEquals(cue.start, 0)
 
 
 class WebVTTWriterTestCase(unittest.TestCase):

@@ -3,7 +3,7 @@ import re
 from copy import deepcopy
 
 from .base import (
-    BaseReader, BaseWriter, CaptionSet, Caption, CaptionNode
+    BaseReader, BaseWriter, CaptionSet, CaptionList, Caption, CaptionNode
 )
 
 from .geometry import Layout
@@ -37,6 +37,10 @@ DEFAULT_ALIGNMENT = u'middle'
 
 
 def microseconds(h, m, s, f):
+    """
+    Returns an integer representing a number of microseconds
+    :rtype: int
+    """
     return (int(h) * 3600 + int(m) * 60 + int(s)) * 1000000 + int(f) * 1000
 
 
@@ -45,9 +49,6 @@ class WebVTTReader(BaseReader):
         """
         :param ignore_timing_errors: Whether to ignore timing checks
         """
-        super(WebVTTReader, self).__init__(
-            ignore_timing_errors, *args, **kwargs
-        )
         self.ignore_timing_errors = ignore_timing_errors
 
     def detect(self, content):
@@ -57,8 +58,7 @@ class WebVTTReader(BaseReader):
         if type(content) != unicode:
             raise InvalidInputError('The content is not a unicode string.')
 
-        caption_set = CaptionSet()
-        caption_set.set_captions(lang, self._parse(content.splitlines()))
+        caption_set = CaptionSet({lang: self._parse(content.splitlines())})
 
         if caption_set.is_empty():
             raise CaptionReadNoCaptions(u"empty caption file")
@@ -66,8 +66,11 @@ class WebVTTReader(BaseReader):
         return caption_set
 
     def _parse(self, lines):
-        captions = []
-        caption = None
+        captions = CaptionList()
+        start = None
+        end = None
+        nodes = []
+        layout_info = None
         found_timing = False
 
         for i, line in enumerate(lines):
@@ -77,31 +80,36 @@ class WebVTTReader(BaseReader):
                 timing_line = i
                 last_start_time = captions[-1].start if captions else 0
                 try:
-                    caption = self._parse_timing_line(line, last_start_time)
+                    start, end, layout_info = self._parse_timing_line(
+                        line, last_start_time)
                 except CaptionReadError as e:
                     new_message = u'%s (line %d)' % (e.args[0], timing_line)
                     raise type(e), new_message, sys.exc_info()[2]
 
             elif u'' == line:
                 if found_timing:
-                    if caption.is_empty():
+                    if not nodes:
                         raise CaptionReadSyntaxError(
                             u'Cue without content. (line %d)' % timing_line)
                     else:
                         found_timing = False
+                        caption = Caption(
+                            start, end, nodes, layout_info=layout_info)
                         captions.append(caption)
-                        caption = None
+                        nodes = []
             else:
                 if found_timing:
-                    if not caption.is_empty():
-                        caption.nodes.append(CaptionNode.create_break())
-                    caption.nodes.append(CaptionNode.create_text(
+                    if nodes:
+                        nodes.append(CaptionNode.create_break())
+                    nodes.append(CaptionNode.create_text(
                         self._decode(line)))
                 else:
                     # it's a comment or some metadata; ignore it
                     pass
 
-        if caption and not caption.is_empty():
+        # Add a last caption if there are remaining nodes
+        if nodes:
+            caption = Caption(start, end, nodes, layout_info=layout_info)
             captions.append(caption)
 
         return captions
@@ -110,47 +118,51 @@ class WebVTTReader(BaseReader):
         partial_result = VOICE_SPAN_PATTERN.sub(u'\\2: ', line)
         return OTHER_SPAN_PATTERN.sub(u'', partial_result)
 
-    def _validate_timings(self, caption, last_start_time):
-        if caption.start is None:
+    def _validate_timings(self, start, end, last_start_time):
+        if start is None:
             raise CaptionReadSyntaxError(
                 u'Invalid cue start timestamp.')
-        if caption.end is None:
+        if end is None:
             raise CaptionReadSyntaxError(u'Invalid cue end timestamp.')
-        if caption.start > caption.end:
+        if start > end:
             raise CaptionReadError(
                 u'End timestamp is not greater than start timestamp.')
-        if caption.start < last_start_time:
+        if start < last_start_time:
             raise CaptionReadError(
                 u'Start timestamp is not greater than or equal'
                 u'to start timestamp of previous cue.')
 
     def _parse_timing_line(self, line, last_start_time):
         """
-        :returns: Caption
+        :returns: Tuple (int, int, Layout)
         """
         m = TIMING_LINE_PATTERN.search(line)
         if not m:
             raise CaptionReadSyntaxError(
                 u'Invalid timing format.')
 
-        caption = Caption()
+        start = self._parse_timestamp(m.group(1))
+        end = self._parse_timestamp(m.group(2))
 
-        caption.start = self._parse_timestamp(m.group(1))
-        caption.end = self._parse_timestamp(m.group(2))
         cue_settings = m.group(3)
 
         if not self.ignore_timing_errors:
-            self._validate_timings(caption, last_start_time)
+            self._validate_timings(start, end, last_start_time)
 
+        layout_info = None
         if cue_settings:
-            caption.layout_info = Layout(webvtt_positioning=cue_settings)
+            layout_info = Layout(webvtt_positioning=cue_settings)
 
-        return caption
+        return start, end, layout_info
 
     def _parse_timestamp(self, timestamp):
+        """Returns an integer representing a number of microseconds
+        :rtype: int
+        """
         m = TIMESTAMP_PATTERN.search(timestamp)
         if not m:
-            return None
+            raise CaptionReadSyntaxError(
+                u'Invalid timing format.')
 
         m = m.groups()
 

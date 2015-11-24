@@ -1,8 +1,30 @@
-from ..base import Caption, CaptionNode
+from ..base import CaptionList, Caption, CaptionNode
 from ..geometry import (UnitEnum, Size, Layout, Point, Alignment,
                         VerticalAlignmentEnum, HorizontalAlignmentEnum)
 
 from .constants import PAC_BYTES_TO_POSITIONING_MAP, COMMANDS
+
+
+class PreCaption(object):
+    """
+    The Caption class has been refactored and now its instances must be used as
+    immutable objects. Some of the code in this module, however, relied on the
+    fact that Caption instances were mutable. For backwards compatibility,
+    therefore, this class was created to work as a mutable caption data holder
+    used to eventually instantiate an actual Caption object.
+    """
+
+    def __init__(self, start=0, end=0):
+        self.start = start
+        self.end = end
+        self.nodes = []
+        self.style = {}
+        self.layout_info = None
+
+    def to_real_caption(self):
+        return Caption(
+            self.start, self.end, self.nodes, self.style, self.layout_info
+        )
 
 
 class TimingCorrectingCaptionList(list):
@@ -175,7 +197,7 @@ class CaptionCreator(object):
         if node_buffer.is_empty():
             return
 
-        caption = Caption()
+        caption = PreCaption()
         caption.start = start
         caption.end = 0  # Not yet known; filled in later
         self._still_editing = [caption]
@@ -186,7 +208,7 @@ class CaptionCreator(object):
                 continue
 
             elif instruction.requires_repositioning():
-                caption = Caption()
+                caption = PreCaption()
                 caption.start = start
                 caption.end = 0
                 self._still_editing.append(caption)
@@ -228,11 +250,14 @@ class CaptionCreator(object):
         self._collection.extend(self._still_editing)
 
     def get_all(self):
-        """Returns the Caption collection as a list
+        """Returns the Caption collection as a CaptionList
 
-        :rtype: list
+        :rtype: CaptionList
         """
-        return list(self._collection)
+        caption_list = CaptionList()
+        for precap in self._collection:
+            caption_list.append(precap.to_real_caption())
+        return caption_list
 
 
 class InstructionNodeCreator(object):
