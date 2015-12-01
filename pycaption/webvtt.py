@@ -226,7 +226,7 @@ class WebVTTWriter(BaseWriter):
             return u"%02d:%06.3f" % (minutes, seconds)
 
     def _tags_for_style(self, style):
-        if style == u'italic':
+        if style == u'italics':
             return [u'<i>', u'</i>']
         elif style == u'underline':
             return [u'<u>', u'</u>']
@@ -235,11 +235,29 @@ class WebVTTWriter(BaseWriter):
         else:
             return [u'', u'']
 
+    def _calculate_resulting_style(self, style, caption_set):
+        resulting_style = {}
+
+        style_classes = []
+        if u'classes' in style:
+            style_classes = style[u'classes']
+        elif u'class' in style:
+            style_classes = [style[u'class']]
+
+        for style_class in style_classes:
+            sub_style = caption_set.get_style(style_class).copy()
+            # Recursively resolve class attributes and calculate style
+            resulting_style.update(self._calculate_resulting_style(sub_style, caption_set))
+
+        resulting_style.update(style)
+
+        return resulting_style
+
     def _write_caption(self, caption_set, caption):
         """
         :type caption: Caption
         """
-        layout_groups = self._layout_groups(caption.nodes)
+        layout_groups = self._layout_groups(caption.nodes, caption_set)
 
         start = self._timestamp(caption.start)
         end = self._timestamp(caption.end)
@@ -248,14 +266,14 @@ class WebVTTWriter(BaseWriter):
         output = u''
 
         cue_style_tags = [u'', u'']
-        if u'class' in caption.style:
-            style_class = caption.style['class']
-            style = caption_set.get_style(style_class)
-            for key, value in style.items():
-                if value:
-                    tags = self._tags_for_style(key)
-                    cue_style_tags[0] += tags[0]
-                    cue_style_tags[1] = tags[1] + cue_style_tags[1]
+
+        style = self._calculate_resulting_style(caption.style, caption_set)
+        for key, value in style.items():
+            if value:
+                tags = self._tags_for_style(key)
+#                    print "tags: " + str(tags) + "\n"
+                cue_style_tags[0] += tags[0]
+                cue_style_tags[1]  = tags[1] + cue_style_tags[1]
 
         for cue_text, layout in layout_groups:
             if not layout:
@@ -355,7 +373,7 @@ class WebVTTWriter(BaseWriter):
 
         return cue_settings
 
-    def _layout_groups(self, nodes):
+    def _layout_groups(self, nodes, caption_set):
         """
         Convert a Caption's nodes to WebVTT cue or cues (depending on
         whether they have the same positioning or not).
@@ -384,12 +402,14 @@ class WebVTTWriter(BaseWriter):
                 s += self._encode(node.content) or u'&nbsp;'
                 current_layout = node.layout_info
             elif node.type_ == CaptionNode.STYLE:
+                resulting_style = self._calculate_resulting_style(node.content, caption_set)
+
                 styles = [u'italics', u'underline', u'bold']
                 if not node.start:
                     styles.reverse()
 
                 for style in styles:
-                    if style in node.content and node.content[style]:
+                    if style in resulting_style and resulting_style[style]:
                         tags = self._tags_for_style(style)
                         if node.start:
                             s += tags[0]
