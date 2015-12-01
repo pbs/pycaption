@@ -154,7 +154,7 @@ class DFXPReader(BaseReader):
             else:
                 raise InvalidInputError(u"Unsupported offset-time metric " + metric)
 
-            return microseconds
+            return int(microseconds)
 
     def _translate_tag(self, tag):
         # convert text
