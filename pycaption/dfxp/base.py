@@ -225,7 +225,10 @@ class DFXPReader(BaseReader):
         attrs = {}
         dfxp_attrs = tag.attrs
         for arg in dfxp_attrs:
-            if arg == u"style":
+            if arg.lower() == u"style":
+                # Support multiple classes per tag
+                attrs[u'classes'] = dfxp_attrs[arg].strip().split(u' ')
+                # Save old class attribute for compatibility
                 attrs[u'class'] = dfxp_attrs[arg]
             elif arg.lower() == u"tts:fontstyle" and dfxp_attrs[arg] == u"italic":
                 attrs[u'italics'] = True
@@ -239,7 +242,7 @@ class DFXPReader(BaseReader):
                 attrs[u'font-family'] = dfxp_attrs[arg]
             elif arg.lower() == u"tts:fontsize":
                 attrs[u'font-size'] = dfxp_attrs[arg]
-            elif arg == u"tts:color":
+            elif arg.lower() == u"tts:color":
                 attrs[u'color'] = dfxp_attrs[arg]
         return attrs
 
