@@ -251,7 +251,7 @@ class WebVTTWriter(BaseWriter):
         if u'class' in caption.style:
             style_class = caption.style['class']
             style = caption_set.get_style(style_class)
-            for key, value in style.iteritems():
+            for key, value in style.items():
                 if value:
                     tags = self._tags_for_style(key)
                     cue_style_tags[0] += tags[0]
