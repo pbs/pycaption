@@ -8,8 +8,7 @@ from .samples.sami import SAMPLE_SAMI
 from .samples.srt import SAMPLE_SRT
 from .samples.webvtt import (
     SAMPLE_WEBVTT, SAMPLE_WEBVTT_FROM_WEBVTT,
-    SAMPLE_WEBVTT_FROM_DFXP_WITH_POSITIONING,
-    SAMPLE_WEBVTT_WITH_SETTINGS_CUE
+    SAMPLE_WEBVTT_FROM_DFXP_WITH_POSITIONING, SAMPLE_WEBVTT_WITH_CUE_SETTINGS
 )
 from .mixins import (
     WebVTTTestingMixIn, DFXPTestingMixIn, SAMITestingMixIn, SRTTestingMixIn
@@ -24,12 +23,12 @@ class WebVTTtoWebVTTTestCase(unittest.TestCase, WebVTTTestingMixIn):
         self.assertTrue(isinstance(results, unicode))
         self.assertWebVTTEquals(SAMPLE_WEBVTT_FROM_WEBVTT, results)
 
-    def test_cues_are_kept(self):
-        caption_set = WebVTTReader().read(SAMPLE_WEBVTT_WITH_SETTINGS_CUE)
+    def test_cue_settings_are_kept(self):
+        caption_set = WebVTTReader().read(SAMPLE_WEBVTT_WITH_CUE_SETTINGS)
 
         webvtt = WebVTTWriter().write(caption_set)
 
-        self.assertEqual(SAMPLE_WEBVTT_WITH_SETTINGS_CUE, webvtt)
+        self.assertEqual(SAMPLE_WEBVTT_WITH_CUE_SETTINGS, webvtt)
 
     def test_positioning_is_kept(self):
         caption_set = WebVTTReader().read(

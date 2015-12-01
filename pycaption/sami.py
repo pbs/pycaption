@@ -48,7 +48,7 @@ from cssutils import parseString, log, css as cssutils_css
 from bs4 import BeautifulSoup, NavigableString
 
 from .base import (
-    BaseReader, BaseWriter, CaptionSet, Caption, CaptionNode,
+    BaseReader, BaseWriter, CaptionSet, CaptionList, Caption, CaptionNode,
     DEFAULT_LANGUAGE_CODE)
 from .exceptions import (
     CaptionReadNoCaptions, CaptionReadSyntaxError, InvalidInputError)
@@ -88,17 +88,11 @@ class SAMIReader(BaseReader):
         content, doc_styles, doc_langs = (
             self._get_sami_parser_class()().feed(content))
         sami_soup = self._get_xml_parser_class()(content)
-        caption_set = CaptionSet()
 
-        # Convert styles from CSS to internal representation
-        for style in doc_styles.items():
-            style = (style[0], self._translate_parsed_style(style[1]))
-
-        caption_set.set_styles(doc_styles)
         # Get the global layout that applies to all <p> tags
-        layout_info = self._build_layout(doc_styles.get('p', {}))
-        caption_set.layout_info = layout_info
+        global_layout = self._build_layout(doc_styles.get('p', {}))
 
+        caption_dict = {}
         for language in doc_langs:
             lang_layout = None
             for target, styling in doc_styles.items():
@@ -106,14 +100,25 @@ class SAMIReader(BaseReader):
                     if styling.get(u'lang', None) == language:
                         lang_layout = self._build_layout(
                             doc_styles.get(target, {}),
-                            inherit_from=layout_info
+                            inherit_from=global_layout
                         )
                         break
-            lang_layout = lang_layout or layout_info
-            caption_set.set_layout_info(language, lang_layout)
+            lang_layout = lang_layout or global_layout
             lang_captions = self._translate_lang(
                 language, sami_soup, lang_layout)
-            caption_set.set_captions(language, lang_captions)
+
+            caption_dict[language] = lang_captions
+
+        caption_set = CaptionSet(
+            caption_dict,
+            layout_info=global_layout
+        )
+
+        # Convert styles from CSS to internal representation
+        for style in doc_styles.items():
+            style = (style[0], self._translate_parsed_style(style[1]))
+
+        caption_set.set_styles(doc_styles)
 
         if caption_set.is_empty():
             raise CaptionReadNoCaptions(u"empty caption file")
@@ -183,7 +188,7 @@ class SAMIReader(BaseReader):
 
         :rtype: list
         """
-        captions = []
+        captions = CaptionList(layout_info=parent_layout)
         milliseconds = 0
 
         for p in sami_soup.select(u'p[lang|=%s]' % language):
@@ -206,7 +211,6 @@ class SAMIReader(BaseReader):
                     alignment=self.first_alignment,
                     inherit_from=layout_info
                 )
-                caption = Caption(layout_info=caption_layout)
                 for node in self.line:
                     node.layout_info = Layout(
                         alignment=self.first_alignment,
@@ -214,10 +218,7 @@ class SAMIReader(BaseReader):
                     )
                 self.first_alignment = None
 
-                caption.start = start
-                caption.end = end
-                caption.nodes = self.line
-                caption.style = styles
+                caption = Caption(start, end, self.line, styles, caption_layout)
                 captions.append(caption)
 
         if captions and captions[-1].end == 0:

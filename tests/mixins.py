@@ -84,7 +84,7 @@ class DFXPTestingMixIn(object):
 
     def _remove_styling(self, soup):
         for style in soup(u'styling'):
-            style.extract()
+            style.clear()
 
         for paragraph in soup(u'p'):
             if u'style' in paragraph.attrs:

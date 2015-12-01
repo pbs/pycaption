@@ -1,7 +1,7 @@
 from copy import deepcopy
 
 from .base import (
-    BaseReader, BaseWriter, CaptionSet, Caption, CaptionNode)
+    BaseReader, BaseWriter, CaptionSet, CaptionList, Caption, CaptionNode)
 from .exceptions import CaptionReadNoCaptions, InvalidInputError
 
 
@@ -17,37 +17,37 @@ class SRTReader(BaseReader):
         if type(content) != unicode:
             raise InvalidInputError('The content is not a unicode string.')
 
-        caption_set = CaptionSet()
         lines = content.splitlines()
         start_line = 0
-        captions = []
+        captions = CaptionList()
 
         while start_line < len(lines):
             if not lines[start_line].isdigit():
                 break
 
-            caption = Caption()
-
             end_line = self._find_text_line(start_line, lines)
 
             timing = lines[start_line + 1].split(u'-->')
-            caption.start = self._srttomicro(timing[0].strip(u' \r\n'))
-            caption.end = self._srttomicro(timing[1].strip(u' \r\n'))
+            start = self._srttomicro(timing[0].strip(u' \r\n'))
+            end = self._srttomicro(timing[1].strip(u' \r\n'))
+
+            nodes = []
 
             for line in lines[start_line + 2:end_line - 1]:
                 # skip extra blank lines
-                if not caption.nodes or line != u'':
-                    caption.nodes.append(CaptionNode.create_text(line))
-                    caption.nodes.append(CaptionNode.create_break())
+                if not nodes or line != u'':
+                    nodes.append(CaptionNode.create_text(line))
+                    nodes.append(CaptionNode.create_break())
 
-            # remove last line break from end of caption list
-            if len(caption.nodes):
-                caption.nodes.pop()
+            if len(nodes):
+                # remove last line break from end of caption list
+                nodes.pop()
+                caption = Caption(start, end, nodes)
                 captions.append(caption)
 
             start_line = end_line
 
-        caption_set.set_captions(lang, captions)
+        caption_set = CaptionSet({lang: captions})
 
         if caption_set.is_empty():
             raise CaptionReadNoCaptions(u"empty caption file")

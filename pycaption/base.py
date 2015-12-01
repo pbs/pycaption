@@ -1,6 +1,7 @@
-from collections import defaultdict
 from datetime import timedelta
+from numbers import Number
 
+from .exceptions import CaptionReadError, CaptionReadTimingError
 
 DEFAULT_LANGUAGE_CODE = u'en-US'
 
@@ -157,11 +158,33 @@ class Caption(object):
     A single caption, including the time and styling information
     for its display.
     """
-    def __init__(self, layout_info=None):
-        self.start = 0
-        self.end = 0
-        self.nodes = []
-        self.style = {}
+    def __init__(self, start, end, nodes, style={}, layout_info=None):
+        """
+        Initialize the Caption object
+        :param start: The start time in microseconds
+        :type start: Number
+        :param end: The end time in microseconds
+        :type end: Number
+        :param nodes: A list of CaptionNodes
+        :type nodes: list
+        :param style: A dictionary with CSS-like styling rules
+        :type style: dict
+        :param layout_info: A Layout object with the necessary positioning
+            information
+        :type layout_info: Layout
+        """
+        if not isinstance(start, Number):
+            raise CaptionReadTimingError(u"Captions must be initialized with a"
+                                         u" valid start time")
+        if not isinstance(end, Number):
+            raise CaptionReadTimingError(u"Captions must be initialized with a"
+                                         u" valid end time")
+        if not nodes:
+            raise CaptionReadError(u"Node list cannot be empty")
+        self.start = start
+        self.end = end
+        self.nodes = nodes
+        self.style = style
         self.layout_info = layout_info
 
     def is_empty(self):
@@ -217,6 +240,41 @@ class Caption(object):
         return u'0' + str_value
 
 
+class CaptionList(list):
+    """ A list of captions with a layout object attached to it """
+    def __init__(self, iterable=None, layout_info=None):
+        """
+        :param iterator: An iterator used to populate the caption list
+        :param Layout layout_info: A Layout object with the positioning info
+        """
+        self.layout_info = layout_info
+        args = [iterable] if iterable else []
+        super(CaptionList, self).__init__(*args)
+
+    def __getslice__(self, i, j):
+        return CaptionList(
+            list.__getslice__(self, i, j), layout_info=self.layout_info)
+
+    def __add__(self, other):
+        add_is_safe = (
+            not hasattr(other, 'layout_info') or
+            not other.layout_info or
+            self.layout_info == other.layout_info
+        )
+        if add_is_safe:
+            return CaptionList(
+                list.__add__(self, other), layout_info=self.layout_info)
+        else:
+            raise ValueError(
+                "Cannot add CaptionList objects with different layout_info")
+
+    def __mul__(self, other):
+        return CaptionList(
+            list.__mul__(self, other), layout_info=self.layout_info)
+
+    __rmul__ = __mul__
+
+
 class CaptionSet(object):
     """
     A set of captions in potentially multiple languages,
@@ -225,18 +283,15 @@ class CaptionSet(object):
     The .layout_info attribute, keeps information that should be inherited
     by all the children.
     """
-    def __init__(self):
-        self._styles = {}
-
-        # Base layout to be inherited by all languages
-        self.layout_info = None
-
-        # For individual languages, represents inheritable layout-related
-        # information
-        self._layout_info = {}
-
-        # Captions by language.
-        self._captions = defaultdict(list)
+    def __init__(self, captions, styles={}, layout_info=None):
+        """
+        :param captions: A dictionary of the format {'language': CaptionList}
+        :param styles: A dictionary with CSS-like styling rules
+        :param Layout layout_info: A Layout object with the positioning info
+        """
+        self._captions = captions
+        self._styles = styles
+        self.layout_info = layout_info
 
     def set_captions(self, lang, captions):
         self._captions[lang] = captions
@@ -275,10 +330,13 @@ class CaptionSet(object):
         )
 
     def set_layout_info(self, lang, layout_info):
-        self._layout_info[lang] = layout_info
+        self._captions[lang].layout_info = layout_info
 
     def get_layout_info(self, lang):
-        return self._layout_info.get(lang)
+        caption_list = self._captions.get(lang)
+        if caption_list:
+            return caption_list.layout_info
+        return None
 
     def adjust_caption_timing(self, offset=0, rate_skew=1.0):
         """
@@ -290,7 +348,7 @@ class CaptionSet(object):
         """
         for lang in self.get_languages():
             captions = self.get_captions(lang)
-            out_captions = []
+            out_captions = CaptionList()
             for caption in captions:
                 caption.start = caption.start * rate_skew + offset
                 caption.end = caption.end * rate_skew + offset
@@ -304,8 +362,8 @@ def merge_concurrent_captions(caption_set):
     for lang in caption_set.get_languages():
         captions = caption_set.get_captions(lang)
         last_caption = None
-        concurrent_captions = []
-        merged_captions = []
+        concurrent_captions = CaptionList()
+        merged_captions = CaptionList()
         for caption in captions:
             if last_caption:
                 last_timespan = last_caption.start, last_caption.end
@@ -336,9 +394,6 @@ def merge(captions):
             new_nodes.append(CaptionNode.create_break())
         for node in caption.nodes:
             new_nodes.append(node)
-    caption = Caption()
-    caption.start = captions[0].start
-    caption.end = captions[0].end
-    caption.style = captions[0].style
-    caption.nodes = new_nodes
+    caption = Caption(
+        captions[0].start, captions[0].end, new_nodes, captions[0].style)
     return caption

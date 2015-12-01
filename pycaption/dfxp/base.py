@@ -8,7 +8,7 @@ from bs4 import BeautifulSoup, NavigableString
 from xml.sax.saxutils import escape
 
 from ..base import (
-    BaseReader, BaseWriter, CaptionSet, Caption, CaptionNode,
+    BaseReader, BaseWriter, CaptionSet, CaptionList, Caption, CaptionNode,
     DEFAULT_LANGUAGE_CODE)
 from ..exceptions import (
     CaptionReadNoCaptions, CaptionReadSyntaxError, InvalidInputError)
@@ -66,13 +66,15 @@ class DFXPReader(BaseReader):
 
         dfxp_document = self._get_dfxp_parser_class()(
             content, read_invalid_positioning=self.read_invalid_positioning)
-        captions = CaptionSet()
+
+        caption_dict = {}
+        style_dict = {}
 
         # Each div represents all the captions for a single language.
         for div in dfxp_document.find_all(u'div'):
             lang = div.attrs.get(u'xml:lang', DEFAULT_LANGUAGE_CODE)
-            captions.set_captions(lang, self._translate_div(div))
-            captions.set_layout_info(lang, div.layout_info)
+
+            caption_dict[lang] = self._translate_div(div)
 
         for style in dfxp_document.find_all(u'style'):
             id_ = style.attrs.get(u'xml:id') or style.attrs.get(u'id')
@@ -82,12 +84,14 @@ class DFXPReader(BaseReader):
                 # http://www.w3.org/TR/ttaf1-dfxp/#styling-vocabulary-style
                 if u'region' not in [
                         parent_.name for parent_ in style.parents]:
-                    captions.add_style(id_, self._translate_style(style))
+                    style_dict[id_] = self._translate_style(style)
 
-        if captions.is_empty():
+        caption_set = CaptionSet(caption_dict, styles=style_dict)
+
+        if caption_set.is_empty():
             raise CaptionReadNoCaptions(u"empty caption file")
 
-        return captions
+        return caption_set
 
     @staticmethod
     def _get_dfxp_parser_class():
@@ -96,10 +100,10 @@ class DFXPReader(BaseReader):
         return LayoutAwareDFXPParser
 
     def _translate_div(self, div):
-        captions = []
-        for p_tag in div.find_all(u'p'):
-            captions.append(self._translate_p_tag(p_tag))
-        return captions
+        return CaptionList(
+            [self._translate_p_tag(p_tag) for p_tag in div.find_all(u'p')],
+            div.layout_info
+        )
 
     def _translate_p_tag(self, p_tag):
         start, end = self._find_times(p_tag)
@@ -107,12 +111,8 @@ class DFXPReader(BaseReader):
         self._translate_tag(p_tag)
         styles = self._translate_style(p_tag)
 
-        caption = Caption(layout_info=p_tag.layout_info)
-        caption.start = start
-        caption.end = end
-        caption.nodes = self.nodes
-        caption.style = styles
-        return caption
+        return Caption(
+            start, end, self.nodes, style=styles, layout_info=p_tag.layout_info)
 
     def _find_times(self, p_tag):
         start = self._translate_time(p_tag[u'begin'])
