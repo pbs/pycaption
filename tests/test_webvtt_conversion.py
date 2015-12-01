@@ -9,7 +9,6 @@ from .samples.srt import SAMPLE_SRT
 from .samples.webvtt import (
     SAMPLE_WEBVTT, SAMPLE_WEBVTT_FROM_WEBVTT,
     SAMPLE_WEBVTT_FROM_DFXP_WITH_POSITIONING,
-    SAMPLE_WEBVTT_FROM_DFXP_WITH_POSITIONING_WITHOUT_STYLE,
     SAMPLE_WEBVTT_WITH_SETTINGS_CUE
 )
 from .mixins import (
@@ -36,10 +35,8 @@ class WebVTTtoWebVTTTestCase(unittest.TestCase, WebVTTTestingMixIn):
         caption_set = WebVTTReader().read(
             SAMPLE_WEBVTT_FROM_DFXP_WITH_POSITIONING)
         results = WebVTTWriter().write(caption_set)
-	# TODO: Change this to SAMPLE_WEBVTT_FROM_DFXP_WITH_POSITIONING once
-	# reading WebVTT style tags is supported
         self.assertEquals(
-            SAMPLE_WEBVTT_FROM_DFXP_WITH_POSITIONING_WITHOUT_STYLE, results)
+            SAMPLE_WEBVTT_FROM_DFXP_WITH_POSITIONING, results)
 
 #     # TODO: Write a test that includes a WebVTT file with style tags
 #     # That will fail because the styles used in the cues are not tracked.

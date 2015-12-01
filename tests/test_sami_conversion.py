@@ -9,14 +9,18 @@ from .samples.dfxp import (
     SAMPLE_DFXP_FROM_SAMI_WITH_BAD_SPAN_ALIGN
 )
 from .samples.sami import (
-    SAMPLE_SAMI, SAMPLE_SAMI_SYNTAX_ERROR, SAMPLE_SAMI_PARTIAL_MARGINS,
-    SAMPLE_SAMI_PARTIAL_MARGINS_RELATIVIZED, SAMPLE_SAMI_LANG_MARGIN,
-    SAMPLE_SAMI_WITH_SPAN, SAMPLE_SAMI_WITH_BAD_SPAN_ALIGN,
+    SAMPLE_SAMI, SAMPLE_SAMI_WITH_STYLE_TAGS, SAMPLE_SAMI_WITH_CSS_INLINE_STYLE,
+    SAMPLE_SAMI_WITH_CSS_ID_STYLE, SAMPLE_SAMI_SYNTAX_ERROR,
+    SAMPLE_SAMI_PARTIAL_MARGINS, SAMPLE_SAMI_PARTIAL_MARGINS_RELATIVIZED,
+    SAMPLE_SAMI_LANG_MARGIN, SAMPLE_SAMI_WITH_SPAN, SAMPLE_SAMI_WITH_BAD_SPAN_ALIGN,
     SAMPLE_SAMI_WITH_MULTIPLE_SPAN_ALIGNS, SAMPLE_SAMI_NO_LANG,
     SAMPLE_SAMI_WITH_LANG
 )
 from .samples.srt import SAMPLE_SRT
-from .samples.webvtt import SAMPLE_WEBVTT_FROM_SAMI
+from .samples.webvtt import (
+    SAMPLE_WEBVTT_FROM_SAMI, SAMPLE_WEBVTT_FROM_SAMI_WITH_STYLE,
+    SAMPLE_WEBVTT_FROM_SAMI_WITH_ID_STYLE
+)
 
 from .mixins import SRTTestingMixIn, DFXPTestingMixIn, SAMITestingMixIn, WebVTTTestingMixIn
 
@@ -127,6 +131,27 @@ class SAMItoWebVTTTestCase(unittest.TestCase, WebVTTTestingMixIn):
             video_width=640, video_height=360).write(caption_set)
         self.assertTrue(isinstance(results, unicode))
         self.assertWebVTTEquals(SAMPLE_WEBVTT_FROM_SAMI, results)
+        
+    def test_sami_with_style_tags_to_webvtt_conversion(self):
+        caption_set = SAMIReader().read(SAMPLE_SAMI_WITH_STYLE_TAGS)
+        results = WebVTTWriter(
+            video_width=640, video_height=360).write(caption_set)
+        self.assertTrue(isinstance(results, unicode))
+        self.assertWebVTTEquals(SAMPLE_WEBVTT_FROM_SAMI_WITH_STYLE, results)
+        
+    def test_sami_with_css_inline_style_to_webvtt_conversion(self):
+        caption_set = SAMIReader().read(SAMPLE_SAMI_WITH_CSS_INLINE_STYLE)
+        results = WebVTTWriter(
+            video_width=640, video_height=360).write(caption_set)
+        self.assertTrue(isinstance(results, unicode))
+        self.assertWebVTTEquals(SAMPLE_WEBVTT_FROM_SAMI_WITH_STYLE, results)
+
+    def test_sami_with_css_id_style_to_webvtt_conversion(self):
+        caption_set = SAMIReader().read(SAMPLE_SAMI_WITH_CSS_ID_STYLE)
+        results = WebVTTWriter(
+            video_width=640, video_height=360).write(caption_set)
+        self.assertTrue(isinstance(results, unicode))
+        self.assertWebVTTEquals(SAMPLE_WEBVTT_FROM_SAMI_WITH_ID_STYLE, results)
 
 
 class SAMIWithMissingLanguage(unittest.TestCase, SAMITestingMixIn):

@@ -49,6 +49,96 @@ P { margin-left:  1pt;
 </BODY></SAMI>
 """
 
+SAMPLE_SAMI_WITH_STYLE_TAGS = u"""
+<SAMI><HEAD><TITLE>NOVA3213</TITLE><STYLE TYPE="text/css">
+<!--
+P { margin-left:  1pt;
+    margin-right: 1pt;
+    margin-bottom: 2pt;
+    margin-top: 2pt;
+    text-align: center;
+    font-size: 10pt;
+    font-family: Arial;
+    font-weight: normal;
+    font-style: normal;
+    color: #ffeedd; }
+
+.ENCC {Name: English; lang: en-US; SAMI_Type: CC;}
+
+--></STYLE></HEAD><BODY>
+<SYNC start="9209"><P class="ENCC">
+    I <b>do</b> <i>not</i> want to go <u>home</u>.<br />
+    I don't like it <i><u><b>there</b></u></i>.
+</P></SYNC>
+<SYNC start="12312"><P class="ENCC">&nbsp;</P></SYNC>
+</BODY></SAMI>
+"""
+
+SAMPLE_SAMI_WITH_CSS_INLINE_STYLE = u"""
+<SAMI><HEAD><TITLE>NOVA3213</TITLE><STYLE TYPE="text/css">
+<!--
+P { margin-left:  1pt;
+    margin-right: 1pt;
+    margin-bottom: 2pt;
+    margin-top: 2pt;
+    text-align: center;
+    font-size: 10pt;
+    font-family: Arial;
+    font-weight: normal;
+    font-style: normal;
+    color: #ffeedd; }
+
+.ENCC {Name: English; lang: en-US; SAMI_Type: CC;}
+
+--></STYLE></HEAD><BODY>
+<SYNC start="9209"><P class="ENCC">
+    I <span style="font-weight: bold">do</span> <span style="font-style: italic">not</span> want to go <span style="text-decoration: underline">home</span>.<br />
+    I don't like it <span style="font-weight:bold;font-style:italic;text-decoration:underline">there</span>.
+</P></SYNC>
+<SYNC start="12312"><P class="ENCC">&nbsp;</P></SYNC>
+</BODY></SAMI>
+"""
+
+SAMPLE_SAMI_WITH_CSS_ID_STYLE = u"""
+<SAMI><HEAD><TITLE>NOVA3213</TITLE><STYLE TYPE="text/css">
+<!--
+P { margin-left:  1pt;
+    margin-right: 1pt;
+    margin-bottom: 2pt;
+    margin-top: 2pt;
+    text-align: center;
+    font-size: 10pt;
+    font-family: Arial;
+    font-weight: normal;
+    font-style: normal;
+    color: #ffeedd; }
+
+#StyleItalic { font-style: italic; }
+#StyleBold { font-weight: bold; }
+#StyleUnderline { text-decoration: underline; }
+#StyleItalicBoldUnderline { font-style: italic; font-weight: bold; text-decoration: underline; }
+
+.ENCC {Name: English; lang: en-US; SAMI_Type: CC;}
+
+--></STYLE></HEAD><BODY>
+<SYNC start="9209"><P class="ENCC" id="StyleItalic">
+    This is in italics.
+</P></SYNC>
+<SYNC start="12312"><P class="ENCC">&nbsp;</P></SYNC>
+<SYNC start="14848"><P class="ENCC" id="StyleUnderline">
+    This is underlined.
+</P></SYNC>
+<SYNC start="17000"><P class="ENCC" id="StyleBold">
+    This is bold.
+</P></SYNC>
+<SYNC start="18752"><P class="ENCC">&nbsp;</P></SYNC>
+<SYNC start="20887"><P class="ENCC" id="StyleItalicBoldUnderline">
+    This is everything together.
+</P></SYNC>
+<SYNC start="26760"><P class="ENCC">&nbsp;</P></SYNC>
+</BODY></SAMI>
+"""
+
 SAMPLE_SAMI_EMPTY = u"""
 <SAMI><HEAD><TITLE>NOVA3213</TITLE><STYLE TYPE="text/css">
 <!--
