@@ -2,6 +2,8 @@ import re
 
 from copy import deepcopy
 
+import re
+
 from bs4 import BeautifulSoup, NavigableString
 from xml.sax.saxutils import escape
 
@@ -124,17 +126,35 @@ class DFXPReader(BaseReader):
         return start, end
 
     def _translate_time(self, stamp):
-        timesplit = stamp.split(u':')
-        if u'.' not in timesplit[2]:
-            timesplit[2] = timesplit[2] + u'.000'
-        secsplit = timesplit[2].split(u'.')
-        if len(timesplit) > 3:
-            secsplit.append((int(timesplit[3]) / 30) * 100)
-        microseconds = (int(timesplit[0]) * 3600000000 +
-                        int(timesplit[1]) * 60000000 +
-                        int(secsplit[0]) * 1000000 +
-                        int(secsplit[1]) * 1000)
-        return microseconds
+        if stamp[-1].isdigit():
+            timesplit = stamp.split(u':')
+            if u'.' not in timesplit[2]:
+                timesplit[2] = timesplit[2] + u'.000'
+            secsplit = timesplit[2].split(u'.')
+            if len(timesplit) > 3:
+                secsplit.append((int(timesplit[3]) / 30) * 100)
+            microseconds = (int(timesplit[0]) * 3600000000 +
+                            int(timesplit[1]) * 60000000 +
+                            int(secsplit[0]) * 1000000 +
+                            int(secsplit[1]) * 1000)
+            return microseconds
+        else:
+            # Must be offset-time
+            m = re.search('^([0-9.]+)([a-z]+)$', stamp)
+            value = float(m.group(1))
+            metric = m.group(2)
+            if metric == u"h":
+                microseconds = value * 60 * 60 * 1000000
+            elif metric == u"m":
+                microseconds = value * 60 * 1000000
+            elif metric == u"s":
+                microseconds = value * 1000000
+            elif metric == u"ms":
+                microseconds = value * 1000
+            else:
+                raise InvalidInputError(u"Unsupported offset-time metric " + metric)
+
+            return int(microseconds)
 
     def _translate_tag(self, tag):
         # convert text
@@ -205,17 +225,24 @@ class DFXPReader(BaseReader):
         attrs = {}
         dfxp_attrs = tag.attrs
         for arg in dfxp_attrs:
-            if arg == u"style":
+            if arg.lower() == u"style":
+                # Support multiple classes per tag
+                attrs[u'classes'] = dfxp_attrs[arg].strip().split(u' ')
+                # Save old class attribute for compatibility
                 attrs[u'class'] = dfxp_attrs[arg]
             elif arg.lower() == u"tts:fontstyle" and dfxp_attrs[arg] == u"italic":
                 attrs[u'italics'] = True
+            elif arg.lower() == u"tts:fontweight" and dfxp_attrs[arg] == u"bold":
+                attrs[u'bold'] = True
+            elif arg.lower() == u"tts:textdecoration" and u"underline" in dfxp_attrs[arg].strip().split(u" "):
+                attrs[u'underline'] = True
             elif arg.lower() == u"tts:textalign":
                 attrs[u'text-align'] = dfxp_attrs[arg]
             elif arg.lower() == u"tts:fontfamily":
                 attrs[u'font-family'] = dfxp_attrs[arg]
             elif arg.lower() == u"tts:fontsize":
                 attrs[u'font-size'] = dfxp_attrs[arg]
-            elif arg == u"tts:color":
+            elif arg.lower() == u"tts:color":
                 attrs[u'color'] = dfxp_attrs[arg]
         return attrs
 

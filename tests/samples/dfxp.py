@@ -48,6 +48,94 @@ SAMPLE_DFXP = """\
  </body>
 </tt>"""
 
+SAMPLE_DFXP_WITH_INLINE_STYLE = """
+<?xml version="1.0" encoding="utf-8"?>
+<tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml"
+    xmlns:tts="http://www.w3.org/ns/ttml#styling">
+ <head>
+  <styling>
+   <style xml:id="p" tts:color="#ffeedd" tts:fontFamily="Arial"
+          tts:fontSize="10pt" tts:textAlign="center"/>
+  </styling>
+  <layout>
+  <region tts:displayAlign="after" tts:textAlign="center" xml:id="bottom"></region>
+  </layout>
+ </head>
+ <body>
+  <div xml:lang="en-US" region="bottom">
+   <p begin="00:00:09.209" end="00:00:12.312" region="bottom" style="p">
+    This is <span tts:fontstyle="italic">italic</span>, <span tts:fontweight="bold">bold
+    </span>, <span tts:textdecoration="overline underline">
+    underline</span>, <span tts:fontstyle="italic" tts:fontweight="bold" tts:textdecoration="underline">
+    everything together in one tag</span>, and <span tts:textdecoration="underline">
+    <span tts:fontweight="bold"><span tts:fontstyle="italic">nested</span></span></span>.
+   </p>
+  </div>
+ </body>
+</tt>
+"""
+
+SAMPLE_DFXP_WITH_DEFINED_STYLE = """
+<?xml version="1.0" encoding="utf-8"?>
+<tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml"
+    xmlns:tts="http://www.w3.org/ns/ttml#styling">
+ <head>
+  <styling>
+   <style xml:id="p" tts:color="#ffeedd" tts:fontFamily="Arial"
+          tts:fontSize="10pt" tts:textAlign="center"/>
+   <style xml:id="s1" tts:fontstyle="italic"/>
+   <style xml:id="s2" tts:fontweight="bold" />
+   <style xml:id="s3" tts:textdecoration="underline" />
+  </styling>
+  <layout>
+  <region tts:displayAlign="after" tts:textAlign="center" xml:id="bottom"></region>
+  </layout>
+ </head>
+ <body>
+  <div xml:lang="en-US" region="bottom">
+   <p begin="00:00:09.209" end="00:00:12.312" region="bottom" style="p">
+    This is <span style="s1">italic</span>, <span style="s2">bold</span>, <span style="s3">
+    underline</span>, <span style="s1 s2 s3">everything together in one tag</span>, and <span style="s3">
+    <span style="s2"><span style="s1">nested</span></span></span>.
+   </p>
+  </div>
+ </body>
+</tt>
+"""
+
+SAMPLE_DFXP_WITH_INHERITED_STYLE = """
+<?xml version="1.0" encoding="utf-8"?>
+<tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml"
+    xmlns:tts="http://www.w3.org/ns/ttml#styling">
+ <head>
+  <styling>
+   <style xml:id="p" tts:color="#ffeedd" tts:fontFamily="Arial"
+          tts:fontSize="10pt" tts:textAlign="center"/>
+   <style xml:id="s1" tts:fontstyle="italic"/>
+   <style xml:id="s2" tts:fontweight="bold" />
+   <style xml:id="s3" tts:textdecoration="underline" />
+   <style xml:id="inherit_s3" style="s3" />
+   <style xml:id="inherit_s3_underline" style="s1" tts:textdecoration="underline" /> 
+   <style xml:id="inherit_s3_bold" style="inherit_s3_underline" tts:fontweight="bold" />
+   <style xml:id="inherit_s2" style="s2" />
+   <style xml:id="inherit_s1" style="s1" />
+  </styling>
+  <layout>
+  <region tts:displayAlign="after" tts:textAlign="center" xml:id="bottom"></region>
+  </layout>
+ </head>
+ <body>
+  <div xml:lang="en-US" region="bottom">
+   <p begin="00:00:09.209" end="00:00:12.312" region="bottom" style="p">
+    This is <span style="inherit_s1">italic</span>, <span style="inherit_s2">bold</span>, <span style="inherit_s3">
+    underline</span>, <span style="inherit_s3_bold">everything together in one tag</span>, and <span style="inherit_s3">
+    <span style="inherit_s2"><span style="inherit_s1">nested</span></span></span>.
+   </p>
+  </div>
+ </body>
+</tt>
+"""
+
 SAMPLE_DFXP_WITHOUT_REGION_AND_STYLE = """
 <?xml version="1.0" encoding="utf-8"?>
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml"

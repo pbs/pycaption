@@ -1,7 +1,7 @@
 import unittest
 
 from pycaption import DFXPReader, CaptionReadNoCaptions
-from pycaption.exceptions import CaptionReadSyntaxError
+from pycaption.exceptions import CaptionReadSyntaxError, InvalidInputError
 
 from .samples.dfxp import (
     SAMPLE_DFXP, SAMPLE_DFXP_EMPTY, SAMPLE_DFXP_SYNTAX_ERROR)
@@ -22,6 +22,19 @@ class DFXPReaderTestCase(unittest.TestCase):
 
         self.assertEquals(17000000, paragraph.start)
         self.assertEquals(18752000, paragraph.end)
+
+    def test_offset_time(self):
+        reader = DFXPReader()
+        self.assertEquals(1, reader._translate_time(u"0.001ms"))
+        self.assertEquals(2000, reader._translate_time(u"2ms"))
+        self.assertEquals(1000000, reader._translate_time(u"1s"))
+        self.assertEquals(1234567, reader._translate_time(u"1.234567s"))
+        self.assertEquals(180000000, reader._translate_time(u"3m"))
+        self.assertEquals(14400000000, reader._translate_time(u"4h"))
+        # Tick values are not supported
+        self.assertRaises(
+	        InvalidInputError, reader._translate_time, u"2.3t"
+        )
 
     def test_empty_file(self):
         self.assertRaises(

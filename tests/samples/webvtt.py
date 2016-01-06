@@ -63,6 +63,34 @@ It's all about an eternal Einstein.
 
 SAMPLE_WEBVTT_FROM_SAMI = SAMPLE_WEBVTT_FROM_DFXP
 
+SAMPLE_WEBVTT_FROM_SAMI_WITH_STYLE = u"""WEBVTT
+
+00:09.209 --> 00:12.312
+I <b>do</b> <i>not</i> want to go <u>home</u>.
+I don't like it <i><u><b>there</b></u></i>.
+"""
+
+SAMPLE_WEBVTT_FROM_SAMI_WITH_ID_STYLE = u"""WEBVTT
+
+00:09.209 --> 00:12.312
+<i>This is in italics.</i>
+
+00:14.848 --> 00:17.000
+<u>This is underlined.</u>
+
+00:17.000 --> 00:18.752
+<b>This is bold.</b>
+
+00:20.887 --> 00:26.760
+<i><b><u>This is everything together.</u></b></i>
+"""
+
+SAMPLE_WEBVTT_FROM_DFXP_WITH_STYLE = u"""WEBVTT
+
+00:09.209 --> 00:12.312
+This is <i>italic</i>, <b>bold</b>, <u>underline</u>, <i><u><b>everything together in one tag</b></u></i>, and <u><b><i>nested</i></b></u>.
+"""
+
 SAMPLE_WEBVTT_FROM_DFXP_WITH_POSITIONING = u"""WEBVTT
 
 00:01.000 --> 00:03.000 position:25%,start line:25% size:50%
@@ -70,6 +98,22 @@ You might not remember us. We are a typical transparent region with centered tex
 
 00:03.500 --> 00:05.000 align:right position:25%,start line:25% size:50%
 had personality.
+
+00:05.500 --> 00:07.000 align:left position:50%,start line:50% size:25%
+Hello there, children! Have you seen any visitors?
+
+00:07.500 --> 00:09.000 align:right position:25%,start line:75% size:25%
+This is
+the last cue
+"""
+
+SAMPLE_WEBVTT_FROM_DFXP_WITH_POSITIONING_AND_STYLE = u"""WEBVTT
+
+00:01.000 --> 00:03.000 position:25%,start line:25% size:50%
+You might not remember us. We are a typical transparent region with centered text that has an outline.
+
+00:03.500 --> 00:05.000 align:right position:25%,start line:25% size:50%
+had <u>personality.</u>
 
 00:05.500 --> 00:07.000 align:left position:50%,start line:50% size:25%
 Hello there, children! Have you seen any visitors?

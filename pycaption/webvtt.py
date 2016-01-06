@@ -225,7 +225,7 @@ class WebVTTWriter(BaseWriter):
         captions = caption_set.get_captions(lang)
 
         return output + u'\n'.join(
-            [self._write_caption(caption) for caption in captions])
+            [self._write_caption(caption_set, caption) for caption in captions])
 
     def _timestamp(self, ts):
         ts = float(ts) / 1000000
@@ -237,11 +237,39 @@ class WebVTTWriter(BaseWriter):
         else:
             return u"%02d:%06.3f" % (minutes, seconds)
 
-    def _write_caption(self, caption):
+    def _tags_for_style(self, style):
+        if style == u'italics':
+            return [u'<i>', u'</i>']
+        elif style == u'underline':
+            return [u'<u>', u'</u>']
+        elif style == u'bold':
+            return [u'<b>', u'</b>']
+        else:
+            return [u'', u'']
+
+    def _calculate_resulting_style(self, style, caption_set):
+        resulting_style = {}
+
+        style_classes = []
+        if u'classes' in style:
+            style_classes = style[u'classes']
+        elif u'class' in style:
+            style_classes = [style[u'class']]
+
+        for style_class in style_classes:
+            sub_style = caption_set.get_style(style_class).copy()
+            # Recursively resolve class attributes and calculate style
+            resulting_style.update(self._calculate_resulting_style(sub_style, caption_set))
+
+        resulting_style.update(style)
+
+        return resulting_style
+
+    def _write_caption(self, caption_set, caption):
         """
         :type caption: Caption
         """
-        layout_groups = self._layout_groups(caption.nodes)
+        layout_groups = self._layout_groups(caption.nodes, caption_set)
 
         start = self._timestamp(caption.start)
         end = self._timestamp(caption.end)
@@ -249,12 +277,22 @@ class WebVTTWriter(BaseWriter):
 
         output = u''
 
+        cue_style_tags = [u'', u'']
+
+        style = self._calculate_resulting_style(caption.style, caption_set)
+        for key, value in style.items():
+            if value:
+                tags = self._tags_for_style(key)
+#                    print "tags: " + str(tags) + "\n"
+                cue_style_tags[0] += tags[0]
+                cue_style_tags[1]  = tags[1] + cue_style_tags[1]
+
         for cue_text, layout in layout_groups:
             if not layout:
                 layout = caption.layout_info or self.global_layout
             cue_settings = self._cue_settings_from(layout)
             output += timespan + cue_settings + u'\n'
-            output += cue_text + u'\n'
+            output += cue_style_tags[0] + cue_text + cue_style_tags[1] + u'\n'
 
         return output
 
@@ -347,7 +385,7 @@ class WebVTTWriter(BaseWriter):
 
         return cue_settings
 
-    def _layout_groups(self, nodes):
+    def _layout_groups(self, nodes, caption_set):
         """
         Convert a Caption's nodes to WebVTT cue or cues (depending on
         whether they have the same positioning or not).
@@ -376,9 +414,22 @@ class WebVTTWriter(BaseWriter):
                 s += self._encode(node.content) or u'&nbsp;'
                 current_layout = node.layout_info
             elif node.type_ == CaptionNode.STYLE:
+                resulting_style = self._calculate_resulting_style(node.content, caption_set)
+
+                styles = [u'italics', u'underline', u'bold']
+                if not node.start:
+                    styles.reverse()
+
+                for style in styles:
+                    if style in resulting_style and resulting_style[style]:
+                        tags = self._tags_for_style(style)
+                        if node.start:
+                            s += tags[0]
+                        else:
+                            s += tags[1]
+
                 # TODO: Refactor pycaption and eliminate the concept of a
                 # "Style node"
-                pass
             elif node.type_ == CaptionNode.BREAK:
                 if i > 0 and nodes[i - 1].type_ != CaptionNode.TEXT:
                     s += u'&nbsp;'

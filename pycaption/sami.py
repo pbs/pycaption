@@ -111,9 +111,15 @@ class SAMIReader(BaseReader):
 
         caption_set = CaptionSet(
             caption_dict,
-            styles=doc_styles,
             layout_info=global_layout
         )
+
+        # Convert styles from CSS to internal representation
+        for style in doc_styles.items():
+            style = (style[0], self._translate_parsed_style(style[1]))
+
+        caption_set.set_styles(doc_styles)
+
         if caption_set.is_empty():
             raise CaptionReadNoCaptions(u"empty caption file")
 
@@ -221,6 +227,16 @@ class SAMIReader(BaseReader):
 
         return captions
 
+    def _get_style_name_from_tag(self, tag):
+        if tag == u'i':
+            return u'italics'
+        elif tag == u'b':
+            return u'bold'
+        elif tag == u'u':
+            return u'underline'
+        else:
+            raise RuntimeError("Unknown style tag")
+
     def _translate_tag(self, tag, inherit_from=None):
         """
         :param inherit_from: A Layout object extracted from an ancestor tag
@@ -241,16 +257,17 @@ class SAMIReader(BaseReader):
         # convert line breaks
         elif tag.name == u'br':
             self.line.append(CaptionNode.create_break(inherit_from))
-        # convert italics
-        elif tag.name == u'i':
+        # convert italics, bold, and underline
+        elif tag.name == u'i' or tag.name == u'b' or tag.name == u'u':
+            style_name = self._get_style_name_from_tag(tag.name)
             self.line.append(
-                CaptionNode.create_style(True, {u'italics': True})
+                CaptionNode.create_style(True, {style_name: True})
             )
             # recursively call function for any children elements
             for a in tag.contents:
                 self._translate_tag(a, inherit_from)
             self.line.append(
-                CaptionNode.create_style(False, {u'italics': True}))
+                CaptionNode.create_style(False, {style_name: True}))
         elif tag.name == u'span':
             self._translate_span(tag, inherit_from)
         else:
@@ -301,20 +318,36 @@ class SAMIReader(BaseReader):
                 css_property, value = style
             else:
                 continue
-            if css_property == u'font-family':
-                attrs[u'font-family'] = value.strip()
-            elif css_property == u'font-size':
-                attrs[u'font-size'] = value.strip()
-            elif css_property == u'font-style' and value.strip() == u'italic':
-                attrs[u'italics'] = True
-            elif css_property == u'lang':
-                attrs[u'lang'] = value.strip()
-            elif css_property == u'color':
-                attrs[u'color'] = value.strip()
-            elif css_property == u'text-align':
+            if css_property == u'text-align':
                 self._save_first_alignment(value.strip())
+            else:
+                self._translate_css_property(attrs, css_property, value)
 
         return attrs
+
+    def _translate_parsed_style(self, styles):
+        # Keep unknown styles by default
+        attrs = styles
+        for css_property, value in styles.items():
+            self._translate_css_property(attrs, css_property, value)
+
+        return attrs
+
+    def _translate_css_property(self, attrs, css_property, value):
+        if css_property == u'font-family':
+            attrs[u'font-family'] = value.strip()
+        elif css_property == u'font-size':
+            attrs[u'font-size'] = value.strip()
+        elif css_property == u'font-style' and value.strip() == u'italic':
+            attrs[u'italics'] = True
+        elif css_property == u'text-decoration' and value.strip() == u'underline':
+            attrs[u'underline'] = True
+        elif css_property == u'font-weight' and value.strip() == u'bold':
+            attrs[u'bold'] = True
+        elif css_property == u'lang':
+            attrs[u'lang'] = value.strip()
+        elif css_property == u'color':
+            attrs[u'color'] = value.strip()
 
     def _save_first_alignment(self, align):
         """
@@ -575,10 +608,15 @@ class SAMIWriter(BaseWriter):
         sami_style = {}
 
         for key, value in rules.items():
-            sami_style[key] = value
-
-        if u'italics' in rules:
-            sami_style[u'font-style'] = u'italic'
+            # Recreate original CSS rules from internal style
+            if key == u'italics' and value == True:
+                sami_style[u'font-style'] = u'italic'
+            elif key == u'bold' and value == True:
+                sami_style[u'font-weight'] = u'bold'
+            elif key == u'underline' and value == True:
+                sami_style[u'text-decoration'] = u'underline'
+            else:
+                sami_style[key] = value
 
         return sami_style
 
@@ -615,10 +653,6 @@ class SAMIParser(HTMLParser):
         if tag == u'div':
             tag = u'span'
 
-        if tag == u'i':
-            tag = u'span'
-            attrs = [(u'style', u'font-style:italic;')]
-
         # figure out the caption language of P tags
         if tag == u'p':
             lang = self._find_lang(attrs)
@@ -647,7 +681,7 @@ class SAMIParser(HTMLParser):
     # override the parser's handling of endtags
     def handle_endtag(self, tag):
         # treat divs as spans
-        if tag == u'div' or tag == u'i':
+        if tag == u'div':
             tag = u'span'
 
         # handle incorrectly formatted sync/p tags

@@ -13,7 +13,9 @@ from pycaption.dfxp.base import (
 )
 
 from .samples.dfxp import (
-    SAMPLE_DFXP, SAMPLE_DFXP_WITHOUT_REGION_AND_STYLE, SAMPLE_DFXP_WITH_POSITIONING,
+    SAMPLE_DFXP, SAMPLE_DFXP_WITH_INLINE_STYLE, SAMPLE_DFXP_WITH_DEFINED_STYLE,
+    SAMPLE_DFXP_WITH_INHERITED_STYLE,
+    SAMPLE_DFXP_WITHOUT_REGION_AND_STYLE, SAMPLE_DFXP_WITH_POSITIONING,
     SAMPLE_DFXP_WITH_RELATIVIZED_POSITIONING, SAMPLE_DFXP_LONG_CUE,
     SAMPLE_DFXP_FROM_SAMI_WITH_MARGINS, DFXP_STYLE_REGION_ALIGN_CONFLICT,
     SAMPLE_DFXP_INVALID_BUT_SUPPORTED_POSITIONING_INPUT,
@@ -22,12 +24,14 @@ from .samples.dfxp import (
     SAMPLE_DFXP_OUTPUT, SAMPLE_DFXP_STYLE_TAG_WITH_NO_XML_ID_INPUT,
     SAMPLE_DFXP_STYLE_TAG_WITH_NO_XML_ID_OUTPUT,
     SAMPLE_DFXP_LONG_CUE_FIT_TO_SCREEN, SAMPLE_DFXP_FOR_LEGACY_WRITER_INPUT,
-SAMPLE_DFXP_FOR_LEGACY_WRITER_OUTPUT
+    SAMPLE_DFXP_FOR_LEGACY_WRITER_OUTPUT
 )
 from .samples.sami import SAMPLE_SAMI
 from .samples.srt import SAMPLE_SRT
 from .samples.webvtt import (
     SAMPLE_WEBVTT_FROM_DFXP, SAMPLE_WEBVTT_FROM_DFXP_WITH_POSITIONING,
+    SAMPLE_WEBVTT_FROM_DFXP_WITH_STYLE,# SAMPLE_WEBVTT_FROM_DFXP_WITH_DEFINED_STYLE
+    SAMPLE_WEBVTT_FROM_DFXP_WITH_POSITIONING_AND_STYLE,
     SAMPLE_WEBVTT_OUTPUT_LONG_CUE, WEBVTT_FROM_DFXP_WITH_CONFLICTING_ALIGN
 )
 
@@ -178,6 +182,24 @@ class DFXPtoWebVTTTestCase(unittest.TestCase, WebVTTTestingMixIn):
         results = WebVTTWriter().write(caption_set)
         self.assertTrue(isinstance(results, unicode))
         self.assertWebVTTEquals(SAMPLE_WEBVTT_FROM_DFXP, results)
+        
+    def test_dfxp_with_inline_style_to_webvtt_conversion(self):
+        caption_set = DFXPReader().read(SAMPLE_DFXP_WITH_INLINE_STYLE)
+        results = WebVTTWriter().write(caption_set)
+        self.assertTrue(isinstance(results, unicode))
+        self.assertWebVTTEquals(SAMPLE_WEBVTT_FROM_DFXP_WITH_STYLE, results)
+
+    def test_dfxp_with_defined_style_to_webvtt_conversion(self):
+        caption_set = DFXPReader().read(SAMPLE_DFXP_WITH_DEFINED_STYLE)
+        results = WebVTTWriter().write(caption_set)
+        self.assertTrue(isinstance(results, unicode))
+        self.assertWebVTTEquals(SAMPLE_WEBVTT_FROM_DFXP_WITH_STYLE, results)
+
+    def test_dfxp_with_inherited_style_to_webvtt_conversion(self):
+        caption_set = DFXPReader().read(SAMPLE_DFXP_WITH_INHERITED_STYLE)
+        results = WebVTTWriter().write(caption_set)
+        self.assertTrue(isinstance(results, unicode))
+        self.assertWebVTTEquals(SAMPLE_WEBVTT_FROM_DFXP_WITH_STYLE, results)
 
     def test_dfxp_with_positioning_to_webvtt_conversion(self):
         caption_set = DFXPReader().read(
@@ -187,7 +209,7 @@ class DFXPtoWebVTTTestCase(unittest.TestCase, WebVTTTestingMixIn):
         ).write(caption_set)
         self.assertTrue(isinstance(results, unicode))
         self.assertWebVTTEquals(
-            SAMPLE_WEBVTT_FROM_DFXP_WITH_POSITIONING, results)
+            SAMPLE_WEBVTT_FROM_DFXP_WITH_POSITIONING_AND_STYLE, results)
 
     def test_dfxp_to_webvtt_adds_explicit_size(self):
         caption_set = DFXPReader().read(SAMPLE_DFXP_LONG_CUE)

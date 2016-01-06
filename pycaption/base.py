@@ -316,7 +316,7 @@ class CaptionSet(object):
         :param selector: The selector whose rules should be returned (e.g. an
             element or class name).
         """
-        return self._styles.get(selector, [])
+        return self._styles.get(selector, {})
 
     def get_styles(self):
         return self._styles.items()
