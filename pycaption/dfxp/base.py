@@ -163,9 +163,11 @@ class DFXPReader(BaseReader):
             pattern = re.compile(u"^(?:[\n\r]+\s*)?(.+)")
             result = pattern.search(tag)
             if result:
-                # BeautifulSoup apparently handles unescaping character codes
-                # (e.g. &amp;) automatically. The following variable, therefore,
-                # should contain a plain unicode string.
+                # Escaping/unescaping xml entities is the responsibility of the
+                # xml parser used by BeautifulSoup in its initialization. The
+                # content of the tag variable at this point should be a plain
+                # unicode string with xml entities already converted to unicode
+                # characters.
                 tag_text = result.groups()[0]
                 node = CaptionNode.create_text(
                     tag_text, layout_info=tag.layout_info)
@@ -464,10 +466,18 @@ class LayoutAwareDFXPParser(BeautifulSoup):
         """The `features` param determines the parser to be used. The parsers
         are usually html parsers, some more forgiving than others, and as such
         they do stuff very differently especially for xml files. We chose this
-        one because even though the docs say it's slower, it just "works".
+        one because even though the docs say it's slower, it's very forgiving
+        (it allows `<` characters, for example). It also doesn't support the
+        `&apos;` entity, which seems to be a bug, so as a workaround we have to
+        manually replace the every occurance of this entity in the string before
+        using the parser.
 
         The reason why we haven't used the 'xml' parser is that it destroys
         characters such as < or & (even the escaped ones).
+
+        The 'lxml' parser seems to respect the html specification the best, but
+        it's not as forgiving as 'html.parser' and fails when there are
+        unescaped `<` characters in the input.
 
         :type read_invalid_positioning: bool
         :param read_invalid_positioning: if True, will try to also look for
@@ -478,6 +488,10 @@ class LayoutAwareDFXPParser(BeautifulSoup):
         Check out the docs below for explanation.
         http://www.crummy.com/software/BeautifulSoup/bs4/doc/#installing-a-parser
         """
+
+        # Work around for lack of '&apos;' support in html.parser
+        markup = markup.replace(u"&apos;", "'")
+
         super(LayoutAwareDFXPParser, self).__init__(
             markup, features, builder, parse_only, from_encoding, **kwargs)
 

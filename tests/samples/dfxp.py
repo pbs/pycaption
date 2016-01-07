@@ -115,7 +115,7 @@ SAMPLE_DFXP_WITH_INHERITED_STYLE = """
    <style xml:id="s2" tts:fontweight="bold" />
    <style xml:id="s3" tts:textdecoration="underline" />
    <style xml:id="inherit_s3" style="s3" />
-   <style xml:id="inherit_s3_underline" style="s1" tts:textdecoration="underline" /> 
+   <style xml:id="inherit_s3_underline" style="s1" tts:textdecoration="underline" />
    <style xml:id="inherit_s3_bold" style="inherit_s3_underline" tts:fontweight="bold" />
    <style xml:id="inherit_s2" style="s2" />
    <style xml:id="inherit_s1" style="s1" />
@@ -1083,3 +1083,22 @@ DFXP_WITH_TEMPLATED_STYLE = """\
 </body>
 </tt>
 """
+
+DFXP_WITH_ESCAPED_APOSTROPHE = u"""\
+<tt xml:lang="en-us"
+    xmlns="http://www.w3.org/ns/ttml"
+    xmlns:tts='http://www.w3.org/ns/ttml#styling'
+    >
+<head>
+    <layout>
+        <region xml:id="r0" tts:textAlign="center" tts:displayAlign="after" tts:origin="5% 5%" tts:extent="90% 90%"/>
+    </layout>
+</head>
+<body>
+    <div>
+        <p region="r0" begin='00:00:01.000' end='00:00:03.000'>
+        << &quot;Andy&apos;s Caf&eacute; & Restaurant&quot; this way
+        </p>
+    </div>
+</body>
+</tt>"""

@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import unittest
 
 from bs4 import BeautifulSoup
@@ -24,13 +26,12 @@ from .samples.dfxp import (
     SAMPLE_DFXP_OUTPUT, SAMPLE_DFXP_STYLE_TAG_WITH_NO_XML_ID_INPUT,
     SAMPLE_DFXP_STYLE_TAG_WITH_NO_XML_ID_OUTPUT,
     SAMPLE_DFXP_LONG_CUE_FIT_TO_SCREEN, SAMPLE_DFXP_FOR_LEGACY_WRITER_INPUT,
-    SAMPLE_DFXP_FOR_LEGACY_WRITER_OUTPUT
+    SAMPLE_DFXP_FOR_LEGACY_WRITER_OUTPUT, DFXP_WITH_ESCAPED_APOSTROPHE
 )
 from .samples.sami import SAMPLE_SAMI
 from .samples.srt import SAMPLE_SRT
 from .samples.webvtt import (
-    SAMPLE_WEBVTT_FROM_DFXP, SAMPLE_WEBVTT_FROM_DFXP_WITH_POSITIONING,
-    SAMPLE_WEBVTT_FROM_DFXP_WITH_STYLE,# SAMPLE_WEBVTT_FROM_DFXP_WITH_DEFINED_STYLE
+    SAMPLE_WEBVTT_FROM_DFXP, SAMPLE_WEBVTT_FROM_DFXP_WITH_STYLE,
     SAMPLE_WEBVTT_FROM_DFXP_WITH_POSITIONING_AND_STYLE,
     SAMPLE_WEBVTT_OUTPUT_LONG_CUE, WEBVTT_FROM_DFXP_WITH_CONFLICTING_ALIGN
 )
@@ -145,6 +146,17 @@ class DFXPtoDFXPTestCase(unittest.TestCase, DFXPTestingMixIn):
         result = DFXPWriter().write(caption_set)
         self.assertEqual(result, SAMPLE_DFXP_LONG_CUE_FIT_TO_SCREEN)
 
+    def test_proper_xml_entity_escaping(self):
+        caption_set = DFXPReader().read(DFXP_WITH_ESCAPED_APOSTROPHE)
+        cue_text = caption_set.get_captions(u'en-US')[0].nodes[0].content
+        self.assertEqual(
+            cue_text, u"<< \"Andy's Caf\xe9 & Restaurant\" this way")
+        result = DFXPWriter().write(caption_set)
+        self.assertIn(
+            u"&lt;&lt; \"Andy's Café &amp; Restaurant\" this way",
+            result
+        )
+
 
 class DFXPtoSRTTestCase(unittest.TestCase, SRTTestingMixIn):
 
@@ -182,7 +194,7 @@ class DFXPtoWebVTTTestCase(unittest.TestCase, WebVTTTestingMixIn):
         results = WebVTTWriter().write(caption_set)
         self.assertTrue(isinstance(results, unicode))
         self.assertWebVTTEquals(SAMPLE_WEBVTT_FROM_DFXP, results)
-        
+
     def test_dfxp_with_inline_style_to_webvtt_conversion(self):
         caption_set = DFXPReader().read(SAMPLE_DFXP_WITH_INLINE_STYLE)
         results = WebVTTWriter().write(caption_set)
