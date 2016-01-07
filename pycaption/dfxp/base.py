@@ -2,8 +2,6 @@ import re
 
 from copy import deepcopy
 
-import re
-
 from bs4 import BeautifulSoup, NavigableString
 from xml.sax.saxutils import escape
 
