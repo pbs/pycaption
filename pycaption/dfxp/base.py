@@ -467,17 +467,21 @@ class LayoutAwareDFXPParser(BeautifulSoup):
         are usually html parsers, some more forgiving than others, and as such
         they do stuff very differently especially for xml files. We chose this
         one because even though the docs say it's slower, it's very forgiving
-        (it allows `<` characters, for example). It also doesn't support the
-        `&apos;` entity, which seems to be a bug, so as a workaround we have to
-        manually replace the every occurance of this entity in the string before
-        using the parser.
+        (it allows unescaped `<` characters, for example). It doesn't support
+        the `&apos;` entity, however, since it respects the HTML4 and not HTML5
+        syntax. Since this is valid XML 1.0, as a workaround we have to manually
+        replace the every occurance of this entity in the string before using
+        the parser.
 
         The reason why we haven't used the 'xml' parser is that it destroys
         characters such as < or & (even the escaped ones).
 
         The 'lxml' parser seems to respect the html specification the best, but
         it's not as forgiving as 'html.parser' and fails when there are
-        unescaped `<` characters in the input.
+        unescaped `<` characters in the input, for example.
+
+        An alternative would be using html5lib, but that (1) is an external
+        dependency and (2) BeautifulSoup says it's the slowest option.
 
         :type read_invalid_positioning: bool
         :param read_invalid_positioning: if True, will try to also look for
