@@ -131,6 +131,8 @@ class DFXPReader(BaseReader):
             secsplit = timesplit[2].split(u'.')
             if len(timesplit) > 3:
                 secsplit.append((int(timesplit[3]) / 30) * 100)
+            while len(secsplit[1]) < 3:
+                secsplit[1] += u'0'
             microseconds = (int(timesplit[0]) * 3600000000 +
                             int(timesplit[1]) * 60000000 +
                             int(secsplit[0]) * 1000000 +
