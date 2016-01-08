@@ -14,7 +14,7 @@ For details, see the `documentation <http://pycaption.readthedocs.org>`__.
 Changelog
 ---------
 
-0.5.0
+0.5.x
 ^^^^^
 - Added positioning support
 - Created documentation
