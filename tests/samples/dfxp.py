@@ -1102,3 +1102,25 @@ DFXP_WITH_ESCAPED_APOSTROPHE = u"""\
     </div>
 </body>
 </tt>"""
+
+DFXP_WITH_ALTERNATIVE_TIMING_FORMATS = u"""\
+<tt xml:lang="en-us"
+    xmlns="http://www.w3.org/ns/ttml"
+    xmlns:tts='http://www.w3.org/ns/ttml#styling'
+    >
+<head>
+    <layout>
+        <region xml:id="r0" tts:textAlign="center" tts:displayAlign="after" tts:origin="5% 5%" tts:extent="90% 90%"/>
+    </layout>
+</head>
+<body>
+    <div>
+        <p region="r0" begin='00:00:01.9' end='00:00:03.05'>
+            foo
+        </p>
+        <p region="r0" begin='4s' end='5.2s'>
+            bar
+        </p>
+    </div>
+</body>
+</tt>"""
