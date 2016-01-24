@@ -1,4 +1,5 @@
 from copy import deepcopy
+import six
 
 from .base import (
     BaseReader, BaseWriter, CaptionSet, CaptionList, Caption, CaptionNode)
@@ -14,7 +15,7 @@ class SRTReader(BaseReader):
             return False
 
     def read(self, content, lang=u'en-US'):
-        if type(content) != unicode:
+        if type(content) != six.text_type:
             raise InvalidInputError('The content is not a unicode string.')
 
         lines = content.splitlines()

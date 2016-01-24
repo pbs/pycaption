@@ -10,11 +10,14 @@ dependencies = [
     'beautifulsoup4>=4.2.1',
     'lxml>=3.2.3',
     'cssutils>=0.9.10',
+    'future',
+    'enum34',
+    'six'
 ]
 
 setup(
     name='pycaption',
-    version='0.5.4',
+    version='0.5.4-sannies',
     description='Closed caption converter',
     long_description=open(README_PATH).read(),
     author='Joe Norton',

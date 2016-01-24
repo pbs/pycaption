@@ -14,7 +14,7 @@ from pycaption.dfxp.base import (
     DFXP_DEFAULT_REGION_ID, _recreate_style, _convert_layout_to_attributes
 )
 
-from .samples.dfxp import (
+from tests.samples.dfxp import (
     SAMPLE_DFXP, SAMPLE_DFXP_WITH_INLINE_STYLE, SAMPLE_DFXP_WITH_DEFINED_STYLE,
     SAMPLE_DFXP_WITH_INHERITED_STYLE,
     SAMPLE_DFXP_WITHOUT_REGION_AND_STYLE, SAMPLE_DFXP_WITH_POSITIONING,
@@ -28,15 +28,15 @@ from .samples.dfxp import (
     SAMPLE_DFXP_LONG_CUE_FIT_TO_SCREEN, SAMPLE_DFXP_FOR_LEGACY_WRITER_INPUT,
     SAMPLE_DFXP_FOR_LEGACY_WRITER_OUTPUT, DFXP_WITH_ESCAPED_APOSTROPHE
 )
-from .samples.sami import SAMPLE_SAMI
-from .samples.srt import SAMPLE_SRT
-from .samples.webvtt import (
+from tests.samples.sami import SAMPLE_SAMI
+from tests.samples.srt import SAMPLE_SRT
+from tests.samples.webvtt import (
     SAMPLE_WEBVTT_FROM_DFXP, SAMPLE_WEBVTT_FROM_DFXP_WITH_STYLE,
     SAMPLE_WEBVTT_FROM_DFXP_WITH_POSITIONING_AND_STYLE,
     SAMPLE_WEBVTT_OUTPUT_LONG_CUE, WEBVTT_FROM_DFXP_WITH_CONFLICTING_ALIGN
 )
 
-from .mixins import (
+from tests.mixins import (
     SRTTestingMixIn, SAMITestingMixIn, DFXPTestingMixIn, WebVTTTestingMixIn)
 
 # Arbitrary values used to test relativization

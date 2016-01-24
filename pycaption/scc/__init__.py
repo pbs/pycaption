@@ -77,11 +77,13 @@ http://www.theneitherworld.com/mcpoodle/SCC_TOOLS/DOCS/SCC_FORMAT.HTML
  just carried over when implementing positioning.
 """
 
-
 import re
 import math
 import string
 import textwrap
+from copy import deepcopy
+
+import six
 
 from pycaption.base import (
     BaseReader, BaseWriter, CaptionSet, CaptionNode,
@@ -96,9 +98,7 @@ from .constants import (
 from .specialized_collections import (
     TimingCorrectingCaptionList, NotifyingDict, CaptionCreator,
     InstructionNodeCreator)
-
 from .state_machines import DefaultProvidingPositionTracker
-from copy import deepcopy
 
 
 class NodeCreatorFactory(object):
@@ -195,10 +195,10 @@ class SCCReader(BaseReader):
     def read(self, content, lang=u'en-US', simulate_roll_up=False, offset=0):
         """Converts the unicode string into a CaptionSet
 
-        :type content: unicode
+        :type content: six.text_type
         :param content: The SCC content to be converted to a CaptionSet
 
-        :type lang: unicode
+        :type lang: six.text_type
         :param lang: The language of the caption
 
         :type simulate_roll_up: bool
@@ -211,7 +211,7 @@ class SCCReader(BaseReader):
 
         :rtype: CaptionSet
         """
-        if type(content) != unicode:
+        if type(content) != six.text_type:
             raise InvalidInputError(u'The content is not a unicode string.')
 
         self.simulate_roll_up = simulate_roll_up

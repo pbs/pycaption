@@ -2,7 +2,7 @@ import unittest
 
 from pycaption import SRTReader, CaptionReadNoCaptions
 
-from .samples.srt import (
+from tests.samples.srt import (
     SAMPLE_SRT, SAMPLE_SRT_NUMERIC,
     SAMPLE_SRT_EMPTY, SAMPLE_SRT_BLANK_LINES, SAMPLE_SRT_TRAILING_BLANKS)
 

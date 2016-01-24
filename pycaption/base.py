@@ -1,5 +1,6 @@
 from datetime import timedelta
 from numbers import Number
+from six import text_type
 
 from .exceptions import CaptionReadError, CaptionReadTimingError
 
@@ -22,14 +23,14 @@ class CaptionConverter(object):
     def read(self, content, caption_reader):
         try:
             self.captions = caption_reader.read(content)
-        except AttributeError, e:
+        except AttributeError as e:
             raise Exception(e)
         return self
 
     def write(self, caption_writer):
         try:
             return caption_writer.write(self.captions)
-        except AttributeError, e:
+        except AttributeError as e:
             raise Exception(e)
 
 
@@ -230,7 +231,7 @@ class Caption(object):
     def _format_timestamp(self, value, msec_separator=None):
         datetime_value = timedelta(milliseconds=(int(value / 1000)))
 
-        str_value = unicode(datetime_value)[:11]
+        str_value = text_type(datetime_value)[:11]
         if not datetime_value.microseconds:
             str_value += u'.000'
 

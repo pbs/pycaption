@@ -1,9 +1,10 @@
 import re
-
+from builtins import str
 from copy import deepcopy
 
 from bs4 import BeautifulSoup, NavigableString
 from xml.sax.saxutils import escape
+import six
 
 from ..base import (
     BaseReader, BaseWriter, CaptionSet, CaptionList, Caption, CaptionNode,
@@ -48,6 +49,7 @@ DFXP_DEFAULT_REGION_ID = u'bottom'
 
 class DFXPReader(BaseReader):
     def __init__(self, *args, **kw):
+        super().__init__(*args, **kw)
         self.read_invalid_positioning = (
             kw.get('read_invalid_positioning', False))
         self.nodes = []
@@ -59,7 +61,7 @@ class DFXPReader(BaseReader):
             return False
 
     def read(self, content):
-        if type(content) != unicode:
+        if type(content) != six.text_type:
             raise InvalidInputError(u'The content is not a unicode string.')
 
         dfxp_document = self._get_dfxp_parser_class()(
@@ -300,7 +302,7 @@ class DFXPWriter(BaseWriter):
 
         for lang in langs:
             div = dfxp.new_tag(u'div')
-            div[u'xml:lang'] = unicode(lang)
+            div[u'xml:lang'] = six.text_type(lang)
             self._assign_positioning_data(div, lang, caption_set)
 
             for caption in caption_set.get_captions(lang):
@@ -1031,7 +1033,7 @@ class RegionCreator(object):
 
         :type prefix: unicode
         """
-        new_id = unicode((prefix or u'') + unicode(self._id_seed))
+        new_id = six.text_type((prefix or u'') + six.text_type(self._id_seed))
         self._id_seed += 1
         return new_id
 

@@ -2,7 +2,7 @@ import unittest
 
 from pycaption import SAMIReader, CaptionReadNoCaptions
 
-from .samples.sami import (
+from tests.samples.sami import (
     SAMPLE_SAMI, SAMPLE_SAMI_EMPTY, SAMPLE_SAMI_SYNTAX_ERROR,
     SAMPLE_SAMI_PARTIAL_MARGINS, SAMPLE_SAMI_WITH_BAD_SPAN_ALIGN,
     SAMPLE_SAMI_WITH_BAD_DIV_ALIGN, SAMPLE_SAMI_WITH_P_ALIGN,

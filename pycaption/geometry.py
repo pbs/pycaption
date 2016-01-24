@@ -7,17 +7,10 @@ CONVENTIONS:
   responsible for the recalculation should return a new object with the
   necessary modifications.
 """
+import six
 
 from .exceptions import RelativizationError
-
-class Enum(object):
-    """Generic class that's not easily instantiable, serving as a base for
-    the enumeration classes
-    """
-    def __new__(cls, *args, **kwargs):
-        raise Exception(u"Don't instantiate. Use like an enum")
-
-    __init__ = __new__
+from enum import Enum
 
 
 class UnitEnum(Enum):
@@ -35,11 +28,6 @@ class UnitEnum(Enum):
     CELL = u'c'
     PT = u'pt'
 
-    class __metaclass__(type):
-        def __iter__(self):
-            for attr in dir(UnitEnum):
-                if not attr.startswith("__"):
-                    yield getattr(UnitEnum, attr)
 
 
 class VerticalAlignmentEnum(Enum):
@@ -142,7 +130,7 @@ class TwoDimensionalObject(object):
 
         :type attribute: unicode
         """
-        horizontal, vertical = unicode(attribute).split(u' ')
+        horizontal, vertical = six.text_type(attribute).split(u' ')
         horizontal = Size.from_string(horizontal)
         vertical = Size.from_string(vertical)
 
@@ -429,7 +417,7 @@ class Size(object):
         """
         if value is None:
             raise ValueError(u"Size must be initialized with a value.")
-        if unit not in UnitEnum:
+        if not isinstance(unit,UnitEnum):
             raise ValueError(u"Size must be initialized with a valid unit.")
 
         self.value = float(value)
@@ -521,13 +509,11 @@ class Size(object):
         :type string: unicode
         :rtype: Size
         """
-        units = [UnitEnum.CELL, UnitEnum.PERCENT, UnitEnum.PIXEL,
-                 UnitEnum.EM, UnitEnum.PT]
 
         raw_number = string
-        for unit in units:
-            if raw_number.endswith(unit):
-                raw_number = raw_number.rstrip(unit)
+        for unit in list(UnitEnum):
+            if raw_number.endswith(unit.value):
+                raw_number = raw_number.rstrip(unit.value)
                 break
         else:
             unit = None
@@ -552,7 +538,7 @@ class Size(object):
                 u"The specified value is not valid because its unit "
                 u"is not recognized: {value}. "
                 u"The only supported units are: {supported}"
-                .format(value=raw_number, supported=u', '.join(units))
+                .format(value=raw_number, supported=u', '.join(UnitEnum._member_map_))
             )
 
     def __repr__(self):

@@ -38,8 +38,20 @@ OBS:
 import re
 
 from collections import deque
-from htmlentitydefs import name2codepoint
-from HTMLParser import HTMLParser, HTMLParseError
+from builtins import chr
+from builtins import str
+import six
+
+try:
+    from htmlentitydefs import name2codepoint
+except:
+    from html.entities import name2codepoint
+
+try:
+    from HTMLParser import HTMLParser, HTMLParseError
+except:
+    from html.parser import HTMLParser
+
 from logging import FATAL
 from xml.sax.saxutils import escape
 from copy import deepcopy
@@ -72,6 +84,7 @@ SAMI_BASE_MARKUP = u'''
 
 class SAMIReader(BaseReader):
     def __init__(self, *args, **kw):
+        super().__init__(*args, **kw)
         self.line = []
         self.first_alignment = None
 
@@ -82,7 +95,7 @@ class SAMIReader(BaseReader):
             return False
 
     def read(self, content):
-        if type(content) != unicode:
+        if type(content) != six.text_type:
             raise InvalidInputError('The content is not a unicode string.')
 
         content, doc_styles, doc_langs = (
@@ -548,10 +561,10 @@ class SAMIWriter(BaseWriter):
 
         if layout_info and layout_info.padding:
             rules.update({
-                'margin-top': unicode(layout_info.padding.before),
-                'margin-right': unicode(layout_info.padding.end),
-                'margin-bottom': unicode(layout_info.padding.after),
-                'margin-left': unicode(layout_info.padding.start),
+                'margin-top': six.text_type(layout_info.padding.before),
+                'margin-right': six.text_type(layout_info.padding.end),
+                'margin-bottom': six.text_type(layout_info.padding.after),
+                'margin-left': six.text_type(layout_info.padding.start),
             })
 
         for attr, value in self._recreate_style(rules).items():
@@ -698,7 +711,7 @@ class SAMIParser(HTMLParser):
             self.sami += u'&%s;' % name
         else:
             try:
-                self.sami += unichr(self.name2codepoint[name])
+                self.sami += chr(self.name2codepoint[name])
             except (KeyError, ValueError):
                 self.sami += u'&%s' % name
 
@@ -706,9 +719,9 @@ class SAMIParser(HTMLParser):
 
     def handle_charref(self, name):
         if name[0] == u'x':
-            self.sami += unichr(int(name[1:], 16))
+            self.sami += chr(int(name[1:], 16))
         else:
-            self.sami += unichr(int(name))
+            self.sami += chr(int(name))
 
     # override the parser's handling of data
     def handle_data(self, data):

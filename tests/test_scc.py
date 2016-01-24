@@ -6,7 +6,7 @@ from pycaption.scc.specialized_collections import (InstructionNodeCreator,
 from pycaption import SCCReader, CaptionReadNoCaptions
 from pycaption.scc.state_machines import DefaultProvidingPositionTracker
 
-from .samples.scc import (
+from tests.samples.scc import (
     SAMPLE_SCC_PRODUCES_CAPTIONS_WITH_START_AND_END_TIME_THE_SAME,
     SAMPLE_SCC_POP_ON, SAMPLE_SCC_MULTIPLE_POSITIONING,
     SAMPLE_SCC_WITH_ITALICS, SAMPLE_SCC_EMPTY, SAMPLE_SCC_ROLL_UP_RU2,
