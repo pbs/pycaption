@@ -256,6 +256,10 @@ class CaptionList(list):
         return CaptionList(
             list.__getslice__(self, i, j), layout_info=self.layout_info)
 
+    def __getitem__(self, y):
+        return CaptionList(
+            list.__getitem__(self, y), layout_info=self.layout_info)
+
     def __add__(self, other):
         add_is_safe = (
             not hasattr(other, 'layout_info') or
