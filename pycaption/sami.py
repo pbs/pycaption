@@ -54,7 +54,7 @@ except:
 
 from logging import FATAL
 from xml.sax.saxutils import escape
-from copy import deepcopy
+from copy import deepcopy, copy
 
 from cssutils import parseString, log, css as cssutils_css
 from bs4 import BeautifulSoup, NavigableString
@@ -341,7 +341,8 @@ class SAMIReader(BaseReader):
     def _translate_parsed_style(self, styles):
         # Keep unknown styles by default
         attrs = styles
-        for css_property, value in styles.items():
+        for css_property in list(styles.keys()):
+            value = styles[css_property]
             self._translate_css_property(attrs, css_property, value)
 
         return attrs
@@ -482,17 +483,17 @@ class SAMIWriter(BaseWriter):
         :rtype: BeautifulSoup
         """
         if lang == primary:
-            sync = sami.new_tag(u"sync", start=u"%s" % time)
+            sync = sami.new_tag(u"sync", start=u"%d" % time)
             sami.body.append(sync)
         else:
-            sync = sami.find(u"sync", start=u"%s" % time)
+            sync = sami.find(u"sync", start=u"%d" % time)
             if sync is None:
                 sami, sync = self._find_closest_sync(sami, time)
 
         return sami, sync
 
     def _find_closest_sync(self, sami, time):
-        sync = sami.new_tag(u"sync", start=u"%s" % time)
+        sync = sami.new_tag(u"sync", start=u"%d" % time)
 
         earlier = sami.find_all(u"sync", start=lambda x: int(x) < time)
         if earlier:

@@ -1,3 +1,4 @@
+import datetime
 import sys
 import re
 from copy import deepcopy
@@ -221,7 +222,7 @@ class WebVTTWriter(BaseWriter):
 
         # WebVTT's language support seems to be a bit crazy, so let's just
         # support a single one for now.
-        lang = caption_set.get_languages()[0]
+        lang = list(caption_set.get_languages())[0]
 
         self.global_layout = caption_set.get_layout_info(lang)
 
@@ -231,14 +232,14 @@ class WebVTTWriter(BaseWriter):
             [self._write_caption(caption_set, caption) for caption in captions])
 
     def _timestamp(self, ts):
-        ts = float(ts) / 1000000
-        hours = int(ts) / 60 / 60
-        minutes = int(ts) / 60 - hours * 60
-        seconds = ts - hours * 60 * 60 - minutes * 60
-        if hours:
-            return u"%02d:%02d:%06.3f" % (hours, minutes, seconds)
-        else:
-            return u"%02d:%06.3f" % (minutes, seconds)
+        td = datetime.timedelta(microseconds=ts)
+        mm, ss = divmod(td.seconds, 60)
+        hh, mm = divmod(mm, 60)
+        s = "%02d:%02d.%03d" % (mm, ss, td.microseconds/1000)
+        if hh:
+            s = "%d:%s" % (hh,s)
+        return s
+
 
     def _tags_for_style(self, style):
         if style == u'italics':
