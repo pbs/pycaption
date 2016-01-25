@@ -557,7 +557,7 @@ class Size(object):
     def to_xml_attribute(self, **kwargs):
         """Returns a unicode representation of this object, as an xml attribute
         """
-        return unicode(self)
+        return six.text_type(self)
 
     def serialized(self):
         """Returns the "useful" values of this object"""
@@ -623,7 +623,7 @@ class Padding(object):
         :param attribute: a string like object, representing a dfxp attr. value
         :return: a Padding object
         """
-        values_list = unicode(attribute).split(u' ')
+        values_list = six.text_type(attribute).split(u' ')
         sizes = []
 
         for value in values_list:

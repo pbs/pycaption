@@ -268,7 +268,7 @@ class DFXPWriter(BaseWriter):
 
         :rtype: unicode
         """
-        dfxp = BeautifulSoup(DFXP_BASE_MARKUP, u'xml')
+        dfxp = BeautifulSoup(DFXP_BASE_MARKUP, u'lxml-xml')
         dfxp.find(u'tt')[u'xml:lang'] = u"en"
 
         langs = caption_set.get_languages()

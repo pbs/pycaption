@@ -395,7 +395,7 @@ class SAMIWriter(BaseWriter):
 
     def write(self, caption_set):
         caption_set = deepcopy(caption_set)
-        sami = BeautifulSoup(SAMI_BASE_MARKUP, u"xml")
+        sami = BeautifulSoup(SAMI_BASE_MARKUP, u"lxml")
 
         caption_set.layout_info = self._relativize_and_fit_to_screen(
             caption_set.layout_info)
@@ -654,6 +654,7 @@ class SAMIParser(HTMLParser):
         self.last_element = u''
         self.name2codepoint = name2codepoint.copy()
         self.name2codepoint[u'apos'] = 0x0027
+        self.convert_charrefs = False
 
     def handle_starttag(self, tag, attrs):
         """
@@ -718,6 +719,9 @@ class SAMIParser(HTMLParser):
 
         self.last_element = u''
 
+
+
+
     def handle_charref(self, name):
         if name[0] == u'x':
             self.sami += chr(int(name[1:], 16))
@@ -749,7 +753,7 @@ class SAMIParser(HTMLParser):
             index = data.lower().find(u"</head>")
 
             self.styles = self._css_parse(
-                BeautifulSoup(data[:index]).find(u'style').get_text())
+                BeautifulSoup(data[:index], "lxml").find(u'style').get_text())
         except AttributeError:
             self.styles = {}
 

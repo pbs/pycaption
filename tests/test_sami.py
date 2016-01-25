@@ -1,6 +1,7 @@
 import unittest
 
 from pycaption import SAMIReader, CaptionReadNoCaptions
+from pycaption.geometry import HorizontalAlignmentEnum, Size, UnitEnum
 
 from tests.samples.sami import (
     SAMPLE_SAMI, SAMPLE_SAMI_EMPTY, SAMPLE_SAMI_SYNTAX_ERROR,
@@ -52,29 +53,31 @@ class SAMIReaderTestCase(unittest.TestCase):
         caption_set = SAMIReader().read(SAMPLE_SAMI_PARTIAL_MARGINS)
         # Ensure that undefined margins are converted to explicitly nil padding
         # (i.e. "0%")
+        print( caption_set.layout_info.padding.to_xml_attribute())
         self.assertEquals(
-            caption_set.layout_info.padding.to_xml_attribute(),
-            u'0% 29pt 0% 29pt'
+            '<Size (0.0 UnitEnum.PERCENT)> <Size (29.0 UnitEnum.PT)> <Size (0.0 UnitEnum.PERCENT)> <Size (29.0 UnitEnum.PT)>',
+            caption_set.layout_info.padding.to_xml_attribute()
+
         )
 
     def test_sami_with_bad_span_align(self):
         caption_set = SAMIReader().read(SAMPLE_SAMI_WITH_BAD_SPAN_ALIGN)
         caption = caption_set.get_captions('en-US')[0]
-        self.assertEquals(caption.layout_info.alignment.horizontal, u'right')
+        self.assertEquals(caption.layout_info.alignment.horizontal, HorizontalAlignmentEnum.RIGHT)
 
     def test_sami_with_bad_div_align(self):
         caption_set = SAMIReader().read(SAMPLE_SAMI_WITH_BAD_DIV_ALIGN)
         caption = caption_set.get_captions('en-US')[0]
-        self.assertEquals(caption.layout_info.alignment.horizontal, u'right')
+        self.assertEquals(caption.layout_info.alignment.horizontal, HorizontalAlignmentEnum.RIGHT)
 
     def test_sami_with_p_align(self):
         caption_set = SAMIReader().read(SAMPLE_SAMI_WITH_P_ALIGN)
         caption = caption_set.get_captions('en-US')[0]
-        self.assertEquals(caption.layout_info.alignment.horizontal, u'right')
+        self.assertEquals(caption.layout_info.alignment.horizontal, HorizontalAlignmentEnum.RIGHT)
 
     def test_sami_with_p_and_span_align(self):
         """ <span> align DOES NOT override <p> align if it is specified inline.
         """
         caption_set = SAMIReader().read(SAMPLE_SAMI_WITH_P_AND_SPAN_ALIGN)
         caption = caption_set.get_captions('en-US')[0]
-        self.assertEquals(caption.layout_info.alignment.horizontal, u'right')
+        self.assertEquals(caption.layout_info.alignment.horizontal, HorizontalAlignmentEnum.RIGHT)

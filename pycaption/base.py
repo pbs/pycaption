@@ -257,8 +257,11 @@ class CaptionList(list):
             list.__getslice__(self, i, j), layout_info=self.layout_info)
 
     def __getitem__(self, y):
-        return CaptionList(
-            list.__getitem__(self, y), layout_info=self.layout_info)
+        item = list.__getitem__(self, y)
+        if isinstance(item, Caption) :
+            return item
+        return CaptionList(item
+            , layout_info=self.layout_info)
 
     def __add__(self, other):
         add_is_safe = (

@@ -619,7 +619,7 @@ class _SccTimeTranslator(object):
         :rtype: int
         """
         return self._translate_time(
-            self._time[:-2] + unicode(int(self._time[-2:]) + self._frames),
+            self._time[:-2] + six.text_type(int(self._time[-2:]) + self._frames),
             self.offset
         )
 

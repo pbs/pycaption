@@ -3,6 +3,7 @@
 import unittest
 
 from bs4 import BeautifulSoup
+from six import text_type
 
 from pycaption import (
     DFXPReader, DFXPWriter, SRTWriter, SAMIWriter, WebVTTWriter)
@@ -49,7 +50,7 @@ class DFXPtoDFXPTestCase(unittest.TestCase, DFXPTestingMixIn):
     def test_dfxp_to_dfxp_conversion(self):
         caption_set = DFXPReader().read(SAMPLE_DFXP)
         results = DFXPWriter().write(caption_set)
-        self.assertTrue(isinstance(results, unicode))
+        self.assertTrue(isinstance(results, text_type))
         self.assertDFXPEquals(SAMPLE_DFXP_OUTPUT, results)
 
     def test_default_styling_tag(self):
@@ -60,7 +61,7 @@ class DFXPtoDFXPTestCase(unittest.TestCase, DFXPTestingMixIn):
         default_style = _recreate_style(DFXP_DEFAULT_STYLE, None)
         default_style[u'xml:id'] = DFXP_DEFAULT_STYLE_ID
 
-        soup = BeautifulSoup(result, u'xml')
+        soup = BeautifulSoup(result, u'lxml')
         style = soup.find(u'style', {u'xml:id': DFXP_DEFAULT_STYLE_ID})
 
         self.assertTrue(style)
@@ -70,7 +71,7 @@ class DFXPtoDFXPTestCase(unittest.TestCase, DFXPTestingMixIn):
         caption_set = DFXPReader().read(SAMPLE_DFXP)
         result = DFXPWriter().write(caption_set)
 
-        soup = BeautifulSoup(result, u'xml')
+        soup = BeautifulSoup(result, u'lxml')
         for p in soup.find_all(u'p'):
             self.assertEquals(p.attrs.get(u'style'), 'p')
 
@@ -78,7 +79,7 @@ class DFXPtoDFXPTestCase(unittest.TestCase, DFXPTestingMixIn):
         caption_set = DFXPReader().read(SAMPLE_DFXP)
         result = DFXPWriter().write(caption_set)
 
-        soup = BeautifulSoup(result, u'xml')
+        soup = BeautifulSoup(result, u'lxml')
         region = soup.find(u'region', {u'xml:id': DFXP_DEFAULT_REGION_ID})
 
         default_region = _convert_layout_to_attributes(DFXP_DEFAULT_REGION)
@@ -92,7 +93,7 @@ class DFXPtoDFXPTestCase(unittest.TestCase, DFXPTestingMixIn):
         caption_set = DFXPReader().read(SAMPLE_DFXP)
         result = DFXPWriter().write(caption_set)
 
-        soup = BeautifulSoup(result, u'xml')
+        soup = BeautifulSoup(result, u'lxml')
         for p in soup.find_all(u'p'):
             self.assertEquals(p.attrs.get(u'region'), DFXP_DEFAULT_REGION_ID)
 
@@ -163,7 +164,7 @@ class DFXPtoSRTTestCase(unittest.TestCase, SRTTestingMixIn):
     def test_dfxp_to_srt_conversion(self):
         caption_set = DFXPReader().read(SAMPLE_DFXP)
         results = SRTWriter().write(caption_set)
-        self.assertTrue(isinstance(results, unicode))
+        self.assertTrue(isinstance(results, text_type))
         self.assertSRTEquals(SAMPLE_SRT, results)
 
 
@@ -172,7 +173,7 @@ class DFXPtoSAMITestCase(unittest.TestCase, SAMITestingMixIn):
     def test_dfxp_to_sami_conversion(self):
         caption_set = DFXPReader().read(SAMPLE_DFXP)
         results = SAMIWriter().write(caption_set)
-        self.assertTrue(isinstance(results, unicode))
+        self.assertTrue(isinstance(results, text_type))
         self.assertSAMIEquals(SAMPLE_SAMI, results)
 
     def test_dfxp_to_sami_with_margins(self):
