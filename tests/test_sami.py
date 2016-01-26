@@ -1,4 +1,5 @@
 import unittest
+import six
 
 from pycaption import SAMIReader, CaptionReadNoCaptions
 from pycaption.geometry import HorizontalAlignmentEnum, Size, UnitEnum
@@ -53,10 +54,9 @@ class SAMIReaderTestCase(unittest.TestCase):
         caption_set = SAMIReader().read(SAMPLE_SAMI_PARTIAL_MARGINS)
         # Ensure that undefined margins are converted to explicitly nil padding
         # (i.e. "0%")
-        print( caption_set.layout_info.padding.to_xml_attribute())
         self.assertEquals(
-            '<Size (0.0 UnitEnum.PERCENT)> <Size (29.0 UnitEnum.PT)> <Size (0.0 UnitEnum.PERCENT)> <Size (29.0 UnitEnum.PT)>',
-            caption_set.layout_info.padding.to_xml_attribute()
+            caption_set.layout_info.padding.to_xml_attribute(),
+            u'0% 29pt 0% 29pt'
 
         )
 

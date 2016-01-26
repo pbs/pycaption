@@ -20,6 +20,8 @@ from .exceptions import (
 # A WebVTT timing line has both start/end times and layout related settings
 # (referred to as 'cue settings' in the documentation)
 # The following pattern captures [start], [end] and [cue settings] if existent
+from pycaption.geometry import HorizontalAlignmentEnum
+
 TIMING_LINE_PATTERN = re.compile(u'^(\S+)\s+-->\s+(\S+)(?:\s+(.*?))?\s*$')
 TIMESTAMP_PATTERN = re.compile(u'^(\d+):(\d{2})(:\d{2})?\.(\d{3})')
 VOICE_SPAN_PATTERN = re.compile(u'<v(\\.\\w+)* ([^>]*)>')
@@ -30,11 +32,11 @@ OTHER_SPAN_PATTERN = (
 )  # These WebVTT tags are stripped off the cues on conversion
 
 WEBVTT_VERSION_OF = {
-    u'left': u'left',
-    u'center': u'middle',
-    u'right': u'right',
-    u'start': u'start',
-    u'end': u'end'
+    HorizontalAlignmentEnum.LEFT: u'left',
+    HorizontalAlignmentEnum.CENTER: u'middle',
+    HorizontalAlignmentEnum.RIGHT: u'right',
+    HorizontalAlignmentEnum.START: u'start',
+    HorizontalAlignmentEnum.END: u'end'
 }
 
 DEFAULT_ALIGNMENT = u'middle'
@@ -88,7 +90,8 @@ class WebVTTReader(BaseReader):
                         line, last_start_time)
                 except CaptionReadError as e:
                     new_message = u'%s (line %d)' % (e.args[0], timing_line)
-                    raise type(e)(new_message).with_traceback(sys.exc_info()[2])
+                    six.reraise(type(e), type(e)(new_message), sys.exc_info()[2])
+
 
             elif u'' == line:
                 if found_timing:
@@ -284,7 +287,7 @@ class WebVTTWriter(BaseWriter):
         cue_style_tags = [u'', u'']
 
         style = self._calculate_resulting_style(caption.style, caption_set)
-        for key, value in style.items():
+        for key, value in sorted(style.items()):
             if value:
                 tags = self._tags_for_style(key)
 #                    print "tags: " + str(tags) + "\n"

@@ -48,8 +48,10 @@ DFXP_DEFAULT_REGION_ID = u'bottom'
 
 
 class DFXPReader(BaseReader):
+
+
     def __init__(self, *args, **kw):
-        super().__init__(*args, **kw)
+        super(DFXPReader, self).__init__(*args, **kw)
         self.read_invalid_positioning = (
             kw.get('read_invalid_positioning', False))
         self.nodes = []

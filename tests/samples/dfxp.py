@@ -176,7 +176,7 @@ SAMPLE_DFXP_WITHOUT_REGION_AND_STYLE = """
  </body>
 </tt>"""
 
-SAMPLE_DFXP_WITH_POSITIONING = """<?xml version="1.0" encoding="utf-8"?>
+SAMPLE_DFXP_WITH_POSITIONING = u"""<?xml version="1.0" encoding="utf-8"?>
 <tt xml:lang="en-us"
     xmlns="http://www.w3.org/ns/ttml"
     xmlns:tts='http://www.w3.org/ns/ttml#styling'

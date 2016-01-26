@@ -83,8 +83,9 @@ SAMI_BASE_MARKUP = u'''
 
 
 class SAMIReader(BaseReader):
+
     def __init__(self, *args, **kw):
-        super().__init__(*args, **kw)
+        super(SAMIReader, self).__init__(*args, **kw)
         self.line = []
         self.first_alignment = None
 
@@ -395,7 +396,7 @@ class SAMIWriter(BaseWriter):
 
     def write(self, caption_set):
         caption_set = deepcopy(caption_set)
-        sami = BeautifulSoup(SAMI_BASE_MARKUP, u"lxml")
+        sami = BeautifulSoup(SAMI_BASE_MARKUP, u"lxml-xml")
 
         caption_set.layout_info = self._relativize_and_fit_to_screen(
             caption_set.layout_info)
@@ -568,7 +569,7 @@ class SAMIWriter(BaseWriter):
                 'margin-left': six.text_type(layout_info.padding.start),
             })
 
-        for attr, value in self._recreate_style(rules).items():
+        for attr, value in sorted(self._recreate_style(rules).items()):
             sami_style += u' {}: {};\n    '.format(attr, value)
 
         return sami_style + u'}\n'

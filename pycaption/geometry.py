@@ -56,9 +56,9 @@ class HorizontalAlignmentEnum(Enum):
 class Alignment(object):
     def __init__(self, horizontal, vertical):
         """
-        :type horizontal: unicode
+        :type horizontal: HorizontalAlignmentEnum
         :param horizontal: HorizontalAlignmentEnum member
-        :type vertical: unicode
+        :type vertical: VerticalAlignmentEnum
         :param vertical: VerticalAlignmentEnum member
         """
         self.horizontal = horizontal
@@ -405,6 +405,7 @@ class Point(TwoDimensionalObject):
             x=self.x.to_xml_attribute(), y=self.y.to_xml_attribute())
 
 
+@six.python_2_unicode_compatible
 class Size(object):
     """Ties together a number with a unit, to represent a size.
 
@@ -437,6 +438,10 @@ class Size(object):
             return cmp(self.value, other.value)
         else:
             raise ValueError(u"The sizes should have the same measure units.")
+
+    def __lt__(self, other):
+        return self.value < other.value
+
 
     def __add__(self, other):
         if self.unit == other.unit:
@@ -543,16 +548,16 @@ class Size(object):
 
     def __repr__(self):
         return u'<Size ({value} {unit})>'.format(
-            value=self.value, unit=self.unit
+            value=self.value, unit=self.unit.value
         )
 
-    def __unicode__(self):
+    def __str__(self):
         value = round(self.value, 2)
         if value.is_integer():
             s = u"{}".format(int(value))
         else:
             s = u"{:.2f}".format(value).rstrip('0').rstrip('.')
-        return u"{}{}".format(s, self.unit)
+        return u"{}{}".format(s, self.unit.value)
 
     def to_xml_attribute(self, **kwargs):
         """Returns a unicode representation of this object, as an xml attribute

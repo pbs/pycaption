@@ -45,8 +45,8 @@ class CaptionSetTestingMixIn(object):
         and differences in timing that are less than tolerance_microseconds.
         """
 
-        captions_1 = first.get_captions(first.get_languages()[0])
-        captions_2 = second.get_captions(first.get_languages()[0])
+        captions_1 = first.get_captions(list(first.get_languages())[0])
+        captions_2 = second.get_captions(list(first.get_languages())[0])
 
         def get_text_for_caption(caption):
             text = caption.get_text()

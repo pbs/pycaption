@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 import unittest
+from six import text_type
+from pycaption.geometry import UnitEnum, HorizontalAlignmentEnum, VerticalAlignmentEnum
 from pycaption.scc.specialized_collections import (InstructionNodeCreator,
                                                    TimingCorrectingCaptionList)
 
@@ -43,22 +45,22 @@ class SCCReaderTestCase(unittest.TestCase):
             SCCReader().read, SAMPLE_SCC_EMPTY)
 
     def test_scc_positioning_is_read(self):
-        captions = SCCReader().read(unicode(SAMPLE_SCC_MULTIPLE_POSITIONING))
+        captions = SCCReader().read(text_type(SAMPLE_SCC_MULTIPLE_POSITIONING))
 
         # SCC generates only origin, and we always expect it.
         expected_positioning = [
-            ((0.0, u'%'), (80.0, u'%')),
-            ((37.5, u'%'), (0.0, u'%')),
-            ((75.0, u'%'), (20.0, u'%')),
-            ((12.5, u'%'), (46.666666666666664, u'%')),
-            ((12.5, u'%'), (93.33333333333333, u'%')),
-            ((37.5, u'%'), (53.333333333333336, u'%')),
-            ((75.0, u'%'), (13.333333333333334, u'%')),
-            ((12.5, u'%'), (33.333333333333336, u'%')),
-            ((12.5, u'%'), (86.66666666666667, u'%')),
-            ((75.0, u'%'), (6.666666666666667, u'%')),
-            ((37.5, u'%'), (40.0, u'%')),
-            ((12.5, u'%'), (73.33333333333333, u'%'))
+            ((0.0, UnitEnum.PERCENT), (80.0, UnitEnum.PERCENT)),
+            ((37.5, UnitEnum.PERCENT), (0.0, UnitEnum.PERCENT)),
+            ((75.0, UnitEnum.PERCENT), (20.0, UnitEnum.PERCENT)),
+            ((12.5, UnitEnum.PERCENT), (46.666666666666664, UnitEnum.PERCENT)),
+            ((12.5, UnitEnum.PERCENT), (93.33333333333333, UnitEnum.PERCENT)),
+            ((37.5, UnitEnum.PERCENT), (53.333333333333336, UnitEnum.PERCENT)),
+            ((75.0, UnitEnum.PERCENT), (13.333333333333334, UnitEnum.PERCENT)),
+            ((12.5, UnitEnum.PERCENT), (33.333333333333336, UnitEnum.PERCENT)),
+            ((12.5, UnitEnum.PERCENT), (86.66666666666667, UnitEnum.PERCENT)),
+            ((75.0, UnitEnum.PERCENT), (6.666666666666667, UnitEnum.PERCENT)),
+            ((37.5, UnitEnum.PERCENT), (40.0, UnitEnum.PERCENT)),
+            ((12.5, UnitEnum.PERCENT), (73.33333333333333, UnitEnum.PERCENT))
         ]
         actual_positioning = [
             caption_.layout_info.origin.serialized() for caption_ in
@@ -115,10 +117,10 @@ class SCCReaderTestCase(unittest.TestCase):
         ]
 
         expected_caption_layouts = [
-            (((0.0, u'%'), (86.66666666666667, u'%')), None, None,
-             (u'left', u'top')),
-            (((0.0, u'%'), (86.66666666666667, u'%')), None, None,
-             (u'left', u'top'))]
+            (((0.0, UnitEnum.PERCENT), (86.66666666666667, UnitEnum.PERCENT)), None, None,
+             (HorizontalAlignmentEnum.LEFT, VerticalAlignmentEnum.TOP)),
+            (((0.0, UnitEnum.PERCENT), (86.66666666666667, UnitEnum.PERCENT)), None, None,
+             (HorizontalAlignmentEnum.LEFT, VerticalAlignmentEnum.TOP))]
 
         actual_node_layout_infos = [
             {idx: [node.layout_info.serialized() for node in caption.nodes]}
@@ -126,14 +128,14 @@ class SCCReaderTestCase(unittest.TestCase):
         ]
 
         expected_node_layout_infos = [
-            {0: [(((0.0, u'%'), (86.66666666666667, u'%')),
+            {0: [(((0.0, UnitEnum.PERCENT), (86.66666666666667, UnitEnum.PERCENT)),
                   None,
                   None,
-                  (u'left', u'top'))]},
-            {1: [(((0.0, u'%'), (86.66666666666667, u'%')),
+                  (HorizontalAlignmentEnum.LEFT, VerticalAlignmentEnum.TOP))]},
+            {1: [(((0.0, UnitEnum.PERCENT), (86.66666666666667, UnitEnum.PERCENT)),
                   None,
                   None,
-                  (u'left', u'top'))]}
+                  (HorizontalAlignmentEnum.LEFT, VerticalAlignmentEnum.TOP))]}
         ]
 
         self.assertEqual(expected_node_layout_infos, actual_node_layout_infos)

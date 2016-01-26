@@ -494,7 +494,7 @@ class SCCWriter(BaseWriter):
         caption_set = deepcopy(caption_set)
 
         # Only support one language.
-        lang = caption_set.get_languages()[0]
+        lang = list(caption_set.get_languages())[0]
         captions = caption_set.get_captions(lang)
 
         # PASS 1: compute codes for each caption
@@ -532,12 +532,12 @@ class SCCWriter(BaseWriter):
     def _layout_line(caption):
         def caption_node_to_text(caption_node):
             if caption_node.type_ == CaptionNode.TEXT:
-                return unicode(caption_node.content)
+                return six.text_type(caption_node.content)
             elif caption_node.type_ == CaptionNode.BREAK:
                 return u'\n'
         caption_text = u''.join(
             [caption_node_to_text(node) for node in caption.nodes])
-        inner_lines = string.split(caption_text, u'\n')
+        inner_lines = caption_text.split( u'\n')
         inner_lines_laid_out = [textwrap.fill(x, 32) for x in inner_lines]
         return u'\n'.join(inner_lines_laid_out)
 
@@ -573,7 +573,7 @@ class SCCWriter(BaseWriter):
 
     def _text_to_code(self, s):
         code = u''
-        lines = string.split(self._layout_line(s), u'\n')
+        lines = self._layout_line(s).split( u'\n')
         for row, line in enumerate(lines):
             row += 16 - len(lines)
             # Move cursor to column 0 of the destination row
