@@ -38,8 +38,6 @@ OBS:
 import re
 
 from collections import deque
-from builtins import chr
-from builtins import str
 import six
 
 try:
@@ -714,7 +712,7 @@ class SAMIParser(HTMLParser):
             self.sami += u'&%s;' % name
         else:
             try:
-                self.sami += chr(self.name2codepoint[name])
+                self.sami += six.unichr(self.name2codepoint[name])
             except (KeyError, ValueError):
                 self.sami += u'&%s' % name
 
@@ -725,9 +723,9 @@ class SAMIParser(HTMLParser):
 
     def handle_charref(self, name):
         if name[0] == u'x':
-            self.sami += chr(int(name[1:], 16))
+            self.sami += six.unichr(int(name[1:], 16))
         else:
-            self.sami += chr(int(name))
+            self.sami += six.unichr(int(name))
 
     # override the parser's handling of data
     def handle_data(self, data):
