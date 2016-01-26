@@ -79,7 +79,6 @@ http://www.theneitherworld.com/mcpoodle/SCC_TOOLS/DOCS/SCC_FORMAT.HTML
 
 import re
 import math
-import string
 import textwrap
 from copy import deepcopy
 
