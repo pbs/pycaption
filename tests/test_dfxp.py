@@ -3,7 +3,7 @@ import unittest
 from pycaption import DFXPReader, CaptionReadNoCaptions
 from pycaption.exceptions import CaptionReadSyntaxError, InvalidInputError
 
-from .samples.dfxp import (
+from tests.samples.dfxp import (
     SAMPLE_DFXP, SAMPLE_DFXP_EMPTY, SAMPLE_DFXP_SYNTAX_ERROR,
     DFXP_WITH_ALTERNATIVE_TIMING_FORMATS
 )
@@ -110,6 +110,31 @@ class DFXPReaderTestCase(unittest.TestCase):
         self.assertEqual(caps[0].end, 3050000)
         self.assertEqual(caps[1].start, 4000000)
         self.assertEqual(caps[1].end, 5200000)
+
+
+    def test_empty_cue_works(self):
+        caption_set = DFXPReader().read(
+            SAMPLE_DFXP_EMPTY_CUE)
+        caps = caption_set.get_captions('en-US')
+        self.assertEquals(1, len(caps))
+
+
+
+SAMPLE_DFXP_EMPTY_CUE = u"""\
+<?xml version="1.0" encoding="utf-8"?>
+<tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling">
+ <head>
+  <layout>
+   <region tts:origin="10% 10%" xml:id="bottom"/>
+  </layout>
+ </head>
+ <body>
+  <div region="bottom" xml:lang="en-US">
+   <p begin="00:00:01.209" end="00:00:02.312" region="bottom">abc</p>
+   <p begin="00:00:09.209" end="00:00:12.312" region="bottom"></p>
+  </div>
+ </body>
+</tt>"""
 
 
 SAMPLE_DFXP_INVALID_POSITIONING_VALUE_TEMPLATE = u"""\
