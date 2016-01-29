@@ -130,13 +130,16 @@ class DFXPReader(BaseReader):
                 timesplit[2] = timesplit[2] + u'.000'
             secsplit = timesplit[2].split(u'.')
             if len(timesplit) > 3:
-                secsplit.append((int(timesplit[3]) / 30) * 100)
+                secsplit.append((float(timesplit[3]) / 30 * 1000000))
             while len(secsplit[1]) < 3:
                 secsplit[1] += u'0'
             microseconds = (int(timesplit[0]) * 3600000000 +
                             int(timesplit[1]) * 60000000 +
                             int(secsplit[0]) * 1000000 +
                             int(secsplit[1]) * 1000)
+            if (len(secsplit) > 2):
+                microseconds += int(secsplit[2])
+
             return microseconds
         else:
             # Must be offset-time
