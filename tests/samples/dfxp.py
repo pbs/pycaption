@@ -260,7 +260,6 @@ SAMPLE_DFXP_EMPTY = """
 </tt>
 """
 
-
 SAMPLE_DFXP_SYNTAX_ERROR = """
 <?xml version="1.0" encoding="UTF-16"?>
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml">
@@ -273,7 +272,7 @@ SAMPLE_DFXP_SYNTAX_ERROR = """
 </tt>
 """
 
-DFXP_FROM_SAMI_WITH_POSITIONING = """\
+SAMPLE_DFXP_FROM_SAMI_WITH_POSITIONING = """\
 <?xml version="1.0" encoding="utf-8"?>
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml"
     xmlns:tts="http://www.w3.org/ns/ttml#styling">
@@ -541,7 +540,6 @@ SAMPLE_DFXP_INVALID_BUT_SUPPORTED_POSITIONING_OUTPUT = """\
   </div>
  </body>
 </tt>"""
-
 
 SAMPLE_DFXP_MULTIPLE_REGIONS_INPUT = """
 <?xml version="1.0" encoding="utf-8"?>
@@ -932,7 +930,6 @@ SAMPLE_DFXP_WITH_PROPERLY_CLOSING_SPANS_OUTPUT = """\
  </body>
 </tt>"""
 
-
 SAMPLE_DFXP_FOR_LEGACY_WRITER_INPUT = """
 <?xml version="1.0" encoding="utf-8"?>
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml"
@@ -1060,7 +1057,7 @@ DFXP_WITH_CONCURRENT_CAPTIONS = """\
 </tt>"""
 
 # 'style_name' is the template parameter to use in str.format
-DFXP_WITH_TEMPLATED_STYLE = """\
+SAMPLE_DFXP_WITH_TEMPLATED_STYLE = """\
 <tt xml:lang="en-US"
     xmlns="http://www.w3.org/ns/ttml"
     xmlns:tts='http://www.w3.org/ns/ttml#styling'
@@ -1083,7 +1080,7 @@ DFXP_WITH_TEMPLATED_STYLE = """\
 </tt>
 """
 
-DFXP_WITH_ESCAPED_APOSTROPHE = """\
+SAMPLE_DFXP_WITH_ESCAPED_APOSTROPHE = """\
 <tt xml:lang="en-US"
     xmlns="http://www.w3.org/ns/ttml"
     xmlns:tts='http://www.w3.org/ns/ttml#styling'
@@ -1102,7 +1099,7 @@ DFXP_WITH_ESCAPED_APOSTROPHE = """\
 </body>
 </tt>"""
 
-DFXP_WITH_ALTERNATIVE_TIMING_FORMATS = """\
+SAMPLE_DFXP_WITH_ALTERNATIVE_TIMING_FORMATS = """\
 <tt xml:lang="en-US"
     xmlns="http://www.w3.org/ns/ttml"
     xmlns:tts='http://www.w3.org/ns/ttml#styling'
@@ -1123,7 +1120,6 @@ DFXP_WITH_ALTERNATIVE_TIMING_FORMATS = """\
     </div>
 </body>
 </tt>"""
-
 
 SAMPLE_DFXP_EMPTY_PARAGRAPH = """
 <?xml version="1.0" encoding="UTF-16"?>
@@ -1147,3 +1143,82 @@ SAMPLE_DFXP_INCORRECT_TIME_FORMAT = """
  </body>
 </tt>
 """
+
+SAMPLE_DFXP_WITH_FRAME_TIMING = u"""\
+<?xml version="1.0" encoding="utf-8"?>
+<tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling">
+ <head>
+  <layout>
+   <region tts:origin="10% 10%" xml:id="b1"/>
+   <region tts:origin="40% 40%" xml:id="b2"/>
+   <region tts:origin="10% 70%" xml:id="b3"/>
+  </layout>
+ </head>
+ <body>
+  <div region="bottom" xml:lang="en-US">
+   <p begin="00:00:09:20" end="00:00:12:7" region="b1">
+    ABC
+   </p>
+  </div>
+ </body>
+</tt>"""
+
+SAMPLE_DFXP_EMPTY_CUE = """\
+<?xml version="1.0" encoding="utf-8"?>
+<tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling">
+ <head>
+  <layout>
+   <region tts:origin="10% 10%" xml:id="bottom"/>
+  </layout>
+ </head>
+ <body>
+  <div region="bottom" xml:lang="en-US">
+   <p begin="00:00:01.209" end="00:00:02.312" region="bottom">abc</p>
+   <p begin="00:00:09.209" end="00:00:12.312" region="bottom"></p>
+  </div>
+ </body>
+</tt>"""
+
+SAMPLE_DFXP_INVALID_POSITIONING_VALUE_TEMPLATE = """\
+<?xml version="1.0" encoding="utf-8"?>
+<tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling">
+ <head>
+  <layout>
+   <region tts:origin="{origin}" xml:id="bottom"/>
+  </layout>
+ </head>
+ <body>
+  <div region="bottom" xml:lang="en-US">
+   <p begin="00:00:09.209" end="00:00:12.312" region="bottom">
+    ( clock ticking )
+   </p>
+  </div>
+ </body>
+</tt>"""
+
+# TODO - notice that there's no "bottom" region specified in the <layout>
+# region, but it's referenced by the <div>. Decide if this is ok enough
+SAMPLE_DFXP_MULTIPLE_CAPTIONS_WITH_THE_SAME_TIMING = """\
+<?xml version="1.0" encoding="utf-8"?>
+<tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling">
+ <head>
+  <layout>
+   <region tts:origin="10% 10%" xml:id="b1"/>
+   <region tts:origin="40% 40%" xml:id="b2"/>
+   <region tts:origin="10% 70%" xml:id="b3"/>
+  </layout>
+ </head>
+ <body>
+  <div region="bottom" xml:lang="en-US">
+   <p begin="00:00:09.209" end="00:00:12.312" region="b1">
+    Some text here
+   </p>
+   <p begin="00:00:09.209" end="00:00:12.312" region="b2">
+    Some text there
+   </p>
+   <p begin="00:00:09.209" end="00:00:12.312" region="b3">
+    Caption texts are everywhere!
+   </p>
+  </div>
+ </body>
+</tt>"""
