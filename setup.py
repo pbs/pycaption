@@ -12,7 +12,7 @@ dependencies = [
     'cssutils>=0.9.10',
     'future',
     'enum34',
-    'six'
+    'six>=1.9.0'
 ]
 
 setup(
