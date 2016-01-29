@@ -5,7 +5,7 @@ from pycaption.exceptions import CaptionReadSyntaxError, InvalidInputError
 
 from .samples.dfxp import (
     SAMPLE_DFXP, SAMPLE_DFXP_EMPTY, SAMPLE_DFXP_SYNTAX_ERROR,
-    DFXP_WITH_ALTERNATIVE_TIMING_FORMATS
+    DFXP_WITH_ALTERNATIVE_TIMING_FORMATS, DFXP_WITH_FRAME_TIMING
 )
 
 
@@ -111,6 +111,12 @@ class DFXPReaderTestCase(unittest.TestCase):
         self.assertEqual(caps[1].start, 4000000)
         self.assertEqual(caps[1].end, 5200000)
 
+    def test_properly_converts_frametiming(self):
+        caption_set = DFXPReader().read(
+            DFXP_WITH_FRAME_TIMING)
+        caps = caption_set.get_captions('en-US')
+        self.assertEquals(caps[0].end, 12233333)
+        self.assertEquals(caps[0].start, 9666666)
 
 SAMPLE_DFXP_INVALID_POSITIONING_VALUE_TEMPLATE = u"""\
 <?xml version="1.0" encoding="utf-8"?>
