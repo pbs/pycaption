@@ -82,7 +82,7 @@ SAMPLE_WEBVTT_FROM_SAMI_WITH_ID_STYLE = u"""WEBVTT
 <b>This is bold.</b>
 
 00:20.887 --> 00:26.760
-<i><b><u>This is everything together.</u></b></i>
+<b><i><u>This is everything together.</u></i></b>
 """
 
 SAMPLE_WEBVTT_FROM_DFXP_WITH_STYLE = u"""WEBVTT

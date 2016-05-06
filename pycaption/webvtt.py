@@ -280,7 +280,7 @@ class WebVTTWriter(BaseWriter):
         cue_style_tags = [u'', u'']
 
         style = self._calculate_resulting_style(caption.style, caption_set)
-        for key, value in style.items():
+        for key, value in sorted(style.items()):
             if value:
                 tags = self._tags_for_style(key)
 #                    print "tags: " + str(tags) + "\n"
