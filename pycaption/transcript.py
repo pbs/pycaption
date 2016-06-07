@@ -27,7 +27,4 @@ class TranscriptWriter(BaseWriter):
         return u'\n'.join(transcripts)
 
     def _strip_text(self, elements, lang_transcript):
-        for el in elements:
-            if el.type_ == CaptionNode.TEXT:
-                lang_transcript += el.content
-        return lang_transcript
+        return u' '.join([lang_transcript] + [el.content for el in elements if el.type_ == CaptionNode.TEXT])
