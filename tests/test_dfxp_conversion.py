@@ -114,8 +114,10 @@ class DFXPtoDFXPTestCase(unittest.TestCase, DFXPTestingMixIn):
             relativize=False,
             fit_to_screen=False,
             write_inline_positioning=True).write(caption_set)
-        self.assertEqual(result,
-                         SAMPLE_DFXP_INVALID_BUT_SUPPORTED_POSITIONING_OUTPUT)
+        self.assertDFXPEquals(
+            result,
+            SAMPLE_DFXP_INVALID_BUT_SUPPORTED_POSITIONING_OUTPUT
+        )
 
     def test_dont_create_style_tags_with_no_id(self):
         # The <style> tags can have no 'xml:id' attribute. Previously, in this
