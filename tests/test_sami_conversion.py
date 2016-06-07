@@ -1,5 +1,7 @@
 import unittest
 
+from bs4 import BeautifulSoup
+
 from pycaption import (
     SAMIReader, SAMIWriter, SRTWriter, DFXPWriter, WebVTTWriter)
 
@@ -44,7 +46,7 @@ class SAMItoSAMITestCase(unittest.TestCase, SAMITestingMixIn):
         result = SAMIWriter(
             video_width=VIDEO_WIDTH, video_height=VIDEO_HEIGHT
         ).write(caption_set)
-        self.assertEqual(result, SAMPLE_SAMI_PARTIAL_MARGINS_RELATIVIZED)
+        self.assertSAMIEquals(result, SAMPLE_SAMI_PARTIAL_MARGINS_RELATIVIZED)
 
 
 class SAMItoSRTTestCase(unittest.TestCase, SRTTestingMixIn):
@@ -131,14 +133,14 @@ class SAMItoWebVTTTestCase(unittest.TestCase, WebVTTTestingMixIn):
             video_width=640, video_height=360).write(caption_set)
         self.assertTrue(isinstance(results, unicode))
         self.assertWebVTTEquals(SAMPLE_WEBVTT_FROM_SAMI, results)
-        
+
     def test_sami_with_style_tags_to_webvtt_conversion(self):
         caption_set = SAMIReader().read(SAMPLE_SAMI_WITH_STYLE_TAGS)
         results = WebVTTWriter(
             video_width=640, video_height=360).write(caption_set)
         self.assertTrue(isinstance(results, unicode))
         self.assertWebVTTEquals(SAMPLE_WEBVTT_FROM_SAMI_WITH_STYLE, results)
-        
+
     def test_sami_with_css_inline_style_to_webvtt_conversion(self):
         caption_set = SAMIReader().read(SAMPLE_SAMI_WITH_CSS_INLINE_STYLE)
         results = WebVTTWriter(
