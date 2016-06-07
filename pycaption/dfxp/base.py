@@ -180,6 +180,10 @@ class DFXPReader(BaseReader):
         elif tag.name == u'span':
             # convert span
             self._translate_span(tag)
+        elif tag.name == u'p' and not tag.contents:
+            node = CaptionNode.create_text(
+                u'', layout_info=tag.layout_info)
+            self.nodes.append(node)
         else:
             # recursively call function for any children elements
             for a in tag.contents:

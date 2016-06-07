@@ -1,11 +1,11 @@
 import unittest
 
 from pycaption import DFXPReader, CaptionReadNoCaptions
-from pycaption.exceptions import CaptionReadSyntaxError, InvalidInputError
+from pycaption.exceptions import CaptionReadSyntaxError, InvalidInputError, CaptionReadError
 
 from .samples.dfxp import (
     SAMPLE_DFXP, SAMPLE_DFXP_EMPTY, SAMPLE_DFXP_SYNTAX_ERROR,
-    DFXP_WITH_ALTERNATIVE_TIMING_FORMATS
+    DFXP_WITH_ALTERNATIVE_TIMING_FORMATS, SAMPLE_DFXP_EMPTY_PARAGRAPH
 )
 
 
@@ -110,6 +110,12 @@ class DFXPReaderTestCase(unittest.TestCase):
         self.assertEqual(caps[0].end, 3050000)
         self.assertEqual(caps[1].start, 4000000)
         self.assertEqual(caps[1].end, 5200000)
+
+    def test_empty_paragraph(self):
+        try:
+            DFXPReader().read(SAMPLE_DFXP_EMPTY_PARAGRAPH)
+        except CaptionReadError:
+            self.fail("Failing on empty paragraph")
 
 
 SAMPLE_DFXP_INVALID_POSITIONING_VALUE_TEMPLATE = u"""\
