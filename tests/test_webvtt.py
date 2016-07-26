@@ -5,10 +5,10 @@ from pycaption import (
     CaptionReadNoCaptions, CaptionReadError, CaptionReadSyntaxError
 )
 
-from .samples.dfxp import DFXP_STYLE_REGION_ALIGN_CONFLICT
-from .samples.sami import SAMPLE_SAMI_DOUBLE_BR
-from .samples.srt import SAMPLE_SRT
-from .samples.webvtt import (
+from tests.samples.dfxp import DFXP_STYLE_REGION_ALIGN_CONFLICT
+from tests.samples.sami import SAMPLE_SAMI_DOUBLE_BR
+from tests.samples.srt import SAMPLE_SRT
+from tests.samples.webvtt import (
     SAMPLE_WEBVTT, SAMPLE_WEBVTT_2, SAMPLE_WEBVTT_EMPTY, SAMPLE_WEBVTT_DOUBLE_BR,
     WEBVTT_FROM_DFXP_WITH_CONFLICTING_ALIGN, SAMPLE_WEBVTT_LAST_CUE_ZERO_START
 )
@@ -156,7 +156,7 @@ class WebVTTReaderTestCase(unittest.TestCase):
     def test_zero_start(self):
         captions = self.reader.read(SAMPLE_WEBVTT_LAST_CUE_ZERO_START)
         cue = captions.get_captions(u'en-US')[0]
-        self.assertEquals(cue.start, 0)
+        self.assertEqual(cue.start, 0)
 
 
 class WebVTTWriterTestCase(unittest.TestCase):
@@ -172,5 +172,4 @@ class WebVTTWriterTestCase(unittest.TestCase):
     def test_break_node_positioning_is_ignored(self):
         caption_set = DFXPReader().read(DFXP_STYLE_REGION_ALIGN_CONFLICT)
         results = WebVTTWriter().write(caption_set)
-        self.assertEquals(
-            WEBVTT_FROM_DFXP_WITH_CONFLICTING_ALIGN, results)
+        self.assertEqual(WEBVTT_FROM_DFXP_WITH_CONFLICTING_ALIGN, results)

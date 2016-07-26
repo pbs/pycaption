@@ -226,32 +226,31 @@ SAMPLE_SAMI_PARTIAL_MARGINS = u"""
 </SAMI>
 """
 
-SAMPLE_SAMI_PARTIAL_MARGINS_RELATIVIZED = u"""\
-<sami>
+SAMPLE_SAMI_PARTIAL_MARGINS_RELATIVIZED = u"""<sami>
  <head>
   <style type="text/css">
    <!--
-    .subttl {
-     lang: en-US;
-     name: "Subtitles";
-     margin-left: 6.04%;
+    p {
+     background-color: #000;
+     color: #ffffff;
+     font-family: Tahoma;
+     font-size: 24pt;
+     font-weight: bold;
      margin-bottom: 0%;
-     margin-top: 0%;
+     margin-left: 6.04%;
      margin-right: 6.04%;
-     samitype: CC;
+     margin-top: 0%;
+     text-align: center;
     }
 
-    p {
-     font-size: 24pt;
-     font-family: Tahoma;
-     color: #ffffff;
-     margin-right: 6.04%;
+    .subttl {
+     lang: en-US;
      margin-bottom: 0%;
-     margin-top: 0%;
      margin-left: 6.04%;
-     font-weight: bold;
-     background-color: #000;
-     text-align: center;
+     margin-right: 6.04%;
+     margin-top: 0%;
+     name: "Subtitles";
+     samitype: CC;
     }
    -->
   </style>

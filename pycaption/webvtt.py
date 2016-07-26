@@ -1,6 +1,10 @@
+import datetime
 import sys
 import re
 from copy import deepcopy
+
+from builtins import str
+import six
 
 from .base import (
     BaseReader, BaseWriter, CaptionSet, CaptionList, Caption, CaptionNode
@@ -16,6 +20,8 @@ from .exceptions import (
 # A WebVTT timing line has both start/end times and layout related settings
 # (referred to as 'cue settings' in the documentation)
 # The following pattern captures [start], [end] and [cue settings] if existent
+from pycaption.geometry import HorizontalAlignmentEnum
+
 TIMING_LINE_PATTERN = re.compile(u'^(\S+)\s+-->\s+(\S+)(?:\s+(.*?))?\s*$')
 TIMESTAMP_PATTERN = re.compile(u'^(\d+):(\d{2})(:\d{2})?\.(\d{3})')
 VOICE_SPAN_PATTERN = re.compile(u'<v(\\.\\w+)* ([^>]*)>')
@@ -26,11 +32,11 @@ OTHER_SPAN_PATTERN = (
 )  # These WebVTT tags are stripped off the cues on conversion
 
 WEBVTT_VERSION_OF = {
-    u'left': u'left',
-    u'center': u'middle',
-    u'right': u'right',
-    u'start': u'start',
-    u'end': u'end'
+    HorizontalAlignmentEnum.LEFT: u'left',
+    HorizontalAlignmentEnum.CENTER: u'middle',
+    HorizontalAlignmentEnum.RIGHT: u'right',
+    HorizontalAlignmentEnum.START: u'start',
+    HorizontalAlignmentEnum.END: u'end'
 }
 
 DEFAULT_ALIGNMENT = u'middle'
@@ -55,7 +61,7 @@ class WebVTTReader(BaseReader):
         return u'WEBVTT' in content
 
     def read(self, content, lang=u'en-US'):
-        if type(content) != unicode:
+        if type(content) != six.text_type:
             raise InvalidInputError('The content is not a unicode string.')
 
         caption_set = CaptionSet({lang: self._parse(content.splitlines())})
@@ -84,7 +90,8 @@ class WebVTTReader(BaseReader):
                         line, last_start_time)
                 except CaptionReadError as e:
                     new_message = u'%s (line %d)' % (e.args[0], timing_line)
-                    raise type(e), new_message, sys.exc_info()[2]
+                    six.reraise(type(e), type(e)(new_message), sys.exc_info()[2])
+
 
             elif u'' == line:
                 if found_timing:
@@ -218,7 +225,7 @@ class WebVTTWriter(BaseWriter):
 
         # WebVTT's language support seems to be a bit crazy, so let's just
         # support a single one for now.
-        lang = caption_set.get_languages()[0]
+        lang = list(caption_set.get_languages())[0]
 
         self.global_layout = caption_set.get_layout_info(lang)
 
@@ -228,14 +235,14 @@ class WebVTTWriter(BaseWriter):
             [self._write_caption(caption_set, caption) for caption in captions])
 
     def _timestamp(self, ts):
-        ts = float(ts) / 1000000
-        hours = int(ts) / 60 / 60
-        minutes = int(ts) / 60 - hours * 60
-        seconds = ts - hours * 60 * 60 - minutes * 60
-        if hours:
-            return u"%02d:%02d:%06.3f" % (hours, minutes, seconds)
-        else:
-            return u"%02d:%06.3f" % (minutes, seconds)
+        td = datetime.timedelta(microseconds=ts)
+        mm, ss = divmod(td.seconds, 60)
+        hh, mm = divmod(mm, 60)
+        s = "%02d:%02d.%03d" % (mm, ss, td.microseconds/1000)
+        if hh:
+            s = "%d:%s" % (hh,s)
+        return s
+
 
     def _tags_for_style(self, style):
         if style == u'italics':
@@ -377,11 +384,11 @@ class WebVTTWriter(BaseWriter):
         if alignment and alignment != u'middle':
             cue_settings += u" align:" + alignment
         if left_offset:
-            cue_settings += u" position:{},start".format(unicode(left_offset))
+            cue_settings += u" position:{},start".format(six.text_type(left_offset))
         if top_offset:
-            cue_settings += u" line:" + unicode(top_offset)
+            cue_settings += u" line:" + six.text_type(top_offset)
         if cue_width:
-            cue_settings += u" size:" + unicode(cue_width)
+            cue_settings += u" size:" + six.text_type(cue_width)
 
         return cue_settings
 

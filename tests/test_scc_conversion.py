@@ -3,20 +3,20 @@ import unittest
 from pycaption import (
     SCCReader, SCCWriter, SRTReader, SRTWriter, DFXPWriter, WebVTTWriter)
 
-from .samples.dfxp import (
+from tests.samples.dfxp import (
     SAMPLE_DFXP_FROM_SCC_OUTPUT, SAMPLE_DFXP_WITH_PROPERLY_CLOSING_SPANS_OUTPUT
 )
-from .samples.scc import (
+from tests.samples.scc import (
     SAMPLE_SCC_CREATED_DFXP_WITH_WRONGLY_CLOSING_SPANS,
     SCC_THAT_GENERATES_WEBVTT_WITH_PROPER_NEWLINES,
     SAMPLE_SCC_MULTIPLE_POSITIONING
 )
-from .samples.srt import SAMPLE_SRT_ASCII
-from .samples.webvtt import (
+from tests.samples.srt import SAMPLE_SRT_ASCII
+from tests.samples.webvtt import (
     SAMPLE_WEBVTT_FROM_SCC_PROPERLY_WRITES_NEWLINES_OUTPUT
 )
 
-from .mixins import CaptionSetTestingMixIn
+from tests.mixins import CaptionSetTestingMixIn
 
 # This is quite fuzzy at the moment.
 TOLERANCE_MICROSECONDS = 600 * 1000
