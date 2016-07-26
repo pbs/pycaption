@@ -45,8 +45,8 @@ class CaptionSetTestingMixIn(object):
         and differences in timing that are less than tolerance_microseconds.
         """
 
-        captions_1 = first.get_captions(first.get_languages()[0])
-        captions_2 = second.get_captions(first.get_languages()[0])
+        captions_1 = first.get_captions(list(first.get_languages())[0])
+        captions_2 = second.get_captions(list(first.get_languages())[0])
 
         def get_text_for_caption(caption):
             text = caption.get_text()
@@ -101,8 +101,8 @@ class DFXPTestingMixIn(object):
     def assertDFXPEquals(self, first, second,
                          ignore_styling=False,
                          ignore_spans=False):
-        first_soup = BeautifulSoup(first)
-        second_soup = BeautifulSoup(second)
+        first_soup = BeautifulSoup(first, 'lxml')
+        second_soup = BeautifulSoup(second, 'lxml')
 
         if ignore_styling:
             self._remove_styling(first_soup)
@@ -129,8 +129,8 @@ class SAMITestingMixIn(object):
             for caption in soup.select(u'sync'))
 
     def assertSAMIEquals(self, first, second):
-        first_soup = BeautifulSoup(first)
-        second_soup = BeautifulSoup(second)
+        first_soup = BeautifulSoup(first, 'lxml')
+        second_soup = BeautifulSoup(second, 'lxml')
 
         first_items = self._extract_sami_captions(first_soup)
         second_items = self._extract_sami_captions(second_soup)

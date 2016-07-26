@@ -1,9 +1,10 @@
 import unittest
 
 from pycaption import DFXPReader, CaptionReadNoCaptions
+from pycaption.geometry import UnitEnum, HorizontalAlignmentEnum, VerticalAlignmentEnum
 from pycaption.exceptions import CaptionReadSyntaxError, InvalidInputError, CaptionReadError
 
-from .samples.dfxp import (
+from tests.samples.dfxp import (
     SAMPLE_DFXP, SAMPLE_DFXP_EMPTY, SAMPLE_DFXP_SYNTAX_ERROR,
     DFXP_WITH_ALTERNATIVE_TIMING_FORMATS, SAMPLE_DFXP_EMPTY_PARAGRAPH
 )
@@ -16,14 +17,14 @@ class DFXPReaderTestCase(unittest.TestCase):
 
     def test_caption_length(self):
         captions = DFXPReader().read(SAMPLE_DFXP)
-        self.assertEquals(7, len(captions.get_captions(u"en-US")))
+        self.assertEqual(7, len(captions.get_captions(u"en-US")))
 
     def test_proper_timestamps(self):
         captions = DFXPReader().read(SAMPLE_DFXP)
         paragraph = captions.get_captions(u"en-US")[2]
 
-        self.assertEquals(17000000, paragraph.start)
-        self.assertEquals(18752000, paragraph.end)
+        self.assertEqual(17000000, paragraph.start)
+        self.assertEqual(18752000, paragraph.end)
 
     def test_offset_time(self):
         reader = DFXPReader()
@@ -94,9 +95,9 @@ class DFXPReaderTestCase(unittest.TestCase):
             SAMPLE_DFXP_MULTIPLE_CAPTIONS_WITH_THE_SAME_TIMING
         )
         expected_layouts = [
-            (((10, u'%'), (10, u'%')), None, None, (u'center', u'bottom')),
-            (((40, u'%'), (40, u'%')), None, None, (u'center', u'bottom')),
-            (((10, u'%'), (70, u'%')), None, None, (u'center', u'bottom'))]
+            (((10, UnitEnum.PERCENT), (10, UnitEnum.PERCENT)), None, None, (HorizontalAlignmentEnum.CENTER, VerticalAlignmentEnum.BOTTOM)),
+            (((40, UnitEnum.PERCENT), (40, UnitEnum.PERCENT)), None, None, (HorizontalAlignmentEnum.CENTER, VerticalAlignmentEnum.BOTTOM)),
+            (((10, UnitEnum.PERCENT), (70, UnitEnum.PERCENT)), None, None, (HorizontalAlignmentEnum.CENTER, VerticalAlignmentEnum.BOTTOM))]
         actual_layouts = [c_.layout_info.serialized() for c_ in
                           captionset.get_captions('en-US')]
 

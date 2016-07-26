@@ -11,7 +11,7 @@ from pycaption.geometry import (
 
 from pycaption.dfxp.base import _create_internal_alignment
 
-from samples.dfxp import (
+from tests.samples.dfxp import (
     SAMPLE_DFXP_TO_RENDER_WITH_ONLY_DEFAULT_POSITIONING_INPUT,
     DFXP_WITH_TEMPLATED_STYLE)
 

@@ -38,11 +38,21 @@ OBS:
 import re
 
 from collections import deque
-from htmlentitydefs import name2codepoint
-from HTMLParser import HTMLParser, HTMLParseError
+import six
+
+try:
+    from htmlentitydefs import name2codepoint
+except:
+    from html.entities import name2codepoint
+
+try:
+    from HTMLParser import HTMLParser, HTMLParseError
+except:
+    from html.parser import HTMLParser
+
 from logging import FATAL
 from xml.sax.saxutils import escape
-from copy import deepcopy
+from copy import deepcopy, copy
 
 from cssutils import parseString, log, css as cssutils_css
 from bs4 import BeautifulSoup, NavigableString
@@ -71,7 +81,9 @@ SAMI_BASE_MARKUP = u'''
 
 
 class SAMIReader(BaseReader):
+
     def __init__(self, *args, **kw):
+        super(SAMIReader, self).__init__(*args, **kw)
         self.line = []
         self.first_alignment = None
 
@@ -82,7 +94,7 @@ class SAMIReader(BaseReader):
             return False
 
     def read(self, content):
-        if type(content) != unicode:
+        if type(content) != six.text_type:
             raise InvalidInputError('The content is not a unicode string.')
 
         content, doc_styles, doc_langs = (
@@ -328,7 +340,8 @@ class SAMIReader(BaseReader):
     def _translate_parsed_style(self, styles):
         # Keep unknown styles by default
         attrs = styles
-        for css_property, value in styles.items():
+        for css_property in list(styles.keys()):
+            value = styles[css_property]
             self._translate_css_property(attrs, css_property, value)
 
         return attrs
@@ -381,7 +394,7 @@ class SAMIWriter(BaseWriter):
 
     def write(self, caption_set):
         caption_set = deepcopy(caption_set)
-        sami = BeautifulSoup(SAMI_BASE_MARKUP, u"xml")
+        sami = BeautifulSoup(SAMI_BASE_MARKUP, u"lxml-xml")
 
         caption_set.layout_info = self._relativize_and_fit_to_screen(
             caption_set.layout_info)
@@ -469,17 +482,17 @@ class SAMIWriter(BaseWriter):
         :rtype: BeautifulSoup
         """
         if lang == primary:
-            sync = sami.new_tag(u"sync", start=u"%s" % time)
+            sync = sami.new_tag(u"sync", start=u"%d" % time)
             sami.body.append(sync)
         else:
-            sync = sami.find(u"sync", start=u"%s" % time)
+            sync = sami.find(u"sync", start=u"%d" % time)
             if sync is None:
                 sami, sync = self._find_closest_sync(sami, time)
 
         return sami, sync
 
     def _find_closest_sync(self, sami, time):
-        sync = sami.new_tag(u"sync", start=u"%s" % time)
+        sync = sami.new_tag(u"sync", start=u"%d" % time)
 
         earlier = sami.find_all(u"sync", start=lambda x: int(x) < time)
         if earlier:
@@ -548,13 +561,13 @@ class SAMIWriter(BaseWriter):
 
         if layout_info and layout_info.padding:
             rules.update({
-                'margin-top': unicode(layout_info.padding.before),
-                'margin-right': unicode(layout_info.padding.end),
-                'margin-bottom': unicode(layout_info.padding.after),
-                'margin-left': unicode(layout_info.padding.start),
+                'margin-top': six.text_type(layout_info.padding.before),
+                'margin-right': six.text_type(layout_info.padding.end),
+                'margin-bottom': six.text_type(layout_info.padding.after),
+                'margin-left': six.text_type(layout_info.padding.start),
             })
 
-        for attr, value in self._recreate_style(rules).items():
+        for attr, value in sorted(self._recreate_style(rules).items()):
             sami_style += u' {}: {};\n    '.format(attr, value)
 
         return sami_style + u'}\n'
@@ -640,6 +653,7 @@ class SAMIParser(HTMLParser):
         self.last_element = u''
         self.name2codepoint = name2codepoint.copy()
         self.name2codepoint[u'apos'] = 0x0027
+        self.convert_charrefs = False
 
     def handle_starttag(self, tag, attrs):
         """
@@ -698,17 +712,20 @@ class SAMIParser(HTMLParser):
             self.sami += u'&%s;' % name
         else:
             try:
-                self.sami += unichr(self.name2codepoint[name])
+                self.sami += six.unichr(self.name2codepoint[name])
             except (KeyError, ValueError):
                 self.sami += u'&%s' % name
 
         self.last_element = u''
 
+
+
+
     def handle_charref(self, name):
         if name[0] == u'x':
-            self.sami += unichr(int(name[1:], 16))
+            self.sami += six.unichr(int(name[1:], 16))
         else:
-            self.sami += unichr(int(name))
+            self.sami += six.unichr(int(name))
 
     # override the parser's handling of data
     def handle_data(self, data):
@@ -735,7 +752,7 @@ class SAMIParser(HTMLParser):
             index = data.lower().find(u"</head>")
 
             self.styles = self._css_parse(
-                BeautifulSoup(data[:index]).find(u'style').get_text())
+                BeautifulSoup(data[:index], "lxml").find(u'style').get_text())
         except AttributeError:
             self.styles = {}
 

@@ -98,7 +98,7 @@ class LegacyDFXPWriter(BaseWriter):
         caption_set = deepcopy(caption_set)
         caption_set = merge_concurrent_captions(caption_set)
 
-        dfxp = BeautifulSoup(LEGACY_DFXP_BASE_MARKUP, u'xml')
+        dfxp = BeautifulSoup(LEGACY_DFXP_BASE_MARKUP, u'lxml-xml')
         dfxp.find(u'tt')[u'xml:lang'] = u"en"
 
         for style_id, style in caption_set.get_styles():

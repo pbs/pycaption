@@ -77,11 +77,12 @@ http://www.theneitherworld.com/mcpoodle/SCC_TOOLS/DOCS/SCC_FORMAT.HTML
  just carried over when implementing positioning.
 """
 
-
 import re
 import math
-import string
 import textwrap
+from copy import deepcopy
+
+import six
 
 from pycaption.base import (
     BaseReader, BaseWriter, CaptionSet, CaptionNode,
@@ -96,9 +97,7 @@ from .constants import (
 from .specialized_collections import (
     TimingCorrectingCaptionList, NotifyingDict, CaptionCreator,
     InstructionNodeCreator)
-
 from .state_machines import DefaultProvidingPositionTracker
-from copy import deepcopy
 
 
 class NodeCreatorFactory(object):
@@ -195,10 +194,10 @@ class SCCReader(BaseReader):
     def read(self, content, lang=u'en-US', simulate_roll_up=False, offset=0):
         """Converts the unicode string into a CaptionSet
 
-        :type content: unicode
+        :type content: six.text_type
         :param content: The SCC content to be converted to a CaptionSet
 
-        :type lang: unicode
+        :type lang: six.text_type
         :param lang: The language of the caption
 
         :type simulate_roll_up: bool
@@ -211,7 +210,7 @@ class SCCReader(BaseReader):
 
         :rtype: CaptionSet
         """
-        if type(content) != unicode:
+        if type(content) != six.text_type:
             raise InvalidInputError(u'The content is not a unicode string.')
 
         self.simulate_roll_up = simulate_roll_up
@@ -494,7 +493,7 @@ class SCCWriter(BaseWriter):
         caption_set = deepcopy(caption_set)
 
         # Only support one language.
-        lang = caption_set.get_languages()[0]
+        lang = list(caption_set.get_languages())[0]
         captions = caption_set.get_captions(lang)
 
         # PASS 1: compute codes for each caption
@@ -532,12 +531,12 @@ class SCCWriter(BaseWriter):
     def _layout_line(caption):
         def caption_node_to_text(caption_node):
             if caption_node.type_ == CaptionNode.TEXT:
-                return unicode(caption_node.content)
+                return six.text_type(caption_node.content)
             elif caption_node.type_ == CaptionNode.BREAK:
                 return u'\n'
         caption_text = u''.join(
             [caption_node_to_text(node) for node in caption.nodes])
-        inner_lines = string.split(caption_text, u'\n')
+        inner_lines = caption_text.split( u'\n')
         inner_lines_laid_out = [textwrap.fill(x, 32) for x in inner_lines]
         return u'\n'.join(inner_lines_laid_out)
 
@@ -573,7 +572,7 @@ class SCCWriter(BaseWriter):
 
     def _text_to_code(self, s):
         code = u''
-        lines = string.split(self._layout_line(s), u'\n')
+        lines = self._layout_line(s).split( u'\n')
         for row, line in enumerate(lines):
             row += 16 - len(lines)
             # Move cursor to column 0 of the destination row
@@ -619,7 +618,7 @@ class _SccTimeTranslator(object):
         :rtype: int
         """
         return self._translate_time(
-            self._time[:-2] + unicode(int(self._time[-2:]) + self._frames),
+            self._time[:-2] + six.text_type(int(self._time[-2:]) + self._frames),
             self.offset
         )
 

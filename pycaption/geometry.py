@@ -7,17 +7,10 @@ CONVENTIONS:
   responsible for the recalculation should return a new object with the
   necessary modifications.
 """
+import six
 
 from .exceptions import RelativizationError
-
-class Enum(object):
-    """Generic class that's not easily instantiable, serving as a base for
-    the enumeration classes
-    """
-    def __new__(cls, *args, **kwargs):
-        raise Exception(u"Don't instantiate. Use like an enum")
-
-    __init__ = __new__
+from enum import Enum
 
 
 class UnitEnum(Enum):
@@ -35,11 +28,6 @@ class UnitEnum(Enum):
     CELL = u'c'
     PT = u'pt'
 
-    class __metaclass__(type):
-        def __iter__(self):
-            for attr in dir(UnitEnum):
-                if not attr.startswith("__"):
-                    yield getattr(UnitEnum, attr)
 
 
 class VerticalAlignmentEnum(Enum):
@@ -68,9 +56,9 @@ class HorizontalAlignmentEnum(Enum):
 class Alignment(object):
     def __init__(self, horizontal, vertical):
         """
-        :type horizontal: unicode
+        :type horizontal: HorizontalAlignmentEnum
         :param horizontal: HorizontalAlignmentEnum member
-        :type vertical: unicode
+        :type vertical: VerticalAlignmentEnum
         :param vertical: VerticalAlignmentEnum member
         """
         self.horizontal = horizontal
@@ -142,7 +130,7 @@ class TwoDimensionalObject(object):
 
         :type attribute: unicode
         """
-        horizontal, vertical = unicode(attribute).split(u' ')
+        horizontal, vertical = six.text_type(attribute).split(u' ')
         horizontal = Size.from_string(horizontal)
         vertical = Size.from_string(vertical)
 
@@ -417,6 +405,7 @@ class Point(TwoDimensionalObject):
             x=self.x.to_xml_attribute(), y=self.y.to_xml_attribute())
 
 
+@six.python_2_unicode_compatible
 class Size(object):
     """Ties together a number with a unit, to represent a size.
 
@@ -429,7 +418,7 @@ class Size(object):
         """
         if value is None:
             raise ValueError(u"Size must be initialized with a value.")
-        if unit not in UnitEnum:
+        if not isinstance(unit,UnitEnum):
             raise ValueError(u"Size must be initialized with a valid unit.")
 
         self.value = float(value)
@@ -449,6 +438,10 @@ class Size(object):
             return cmp(self.value, other.value)
         else:
             raise ValueError(u"The sizes should have the same measure units.")
+
+    def __lt__(self, other):
+        return self.value < other.value
+
 
     def __add__(self, other):
         if self.unit == other.unit:
@@ -521,13 +514,11 @@ class Size(object):
         :type string: unicode
         :rtype: Size
         """
-        units = [UnitEnum.CELL, UnitEnum.PERCENT, UnitEnum.PIXEL,
-                 UnitEnum.EM, UnitEnum.PT]
 
         raw_number = string
-        for unit in units:
-            if raw_number.endswith(unit):
-                raw_number = raw_number.rstrip(unit)
+        for unit in list(UnitEnum):
+            if raw_number.endswith(unit.value):
+                raw_number = raw_number.rstrip(unit.value)
                 break
         else:
             unit = None
@@ -552,26 +543,26 @@ class Size(object):
                 u"The specified value is not valid because its unit "
                 u"is not recognized: {value}. "
                 u"The only supported units are: {supported}"
-                .format(value=raw_number, supported=u', '.join(units))
+                .format(value=raw_number, supported=u', '.join(UnitEnum._member_map_))
             )
 
     def __repr__(self):
         return u'<Size ({value} {unit})>'.format(
-            value=self.value, unit=self.unit
+            value=self.value, unit=self.unit.value
         )
 
-    def __unicode__(self):
+    def __str__(self):
         value = round(self.value, 2)
         if value.is_integer():
             s = u"{}".format(int(value))
         else:
             s = u"{:.2f}".format(value).rstrip('0').rstrip('.')
-        return u"{}{}".format(s, self.unit)
+        return u"{}{}".format(s, self.unit.value)
 
     def to_xml_attribute(self, **kwargs):
         """Returns a unicode representation of this object, as an xml attribute
         """
-        return unicode(self)
+        return six.text_type(self)
 
     def serialized(self):
         """Returns the "useful" values of this object"""
@@ -637,7 +628,7 @@ class Padding(object):
         :param attribute: a string like object, representing a dfxp attr. value
         :return: a Padding object
         """
-        values_list = unicode(attribute).split(u' ')
+        values_list = six.text_type(attribute).split(u' ')
         sizes = []
 
         for value in values_list:
