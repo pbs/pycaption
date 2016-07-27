@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-SAMPLE_WEBVTT = u"""WEBVTT
+SAMPLE_WEBVTT = """WEBVTT
 
 00:09.209 --> 00:12.312
 ( clock ticking )
@@ -30,7 +30,7 @@ It's all about an eternal Einstein.
 <LAUGHING & WHOOPS!>
 """
 
-SAMPLE_WEBVTT_FROM_DFXP = u"""WEBVTT
+SAMPLE_WEBVTT_FROM_DFXP = """WEBVTT
 
 00:09.209 --> 00:12.312
 ( clock ticking )
@@ -63,14 +63,14 @@ It's all about an eternal Einstein.
 
 SAMPLE_WEBVTT_FROM_SAMI = SAMPLE_WEBVTT_FROM_DFXP
 
-SAMPLE_WEBVTT_FROM_SAMI_WITH_STYLE = u"""WEBVTT
+SAMPLE_WEBVTT_FROM_SAMI_WITH_STYLE = """WEBVTT
 
 00:09.209 --> 00:12.312
 I <b>do</b> <i>not</i> want to go <u>home</u>.
 I don't like it <i><u><b>there</b></u></i>.
 """
 
-SAMPLE_WEBVTT_FROM_SAMI_WITH_ID_STYLE = u"""WEBVTT
+SAMPLE_WEBVTT_FROM_SAMI_WITH_ID_STYLE = """WEBVTT
 
 00:09.209 --> 00:12.312
 <i>This is in italics.</i>
@@ -85,13 +85,13 @@ SAMPLE_WEBVTT_FROM_SAMI_WITH_ID_STYLE = u"""WEBVTT
 <b><i><u>This is everything together.</u></i></b>
 """
 
-SAMPLE_WEBVTT_FROM_DFXP_WITH_STYLE = u"""WEBVTT
+SAMPLE_WEBVTT_FROM_DFXP_WITH_STYLE = """WEBVTT
 
 00:09.209 --> 00:12.312
 This is <i>italic</i>, <b>bold</b>, <u>underline</u>, <i><u><b>everything together in one tag</b></u></i>, and <u><b><i>nested</i></b></u>.
 """
 
-SAMPLE_WEBVTT_FROM_DFXP_WITH_POSITIONING = u"""WEBVTT
+SAMPLE_WEBVTT_FROM_DFXP_WITH_POSITIONING = """WEBVTT
 
 00:01.000 --> 00:03.000 position:25%,start line:25% size:50%
 You might not remember us. We are a typical transparent region with centered text that has an outline.
@@ -107,7 +107,7 @@ This is
 the last cue
 """
 
-SAMPLE_WEBVTT_FROM_DFXP_WITH_POSITIONING_AND_STYLE = u"""WEBVTT
+SAMPLE_WEBVTT_FROM_DFXP_WITH_POSITIONING_AND_STYLE = """WEBVTT
 
 00:01.000 --> 00:03.000 position:25%,start line:25% size:50%
 You might not remember us. We are a typical transparent region with centered text that has an outline.
@@ -123,7 +123,7 @@ This is
 the last cue
 """
 
-SAMPLE_WEBVTT_FROM_SRT = u"""WEBVTT
+SAMPLE_WEBVTT_FROM_SRT = """WEBVTT
 
 00:09.209 --> 00:12.312
 ( clock ticking )
@@ -158,7 +158,7 @@ It's all about an eternal Einstein.
 # in order to conform to the specification.
 SAMPLE_WEBVTT_FROM_WEBVTT = SAMPLE_WEBVTT_FROM_SRT
 
-SAMPLE_WEBVTT_2 = u"""WEBVTT
+SAMPLE_WEBVTT_2 = """WEBVTT
 
 1
 00:00:00.000 --> 00:00:43.000
@@ -189,10 +189,10 @@ ON TONIGHT'S SHOW...
 HEY. WATCH THIS.
 """
 
-SAMPLE_WEBVTT_EMPTY = u"""WEBVTT
+SAMPLE_WEBVTT_EMPTY = """WEBVTT
 """
 
-SAMPLE_WEBVTT_DOUBLE_BR = u"""WEBVTT
+SAMPLE_WEBVTT_DOUBLE_BR = """WEBVTT
 
 00:14.848 --> 00:18.848
 MAN:
@@ -201,7 +201,7 @@ When we think
 of "E equals m c-squared",
 """
 
-SAMPLE_WEBVTT_OUTPUT_LONG_CUE = u"""WEBVTT
+SAMPLE_WEBVTT_OUTPUT_LONG_CUE = """WEBVTT
 
 00:01.000 --> 00:02.000
 NARRATOR:
@@ -213,7 +213,7 @@ They built the largest, most incredible, wildest, craziest,
 most complex machine in history.
 """
 
-WEBVTT_FROM_DFXP_WITH_CONFLICTING_ALIGN = u"""WEBVTT
+WEBVTT_FROM_DFXP_WITH_CONFLICTING_ALIGN = """WEBVTT
 
 00:04.537 --> 00:07.841
 IT'S WORD GIRL♫
@@ -223,7 +223,7 @@ IT'S WORD GIRL♫
 IT'S WORD GIRL♫
 """
 
-SAMPLE_WEBVTT_WITH_CUE_SETTINGS = u"""\
+SAMPLE_WEBVTT_WITH_CUE_SETTINGS = """\
 WEBVTT
 
 00:01.000 --> 00:06.000 align:middle position:37%,start line:74%
@@ -233,7 +233,7 @@ WEBVTT
 They built the largest,
 """
 
-SAMPLE_WEBVTT_FROM_SCC_PROPERLY_WRITES_NEWLINES_OUTPUT = u"""\
+SAMPLE_WEBVTT_FROM_SCC_PROPERLY_WRITES_NEWLINES_OUTPUT = """\
 WEBVTT
 
 21:30.033 --> 21:34.033 align:left position:12.5%,start line:86.67% size:87.5%
@@ -241,7 +241,7 @@ aa
 bb
 """
 
-SAMPLE_WEBVTT_LAST_CUE_ZERO_START = u"""WEBVTT
+SAMPLE_WEBVTT_LAST_CUE_ZERO_START = """WEBVTT
 
 00:00.000 --> 00:12.312
 ( clock ticking )"""

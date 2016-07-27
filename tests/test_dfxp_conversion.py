@@ -60,43 +60,43 @@ class DFXPtoDFXPTestCase(unittest.TestCase, DFXPTestingMixIn):
         result = DFXPWriter().write(caption_set)
 
         default_style = _recreate_style(DFXP_DEFAULT_STYLE, None)
-        default_style[u'xml:id'] = DFXP_DEFAULT_STYLE_ID
+        default_style['xml:id'] = DFXP_DEFAULT_STYLE_ID
 
-        soup = BeautifulSoup(result, u'lxml-xml')
-        style = soup.find(u'style', {u'xml:id': DFXP_DEFAULT_STYLE_ID})
+        soup = BeautifulSoup(result, 'lxml-xml')
+        style = soup.find('style', {'xml:id': DFXP_DEFAULT_STYLE_ID})
 
         self.assertTrue(style)
-        self.assertEquals(style.attrs, default_style)
+        self.assertEqual(style.attrs, default_style)
 
     def test_default_styling_p_tags(self):
         caption_set = DFXPReader().read(SAMPLE_DFXP)
         result = DFXPWriter().write(caption_set)
 
-        soup = BeautifulSoup(result, u'lxml')
-        for p in soup.find_all(u'p'):
-            self.assertEquals(p.attrs.get(u'style'), 'p')
+        soup = BeautifulSoup(result, 'lxml')
+        for p in soup.find_all('p'):
+            self.assertEqual(p.attrs.get('style'), 'p')
 
     def test_default_region_tag(self):
         caption_set = DFXPReader().read(SAMPLE_DFXP)
         result = DFXPWriter().write(caption_set)
 
-        soup = BeautifulSoup(result, u'lxml-xml')
-        region = soup.find(u'region', {u'xml:id': DFXP_DEFAULT_REGION_ID})
+        soup = BeautifulSoup(result, 'lxml-xml')
+        region = soup.find('region', {'xml:id': DFXP_DEFAULT_REGION_ID})
 
         default_region = _convert_layout_to_attributes(DFXP_DEFAULT_REGION)
-        default_region[u'xml:id'] = DFXP_DEFAULT_REGION_ID
+        default_region['xml:id'] = DFXP_DEFAULT_REGION_ID
 
         self.assertTrue(region)
-        self.assertEqual(region.attrs[u'xml:id'], DFXP_DEFAULT_REGION_ID)
+        self.assertEqual(region.attrs['xml:id'], DFXP_DEFAULT_REGION_ID)
         self.assertEqual(region.attrs, default_region)
 
     def test_default_region_p_tags(self):
         caption_set = DFXPReader().read(SAMPLE_DFXP)
         result = DFXPWriter().write(caption_set)
 
-        soup = BeautifulSoup(result, u'lxml')
-        for p in soup.find_all(u'p'):
-            self.assertEqual(p.attrs.get(u'region'), DFXP_DEFAULT_REGION_ID)
+        soup = BeautifulSoup(result, 'lxml')
+        for p in soup.find_all('p'):
+            self.assertEqual(p.attrs.get('region'), DFXP_DEFAULT_REGION_ID)
 
     def test_correct_region_attributes_are_recreated(self):
         caption_set = DFXPReader().read(SAMPLE_DFXP_MULTIPLE_REGIONS_INPUT)
@@ -160,12 +160,12 @@ class DFXPtoDFXPTestCase(unittest.TestCase, DFXPTestingMixIn):
 
     def test_proper_xml_entity_escaping(self):
         caption_set = DFXPReader().read(DFXP_WITH_ESCAPED_APOSTROPHE)
-        cue_text = caption_set.get_captions(u'en-US')[0].nodes[0].content
+        cue_text = caption_set.get_captions('en-US')[0].nodes[0].content
         self.assertEqual(
-            cue_text, u"<< \"Andy's Caf\xe9 & Restaurant\" this way")
+            cue_text, "<< \"Andy's Caf\xe9 & Restaurant\" this way")
         result = DFXPWriter().write(caption_set)
         self.assertIn(
-            u"&lt;&lt; \"Andy's Café &amp; Restaurant\" this way",
+            "&lt;&lt; \"Andy's Café &amp; Restaurant\" this way",
             result
         )
 
@@ -191,10 +191,10 @@ class DFXPtoSAMITestCase(unittest.TestCase, SAMITestingMixIn):
         caption_set = DFXPReader().read(SAMPLE_DFXP_FROM_SAMI_WITH_MARGINS)
         results = SAMIWriter(video_width=VIDEO_WIDTH,
                              video_height=VIDEO_HEIGHT).write(caption_set)
-        margins = [u"margin-right: 6.04%;",
-                   u"margin-bottom: 0%;",
-                   u"margin-top: 0%;",
-                   u"margin-left: 6.04%;"]
+        margins = ["margin-right: 6.04%;",
+                   "margin-bottom: 0%;",
+                   "margin-top: 0%;",
+                   "margin-left: 6.04%;"]
         for margin in margins:
             self.assertIn(margin, results)
 
@@ -238,7 +238,7 @@ class DFXPtoWebVTTTestCase(unittest.TestCase, WebVTTTestingMixIn):
         caption_set = DFXPReader().read(SAMPLE_DFXP_LONG_CUE)
         results = WebVTTWriter().write(caption_set)
         self.assertTrue(isinstance(results, text_type))
-        self.assertEquals(
+        self.assertEqual(
             SAMPLE_WEBVTT_OUTPUT_LONG_CUE, results)
 
     def test_dfxp_to_webvtt_preserves_proper_alignment(self):
@@ -247,7 +247,7 @@ class DFXPtoWebVTTTestCase(unittest.TestCase, WebVTTTestingMixIn):
         # WebVTTWriter.
         caption_set = DFXPReader().read(DFXP_STYLE_REGION_ALIGN_CONFLICT)
         results = WebVTTWriter().write(caption_set)
-        self.assertEquals(
+        self.assertEqual(
             WEBVTT_FROM_DFXP_WITH_CONFLICTING_ALIGN, results)
 
 

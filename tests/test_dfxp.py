@@ -17,27 +17,26 @@ class DFXPReaderTestCase(unittest.TestCase):
 
     def test_caption_length(self):
         captions = DFXPReader().read(SAMPLE_DFXP)
-        self.assertEqual(7, len(captions.get_captions(u"en-US")))
+        self.assertEqual(7, len(captions.get_captions("en-US")))
 
     def test_proper_timestamps(self):
         captions = DFXPReader().read(SAMPLE_DFXP)
-        paragraph = captions.get_captions(u"en-US")[2]
+        paragraph = captions.get_captions("en-US")[2]
 
         self.assertEqual(17000000, paragraph.start)
         self.assertEqual(18752000, paragraph.end)
 
     def test_offset_time(self):
         reader = DFXPReader()
-        self.assertEquals(1, reader._translate_time(u"0.001ms"))
-        self.assertEquals(2000, reader._translate_time(u"2ms"))
-        self.assertEquals(1000000, reader._translate_time(u"1s"))
-        self.assertEquals(1234567, reader._translate_time(u"1.234567s"))
-        self.assertEquals(180000000, reader._translate_time(u"3m"))
-        self.assertEquals(14400000000, reader._translate_time(u"4h"))
+        self.assertEqual(1, reader._translate_time("0.001ms"))
+        self.assertEqual(2000, reader._translate_time("2ms"))
+        self.assertEqual(1000000, reader._translate_time("1s"))
+        self.assertEqual(1234567, reader._translate_time("1.234567s"))
+        self.assertEqual(180000000, reader._translate_time("3m"))
+        self.assertEqual(14400000000, reader._translate_time("4h"))
         # Tick values are not supported
         self.assertRaises(
-	        InvalidInputError, reader._translate_time, u"2.3t"
-        )
+            InvalidInputError, reader._translate_time, "2.3t")
 
     def test_empty_file(self):
         self.assertRaises(
@@ -46,12 +45,12 @@ class DFXPReaderTestCase(unittest.TestCase):
 
     def test_invalid_markup_is_properly_handled(self):
         captions = DFXPReader().read(SAMPLE_DFXP_SYNTAX_ERROR)
-        self.assertEquals(2, len(captions.get_captions(u"en-US")))
+        self.assertEqual(2, len(captions.get_captions("en-US")))
 
     def test_caption_error_for_invalid_positioning_values(self):
         invalid_value_dfxp = (
             SAMPLE_DFXP_INVALID_POSITIONING_VALUE_TEMPLATE
-            .format(origin=u"px 5px")
+            .format(origin="px 5px")
         )
         self.assertRaises(
             CaptionReadSyntaxError, DFXPReader().read,
@@ -61,7 +60,7 @@ class DFXPReaderTestCase(unittest.TestCase):
     def test_caption_error_for_invalid_or_unsupported_positioning_units(self):
         invalid_dfxp = (
             SAMPLE_DFXP_INVALID_POSITIONING_VALUE_TEMPLATE
-            .format(origin=u"6foo 7bar")
+            .format(origin="6foo 7bar")
         )
         self.assertRaises(
             CaptionReadSyntaxError, DFXPReader().read,
@@ -82,9 +81,9 @@ class DFXPReaderTestCase(unittest.TestCase):
             SAMPLE_DFXP_MULTIPLE_CAPTIONS_WITH_THE_SAME_TIMING
         )
 
-        expected_texts = [u'Some text here',
-                          u'Some text there',
-                          u'Caption texts are everywhere!']
+        expected_texts = ['Some text here',
+                          'Some text there',
+                          'Caption texts are everywhere!']
         actual_texts = [c_.nodes[0].content for c_ in
                         captionset.get_captions("en-US")]
 
@@ -119,7 +118,7 @@ class DFXPReaderTestCase(unittest.TestCase):
             self.fail("Failing on empty paragraph")
 
 
-SAMPLE_DFXP_INVALID_POSITIONING_VALUE_TEMPLATE = u"""\
+SAMPLE_DFXP_INVALID_POSITIONING_VALUE_TEMPLATE = """\
 <?xml version="1.0" encoding="utf-8"?>
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling">
  <head>
@@ -138,7 +137,7 @@ SAMPLE_DFXP_INVALID_POSITIONING_VALUE_TEMPLATE = u"""\
 
 # TODO - notice that there's no "bottom" region specified in the <layout>
 # region, but it's referenced by the <div>. Decide if this is ok enough
-SAMPLE_DFXP_MULTIPLE_CAPTIONS_WITH_THE_SAME_TIMING = u"""\
+SAMPLE_DFXP_MULTIPLE_CAPTIONS_WITH_THE_SAME_TIMING = """\
 <?xml version="1.0" encoding="utf-8"?>
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling">
  <head>

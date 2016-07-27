@@ -9,8 +9,8 @@ CONVENTIONS:
 """
 import six
 
-from .exceptions import RelativizationError
 from enum import Enum
+from .exceptions import RelativizationError
 
 
 class UnitEnum(Enum):
@@ -22,12 +22,11 @@ class UnitEnum(Enum):
         if unit == UnitEnum.CELL :
             ...
     """
-    PIXEL = u'px'
-    EM = u'em'
-    PERCENT = u'%'
-    CELL = u'c'
-    PT = u'pt'
-
+    PIXEL = 'px'
+    EM = 'em'
+    PERCENT = '%'
+    CELL = 'c'
+    PT = 'pt'
 
 
 class VerticalAlignmentEnum(Enum):
@@ -38,19 +37,19 @@ class VerticalAlignmentEnum(Enum):
         if alignment == VerticalAlignmentEnum.BOTTOM:
             ...
     """
-    TOP = u'top'
-    CENTER = u'center'
-    BOTTOM = u'bottom'
+    TOP = 'top'
+    CENTER = 'center'
+    BOTTOM = 'bottom'
 
 
 class HorizontalAlignmentEnum(Enum):
     """Enumeration object specifying the horizontal alignment preferences
     """
-    LEFT = u'left'
-    CENTER = u'center'
-    RIGHT = u'right'
-    START = u'start'
-    END = u'end'
+    LEFT = 'left'
+    CENTER = 'center'
+    RIGHT = 'right'
+    START = 'start'
+    END = 'end'
 
 
 class Alignment(object):
@@ -80,7 +79,7 @@ class Alignment(object):
         )
 
     def __repr__(self):
-        return u"<Alignment ({horizontal} {vertical})>".format(
+        return "<Alignment ({horizontal} {vertical})>".format(
             horizontal=self.horizontal, vertical=self.vertical
         )
 
@@ -95,22 +94,22 @@ class Alignment(object):
         horizontal_obj = None
         vertical_obj = None
 
-        if text_align == u'left':
+        if text_align == 'left':
             horizontal_obj = HorizontalAlignmentEnum.LEFT
-        if text_align == u'start':
+        if text_align == 'start':
             horizontal_obj = HorizontalAlignmentEnum.START
-        if text_align == u'center':
+        if text_align == 'center':
             horizontal_obj = HorizontalAlignmentEnum.CENTER
-        if text_align == u'right':
+        if text_align == 'right':
             horizontal_obj = HorizontalAlignmentEnum.RIGHT
-        if text_align == u'end':
+        if text_align == 'end':
             horizontal_obj = HorizontalAlignmentEnum.END
 
-        if display_align == u'before':
+        if display_align == 'before':
             vertical_obj = VerticalAlignmentEnum.TOP
-        if display_align == u'center':
+        if display_align == 'center':
             vertical_obj = VerticalAlignmentEnum.CENTER
-        if display_align == u'after':
+        if display_align == 'after':
             vertical_obj = VerticalAlignmentEnum.BOTTOM
 
         if not any([horizontal_obj, vertical_obj]):
@@ -130,7 +129,7 @@ class TwoDimensionalObject(object):
 
         :type attribute: unicode
         """
-        horizontal, vertical = six.text_type(attribute).split(u' ')
+        horizontal, vertical = six.text_type(attribute).split(' ')
         horizontal = Size.from_string(horizontal)
         vertical = Size.from_string(vertical)
 
@@ -150,8 +149,8 @@ class Stretch(TwoDimensionalObject):
         """
         for parameter in [horizontal, vertical]:
             if not isinstance(parameter, Size):
-                raise ValueError(u"Stretch must be initialized with two valid "
-                                 u"Size objects.")
+                raise ValueError("Stretch must be initialized with two valid "
+                                 "Size objects.")
         self.horizontal = horizontal
         self.vertical = vertical
 
@@ -167,7 +166,7 @@ class Stretch(TwoDimensionalObject):
         )
 
     def __repr__(self):
-        return u'<Stretch ({horizontal}, {vertical})>'.format(
+        return '<Stretch ({horizontal}, {vertical})>'.format(
             horizontal=self.horizontal, vertical=self.vertical
         )
 
@@ -193,13 +192,13 @@ class Stretch(TwoDimensionalObject):
             67
         )
 
-    def __nonzero__(self):
+    def __bool__(self):
         return True if self.horizontal or self.vertical else False
 
     def to_xml_attribute(self, **kwargs):
         """Returns a unicode representation of this object as an xml attribute
         """
-        return u'{horizontal} {vertical}'.format(
+        return '{horizontal} {vertical}'.format(
             horizontal=self.horizontal.to_xml_attribute(),
             vertical=self.vertical.to_xml_attribute()
         )
@@ -314,8 +313,8 @@ class Point(TwoDimensionalObject):
         """
         for parameter in [x, y]:
             if not isinstance(parameter, Size):
-                raise ValueError(u"Point must be initialized with two valid "
-                                 u"Size objects.")
+                raise ValueError("Point must be initialized with two valid "
+                                 "Size objects.")
         self.x = x
         self.y = y
 
@@ -368,7 +367,7 @@ class Point(TwoDimensionalObject):
                     Point(max(p1.x, p2.x), max(p1.y, p2.y)))
 
     def __repr__(self):
-        return u'<Point ({x}, {y})>'.format(
+        return '<Point ({x}, {y})>'.format(
             x=self.x, y=self.y
         )
 
@@ -395,13 +394,13 @@ class Point(TwoDimensionalObject):
             57
         )
 
-    def __nonzero__(self):
+    def __bool__(self):
         return True if self.x or self.y else False
 
     def to_xml_attribute(self, **kwargs):
         """Returns a unicode representation of this object as an xml attribute
         """
-        return u'{x} {y}'.format(
+        return '{x} {y}'.format(
             x=self.x.to_xml_attribute(), y=self.y.to_xml_attribute())
 
 
@@ -417,9 +416,9 @@ class Size(object):
         :param unit: A UnitEnum member
         """
         if value is None:
-            raise ValueError(u"Size must be initialized with a value.")
+            raise ValueError("Size must be initialized with a value.")
         if not isinstance(unit,UnitEnum):
-            raise ValueError(u"Size must be initialized with a valid unit.")
+            raise ValueError("Size must be initialized with a valid unit.")
 
         self.value = float(value)
         self.unit = unit
@@ -428,16 +427,17 @@ class Size(object):
         if self.unit == other.unit:
             return Size(self.value - other.value, self.unit)
         else:
-            raise ValueError(u"The sizes should have the same measure units.")
+            raise ValueError("The sizes should have the same measure units.")
 
     def __abs__(self):
         return Size(abs(self.value), self.unit)
 
     def __cmp__(self, other):
         if self.unit == other.unit:
-            return cmp(self.value, other.value)
+            # python3 does not have cmp
+            return (self.value > other.value) - (self.value < other.value)
         else:
-            raise ValueError(u"The sizes should have the same measure units.")
+            raise ValueError("The sizes should have the same measure units.")
 
     def __lt__(self, other):
         return self.value < other.value
@@ -447,7 +447,7 @@ class Size(object):
         if self.unit == other.unit:
             return Size(self.value + other.value, self.unit)
         else:
-            raise ValueError(u"The sizes should have the same measure units.")
+            raise ValueError("The sizes should have the same measure units.")
 
     def is_relative(self):
         """
@@ -469,10 +469,10 @@ class Size(object):
         # The input must be valid so that any conversion can be done
         if not (video_width or video_height):
             raise RelativizationError(
-                u"Either video width or height must be given as a reference")
+                "Either video width or height must be given as a reference")
         elif video_width and video_height:
             raise RelativizationError(
-                u"Only video width or height can be given as reference")
+                "Only video width or height can be given as reference")
 
         if unit == UnitEnum.EM:
             # TODO: Implement proper conversion of em in function of font-size
@@ -533,31 +533,31 @@ class Size(object):
 
             if value is None:
                 raise ValueError(
-                    u"""Couldn't recognize the value "{value}" as a number"""
+                    """Couldn't recognize the value "{value}" as a number"""
                     .format(value=raw_number)
                 )
             instance = cls(value, unit)
             return instance
         else:
             raise ValueError(
-                u"The specified value is not valid because its unit "
-                u"is not recognized: {value}. "
-                u"The only supported units are: {supported}"
-                .format(value=raw_number, supported=u', '.join(UnitEnum._member_map_))
+                "The specified value is not valid because its unit "
+                "is not recognized: {value}. "
+                "The only supported units are: {supported}"
+                .format(value=raw_number, supported=', '.join(UnitEnum._member_map_))
             )
 
     def __repr__(self):
-        return u'<Size ({value} {unit})>'.format(
+        return '<Size ({value} {unit})>'.format(
             value=self.value, unit=self.unit.value
         )
 
     def __str__(self):
         value = round(self.value, 2)
         if value.is_integer():
-            s = u"{}".format(int(value))
+            s = "{}".format(int(value))
         else:
-            s = u"{:.2f}".format(value).rstrip('0').rstrip('.')
-        return u"{}{}".format(s, self.unit.value)
+            s = "{:.2f}".format(value).rstrip('0').rstrip('.')
+        return "{}{}".format(s, self.unit.value)
 
     def to_xml_attribute(self, **kwargs):
         """Returns a unicode representation of this object, as an xml attribute
@@ -583,7 +583,7 @@ class Size(object):
             47
         )
 
-    def __nonzero__(self):
+    def __bool__(self):
         return self.unit in UnitEnum and self.value is not None
 
 
@@ -628,7 +628,7 @@ class Padding(object):
         :param attribute: a string like object, representing a dfxp attr. value
         :return: a Padding object
         """
-        values_list = six.text_type(attribute).split(u' ')
+        values_list = six.text_type(attribute).split(' ')
         sizes = []
 
         for value in values_list:
@@ -643,16 +643,16 @@ class Padding(object):
         elif len(sizes) == 4:
             return cls(sizes[0], sizes[2], sizes[3], sizes[1])
         else:
-            raise ValueError(u'The provided value "{value}" could not be '
-                             u"parsed into the a padding. Check out "
-                             u"http://www.w3.org/TR/ttaf1-dfxp/"
-                             u"#style-attribute-padding for the definition "
-                             u"and examples".format(value=attribute))
+            raise ValueError('The provided value "{value}" could not be '
+                             "parsed into the a padding. Check out "
+                             "http://www.w3.org/TR/ttaf1-dfxp/"
+                             "#style-attribute-padding for the definition "
+                             "and examples".format(value=attribute))
 
     def __repr__(self):
         return (
-            u"<Padding (before: {before}, after: {after}, start: {start}, "
-            u"end: {end})>".format(
+            "<Padding (before: {before}, after: {after}, start: {start}, "
+            "end: {end})>".format(
                 before=self.before, after=self.after, start=self.start,
                 end=self.end
             )
@@ -688,7 +688,7 @@ class Padding(object):
         )
 
     def to_xml_attribute(
-            self, attribute_order=(u'before', u'end', u'after', u'start'),
+            self, attribute_order=('before', 'end', 'after', 'start'),
             **kwargs):
         """Returns a unicode representation of this object as an xml attribute
 
@@ -709,9 +709,9 @@ class Padding(object):
             # A Padding object with attributes set to None is considered
             # invalid. All four possible paddings must be set. If one of them
             # is not, this error is raised.
-            raise ValueError(u"The attribute order specified is invalid.")
+            raise ValueError("The attribute order specified is invalid.")
 
-        return u' '.join(string_list)
+        return ' '.join(string_list)
 
     def as_percentage_of(self, video_width, video_height):
         return Padding(
@@ -732,6 +732,7 @@ class Padding(object):
         if self.end:
             is_relative &= self.end.is_relative()
         return is_relative
+
 
 class Layout(object):
     """Should encapsulate all the information needed to determine (as correctly
@@ -780,7 +781,7 @@ class Layout(object):
                 if not attr:
                     setattr(self, attr_name, getattr(inherit_from, attr_name))
 
-    def __nonzero__(self):
+    def __bool__(self):
         return any([
             self.origin, self.extent, self.padding, self.alignment,
             self.webvtt_positioning
@@ -788,8 +789,8 @@ class Layout(object):
 
     def __repr__(self):
         return (
-            u"<Layout (origin: {origin}, extent: {extent}, "
-            u"padding: {padding}, alignment: {alignment})>".format(
+            "<Layout (origin: {origin}, extent: {extent}, "
+            "padding: {padding}, alignment: {alignment})>".format(
                 origin=self.origin, extent=self.extent, padding=self.padding,
                 alignment=self.alignment
             )

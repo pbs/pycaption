@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-SAMPLE_SAMI = u"""
+SAMPLE_SAMI = """
 <SAMI><HEAD><TITLE>NOVA3213</TITLE><STYLE TYPE="text/css">
 <!--
 P { margin-left:  1pt;
@@ -49,7 +49,7 @@ P { margin-left:  1pt;
 </BODY></SAMI>
 """
 
-SAMPLE_SAMI_WITH_STYLE_TAGS = u"""
+SAMPLE_SAMI_WITH_STYLE_TAGS = """
 <SAMI><HEAD><TITLE>NOVA3213</TITLE><STYLE TYPE="text/css">
 <!--
 P { margin-left:  1pt;
@@ -74,7 +74,7 @@ P { margin-left:  1pt;
 </BODY></SAMI>
 """
 
-SAMPLE_SAMI_WITH_CSS_INLINE_STYLE = u"""
+SAMPLE_SAMI_WITH_CSS_INLINE_STYLE = """
 <SAMI><HEAD><TITLE>NOVA3213</TITLE><STYLE TYPE="text/css">
 <!--
 P { margin-left:  1pt;
@@ -99,7 +99,7 @@ P { margin-left:  1pt;
 </BODY></SAMI>
 """
 
-SAMPLE_SAMI_WITH_CSS_ID_STYLE = u"""
+SAMPLE_SAMI_WITH_CSS_ID_STYLE = """
 <SAMI><HEAD><TITLE>NOVA3213</TITLE><STYLE TYPE="text/css">
 <!--
 P { margin-left:  1pt;
@@ -139,7 +139,7 @@ P { margin-left:  1pt;
 </BODY></SAMI>
 """
 
-SAMPLE_SAMI_EMPTY = u"""
+SAMPLE_SAMI_EMPTY = """
 <SAMI><HEAD><TITLE>NOVA3213</TITLE><STYLE TYPE="text/css">
 <!--
 P { margin-left:  1pt;
@@ -160,7 +160,7 @@ P { margin-left:  1pt;
 """
 
 
-SAMPLE_SAMI_SYNTAX_ERROR = u"""
+SAMPLE_SAMI_SYNTAX_ERROR = """
 <SAMI>
 <Head>
 <title>ir2014_111</title>
@@ -199,7 +199,7 @@ SAMPLE_SAMI_SYNTAX_ERROR = u"""
 </SAMI>
 """
 
-SAMPLE_SAMI_DOUBLE_BR = u"""
+SAMPLE_SAMI_DOUBLE_BR = """
 <SAMI><HEAD><TITLE>NOVA3213</TITLE>
 </HEAD><BODY>
 <SYNC start="14848"><P class="ENCC">
@@ -209,7 +209,7 @@ SAMPLE_SAMI_DOUBLE_BR = u"""
 </BODY></SAMI>
 """
 
-SAMPLE_SAMI_PARTIAL_MARGINS = u"""
+SAMPLE_SAMI_PARTIAL_MARGINS = """
 <SAMI>
 <HEAD>
    <STYLE TYPE="Text/css">
@@ -226,7 +226,7 @@ SAMPLE_SAMI_PARTIAL_MARGINS = u"""
 </SAMI>
 """
 
-SAMPLE_SAMI_PARTIAL_MARGINS_RELATIVIZED = u"""<sami>
+SAMPLE_SAMI_PARTIAL_MARGINS_RELATIVIZED = """<sami>
  <head>
   <style type="text/css">
    <!--
@@ -265,7 +265,7 @@ SAMPLE_SAMI_PARTIAL_MARGINS_RELATIVIZED = u"""<sami>
  </body>
 </sami>"""
 
-SAMPLE_SAMI_LANG_MARGIN = u"""
+SAMPLE_SAMI_LANG_MARGIN = """
 <SAMI>
 <HEAD>
    <STYLE TYPE="Text/css">
@@ -282,7 +282,7 @@ SAMPLE_SAMI_LANG_MARGIN = u"""
 </SAMI>
 """
 
-SAMPLE_SAMI_WITH_SPAN = u"""
+SAMPLE_SAMI_WITH_SPAN = """
 <SAMI>
 <HEAD>
     <STYLE TYPE="Text/css">
@@ -302,7 +302,7 @@ SAMPLE_SAMI_WITH_SPAN = u"""
 </SAMI>
 """
 
-SAMPLE_SAMI_WITH_BAD_SPAN_ALIGN = u"""
+SAMPLE_SAMI_WITH_BAD_SPAN_ALIGN = """
 <SAMI>
 <HEAD>
     <STYLE TYPE="Text/css">
@@ -322,7 +322,7 @@ SAMPLE_SAMI_WITH_BAD_SPAN_ALIGN = u"""
 </SAMI>
 """
 
-SAMPLE_SAMI_WITH_BAD_DIV_ALIGN = u"""
+SAMPLE_SAMI_WITH_BAD_DIV_ALIGN = """
 <SAMI>
 <HEAD>
     <STYLE TYPE="Text/css">
@@ -342,7 +342,7 @@ SAMPLE_SAMI_WITH_BAD_DIV_ALIGN = u"""
 </SAMI>
 """
 
-SAMPLE_SAMI_WITH_P_ALIGN = u"""
+SAMPLE_SAMI_WITH_P_ALIGN = """
 <SAMI>
 <HEAD>
     <STYLE TYPE="Text/css">
@@ -362,7 +362,7 @@ SAMPLE_SAMI_WITH_P_ALIGN = u"""
 </SAMI>
 """
 
-SAMPLE_SAMI_WITH_P_AND_SPAN_ALIGN = u"""
+SAMPLE_SAMI_WITH_P_AND_SPAN_ALIGN = """
 <SAMI>
 <HEAD>
     <STYLE TYPE="Text/css">
@@ -382,7 +382,7 @@ SAMPLE_SAMI_WITH_P_AND_SPAN_ALIGN = u"""
 </SAMI>
 """
 
-SAMPLE_SAMI_WITH_MULTIPLE_SPAN_ALIGNS = u"""
+SAMPLE_SAMI_WITH_MULTIPLE_SPAN_ALIGNS = """
 <SAMI>
 <HEAD>
     <STYLE TYPE="Text/css">
@@ -404,7 +404,7 @@ SAMPLE_SAMI_WITH_MULTIPLE_SPAN_ALIGNS = u"""
 </SAMI>
 """
 
-SAMPLE_SAMI_NO_LANG = u"""
+SAMPLE_SAMI_NO_LANG = """
 <SAMI>
 <Head><STYLE TYPE="text/css"></Style></Head>
 <BODY>
@@ -414,7 +414,7 @@ SAMPLE_SAMI_NO_LANG = u"""
 </SAMI>
 """
 
-SAMPLE_SAMI_WITH_LANG = u"""
+SAMPLE_SAMI_WITH_LANG = """
 <sami>
 <head>
 <style type="text/css"><!--.en-US {lang: en-US;}--></style>

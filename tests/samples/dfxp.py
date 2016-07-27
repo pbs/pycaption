@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-from __future__ import unicode_literals
 
 SAMPLE_DFXP = """\
 <?xml version="1.0" encoding="utf-8"?>
@@ -176,7 +175,7 @@ SAMPLE_DFXP_WITHOUT_REGION_AND_STYLE = """
  </body>
 </tt>"""
 
-SAMPLE_DFXP_WITH_POSITIONING = u"""<?xml version="1.0" encoding="utf-8"?>
+SAMPLE_DFXP_WITH_POSITIONING = """<?xml version="1.0" encoding="utf-8"?>
 <tt xml:lang="en-us"
     xmlns="http://www.w3.org/ns/ttml"
     xmlns:tts='http://www.w3.org/ns/ttml#styling'
@@ -627,7 +626,7 @@ SAMPLE_DFXP_MULTIPLE_REGIONS_OUTPUT = """\
  </body>
 </tt>"""
 
-SAMPLE_DFXP_TO_RENDER_WITH_ONLY_DEFAULT_POSITIONING_INPUT = u"""\
+SAMPLE_DFXP_TO_RENDER_WITH_ONLY_DEFAULT_POSITIONING_INPUT = """\
 <?xml version="1.0" encoding="utf-8"?>
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling">
  <head>
@@ -1028,7 +1027,7 @@ SAMPLE_DFXP_FOR_LEGACY_WRITER_OUTPUT = """\
  </body>
 </tt>"""
 
-DFXP_WITH_CONCURRENT_CAPTIONS = u"""\
+DFXP_WITH_CONCURRENT_CAPTIONS = """\
 <tt xml:lang="en-us"
     xmlns="http://www.w3.org/ns/ttml"
     xmlns:tts='http://www.w3.org/ns/ttml#styling'
@@ -1084,7 +1083,7 @@ DFXP_WITH_TEMPLATED_STYLE = """\
 </tt>
 """
 
-DFXP_WITH_ESCAPED_APOSTROPHE = u"""\
+DFXP_WITH_ESCAPED_APOSTROPHE = """\
 <tt xml:lang="en-us"
     xmlns="http://www.w3.org/ns/ttml"
     xmlns:tts='http://www.w3.org/ns/ttml#styling'
@@ -1103,7 +1102,7 @@ DFXP_WITH_ESCAPED_APOSTROPHE = u"""\
 </body>
 </tt>"""
 
-DFXP_WITH_ALTERNATIVE_TIMING_FORMATS = u"""\
+DFXP_WITH_ALTERNATIVE_TIMING_FORMATS = """\
 <tt xml:lang="en-us"
     xmlns="http://www.w3.org/ns/ttml"
     xmlns:tts='http://www.w3.org/ns/ttml#styling'

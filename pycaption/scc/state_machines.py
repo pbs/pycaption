@@ -51,7 +51,7 @@ class _PositioningTracker(object):
         """
         if not any(self._positions):
             raise CaptionReadSyntaxError(
-                u'No Preamble Address Code [PAC] was provided'
+                'No Preamble Address Code [PAC] was provided'
             )
         else:
             return self._positions[0]

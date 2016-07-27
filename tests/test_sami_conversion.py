@@ -121,9 +121,9 @@ class SAMItoDFXPTestCase(unittest.TestCase, DFXPTestingMixIn):
         results = DFXPWriter(relativize=False,
                              fit_to_screen=False).write(captions)
         self.assertTrue(isinstance(results, six.text_type))
-        self.assertTrue(u'xmlns="http://www.w3.org/ns/ttml"' in results)
+        self.assertTrue('xmlns="http://www.w3.org/ns/ttml"' in results)
         self.assertTrue(
-            u'xmlns:tts="http://www.w3.org/ns/ttml#styling"' in results)
+            'xmlns:tts="http://www.w3.org/ns/ttml#styling"' in results)
 
 
 class SAMItoWebVTTTestCase(unittest.TestCase, WebVTTTestingMixIn):
@@ -164,4 +164,4 @@ class SAMIWithMissingLanguage(unittest.TestCase, SAMITestingMixIn):
         results = SAMIWriter().write(caption_set)
         self.assertTrue(isinstance(results, six.text_type))
         self.assertSAMIEquals(SAMPLE_SAMI_WITH_LANG, results)
-        self.assertTrue(u"lang: en-US;" in results)
+        self.assertTrue("lang: en-US;" in results)

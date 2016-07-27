@@ -9,7 +9,7 @@ from ..base import BaseWriter, CaptionNode, merge_concurrent_captions
 from xml.sax.saxutils import escape
 from bs4 import BeautifulSoup
 
-LEGACY_DFXP_BASE_MARKUP = u'''
+LEGACY_DFXP_BASE_MARKUP = '''
 <tt xmlns="http://www.w3.org/ns/ttml"
     xmlns:tts="http://www.w3.org/ns/ttml#styling">
     <head>
@@ -21,17 +21,17 @@ LEGACY_DFXP_BASE_MARKUP = u'''
 '''
 
 LEGACY_DFXP_DEFAULT_STYLE = {
-    u'color': u'white',
-    u'font-family': u'monospace',
-    u'font-size': u'1c',
+    'color': 'white',
+    'font-family': 'monospace',
+    'font-size': '1c',
 }
 
-LEGACY_DFXP_DEFAULT_STYLE_ID = u'default'
-LEGACY_DFXP_DEFAULT_REGION_ID = u'bottom'
+LEGACY_DFXP_DEFAULT_STYLE_ID = 'default'
+LEGACY_DFXP_DEFAULT_REGION_ID = 'bottom'
 
 LEGACY_DFXP_DEFAULT_REGION = {
-    u'text-align': u'center',
-    u'display-align': u'after'
+    'text-align': 'center',
+    'display-align': 'after'
 }
 
 
@@ -43,7 +43,7 @@ class SinglePositioningDFXPWriter(DFXPWriter):
         super(SinglePositioningDFXPWriter, self).__init__(*args, **kwargs)
         self.default_positioning = default_positioning
 
-    def write(self, captions_set, force=u''):
+    def write(self, captions_set, force=''):
         """Writes a DFXP file using the positioning provided in the initializer
 
         :type captions_set: pycaption.base.CaptionSet
@@ -88,18 +88,19 @@ class SinglePositioningDFXPWriter(DFXPWriter):
 
         return caption_set
 
+
 class LegacyDFXPWriter(BaseWriter):
     """Ported the legacy DFXPWriter from 0.4.5"""
     def __init__(self, *args, **kw):
         self.p_style = False
         self.open_span = False
 
-    def write(self, caption_set, force=u''):
+    def write(self, caption_set, force=''):
         caption_set = deepcopy(caption_set)
         caption_set = merge_concurrent_captions(caption_set)
 
-        dfxp = BeautifulSoup(LEGACY_DFXP_BASE_MARKUP, u'lxml-xml')
-        dfxp.find(u'tt')[u'xml:lang'] = u"en"
+        dfxp = BeautifulSoup(LEGACY_DFXP_BASE_MARKUP, 'lxml-xml')
+        dfxp.find('tt')['xml:lang'] = "en"
 
         for style_id, style in caption_set.get_styles():
             if style != {}:
@@ -113,7 +114,7 @@ class LegacyDFXPWriter(BaseWriter):
         dfxp = self._recreate_region_tag(
             LEGACY_DFXP_DEFAULT_REGION_ID, LEGACY_DFXP_DEFAULT_REGION, dfxp)
 
-        body = dfxp.find(u'body')
+        body = dfxp.find('body')
 
         if force:
             langs = [self._force_language(force, caption_set.get_languages())]
@@ -121,16 +122,16 @@ class LegacyDFXPWriter(BaseWriter):
             langs = caption_set.get_languages()
 
         for lang in langs:
-            div = dfxp.new_tag(u'div')
-            div[u'xml:lang'] = u'%s' % lang
+            div = dfxp.new_tag('div')
+            div['xml:lang'] = '%s' % lang
 
             for caption in caption_set.get_captions(lang):
                 if caption.style:
                     caption_style = caption.style
-                    caption_style.update({u'region': LEGACY_DFXP_DEFAULT_REGION_ID})
+                    caption_style.update({'region': LEGACY_DFXP_DEFAULT_REGION_ID})
                 else:
-                    caption_style = {u'class': LEGACY_DFXP_DEFAULT_STYLE_ID,
-                                     u'region': LEGACY_DFXP_DEFAULT_REGION_ID}
+                    caption_style = {'class': LEGACY_DFXP_DEFAULT_STYLE_ID,
+                                     'region': LEGACY_DFXP_DEFAULT_REGION_ID}
                 p = self._recreate_p_tag(caption, caption_style, dfxp)
                 div.append(p)
 
@@ -148,54 +149,54 @@ class LegacyDFXPWriter(BaseWriter):
         return langs[-1]
 
     def _recreate_region_tag(self, region_id, styling, dfxp):
-        dfxp_region = dfxp.new_tag(u'region')
-        dfxp_region.attrs.update({u'xml:id': region_id})
+        dfxp_region = dfxp.new_tag('region')
+        dfxp_region.attrs.update({'xml:id': region_id})
 
         attributes = self._recreate_style(styling, dfxp)
         dfxp_region.attrs.update(attributes)
 
-        new_tag = dfxp.new_tag(u'region')
-        new_tag.attrs.update({u'xml:id': region_id})
+        new_tag = dfxp.new_tag('region')
+        new_tag.attrs.update({'xml:id': region_id})
         if dfxp_region != new_tag:
-            dfxp.find(u'layout').append(dfxp_region)
+            dfxp.find('layout').append(dfxp_region)
         return dfxp
 
     def _recreate_styling_tag(self, style, content, dfxp):
-        dfxp_style = dfxp.new_tag(u'style')
-        dfxp_style.attrs.update({u'xml:id': style})
+        dfxp_style = dfxp.new_tag('style')
+        dfxp_style.attrs.update({'xml:id': style})
 
         attributes = self._recreate_style(content, dfxp)
         dfxp_style.attrs.update(attributes)
 
-        new_tag = dfxp.new_tag(u'style')
-        new_tag.attrs.update({u'xml:id': style})
+        new_tag = dfxp.new_tag('style')
+        new_tag.attrs.update({'xml:id': style})
         if dfxp_style != new_tag:
-            dfxp.find(u'styling').append(dfxp_style)
+            dfxp.find('styling').append(dfxp_style)
 
         return dfxp
 
     def _recreate_p_tag(self, caption, caption_style, dfxp):
         start = caption.format_start()
         end = caption.format_end()
-        p = dfxp.new_tag(u"p", begin=start, end=end)
+        p = dfxp.new_tag("p", begin=start, end=end)
         p.string = self._recreate_text(caption, dfxp)
 
-        if dfxp.find(u"style", {u"xml:id": u"p"}):
-            p[u'style'] = u'p'
+        if dfxp.find("style", {"xml:id": "p"}):
+            p['style'] = 'p'
 
         p.attrs.update(self._recreate_style(caption_style, dfxp))
 
         return p
 
     def _recreate_text(self, caption, dfxp):
-        line = u''
+        line = ''
 
         for node in caption.nodes:
             if node.type_ == CaptionNode.TEXT:
-                line += escape(node.content) + u' '
+                line += escape(node.content) + ' '
 
             elif node.type_ == CaptionNode.BREAK:
-                line = line.rstrip() + u'<br/>\n    '
+                line = line.rstrip() + '<br/>\n    '
 
             elif node.type_ == CaptionNode.STYLE:
                 line = self._recreate_span(line, node, dfxp)
@@ -204,20 +205,20 @@ class LegacyDFXPWriter(BaseWriter):
 
     def _recreate_span(self, line, node, dfxp):
         if node.start:
-            styles = u''
+            styles = ''
 
             content_with_style = self._recreate_style(node.content, dfxp)
-            for style, value in content_with_style.items():
-                styles += u' %s="%s"' % (style, value)
+            for style, value in list(content_with_style.items()):
+                styles += ' %s="%s"' % (style, value)
 
             if styles:
                 if self.open_span:
-                    line = line.rstrip() + u'</span> '
-                line += u'<span%s>' % styles
+                    line = line.rstrip() + '</span> '
+                line += '<span%s>' % styles
                 self.open_span = True
 
         elif self.open_span:
-            line = line.rstrip() + u'</span> '
+            line = line.rstrip() + '</span> '
             self.open_span = False
 
         return line
@@ -225,23 +226,23 @@ class LegacyDFXPWriter(BaseWriter):
     def _recreate_style(self, content, dfxp):
         dfxp_style = {}
 
-        if u'region' in content:
-            if dfxp.find(u'region', {u'xml:id': content[u'region']}):
-                dfxp_style[u'region'] = content[u'region']
-        if u'class' in content:
-            if dfxp.find(u"style", {u"xml:id": content[u'class']}):
-                dfxp_style[u'style'] = content[u'class']
-        if u'text-align' in content:
-            dfxp_style[u'tts:textAlign'] = content[u'text-align']
-        if u'italics' in content:
-            dfxp_style[u'tts:fontStyle'] = u'italic'
-        if u'font-family' in content:
-            dfxp_style[u'tts:fontFamily'] = content[u'font-family']
-        if u'font-size' in content:
-            dfxp_style[u'tts:fontSize'] = content[u'font-size']
-        if u'color' in content:
-            dfxp_style[u'tts:color'] = content[u'color']
-        if u'display-align' in content:
-            dfxp_style[u'tts:displayAlign'] = content[u'display-align']
+        if 'region' in content:
+            if dfxp.find('region', {'xml:id': content['region']}):
+                dfxp_style['region'] = content['region']
+        if 'class' in content:
+            if dfxp.find("style", {"xml:id": content['class']}):
+                dfxp_style['style'] = content['class']
+        if 'text-align' in content:
+            dfxp_style['tts:textAlign'] = content['text-align']
+        if 'italics' in content:
+            dfxp_style['tts:fontStyle'] = 'italic'
+        if 'font-family' in content:
+            dfxp_style['tts:fontFamily'] = content['font-family']
+        if 'font-size' in content:
+            dfxp_style['tts:fontSize'] = content['font-size']
+        if 'color' in content:
+            dfxp_style['tts:color'] = content['color']
+        if 'display-align' in content:
+            dfxp_style['tts:displayAlign'] = content['display-align']
 
         return dfxp_style

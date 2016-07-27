@@ -146,7 +146,6 @@ def get_corrected_end_time(caption):
     return caption.start + 4 * 1000 * 1000
 
 
-
 class SCCReader(BaseReader):
     """Converts a given unicode string to a CaptionSet.
 
@@ -160,17 +159,17 @@ class SCCReader(BaseReader):
             DefaultProvidingPositionTracker()
         )
 
-        self.last_command = u''
+        self.last_command = ''
 
         self.buffer_dict = NotifyingDict()
 
-        self.buffer_dict[u'pop'] = self.node_creator_factory.new_creator()
-        self.buffer_dict[u'paint'] = self.node_creator_factory.new_creator()
-        self.buffer_dict[u'roll'] = self.node_creator_factory.new_creator()
+        self.buffer_dict['pop'] = self.node_creator_factory.new_creator()
+        self.buffer_dict['paint'] = self.node_creator_factory.new_creator()
+        self.buffer_dict['roll'] = self.node_creator_factory.new_creator()
 
         # Call this method when the active key changes
         self.buffer_dict.add_change_observer(self._flush_implicit_buffers)
-        self.buffer_dict.set_active(u'pop')
+        self.buffer_dict.set_active('pop')
 
         self.roll_rows = []
         self.roll_rows_expected = 0
@@ -191,7 +190,7 @@ class SCCReader(BaseReader):
         else:
             return False
 
-    def read(self, content, lang=u'en-US', simulate_roll_up=False, offset=0):
+    def read(self, content, lang='en-US', simulate_roll_up=False, offset=0):
         """Converts the unicode string into a CaptionSet
 
         :type content: six.text_type
@@ -211,7 +210,7 @@ class SCCReader(BaseReader):
         :rtype: CaptionSet
         """
         if type(content) != six.text_type:
-            raise InvalidInputError(u'The content is not a unicode string.')
+            raise InvalidInputError('The content is not a unicode string.')
 
         self.simulate_roll_up = simulate_roll_up
         self.time_translator.offset = offset * 1000000
@@ -227,7 +226,7 @@ class SCCReader(BaseReader):
         captions = CaptionSet({lang: self.caption_stash.get_all()})
 
         if captions.is_empty():
-            raise CaptionReadNoCaptions(u"empty caption file")
+            raise CaptionReadNoCaptions("empty caption file")
         else:
             last_caption = captions.get_captions(lang)[-1]
             last_caption.end = get_corrected_end_time(last_caption)
@@ -266,22 +265,22 @@ class SCCReader(BaseReader):
         If they're on the last row however, or if the caption type is changing,
         we make sure to convert the buffers to text, so we don't lose any info.
         """
-        if old_key == u'pop':
+        if old_key == 'pop':
             return
 
-        elif old_key is None or old_key == u'roll':
+        elif old_key is None or old_key == 'roll':
             if not self.buffer.is_empty():
                 self._roll_up()
 
-        elif old_key is None or old_key == u'paint':
+        elif old_key is None or old_key == 'paint':
             # xxx - perhaps the self.buffer property is sufficient
-            if not self.buffer_dict[u'paint'].is_empty():
+            if not self.buffer_dict['paint'].is_empty():
                 self.caption_stash.create_and_store(
-                    self.buffer_dict[u'paint'], self.time)
+                    self.buffer_dict['paint'], self.time)
 
     def _translate_line(self, line):
         # ignore blank lines
-        if line.strip() == u'':
+        if line.strip() == '':
             return
 
         # split line in timestamp and words
@@ -289,15 +288,15 @@ class SCCReader(BaseReader):
         parts = r.findall(line.lower())
 
         # XXX!!!!!! THESE 2 LINES ARE A HACK
-        if parts[0][2].strip() == u'942f':
+        if parts[0][2].strip() == '942f':
             self._fix_last_timing(timing=parts[0][0])
 
         self.time_translator.start_at(parts[0][0])
 
         # loop through each word
-        for word in parts[0][2].split(u' '):
+        for word in parts[0][2].split(' '):
             # ignore empty results
-            if word.strip() != u'':
+            if word.strip() != '':
                 self._translate_word(word)
 
     def _translate_word(self, word):
@@ -324,7 +323,7 @@ class SCCReader(BaseReader):
     def _handle_double_command(self, word):
         # ensure we don't accidentally use the same command twice
         if word == self.last_command:
-            self.last_command = u''
+            self.last_command = ''
             return True
         else:
             self.last_command = word
@@ -352,12 +351,12 @@ class SCCReader(BaseReader):
             return
 
         # if command is pop_up
-        if word == u'9420':
-            self.buffer_dict.set_active(u'pop')
+        if word == '9420':
+            self.buffer_dict.set_active('pop')
 
         # command is paint_on [Resume Direct Captioning]
-        elif word == u'9429':
-            self.buffer_dict.set_active(u'paint')
+        elif word == '9429':
+            self.buffer_dict.set_active('paint')
 
             self.roll_rows_expected = 1
             if not self.buffer.is_empty():
@@ -369,15 +368,15 @@ class SCCReader(BaseReader):
             self.time = self.time_translator.get_time()
 
         # if command is roll_up 2, 3 or 4 rows
-        elif word in (u'9425', u'9426', u'94a7'):
-            self.buffer_dict.set_active(u'roll')
+        elif word in ('9425', '9426', '94a7'):
+            self.buffer_dict.set_active('roll')
 
             # count how many lines are expected
-            if word == u'9425':
+            if word == '9425':
                 self.roll_rows_expected = 2
-            elif word == u'9426':
+            elif word == '9426':
                 self.roll_rows_expected = 3
-            elif word == u'94a7':
+            elif word == '94a7':
                 self.roll_rows_expected = 4
 
             # if content is in the queue, turn it into a caption
@@ -391,23 +390,23 @@ class SCCReader(BaseReader):
             self.time = self.time_translator.get_time()
 
         # clear pop_on buffer
-        elif word == u'94ae':
+        elif word == '94ae':
             self.buffer = self.node_creator_factory.new_creator()
 
         # display pop_on buffer [End Of Caption]
-        elif word == u'942f':
+        elif word == '942f':
             self.time = self.time_translator.get_time()
             self.caption_stash.create_and_store(self.buffer, self.time)
             self.buffer = self.node_creator_factory.new_creator()
 
         # roll up captions [Carriage Return]
-        elif word == u'94ad':
+        elif word == '94ad':
             # display roll-up buffer
             if not self.buffer.is_empty():
                 self._roll_up()
 
         # clear screen
-        elif word == u'942c':
+        elif word == '942c':
             self.roll_rows = []
 
             # XXX - The 942c command has nothing to do with paint-ons
@@ -415,9 +414,9 @@ class SCCReader(BaseReader):
             # the proper buffer (self.buffer) is used.
             # Most likely using `self.buffer` instead of the paint buffer
             # is the right thing to do, but this needs some further attention.
-            if not self.buffer_dict[u'paint'].is_empty():
+            if not self.buffer_dict['paint'].is_empty():
                 self.caption_stash.create_and_store(
-                    self.buffer_dict[u'paint'], self.time)
+                    self.buffer_dict['paint'], self.time)
                 self.buffer = self.node_creator_factory.new_creator()
 
             # attempt to add proper end time to last caption(s)
@@ -485,7 +484,7 @@ class SCCWriter(BaseWriter):
         super(SCCWriter, self).__init__(*args, **kw)
 
     def write(self, caption_set):
-        output = HEADER + u'\n\n'
+        output = HEADER + '\n\n'
 
         if caption_set.is_empty():
             return output
@@ -517,12 +516,12 @@ class SCCWriter(BaseWriter):
         # PASS 3:
         # Write captions.
         for (code, start, end) in codes:
-            output += (u'%s\t' % self._format_timestamp(start))
-            output += u'94ae 94ae 9420 9420 '
+            output += ('%s\t' % self._format_timestamp(start))
+            output += '94ae 94ae 9420 9420 '
             output += code
-            output += u'942c 942c 942f 942f\n\n'
+            output += '942c 942c 942f 942f\n\n'
             if end is not None:
-                output += u'%s\t942c 942c\n\n' % self._format_timestamp(end)
+                output += '%s\t942c 942c\n\n' % self._format_timestamp(end)
 
         return output
 
@@ -533,24 +532,24 @@ class SCCWriter(BaseWriter):
             if caption_node.type_ == CaptionNode.TEXT:
                 return six.text_type(caption_node.content)
             elif caption_node.type_ == CaptionNode.BREAK:
-                return u'\n'
-        caption_text = u''.join(
+                return '\n'
+        caption_text = ''.join(
             [caption_node_to_text(node) for node in caption.nodes])
-        inner_lines = caption_text.split( u'\n')
+        inner_lines = caption_text.split('\n')
         inner_lines_laid_out = [textwrap.fill(x, 32) for x in inner_lines]
-        return u'\n'.join(inner_lines_laid_out)
+        return '\n'.join(inner_lines_laid_out)
 
     @staticmethod
     def _maybe_align(code):
         # Finish a half-word with a no-op so we can move to a full word
         if len(code) % 5 == 2:
-            code += u'80 '
+            code += '80 '
         return code
 
     @staticmethod
     def _maybe_space(code):
         if len(code) % 5 == 4:
-            code += u' '
+            code += ' '
         return code
 
     def _print_character(self, code, char):
@@ -560,7 +559,7 @@ class SCCWriter(BaseWriter):
             try:
                 char_code = SPECIAL_OR_EXTENDED_CHAR_TO_CODE[char]
             except KeyError:
-                char_code = u'91b6'  # Use £ as "unknown character" symbol
+                char_code = '91b6'  # Use £ as "unknown character" symbol
 
         if len(char_code) == 2:
             return code + char_code
@@ -571,14 +570,14 @@ class SCCWriter(BaseWriter):
             return code
 
     def _text_to_code(self, s):
-        code = u''
-        lines = self._layout_line(s).split( u'\n')
+        code = ''
+        lines = self._layout_line(s).split('\n')
         for row, line in enumerate(lines):
             row += 16 - len(lines)
             # Move cursor to column 0 of the destination row
             for _ in range(2):
-                code += (u'%s%s ' % (PAC_HIGH_BYTE_BY_ROW[row],
-                                     PAC_LOW_BYTE_BY_ROW_RESTRICTED[row]))
+                code += ('%s%s ' % (PAC_HIGH_BYTE_BY_ROW[row],
+                                    PAC_LOW_BYTE_BY_ROW_RESTRICTED[row]))
             # Print the line using the SCC encoding
             for char in line:
                 code = self._print_character(code, char)
@@ -598,7 +597,7 @@ class SCCWriter(BaseWriter):
         seconds = math.floor(seconds_float)
         seconds_float -= seconds
         frames = math.floor(seconds_float * 30)
-        return u'%02d:%02d:%02d:%02d' % (hours, minutes, seconds, frames)
+        return '%02d:%02d:%02d:%02d' % (hours, minutes, seconds, frames)
 
 
 class _SccTimeTranslator(object):
@@ -631,7 +630,7 @@ class _SccTimeTranslator(object):
             Helpful for when the captions are off by some time interval.
         :rtype: int
         """
-        if u';' in stamp:
+        if ';' in stamp:
             # Drop-frame timebase runs at the same rate as wall clock
             seconds_per_timestamp_second = 1.0
         else:
@@ -639,7 +638,7 @@ class _SccTimeTranslator(object):
             # 1 second of timecode is longer than an actual second (1.001s)
             seconds_per_timestamp_second = 1001.0 / 1000.0
 
-        time_split = stamp.replace(u';', u':').split(u':')
+        time_split = stamp.replace(';', ':').split(':')
 
         timestamp_seconds = (int(time_split[0]) * 3600 +
                              int(time_split[1]) * 60 +
