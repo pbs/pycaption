@@ -9,7 +9,8 @@ from .samples.dfxp import (
 from .samples.scc import (
     SAMPLE_SCC_CREATED_DFXP_WITH_WRONGLY_CLOSING_SPANS,
     SCC_THAT_GENERATES_WEBVTT_WITH_PROPER_NEWLINES,
-    SAMPLE_SCC_MULTIPLE_POSITIONING
+    SAMPLE_SCC_MULTIPLE_POSITIONING,
+    SAMPLE_SCC_FLASHING_CAPTIONS,
 )
 from .samples.srt import SAMPLE_SRT_ASCII
 from .samples.webvtt import (
@@ -66,3 +67,9 @@ class SCCToWebVTTTestCase(unittest.TestCase):
             webvtt,
             SAMPLE_WEBVTT_FROM_SCC_PROPERLY_WRITES_NEWLINES_OUTPUT
         )
+
+
+class SCCEOCNewlineTest(unittest.TestCase):
+    def test_eoc_on_newline_rejection(self):
+        with self.assertRaises(ValueError):
+            caption_set = SCCReader().read(SAMPLE_SCC_FLASHING_CAPTIONS)
