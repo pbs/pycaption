@@ -410,6 +410,6 @@ class TimingCorrectingCaptionListTestCase(unittest.TestCase):
     def test_eoc_first_command(self):
         caption_set = SCCReader().read(SAMPLE_SCC_EOC_FIRST_COMMAND)
 
-        # just two captions, first EOC disappears
+        # just one caption, first EOC disappears
         num_captions = len(caption_set.get_captions('en-US'))
-        self.assertEqual(num_captions, 2)
+        self.assertEqual(num_captions, 1)
