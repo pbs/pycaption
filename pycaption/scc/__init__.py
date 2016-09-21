@@ -604,7 +604,7 @@ class _SccTimeTranslator(object):
     """Converts SCC time to microseconds, keeping track of frames passed
     """
     def __init__(self):
-        self._time = 0
+        self._time = '00:00:00;00'
 
         # microseconds. The offset from which we begin the time calculation
         self.offset = 0
