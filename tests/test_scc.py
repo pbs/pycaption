@@ -13,7 +13,7 @@ from tests.samples.scc import (
     SAMPLE_SCC_POP_ON, SAMPLE_SCC_MULTIPLE_POSITIONING,
     SAMPLE_SCC_WITH_ITALICS, SAMPLE_SCC_EMPTY, SAMPLE_SCC_ROLL_UP_RU2,
     SAMPLE_SCC_PRODUCES_BAD_LAST_END_TIME, SAMPLE_NO_POSITIONING_AT_ALL_SCC,
-    SAMPLE_SCC_NO_EXPLICIT_END_TO_LAST_CAPTION
+    SAMPLE_SCC_NO_EXPLICIT_END_TO_LAST_CAPTION, SAMPLE_SCC_EOC_FIRST_COMMAND
 )
 
 TOLERANCE_MICROSECONDS = 500 * 1000
@@ -408,3 +408,10 @@ class TimingCorrectingCaptionListTestCase(unittest.TestCase):
         self.assertEqual(
             last_caption.end, last_caption.start + 4 * 1000 * 1000
         )
+
+    def test_eoc_first_command(self):
+        caption_set = SCCReader().read(SAMPLE_SCC_EOC_FIRST_COMMAND)
+
+        # just two captions, first EOC disappears
+        num_captions = len(caption_set.get_captions('en-US'))
+        self.assertEqual(num_captions, 2)
