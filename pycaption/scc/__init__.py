@@ -225,6 +225,14 @@ class SCCReader(BaseReader):
 
         captions = CaptionSet({lang: self.caption_stash.get_all()})
 
+        # check captions for incorrect lengths
+        for cap in captions.get_captions(lang):
+            # if there's an end time on a caption and the difference is
+            # less than .05s kill it (this is likely caused by a standalone
+            # EOC marker in the SCC file)
+            if 0 < cap.end - cap.start < 50000:
+                raise ValueError('unsupported length found in SCC input file: ' + str(cap))
+
         if captions.is_empty():
             raise CaptionReadNoCaptions("empty caption file")
         else:
@@ -604,7 +612,7 @@ class _SccTimeTranslator(object):
     """Converts SCC time to microseconds, keeping track of frames passed
     """
     def __init__(self):
-        self._time = 0
+        self._time = '00:00:00;00'
 
         # microseconds. The offset from which we begin the time calculation
         self.offset = 0
