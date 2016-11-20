@@ -29,5 +29,5 @@ class TranscriptWriter(BaseWriter):
     def _strip_text(self, elements, lang_transcript):
         for el in elements:
             if el.type_ == CaptionNode.TEXT:
-                lang_transcript += el.content
+                lang_transcript += ' ' + el.content
         return lang_transcript
