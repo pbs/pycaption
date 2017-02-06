@@ -5,7 +5,9 @@ from pycaption.exceptions import CaptionReadSyntaxError, InvalidInputError, Capt
 
 from .samples.dfxp import (
     SAMPLE_DFXP, SAMPLE_DFXP_EMPTY, SAMPLE_DFXP_SYNTAX_ERROR,
-    DFXP_WITH_ALTERNATIVE_TIMING_FORMATS, SAMPLE_DFXP_EMPTY_PARAGRAPH
+    DFXP_WITH_ALTERNATIVE_TIMING_FORMATS, SAMPLE_DFXP_EMPTY_PARAGRAPH,
+    SAMPLE_DFXP_EMPTY_PARAGRAPH_WITH_NEWLINE,
+    SAMPLE_DFXP_EMPTY_PARAGRAPH_WITH_MULTIPLE_NEWLINES,
 )
 
 
@@ -116,6 +118,18 @@ class DFXPReaderTestCase(unittest.TestCase):
             DFXPReader().read(SAMPLE_DFXP_EMPTY_PARAGRAPH)
         except CaptionReadError:
             self.fail("Failing on empty paragraph")
+
+    def test_empty_paragraph_with_newline(self):
+        try:
+            DFXPReader().read(SAMPLE_DFXP_EMPTY_PARAGRAPH_WITH_NEWLINE)
+        except CaptionReadError:
+            self.fail("Failing on empty paragraph with one newline")
+
+    def test_empty_paragraph_with_multiple_newlines(self):
+        try:
+            DFXPReader().read(SAMPLE_DFXP_EMPTY_PARAGRAPH_WITH_MULTIPLE_NEWLINES)
+        except CaptionReadError:
+            self.fail("Failing on empty paragraph with multiple newlines")
 
 
 SAMPLE_DFXP_INVALID_POSITIONING_VALUE_TEMPLATE = u"""\
