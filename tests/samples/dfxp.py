@@ -1131,7 +1131,9 @@ SAMPLE_DFXP_EMPTY_PARAGRAPH = """
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml">
 <body>
   <div>
-    <p begin="0:00:02.07" end="0:00:05.07"></p>
+    <p begin="0:00:02.07" end="0:00:05.07">
+    
+    </p>
     <p begin="0:00:05.07" end="0:00:06.21">SESSION GOT OFF TO A LATE START,</p>
   </div>
  </body>
