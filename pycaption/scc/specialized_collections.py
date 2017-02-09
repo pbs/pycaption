@@ -4,6 +4,7 @@ from ..geometry import (UnitEnum, Size, Layout, Point, Alignment,
 
 from .constants import PAC_BYTES_TO_POSITIONING_MAP, COMMANDS
 import collections
+import re
 
 
 class PreCaption(object):
@@ -509,7 +510,15 @@ class _InstructionNode(object):
     def get_text(self):
         """A little legacy code.
         """
-        return ' '.join(self.text.split())
+
+        # Save trailing whitespace, which should be preserved
+        suffix = ''
+        if self.text is not None:
+            m = re.search('\s+$', self.text)
+            if m is not None:
+                suffix = m.group(0)
+
+        return ' '.join(self.text.split()) + suffix
 
     @classmethod
     def create_break(cls, position):

@@ -281,3 +281,14 @@ Scenarist_SCC V1.0
 
 00:25:00;00    942c
 """
+
+
+SAMPLE_SCC_SPACE_PRIOR_TO_ITALIC_COMMAND = """\
+Scenarist_SCC V1.0
+
+00:00:00:00     942c
+
+00:00:00:18     9420 94f2 5b43 6875 e36b 5d20 91ae c8e5 792c 2049 a76d 2043 6875 e36b ae80 942c 942f
+
+00:00:01:06     942c
+"""

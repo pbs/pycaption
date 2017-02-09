@@ -13,7 +13,8 @@ from tests.samples.scc import (
     SAMPLE_SCC_POP_ON, SAMPLE_SCC_MULTIPLE_POSITIONING,
     SAMPLE_SCC_WITH_ITALICS, SAMPLE_SCC_EMPTY, SAMPLE_SCC_ROLL_UP_RU2,
     SAMPLE_SCC_PRODUCES_BAD_LAST_END_TIME, SAMPLE_NO_POSITIONING_AT_ALL_SCC,
-    SAMPLE_SCC_NO_EXPLICIT_END_TO_LAST_CAPTION, SAMPLE_SCC_EOC_FIRST_COMMAND
+    SAMPLE_SCC_NO_EXPLICIT_END_TO_LAST_CAPTION, SAMPLE_SCC_EOC_FIRST_COMMAND,
+    SAMPLE_SCC_SPACE_PRIOR_TO_ITALIC_COMMAND
 )
 
 TOLERANCE_MICROSECONDS = 500 * 1000
@@ -153,6 +154,27 @@ class SCCReaderTestCase(unittest.TestCase):
                           caption_set.get_captions('en-US')]
 
         self.assertEqual(expected_timings, actual_timings)
+
+    def test_space_prior_to_italics_is_maintained(self):
+        caption_set = SCCReader().read(
+            SAMPLE_SCC_SPACE_PRIOR_TO_ITALIC_COMMAND
+        )
+
+        self.assertIsNotNone(caption_set)
+        self.assertIsNotNone(caption_set.get_languages())
+        self.assertEqual(1, len(caption_set.get_languages()))
+        self.assertEqual('en-US', caption_set.get_languages()[0])
+
+        captions = caption_set.get_captions('en-US')
+        self.assertIsNotNone(captions)
+        self.assertEqual(1, len(captions))
+        self.assertIsNotNone(captions[0])
+
+        caption = captions[0]
+        self.assertIsNotNone(caption.nodes)
+        self.assertEqual(4, len(caption.nodes))
+        self.assertIsNotNone(caption.nodes[0].content)
+        self.assertEqual('[Chuck] ', caption.nodes[0].content)
 
 
 class CoverageOnlyTestCase(unittest.TestCase):
