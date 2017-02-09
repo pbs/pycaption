@@ -180,7 +180,7 @@ class DFXPReader(BaseReader):
         elif tag.name == u'span':
             # convert span
             self._translate_span(tag)
-        elif tag.name == u'p' and not tag.contents:
+        elif tag.name == u'p' and self.is_tag_content_empty(tag.contents):
             node = CaptionNode.create_text(
                 u'', layout_info=tag.layout_info)
             self.nodes.append(node)
@@ -188,6 +188,20 @@ class DFXPReader(BaseReader):
             # recursively call function for any children elements
             for a in tag.contents:
                 self._translate_tag(a)
+
+    def is_tag_content_empty(self, content_list):
+        for content in content_list:
+            # recursively check empty content for any children elements
+            if not isinstance(content, NavigableString):
+                if not self.is_tag_content_empty(content.contents):
+                    return False
+                continue
+
+            # avoid confusing newline with not empty content
+            content = content.replace('\n', '')
+            if content:
+                return False
+        return True
 
     def _translate_span(self, tag):
         # convert tag attributes
