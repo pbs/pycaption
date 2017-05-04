@@ -206,7 +206,7 @@ class WebVTTWriter(BaseWriter):
     video_width = None
     video_height = None
 
-    def write(self, caption_set):
+    def write(self, caption_set, language=None):
         """
         :type caption_set: CaptionSet
         """
@@ -223,7 +223,10 @@ class WebVTTWriter(BaseWriter):
 
         # WebVTT's language support seems to be a bit crazy, so let's just
         # support a single one for now.
-        lang = list(caption_set.get_languages())[0]
+        if language is None:
+            lang = list(caption_set.get_languages())[0]
+        else:
+            lang = language
 
         self.global_layout = caption_set.get_layout_info(lang)
 

@@ -245,3 +245,15 @@ SAMPLE_WEBVTT_LAST_CUE_ZERO_START = """WEBVTT
 
 00:00.000 --> 00:12.312
 ( clock ticking )"""
+
+SAMPLE_WEBVTT_MULTI_LANG_EN = """WEBVTT
+
+00:14.848 --> 00:18.848
+Butterfly.
+"""
+
+SAMPLE_WEBVTT_MULTI_LANG_DE = """WEBVTT
+
+00:14.848 --> 00:18.848
+Schmetterling.
+"""

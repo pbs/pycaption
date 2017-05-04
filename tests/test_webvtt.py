@@ -6,11 +6,12 @@ from pycaption import (
 )
 
 from tests.samples.dfxp import DFXP_STYLE_REGION_ALIGN_CONFLICT
-from tests.samples.sami import SAMPLE_SAMI_DOUBLE_BR
+from tests.samples.sami import SAMPLE_SAMI_DOUBLE_BR, SAMPLE_SAMI_WITH_MULTI_LANG
 from tests.samples.srt import SAMPLE_SRT
 from tests.samples.webvtt import (
     SAMPLE_WEBVTT, SAMPLE_WEBVTT_2, SAMPLE_WEBVTT_EMPTY, SAMPLE_WEBVTT_DOUBLE_BR,
-    WEBVTT_FROM_DFXP_WITH_CONFLICTING_ALIGN, SAMPLE_WEBVTT_LAST_CUE_ZERO_START
+    WEBVTT_FROM_DFXP_WITH_CONFLICTING_ALIGN, SAMPLE_WEBVTT_LAST_CUE_ZERO_START,
+    SAMPLE_WEBVTT_MULTI_LANG_DE, SAMPLE_WEBVTT_MULTI_LANG_EN
 )
 
 
@@ -173,3 +174,10 @@ class WebVTTWriterTestCase(unittest.TestCase):
         caption_set = DFXPReader().read(DFXP_STYLE_REGION_ALIGN_CONFLICT)
         results = WebVTTWriter().write(caption_set)
         self.assertEqual(WEBVTT_FROM_DFXP_WITH_CONFLICTING_ALIGN, results)
+
+    def test_lang_option(self):
+        caption_set = SAMIReader().read(SAMPLE_SAMI_WITH_MULTI_LANG)
+        results = WebVTTWriter().write(caption_set,'de-DE')
+        self.assertEqual(SAMPLE_WEBVTT_MULTI_LANG_DE, results)
+        results = WebVTTWriter().write(caption_set,'en-US')
+        self.assertEqual(SAMPLE_WEBVTT_MULTI_LANG_EN, results)
