@@ -254,3 +254,15 @@ SAMPLE_WEBVTT_EMPTY_CUE = """WEBVTT
 00:04.000 --> 00:05.000
 Transcribed by Celestials
 """
+
+SAMPLE_WEBVTT_MULTI_LANG_EN = """WEBVTT
+
+00:14.848 --> 00:18.848
+Butterfly.
+"""
+
+SAMPLE_WEBVTT_MULTI_LANG_DE = """WEBVTT
+
+00:14.848 --> 00:18.848
+Schmetterling.
+"""

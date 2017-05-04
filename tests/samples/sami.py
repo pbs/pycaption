@@ -424,3 +424,17 @@ SAMPLE_SAMI_WITH_LANG = """
 </body>
 </sami>
 """
+
+SAMPLE_SAMI_WITH_MULTI_LANG = """
+<sami>
+<head>
+<style type="text/css"><!--.en-US {lang: en-US;} .de-DE {lang: de-DE;}--></style>
+</head>
+<body>
+<sync start="14848">
+    <p class="en-US">Butterfly.</p>
+    <p class="de-DE">Schmetterling.</p>
+</sync>
+</body>
+</sami>
+"""
