@@ -8,7 +8,7 @@ from tests.samples.sami import (
     SAMPLE_SAMI, SAMPLE_SAMI_EMPTY, SAMPLE_SAMI_SYNTAX_ERROR,
     SAMPLE_SAMI_PARTIAL_MARGINS, SAMPLE_SAMI_WITH_BAD_SPAN_ALIGN,
     SAMPLE_SAMI_WITH_BAD_DIV_ALIGN, SAMPLE_SAMI_WITH_P_ALIGN,
-    SAMPLE_SAMI_WITH_P_AND_SPAN_ALIGN
+    SAMPLE_SAMI_WITH_P_AND_SPAN_ALIGN, SAMPLE_SAMI_WITH_MULTIPLE_P
 )
 
 class SAMIReaderTestCase(unittest.TestCase):
@@ -81,3 +81,10 @@ class SAMIReaderTestCase(unittest.TestCase):
         caption_set = SAMIReader().read(SAMPLE_SAMI_WITH_P_AND_SPAN_ALIGN)
         caption = caption_set.get_captions('en-US')[0]
         self.assertEqual(caption.layout_info.alignment.horizontal, HorizontalAlignmentEnum.RIGHT)
+
+    def test_proper_with_timestamps_with_multiple_paragraph(self):
+        captions = SAMIReader().read(SAMPLE_SAMI_WITH_MULTIPLE_P)
+        paragraph_1 = captions.get_captions("en-US")[0]
+        paragraph_2 = captions.get_captions("en-US")[1]
+        self.assertEqual(paragraph_1.start, paragraph_2.start)
+        self.assertEqual(paragraph_1.end, paragraph_2.end)
