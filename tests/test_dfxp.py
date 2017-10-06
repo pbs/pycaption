@@ -111,6 +111,12 @@ class DFXPReaderTestCase(unittest.TestCase):
         self.assertEqual(caps[1].start, 4000000)
         self.assertEqual(caps[1].end, 5200000)
 
+    def test_empty_paragraph(self):
+        try:
+            DFXPReader().read(SAMPLE_DFXP_EMPTY_PARAGRAPH)
+        except CaptionReadError:
+            self.fail("Failing on empty paragraph")
+
     def test_empty_cue(self):
         caption_set = DFXPReader().read(
             SAMPLE_DFXP_EMPTY_CUE)
