@@ -109,8 +109,11 @@ class DFXPReader(BaseReader):
         self._translate_tag(p_tag)
         styles = self._translate_style(p_tag)
 
-        return Caption(
-            start, end, self.nodes, style=styles, layout_info=p_tag.layout_info)
+        if len(self.nodes) > 0:
+            return Caption(
+                start, end, self.nodes, style=styles,
+                layout_info=p_tag.layout_info)
+        return None
 
     def _find_times(self, p_tag):
         start = self._translate_time(p_tag['begin'])
@@ -180,10 +183,6 @@ class DFXPReader(BaseReader):
         elif tag.name == 'span':
             # convert span
             self._translate_span(tag)
-        elif tag.name == 'p' and not tag.contents:
-            node = CaptionNode.create_text(
-                '', layout_info=tag.layout_info)
-            self.nodes.append(node)
         else:
             # recursively call function for any children elements
             for a in tag.contents:
