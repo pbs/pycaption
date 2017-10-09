@@ -117,6 +117,27 @@ class DFXPReaderTestCase(unittest.TestCase):
         except CaptionReadError:
             self.fail("Failing on empty paragraph")
 
+    def test_empty_cue(self):
+        caption_set = DFXPReader().read(
+            SAMPLE_DFXP_EMPTY_CUE)
+        caps = caption_set.get_captions('en-US')
+        self.assertEquals(caps[1], [])
+
+SAMPLE_DFXP_EMPTY_CUE = """\
+<?xml version="1.0" encoding="utf-8"?>
+<tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling">
+ <head>
+  <layout>
+   <region tts:origin="10% 10%" xml:id="bottom"/>
+  </layout>
+ </head>
+ <body>
+  <div region="bottom" xml:lang="en-US">
+   <p begin="00:00:01.209" end="00:00:02.312" region="bottom">abc</p>
+   <p begin="00:00:09.209" end="00:00:12.312" region="bottom"></p>
+  </div>
+ </body>
+</tt>"""
 
 SAMPLE_DFXP_INVALID_POSITIONING_VALUE_TEMPLATE = """\
 <?xml version="1.0" encoding="utf-8"?>
