@@ -118,6 +118,7 @@ class SRTWriter(BaseWriter):
             while '\n\n' in new_content:
                 new_content = new_content.replace('\n\n', '\n')
 
+            new_content = new_content.decode('utf-8', 'ignore')
             srt += "%s%s" % (new_content, '\n\n')
             count += 1
 
