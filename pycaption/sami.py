@@ -72,6 +72,8 @@ SAMI_BASE_MARKUP = u'''
 
 class SAMIReader(BaseReader):
     def __init__(self, *args, **kw):
+        super(SAMIReader, self).__init__(*args, **kw)
+
         self.line = []
         self.first_alignment = None
 
@@ -145,6 +147,9 @@ class SAMIReader(BaseReader):
             positioning settings in the styles parameter don't specify
             something.
         """
+        if self.ignore_layout:
+            return None
+
         alignment = Alignment.from_horizontal_and_vertical_align(
             text_align=styles.get('text-align')
         )
@@ -207,15 +212,20 @@ class SAMIReader(BaseReader):
                 self.line = []
 
                 self._translate_tag(p, layout_info)
-                caption_layout = self._get_layout_class()(
-                    alignment=self.first_alignment,
-                    inherit_from=layout_info
-                )
-                for node in self.line:
-                    node.layout_info = Layout(
+
+                if self.ignore_layout:
+                    caption_layout = None
+                else:
+                    caption_layout = self._get_layout_class()(
                         alignment=self.first_alignment,
-                        inherit_from=node.layout_info
+                        inherit_from=layout_info
                     )
+                    for node in self.line:
+                        node.layout_info = Layout(
+                            alignment=self.first_alignment,
+                            inherit_from=node.layout_info
+                        )
+
                 self.first_alignment = None
 
                 caption = Caption(start, end, self.line, styles, caption_layout)

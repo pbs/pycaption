@@ -48,6 +48,8 @@ DFXP_DEFAULT_REGION_ID = u'bottom'
 
 class DFXPReader(BaseReader):
     def __init__(self, *args, **kw):
+        super(DFXPReader, self).__init__(*args, **kw)
+
         self.read_invalid_positioning = (
             kw.get('read_invalid_positioning', False))
         self.nodes = []
@@ -63,7 +65,8 @@ class DFXPReader(BaseReader):
             raise InvalidInputError(u'The content is not a unicode string.')
 
         dfxp_document = self._get_dfxp_parser_class()(
-            content, read_invalid_positioning=self.read_invalid_positioning)
+            content, read_invalid_positioning=self.read_invalid_positioning,
+            ignore_layout=self.ignore_layout)
 
         caption_dict = {}
         style_dict = {}
@@ -480,7 +483,7 @@ class LayoutAwareDFXPParser(BeautifulSoup):
 
     def __init__(self, markup=u"", features=u"html.parser", builder=None,
                  parse_only=None, from_encoding=None,
-                 read_invalid_positioning=False, **kwargs):
+                 read_invalid_positioning=False, ignore_layout=False, **kwargs):
         """The `features` param determines the parser to be used. The parsers
         are usually html parsers, some more forgiving than others, and as such
         they do stuff very differently especially for xml files. We chose this
@@ -510,6 +513,7 @@ class LayoutAwareDFXPParser(BeautifulSoup):
         Check out the docs below for explanation.
         http://www.crummy.com/software/BeautifulSoup/bs4/doc/#installing-a-parser
         """
+        self.ignore_layout = ignore_layout
 
         # Work around for lack of '&apos;' support in html.parser
         markup = markup.replace(u"&apos;", "'")
@@ -623,6 +627,9 @@ class LayoutAwareDFXPParser(BeautifulSoup):
             into action (at the moment) if the
         :rtype: Layout
         """
+        if self.ignore_layout:
+            return self.NO_POSITIONING_INFO
+
         region_tag = None
 
         if region_id is not None:

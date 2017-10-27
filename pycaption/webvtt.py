@@ -49,6 +49,8 @@ class WebVTTReader(BaseReader):
         """
         :param ignore_timing_errors: Whether to ignore timing checks
         """
+        super(WebVTTReader, self).__init__(*args, **kwargs)
+
         self.ignore_timing_errors = ignore_timing_errors
 
     def detect(self, content):
@@ -150,7 +152,7 @@ class WebVTTReader(BaseReader):
             self._validate_timings(start, end, last_start_time)
 
         layout_info = None
-        if cue_settings:
+        if not self.ignore_layout and cue_settings:
             layout_info = Layout(webvtt_positioning=cue_settings)
 
         return start, end, layout_info
