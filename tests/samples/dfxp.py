@@ -822,18 +822,18 @@ SAMPLE_DFXP_FROM_SCC_OUTPUT = """<?xml version="1.0" encoding="utf-8"?>
   </styling>
   <layout>
    <region tts:displayAlign="after" tts:textAlign="center" xml:id="bottom"/>
-   <region tts:displayAlign="before" tts:origin="0% 80%" tts:textAlign="left" xml:id="r0"/>
-   <region tts:displayAlign="before" tts:origin="37.5% 0%" tts:textAlign="left" xml:id="r1"/>
-   <region tts:displayAlign="before" tts:origin="75% 20%" tts:textAlign="left" xml:id="r2"/>
-   <region tts:displayAlign="before" tts:origin="12.5% 46.67%" tts:textAlign="left" xml:id="r3"/>
-   <region tts:displayAlign="before" tts:origin="12.5% 93.33%" tts:textAlign="left" xml:id="r4"/>
-   <region tts:displayAlign="before" tts:origin="37.5% 53.33%" tts:textAlign="left" xml:id="r5"/>
-   <region tts:displayAlign="before" tts:origin="75% 13.33%" tts:textAlign="left" xml:id="r6"/>
-   <region tts:displayAlign="before" tts:origin="12.5% 33.33%" tts:textAlign="left" xml:id="r7"/>
-   <region tts:displayAlign="before" tts:origin="12.5% 86.67%" tts:textAlign="left" xml:id="r8"/>
-   <region tts:displayAlign="before" tts:origin="75% 6.67%" tts:textAlign="left" xml:id="r9"/>
-   <region tts:displayAlign="before" tts:origin="37.5% 40%" tts:textAlign="left" xml:id="r10"/>
-   <region tts:displayAlign="before" tts:origin="12.5% 73.33%" tts:textAlign="left" xml:id="r11"/>
+   <region tts:displayAlign="before" tts:origin="0% 80%" tts:textAlign="center" xml:id="r0"/>
+   <region tts:displayAlign="before" tts:origin="37.5% 0%" tts:textAlign="center" xml:id="r1"/>
+   <region tts:displayAlign="before" tts:origin="75% 20%" tts:textAlign="center" xml:id="r2"/>
+   <region tts:displayAlign="before" tts:origin="12.5% 46.67%" tts:textAlign="center" xml:id="r3"/>
+   <region tts:displayAlign="before" tts:origin="12.5% 93.33%" tts:textAlign="center" xml:id="r4"/>
+   <region tts:displayAlign="before" tts:origin="37.5% 53.33%" tts:textAlign="center" xml:id="r5"/>
+   <region tts:displayAlign="before" tts:origin="75% 13.33%" tts:textAlign="center" xml:id="r6"/>
+   <region tts:displayAlign="before" tts:origin="12.5% 33.33%" tts:textAlign="center" xml:id="r7"/>
+   <region tts:displayAlign="before" tts:origin="12.5% 86.67%" tts:textAlign="center" xml:id="r8"/>
+   <region tts:displayAlign="before" tts:origin="75% 6.67%" tts:textAlign="center" xml:id="r9"/>
+   <region tts:displayAlign="before" tts:origin="37.5% 40%" tts:textAlign="center" xml:id="r10"/>
+   <region tts:displayAlign="before" tts:origin="12.5% 73.33%" tts:textAlign="center" xml:id="r11"/>
   </layout>
  </head>
  <body>
@@ -893,11 +893,11 @@ SAMPLE_DFXP_WITH_PROPERLY_CLOSING_SPANS_OUTPUT = """\
   </styling>
   <layout>
    <region tts:displayAlign="after" tts:textAlign="center" xml:id="bottom"/>
-   <region tts:displayAlign="before" tts:extent="87.5% 13.33%" tts:origin="12.5% 86.67%" tts:textAlign="left" xml:id="r0"/>
-   <region tts:displayAlign="before" tts:extent="75% 13.33%" tts:origin="25% 86.67%" tts:textAlign="left" xml:id="r1"/>
-   <region tts:displayAlign="before" tts:extent="50% 13.33%" tts:origin="50% 86.67%" tts:textAlign="left" xml:id="r2"/>
-   <region tts:displayAlign="before" tts:extent="37.5% 13.33%" tts:origin="62.5% 86.67%" tts:textAlign="left" xml:id="r3"/>
-   <region tts:displayAlign="before" tts:extent="75% 6.67%" tts:origin="25% 93.33%" tts:textAlign="left" xml:id="r4"/>
+   <region tts:displayAlign="before" tts:extent="87.5% 13.33%" tts:origin="12.5% 86.67%" tts:textAlign="center" xml:id="r0"/>
+   <region tts:displayAlign="before" tts:extent="75% 13.33%" tts:origin="25% 86.67%" tts:textAlign="center" xml:id="r1"/>
+   <region tts:displayAlign="before" tts:extent="50% 13.33%" tts:origin="50% 86.67%" tts:textAlign="center" xml:id="r2"/>
+   <region tts:displayAlign="before" tts:extent="37.5% 13.33%" tts:origin="62.5% 86.67%" tts:textAlign="center" xml:id="r3"/>
+   <region tts:displayAlign="before" tts:extent="75% 6.67%" tts:origin="25% 93.33%" tts:textAlign="center" xml:id="r4"/>
   </layout>
  </head>
  <body>
