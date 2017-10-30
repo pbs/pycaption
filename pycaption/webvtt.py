@@ -6,8 +6,7 @@ from .base import (
     BaseReader, BaseWriter, CaptionSet, CaptionList, Caption, CaptionNode
 )
 
-from .geometry import Layout
-
+from .geometry import Layout, Size, UnitEnum
 from .exceptions import (
     CaptionReadError, CaptionReadSyntaxError, CaptionReadNoCaptions,
     InvalidInputError
@@ -379,7 +378,9 @@ class WebVTTWriter(BaseWriter):
         if alignment and alignment != u'middle':
             cue_settings += u" align:" + alignment
         if left_offset:
-            cue_settings += u" position:{},start".format(unicode(left_offset))
+            # in VTT, the origin of the cue box is the center, not the left top corner
+            position = left_offset.value + (cue_width.value/2) if cue_width else 50
+            cue_settings += u" position:{}".format(unicode(Size(position, UnitEnum.PERCENT)))
         if top_offset:
             cue_settings += u" line:" + unicode(top_offset)
         if cue_width:
