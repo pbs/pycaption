@@ -419,7 +419,7 @@ def _get_layout_from_tuple(position_tuple):
     horizontal = Size(100 * column / 32.0, UnitEnum.PERCENT)
     vertical = Size(100 * (row - 1) / 15.0, UnitEnum.PERCENT)
     return Layout(origin=Point(horizontal, vertical),
-                  alignment=Alignment(HorizontalAlignmentEnum.LEFT,
+                  alignment=Alignment(HorizontalAlignmentEnum.CENTER,
                                       VerticalAlignmentEnum.TOP)
                   )
 
