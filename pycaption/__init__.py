@@ -20,6 +20,9 @@ __all__ = [
 SUPPORTED_READERS = (
     DFXPReader, WebVTTReader, SAMIReader, SRTReader, SCCReader)
 
+SUPPORTED_WRITERS = (
+    DFXPWriter, WebVTTWriter, SAMIWriter, SRTWriter, SCCWriter)
+
 
 def detect_format(caps):
     """

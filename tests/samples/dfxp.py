@@ -211,6 +211,35 @@ SAMPLE_DFXP_WITH_POSITIONING = """<?xml version="1.0" encoding="utf-8"?>
 </body>
 </tt>"""
 
+SAMPLE_DFXP_WITH_LAYOUT = SAMPLE_DFXP_WITH_POSITIONING
+
+SAMPLE_DFXP_IGNORE_LAYOUT = """<?xml version="1.0" encoding="utf-8"?>
+<tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling">
+ <head>
+  <styling/>
+  <layout>
+   <region tts:displayAlign="after" tts:textAlign="center" xml:id="bottom"/>
+  </layout>
+ </head>
+ <body>
+  <div region="bottom" xml:lang="en-US">
+   <p begin="00:00:01.000" end="00:00:03.000" region="bottom">
+    You might not remember us. We are a typical transparent region with centered text that has an outline.
+   </p>
+   <p begin="00:00:03.500" end="00:00:05.000" region="bottom">
+    had personality.
+   </p>
+   <p begin="00:00:05.500" end="00:00:07.000" region="bottom">
+    Hello there, children! Have you seen any visitors?
+   </p>
+   <p begin="00:00:07.500" end="00:00:09.000" region="bottom">
+    This is<br/>
+    the last cue
+   </p>
+  </div>
+ </body>
+</tt>"""
+
 SAMPLE_DFXP_WITH_RELATIVIZED_POSITIONING = """<?xml version="1.0" encoding="utf-8"?>
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling">
  <head>

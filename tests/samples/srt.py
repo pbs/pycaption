@@ -74,6 +74,47 @@ It's all about an eternal Einstein.
 some more text
 """
 
+SAMPLE_SRT_WITH_LAYOUT = SAMPLE_SRT_ASCII
+
+SAMPLE_SRT_IGNORE_LAYOUT = u"""1
+00:00:09,209 --> 00:00:12,312
+( clock ticking )
+
+2
+00:00:14,848 --> 00:00:17,000
+MAN: 
+When we think 
+of "E equals m c-squared",
+
+3
+00:00:17,000 --> 00:00:18,752
+we have this vision of Einstein
+
+4
+00:00:18,752 --> 00:00:20,887
+as an old, wrinkly man 
+with white hair.
+
+5
+00:00:20,887 --> 00:00:26,760
+MAN 2: 
+E equals m c-squared is 
+not about an old Einstein.
+
+6
+00:00:26,760 --> 00:00:32,200
+MAN 2: 
+It's all about an eternal Einstein.
+
+7
+00:00:32,200 --> 00:00:34,400
+<LAUGHING & WHOOPS!>
+
+8
+00:00:34,400 --> 00:00:38,400
+some more text
+"""
+
 SAMPLE_SRT_NUMERIC = u"""35
 00:00:32,290 --> 00:00:32,890
 TO  FIND  HIM.            IF

@@ -123,6 +123,25 @@ This is
 the last cue
 """
 
+SAMPLE_WEBVTT_WITH_LAYOUT = SAMPLE_WEBVTT_FROM_DFXP_WITH_POSITIONING_AND_STYLE
+
+SAMPLE_WEBVTT_IGNORE_LAYOUT = u"""WEBVTT
+
+00:01.000 --> 00:03.000
+You might not remember us. We are a typical transparent region with centered text that has an outline.
+
+00:03.500 --> 00:05.000
+had personality.
+
+00:05.500 --> 00:07.000
+Hello there, children! Have you seen any visitors?
+
+00:07.500 --> 00:09.000
+This is
+the last cue
+"""
+
+
 SAMPLE_WEBVTT_FROM_SRT = u"""WEBVTT
 
 00:09.209 --> 00:12.312

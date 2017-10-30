@@ -405,6 +405,42 @@ SAMPLE_SAMI_WITH_MULTIPLE_SPAN_ALIGNS = u"""
 </SAMI>
 """
 
+SAMPLE_SAMI_WITH_LAYOUT = SAMPLE_SAMI_WITH_MULTIPLE_SPAN_ALIGNS
+
+SAMPLE_SAMI_IGNORE_LAYOUT = u"""<sami>
+ <head>
+  <style type="text/css">
+   <!--
+    .subttl {
+     lang: en-US;
+     name: "Subtitles";
+     margin-left: 20px;
+     margin-bottom: 20px;
+     margin-top: 20px;
+     margin-right: 20px;
+     samitype: CC;
+    }
+
+    p {
+     font-size: 24pt;
+     font-weight: bold;
+     color: #ffffff;
+     font-family: Tahoma;
+     background-color: #000;
+     text-align: center;
+    }
+   -->
+  </style>
+ </head>
+ <body>
+  <sync start="133">
+   <p class="en-US" p_style="class:encc;">
+    Some say  we have this vision of Einstein  as an old, wrinkly man
+   </p>
+  </sync>
+ </body>
+</sami>"""
+
 SAMPLE_SAMI_NO_LANG = u"""
 <SAMI>
 <Head><STYLE TYPE="text/css"></Style></Head>

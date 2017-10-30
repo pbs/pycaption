@@ -1,6 +1,12 @@
 import unittest
 
+from pycaption import SUPPORTED_READERS, SUPPORTED_WRITERS
 from pycaption.base import CaptionList
+from .samples.sami import SAMPLE_SAMI_WITH_LAYOUT, SAMPLE_SAMI_IGNORE_LAYOUT
+from .samples.scc import SAMPLE_SCC_WITH_LAYOUT, SAMPLE_SCC_IGNORE_LAYOUT
+from .samples.dfxp import SAMPLE_DFXP_WITH_LAYOUT, SAMPLE_DFXP_IGNORE_LAYOUT
+from .samples.srt import SAMPLE_SRT_WITH_LAYOUT, SAMPLE_SRT_IGNORE_LAYOUT
+from .samples.webvtt import SAMPLE_WEBVTT_WITH_LAYOUT, SAMPLE_WEBVTT_IGNORE_LAYOUT
 
 
 class CaptionListTestCase(unittest.TestCase):
@@ -40,3 +46,27 @@ class CaptionListTestCase(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             newcaps = self.caps + CaptionList([4], layout_info="Other Layout")
+
+
+class TestReaderLayoutIgnore(unittest.TestCase):
+
+    def test_(self):
+        samples_with_layout = [SAMPLE_DFXP_WITH_LAYOUT, SAMPLE_WEBVTT_WITH_LAYOUT, SAMPLE_SAMI_WITH_LAYOUT,
+                               SAMPLE_SRT_WITH_LAYOUT, SAMPLE_SCC_WITH_LAYOUT]
+        samples_no_layout = [SAMPLE_DFXP_IGNORE_LAYOUT, SAMPLE_WEBVTT_IGNORE_LAYOUT, SAMPLE_SAMI_IGNORE_LAYOUT,
+                             SAMPLE_SRT_IGNORE_LAYOUT, SAMPLE_SCC_IGNORE_LAYOUT]
+
+        for Reader, Writer, sample_with_layout, sample_no_layout in zip(SUPPORTED_READERS,
+                                                                        SUPPORTED_WRITERS,
+                                                                        samples_with_layout,
+                                                                        samples_no_layout):
+            reader = Reader(ignore_layout=True)
+            writer = Writer()
+
+            caption_set = reader.read(sample_with_layout.decode('utf-8'))
+            result = writer.write(caption_set)
+
+            self.assertEqual(sample_no_layout, result)
+
+            for caption in caption_set._captions['en-US']:
+                self.assertIsNone(caption.layout_info)
