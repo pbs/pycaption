@@ -6,8 +6,7 @@ from .base import (
     BaseReader, BaseWriter, CaptionSet, CaptionList, Caption, CaptionNode
 )
 
-from .geometry import Layout
-
+from .geometry import Layout, Size, UnitEnum
 from .exceptions import (
     CaptionReadError, CaptionReadSyntaxError, CaptionReadNoCaptions,
     InvalidInputError
@@ -49,6 +48,8 @@ class WebVTTReader(BaseReader):
         """
         :param ignore_timing_errors: Whether to ignore timing checks
         """
+        super(WebVTTReader, self).__init__(*args, **kwargs)
+
         self.ignore_timing_errors = ignore_timing_errors
 
     def detect(self, content):
@@ -150,7 +151,7 @@ class WebVTTReader(BaseReader):
             self._validate_timings(start, end, last_start_time)
 
         layout_info = None
-        if cue_settings:
+        if not self.ignore_layout and cue_settings:
             layout_info = Layout(webvtt_positioning=cue_settings)
 
         return start, end, layout_info
@@ -377,7 +378,9 @@ class WebVTTWriter(BaseWriter):
         if alignment and alignment != u'middle':
             cue_settings += u" align:" + alignment
         if left_offset:
-            cue_settings += u" position:{},start".format(unicode(left_offset))
+            # in VTT, the origin of the cue box is the center, not the left top corner
+            position = left_offset.value + (cue_width.value/2) if cue_width else 50
+            cue_settings += u" position:{}".format(unicode(Size(position, UnitEnum.PERCENT)))
         if top_offset:
             cue_settings += u" line:" + unicode(top_offset)
         if cue_width:

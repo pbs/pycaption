@@ -6,6 +6,9 @@ from .exceptions import CaptionReadNoCaptions, InvalidInputError
 
 
 class SRTReader(BaseReader):
+    def __init__(self, *args, **kwargs):
+        super(SRTReader, self).__init__(*args, **kwargs)
+
     def detect(self, content):
         lines = content.splitlines()
         if lines[0].isdigit() and u'-->' in lines[1]:

@@ -154,7 +154,9 @@ class SCCReader(BaseReader):
     This can be then later used for converting into any other supported formats
     """
     def __init__(self, *args, **kw):
-        self.caption_stash = CaptionCreator()
+        super(SCCReader, self).__init__(*args, **kw)
+
+        self.caption_stash = CaptionCreator(ignore_layout=self.ignore_layout)
         self.time_translator = _SccTimeTranslator()
 
         self.node_creator_factory = NodeCreatorFactory(

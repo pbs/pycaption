@@ -35,7 +35,7 @@ class CaptionConverter(object):
 
 class BaseReader(object):
     def __init__(self, *args, **kwargs):
-        pass
+        self.ignore_layout = kwargs.get('ignore_layout', False)
 
     def detect(self, content):
         if content:
