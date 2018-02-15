@@ -8,6 +8,7 @@ from .samples.dfxp import (
     DFXP_WITH_ALTERNATIVE_TIMING_FORMATS, SAMPLE_DFXP_EMPTY_PARAGRAPH,
     SAMPLE_DFXP_EMPTY_PARAGRAPH_WITH_NEWLINE,
     SAMPLE_DFXP_EMPTY_PARAGRAPH_WITH_MULTIPLE_NEWLINES,
+    SAMPLE_DFXP_INCORRECT_TIME_FORMAT,
 )
 
 
@@ -23,9 +24,13 @@ class DFXPReaderTestCase(unittest.TestCase):
     def test_proper_timestamps(self):
         captions = DFXPReader().read(SAMPLE_DFXP)
         paragraph = captions.get_captions(u"en-US")[2]
-
         self.assertEquals(17000000, paragraph.start)
         self.assertEquals(18752000, paragraph.end)
+
+    def test_incorrect_time_format(self):
+        self.assertRaises(CaptionReadSyntaxError,
+                          DFXPReader().read,
+                          SAMPLE_DFXP_INCORRECT_TIME_FORMAT)
 
     def test_offset_time(self):
         reader = DFXPReader()
