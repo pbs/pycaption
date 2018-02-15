@@ -292,7 +292,7 @@ SAMPLE_DFXP_EMPTY = """
 
 
 SAMPLE_DFXP_SYNTAX_ERROR = """
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-16"?>
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml">
 <body>
   <div>
