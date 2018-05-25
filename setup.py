@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import os
 from setuptools import setup, find_packages
+from sys import version
 
 README_PATH = os.path.join(
     os.path.abspath(os.path.dirname(__file__)),
@@ -11,9 +12,11 @@ dependencies = [
     'lxml>=3.2.3',
     'cssutils>=0.9.10',
     'future',
-    'enum34',
     'six>=1.9.0'
 ]
+
+if version[0] == '2':
+    dependencies.append('enum34')
 
 setup(
     name='pycaption',
