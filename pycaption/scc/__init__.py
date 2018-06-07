@@ -226,12 +226,12 @@ class SCCReader(BaseReader):
         captions = CaptionSet({lang: self.caption_stash.get_all()})
 
         # check captions for incorrect lengths
-        for cap in captions.get_captions(lang):
-            # if there's an end time on a caption and the difference is
-            # less than .05s kill it (this is likely caused by a standalone
-            # EOC marker in the SCC file)
-            if 0 < cap.end - cap.start < 50000:
-                raise ValueError('unsupported length found in SCC input file: ' + str(cap))
+#        for cap in captions.get_captions(lang):
+#            # if there's an end time on a caption and the difference is
+#            # less than .05s kill it (this is likely caused by a standalone
+#            # EOC marker in the SCC file)
+#            if 0 < cap.end - cap.start < 50000:
+#                raise ValueError('unsupported length found in SCC input file: ' + str(cap))
 
         if captions.is_empty():
             raise CaptionReadNoCaptions("empty caption file")
