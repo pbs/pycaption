@@ -30,16 +30,6 @@ OTHER_SPAN_PATTERN = (
     )
 )  # These WebVTT tags are stripped off the cues on conversion
 
-WEBVTT_VERSION_OF = {
-    HorizontalAlignmentEnum.LEFT: 'left',
-    HorizontalAlignmentEnum.CENTER: 'middle',
-    HorizontalAlignmentEnum.RIGHT: 'right',
-    HorizontalAlignmentEnum.START: 'start',
-    HorizontalAlignmentEnum.END: 'end'
-}
-
-DEFAULT_ALIGNMENT = 'middle'
-
 
 def microseconds(h, m, s, f):
     """
@@ -372,16 +362,16 @@ class WebVTTWriter(BaseWriter):
             # out
 
         try:
-            alignment = WEBVTT_VERSION_OF[layout.alignment.horizontal]
+            alignment = layout.alignment.horizontal
         except (AttributeError, KeyError):
             pass
 
         cue_settings = ''
 
-        if alignment and alignment != 'middle':
+        if alignment and alignment != 'center':
             cue_settings += " align:" + alignment
         if left_offset:
-            cue_settings += " position:{},start".format(six.text_type(left_offset))
+            cue_settings += " position:{}".format(six.text_type(left_offset))
         if top_offset:
             cue_settings += " line:" + six.text_type(top_offset)
         if cue_width:
