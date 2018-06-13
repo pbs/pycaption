@@ -369,7 +369,7 @@ class WebVTTWriter(BaseWriter):
         cue_settings = ''
 
         if alignment and alignment != 'center':
-            cue_settings += " align:" + alignment
+            cue_settings += " align:" + str(alignment)
         if left_offset:
             cue_settings += " position:{},line-left".format(six.text_type(left_offset))
         if top_offset:
