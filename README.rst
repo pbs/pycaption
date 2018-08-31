@@ -30,5 +30,5 @@ License
 This module is Copyright 2012 PBS.org and is available under the `Apache
 License, Version 2.0 <http://www.apache.org/licenses/LICENSE-2.0>`__.
 
-.. |Build Status| image:: https://travis-ci.org/udemy/pycaption.png?branch=master
+.. |Build Status| image:: https://travis-ci.com/udemy/pycaption.svg?branch=master
    :target: https://travis-ci.org/udemy/pycaption
