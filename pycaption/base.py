@@ -181,8 +181,6 @@ class Caption(object):
         if not isinstance(end, Number):
             raise CaptionReadTimingError("Captions must be initialized with a"
                                          " valid end time")
-        if not nodes:
-            raise CaptionReadError("Node list cannot be empty")
         self.start = start
         self.end = end
         self.nodes = nodes
