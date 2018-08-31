@@ -127,16 +127,6 @@ class WebVTTReaderTestCase(unittest.TestCase):
 
     def test_invalid_files(self):
         self.assertRaises(
-            CaptionReadSyntaxError,
-            WebVTTReader().read,
-            ("\nNOTE Cues without text are invalid.\n"
-                "00:00:20.000 --> 00:00:30.000\n"
-                "\n"
-                "00:00:40.000 --> 00:00:50.000\n"
-                "foo bar baz\n")
-        )
-
-        self.assertRaises(
             CaptionReadError,
             WebVTTReader(ignore_timing_errors=False).read,
             ("00:00:20.000 --> 00:00:10.000\n"
