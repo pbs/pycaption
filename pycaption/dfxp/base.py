@@ -132,8 +132,10 @@ class DFXPReader(BaseReader):
         return frames_micro_count
 
     def _translate_div(self, div):
+        captions =  [caption for caption in [self._translate_p_tag(p_tag) for p_tag in div.find_all(u'p')] if caption is not None]
         return CaptionList(
-            [self._translate_p_tag(p_tag) for p_tag in div.find_all('p')],
+            #[self._translate_p_tag(p_tag) for p_tag in div.find_all('p')],
+            captions,
             div.layout_info
         )
 
@@ -142,9 +144,12 @@ class DFXPReader(BaseReader):
         self.nodes = []
         self._translate_tag(p_tag)
         styles = self._translate_style(p_tag)
-
-        return Caption(
-            start, end, self.nodes, style=styles, layout_info=p_tag.layout_info)
+        # Removes Blank CaptionNode
+        if len(self.nodes) > 0:
+            return Caption(
+                start, end, self.nodes, style=styles, layout_info=p_tag.layout_info)
+        else:
+            return None
 
     def _find_times(self, p_tag):
         start = self._translate_time(p_tag['begin'])
@@ -224,10 +229,21 @@ class DFXPReader(BaseReader):
         elif tag.name == 'span':
             # convert span
             self._translate_span(tag)
-        elif tag.name == 'p' and not tag.contents:
-            node = CaptionNode.create_text(
-                '', layout_info=tag.layout_info)
-            self.nodes.append(node)
+        # Catch p-tags that do not come up as NavigableString
+        elif tag.name == 'p':
+            if tag.text
+                node = CaptionNode.create_text(tag.text, tag.layout_info)
+                self.nodes.append(node)
+
+            elif not tag.contents:
+                node = CaptionNode.create_text(
+                    '', layout_info=tag.layout_info)
+                self.nodes.append(node)
+        # Done catch p-tags error
+        # elif tag.name == 'p' and not tag.contents:
+        #     node = CaptionNode.create_text(
+        #         '', layout_info=tag.layout_info)
+        #     self.nodes.append(node)
         else:
             # recursively call function for any children elements
             for a in tag.contents:
