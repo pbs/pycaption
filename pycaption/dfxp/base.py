@@ -232,7 +232,7 @@ class DFXPReader(BaseReader):
         # Catch p-tags that do not come up as NavigableString
         elif tag.name == 'p':
             if tag.text
-                node = CaptionNode.create_text(tag.texts, tag.layout_info)
+                node = CaptionNode.create_text(tag.text, tag.layout_info)
                 self.nodes.append(node)
 
             elif not tag.contents:
