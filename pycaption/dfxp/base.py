@@ -231,7 +231,7 @@ class DFXPReader(BaseReader):
             self._translate_span(tag)
         # Catch p-tags that do not come up as NavigableString
         elif tag.name == 'p':
-            if tag.text
+            if tag.text:
                 node = CaptionNode.create_text(tag.text, tag.layout_info)
                 self.nodes.append(node)
 
