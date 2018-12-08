@@ -4,13 +4,14 @@ from .dfxp import DFXPWriter, DFXPReader
 from .sami import SAMIReader, SAMIWriter
 from .srt import SRTReader, SRTWriter
 from .scc import SCCReader, SCCWriter
+from .transcript import TranscriptWriter
 from .webvtt import WebVTTReader, WebVTTWriter
 from .exceptions import (
     CaptionReadError, CaptionReadNoCaptions, CaptionReadSyntaxError)
 
 
 __all__ = [
-    'CaptionConverter', 'DFXPReader', 'DFXPWriter',
+    'CaptionConverter', 'TranscriptWriter', 'DFXPReader', 'DFXPWriter',
     'SAMIReader', 'SAMIWriter', 'SRTReader', 'SRTWriter',
     'SCCReader', 'SCCWriter', 'WebVTTReader', 'WebVTTWriter',
     'CaptionReadError', 'CaptionReadNoCaptions', 'CaptionReadSyntaxError',
