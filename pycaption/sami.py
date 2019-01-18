@@ -44,7 +44,6 @@ from logging import FATAL
 from xml.sax.saxutils import escape
 from copy import deepcopy
 
-from cssutils import parseString, log, css as cssutils_css
 from bs4 import BeautifulSoup, NavigableString
 
 from .base import (
@@ -55,10 +54,6 @@ from .exceptions import (
 from .geometry import (
     Layout, Alignment, Padding, Size
 )
-
-
-# change cssutils default logging
-log.setLevel(FATAL)
 
 
 SAMI_BASE_MARKUP = u'''
@@ -641,6 +636,12 @@ class SAMIWriter(BaseWriter):
 
 class SAMIParser(HTMLParser):
     def __init__(self, *args, **kw):
+        # Delay expensive import as long as possible
+        from cssutils import parseString, log, css
+        # change cssutils default logging
+        log.setLevel(FATAL)
+        self.parseString = parseString
+        self.ColorValue = css.ColorValue
         HTMLParser.__init__(self, *args, **kw)
         self.sami = u''
         self.line = u''
@@ -772,7 +773,7 @@ class SAMIParser(HTMLParser):
         Parse styling via cssutils modules
         :rtype: dict
         """
-        sheet = parseString(css)
+        sheet = self.parseString(css)
         style_sheet = {}
 
         for rule in sheet:
@@ -783,7 +784,7 @@ class SAMIParser(HTMLParser):
             # keep any style attributes that are needed
             for prop in rule.style:
                 if prop.name == u'color':
-                    cv = cssutils_css.ColorValue(prop.value)
+                    cv = self.ColorValue(prop.value)
                     # Code for RGB to hex conversion comes from
                     # http://bit.ly/1kwfBnQ
                     new_style[u'color'] = u"#%02x%02x%02x" % (
