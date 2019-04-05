@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+from __future__ import unicode_literals
 from itertools import product
 
 COMMANDS = {
@@ -928,10 +929,10 @@ PAC_BYTES_TO_POSITIONING_MAP = {
 
 def _create_position_to_bytes_map(bytes_to_pos):
     result = {}
-    for high_byte, low_byte_dict in bytes_to_pos.items():
+    for high_byte, low_byte_dict in list(bytes_to_pos.items()):
 
         # must contain mappings to column, to the tuple of possible values
-        for low_byte_list in low_byte_dict.keys():
+        for low_byte_list in list(low_byte_dict.keys()):
             column = bytes_to_pos[high_byte][low_byte_list][1]
 
             row = bytes_to_pos[high_byte][low_byte_list][0]
@@ -953,9 +954,9 @@ def _restructure_bytes_to_position_map(byte_to_pos_map):
     return {
         k_: {
             low_byte: byte_to_pos_map[k_][low_byte_list]
-            for low_byte_list in v_.keys() for low_byte in low_byte_list
+            for low_byte_list in list(v_.keys()) for low_byte in low_byte_list
         }
-        for k_, v_ in byte_to_pos_map.items()
+        for k_, v_ in list(byte_to_pos_map.items())
     }
 
 # Now use the dict with arguments like [u'91'][u'75'] directly.
@@ -966,14 +967,14 @@ PAC_BYTES_TO_POSITIONING_MAP = _restructure_bytes_to_position_map(
 # Inverted character lookup
 CHARACTER_TO_CODE = {
     character: code
-    for code, character in CHARACTERS.iteritems()
+    for code, character in CHARACTERS.items()
 }
 
 SPECIAL_OR_EXTENDED_CHAR_TO_CODE = {
-    character: code for code, character in EXTENDED_CHARS.iteritems()
+    character: code for code, character in EXTENDED_CHARS.items()
 }
 SPECIAL_OR_EXTENDED_CHAR_TO_CODE.update(
-    {character: code for code, character in SPECIAL_CHARS.iteritems()}
+    {character: code for code, character in SPECIAL_CHARS.items()}
 )
 
 # Time to transmit a single codeword = 1 second / 29.97

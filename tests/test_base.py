@@ -1,3 +1,5 @@
+from __future__ import unicode_literals
+from builtins import zip
 import unittest
 
 from pycaption import SUPPORTED_READERS, SUPPORTED_WRITERS
@@ -63,7 +65,7 @@ class TestReaderLayoutIgnore(unittest.TestCase):
             reader = Reader(ignore_layout=True)
             writer = Writer()
 
-            caption_set = reader.read(sample_with_layout.decode('utf-8'))
+            caption_set = reader.read(sample_with_layout)
             result = writer.write(caption_set)
 
             self.assertEqual(sample_no_layout, result)

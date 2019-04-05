@@ -7,17 +7,16 @@ CONVENTIONS:
   responsible for the recalculation should return a new object with the
   necessary modifications.
 """
+from __future__ import unicode_literals
+from __future__ import division
+
+from past.builtins import cmp
+from past.utils import old_div
+from builtins import object
+from enum import Enum
+import six
 
 from .exceptions import RelativizationError
-
-class Enum(object):
-    """Generic class that's not easily instantiable, serving as a base for
-    the enumeration classes
-    """
-    def __new__(cls, *args, **kwargs):
-        raise Exception(u"Don't instantiate. Use like an enum")
-
-    __init__ = __new__
 
 
 class UnitEnum(Enum):
@@ -29,17 +28,11 @@ class UnitEnum(Enum):
         if unit == UnitEnum.CELL :
             ...
     """
-    PIXEL = u'px'
-    EM = u'em'
-    PERCENT = u'%'
-    CELL = u'c'
-    PT = u'pt'
-
-    class __metaclass__(type):
-        def __iter__(self):
-            for attr in dir(UnitEnum):
-                if not attr.startswith("__"):
-                    yield getattr(UnitEnum, attr)
+    PIXEL = 'px'
+    EM = 'em'
+    PERCENT = '%'
+    CELL = 'c'
+    PT = 'pt'
 
 
 class VerticalAlignmentEnum(Enum):
@@ -50,27 +43,27 @@ class VerticalAlignmentEnum(Enum):
         if alignment == VerticalAlignmentEnum.BOTTOM:
             ...
     """
-    TOP = u'top'
-    CENTER = u'center'
-    BOTTOM = u'bottom'
+    TOP = 'top'
+    CENTER = 'center'
+    BOTTOM = 'bottom'
 
 
 class HorizontalAlignmentEnum(Enum):
     """Enumeration object specifying the horizontal alignment preferences
     """
-    LEFT = u'left'
-    CENTER = u'center'
-    RIGHT = u'right'
-    START = u'start'
-    END = u'end'
+    LEFT = 'left'
+    CENTER = 'center'
+    RIGHT = 'right'
+    START = 'start'
+    END = 'end'
 
 
 class Alignment(object):
     def __init__(self, horizontal, vertical):
         """
-        :type horizontal: unicode
+        :type horizontal: HorizontalAlignmentEnum
         :param horizontal: HorizontalAlignmentEnum member
-        :type vertical: unicode
+        :type vertical: HorizontalAlignmentEnum
         :param vertical: VerticalAlignmentEnum member
         """
         self.horizontal = horizontal
@@ -107,22 +100,22 @@ class Alignment(object):
         horizontal_obj = None
         vertical_obj = None
 
-        if text_align == u'left':
+        if text_align == 'left':
             horizontal_obj = HorizontalAlignmentEnum.LEFT
-        if text_align == u'start':
+        if text_align == 'start':
             horizontal_obj = HorizontalAlignmentEnum.START
-        if text_align == u'center':
+        if text_align == 'center':
             horizontal_obj = HorizontalAlignmentEnum.CENTER
-        if text_align == u'right':
+        if text_align == 'right':
             horizontal_obj = HorizontalAlignmentEnum.RIGHT
-        if text_align == u'end':
+        if text_align == 'end':
             horizontal_obj = HorizontalAlignmentEnum.END
 
-        if display_align == u'before':
+        if display_align == 'before':
             vertical_obj = VerticalAlignmentEnum.TOP
-        if display_align == u'center':
+        if display_align == 'center':
             vertical_obj = VerticalAlignmentEnum.CENTER
-        if display_align == u'after':
+        if display_align == 'after':
             vertical_obj = VerticalAlignmentEnum.BOTTOM
 
         if not any([horizontal_obj, vertical_obj]):
@@ -142,7 +135,7 @@ class TwoDimensionalObject(object):
 
         :type attribute: unicode
         """
-        horizontal, vertical = unicode(attribute).split(u' ')
+        horizontal, vertical = six.text_type(attribute).split(' ')
         horizontal = Size.from_string(horizontal)
         vertical = Size.from_string(vertical)
 
@@ -179,7 +172,7 @@ class Stretch(TwoDimensionalObject):
         )
 
     def __repr__(self):
-        return u'<Stretch ({horizontal}, {vertical})>'.format(
+        return '<Stretch ({horizontal}, {vertical})>'.format(
             horizontal=self.horizontal, vertical=self.vertical
         )
 
@@ -205,13 +198,13 @@ class Stretch(TwoDimensionalObject):
             67
         )
 
-    def __nonzero__(self):
+    def __bool__(self):
         return True if self.horizontal or self.vertical else False
 
     def to_xml_attribute(self, **kwargs):
         """Returns a unicode representation of this object as an xml attribute
         """
-        return u'{horizontal} {vertical}'.format(
+        return '{horizontal} {vertical}'.format(
             horizontal=self.horizontal.to_xml_attribute(),
             vertical=self.vertical.to_xml_attribute()
         )
@@ -380,7 +373,7 @@ class Point(TwoDimensionalObject):
                     Point(max(p1.x, p2.x), max(p1.y, p2.y)))
 
     def __repr__(self):
-        return u'<Point ({x}, {y})>'.format(
+        return '<Point ({x}, {y})>'.format(
             x=self.x, y=self.y
         )
 
@@ -407,16 +400,17 @@ class Point(TwoDimensionalObject):
             57
         )
 
-    def __nonzero__(self):
+    def __bool__(self):
         return True if self.x or self.y else False
 
     def to_xml_attribute(self, **kwargs):
         """Returns a unicode representation of this object as an xml attribute
         """
-        return u'{x} {y}'.format(
+        return '{x} {y}'.format(
             x=self.x.to_xml_attribute(), y=self.y.to_xml_attribute())
 
 
+@six.python_2_unicode_compatible
 class Size(object):
     """Ties together a number with a unit, to represent a size.
 
@@ -429,7 +423,7 @@ class Size(object):
         """
         if value is None:
             raise ValueError(u"Size must be initialized with a value.")
-        if unit not in UnitEnum:
+        if not isinstance(unit, UnitEnum):
             raise ValueError(u"Size must be initialized with a valid unit.")
 
         self.value = float(value)
@@ -497,7 +491,7 @@ class Size(object):
             unit = UnitEnum.PIXEL
 
         if unit == UnitEnum.PIXEL:
-            value = value * 100.0 / (video_width or video_height)
+            value = old_div(value * 100.0, (video_width or video_height))
             unit = UnitEnum.PERCENT
 
         if unit == UnitEnum.CELL:
@@ -505,7 +499,7 @@ class Size(object):
             # (w3.org/TR/ttaf1-dfxp/#parameter-attribute-cellResolution)
             # For now we will use the default values (32 columns and 15 rows)
             cell_reference = 32 if video_width else 15
-            value = value * 100.0 / cell_reference
+            value = old_div(value * 100.0, cell_reference)
             unit = UnitEnum.PERCENT
 
         return Size(value, unit)
@@ -521,13 +515,10 @@ class Size(object):
         :type string: unicode
         :rtype: Size
         """
-        units = [UnitEnum.CELL, UnitEnum.PERCENT, UnitEnum.PIXEL,
-                 UnitEnum.EM, UnitEnum.PT]
-
         raw_number = string
-        for unit in units:
-            if raw_number.endswith(unit):
-                raw_number = raw_number.rstrip(unit)
+        for unit in list(UnitEnum):
+            if raw_number.endswith(unit.value):
+                raw_number = raw_number.rstrip(unit.value)
                 break
         else:
             unit = None
@@ -552,26 +543,26 @@ class Size(object):
                 u"The specified value is not valid because its unit "
                 u"is not recognized: {value}. "
                 u"The only supported units are: {supported}"
-                .format(value=raw_number, supported=u', '.join(units))
+                .format(value=raw_number, supported=', '.join(UnitEnum._member_map_))
             )
 
     def __repr__(self):
-        return u'<Size ({value} {unit})>'.format(
+        return '<Size ({value} {unit})>'.format(
             value=self.value, unit=self.unit
         )
 
-    def __unicode__(self):
+    def __str__(self):
         value = round(self.value, 2)
         if value.is_integer():
             s = u"{}".format(int(value))
         else:
             s = u"{:.2f}".format(value).rstrip('0').rstrip('.')
-        return u"{}{}".format(s, self.unit)
+        return u"{}{}".format(s, self.unit.value)
 
     def to_xml_attribute(self, **kwargs):
         """Returns a unicode representation of this object, as an xml attribute
         """
-        return unicode(self)
+        return six.text_type(self)
 
     def serialized(self):
         """Returns the "useful" values of this object"""
@@ -592,7 +583,7 @@ class Size(object):
             47
         )
 
-    def __nonzero__(self):
+    def __bool__(self):
         return self.unit in UnitEnum and self.value is not None
 
 
@@ -637,7 +628,7 @@ class Padding(object):
         :param attribute: a string like object, representing a dfxp attr. value
         :return: a Padding object
         """
-        values_list = unicode(attribute).split(u' ')
+        values_list = six.text_type(attribute).split(' ')
         sizes = []
 
         for value in values_list:
@@ -652,7 +643,7 @@ class Padding(object):
         elif len(sizes) == 4:
             return cls(sizes[0], sizes[2], sizes[3], sizes[1])
         else:
-            raise ValueError(u'The provided value "{value}" could not be '
+            raise ValueError('The provided value "{value}" could not be '
                              u"parsed into the a padding. Check out "
                              u"http://www.w3.org/TR/ttaf1-dfxp/"
                              u"#style-attribute-padding for the definition "
@@ -697,7 +688,7 @@ class Padding(object):
         )
 
     def to_xml_attribute(
-            self, attribute_order=(u'before', u'end', u'after', u'start'),
+            self, attribute_order=('before', 'end', 'after', 'start'),
             **kwargs):
         """Returns a unicode representation of this object as an xml attribute
 
@@ -720,7 +711,7 @@ class Padding(object):
             # is not, this error is raised.
             raise ValueError(u"The attribute order specified is invalid.")
 
-        return u' '.join(string_list)
+        return ' '.join(string_list)
 
     def as_percentage_of(self, video_width, video_height):
         return Padding(
@@ -789,7 +780,7 @@ class Layout(object):
                 if not attr:
                     setattr(self, attr_name, getattr(inherit_from, attr_name))
 
-    def __nonzero__(self):
+    def __bool__(self):
         return any([
             self.origin, self.extent, self.padding, self.alignment,
             self.webvtt_positioning

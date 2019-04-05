@@ -35,11 +35,19 @@ OBS:
       because this is irrelevant.
 
 """
+from __future__ import unicode_literals
+from __future__ import division
+from future import standard_library
+standard_library.install_aliases()
+from builtins import chr
+from past.utils import old_div
+import six
 import re
+from future.backports.html.parser import HTMLParseError
 
 from collections import deque
-from htmlentitydefs import name2codepoint
-from HTMLParser import HTMLParser, HTMLParseError
+from html.entities import name2codepoint
+from html.parser import HTMLParser
 from logging import FATAL
 from xml.sax.saxutils import escape
 from copy import deepcopy
@@ -56,7 +64,7 @@ from .geometry import (
 )
 
 
-SAMI_BASE_MARKUP = u'''
+SAMI_BASE_MARKUP = '''
 <sami>
     <head>
         <style type="text/css"/>
@@ -73,13 +81,13 @@ class SAMIReader(BaseReader):
         self.first_alignment = None
 
     def detect(self, content):
-        if u'<sami' in content.lower():
+        if '<sami' in content.lower():
             return True
         else:
             return False
 
     def read(self, content):
-        if type(content) != unicode:
+        if type(content) != six.text_type:
             raise InvalidInputError('The content is not a unicode string.')
 
         content, doc_styles, doc_langs = (
@@ -92,9 +100,9 @@ class SAMIReader(BaseReader):
         caption_dict = {}
         for language in doc_langs:
             lang_layout = None
-            for target, styling in doc_styles.items():
-                if target not in [u'p', u'sync', u'span']:
-                    if styling.get(u'lang', None) == language:
+            for target, styling in list(doc_styles.items()):
+                if target not in ['p', 'sync', 'span']:
+                    if styling.get('lang', None) == language:
                         lang_layout = self._build_layout(
                             doc_styles.get(target, {}),
                             inherit_from=global_layout
@@ -112,13 +120,13 @@ class SAMIReader(BaseReader):
         )
 
         # Convert styles from CSS to internal representation
-        for style in doc_styles.items():
+        for style in list(doc_styles.items()):
             style = (style[0], self._translate_parsed_style(style[1]))
 
         caption_set.set_styles(doc_styles)
 
         if caption_set.is_empty():
-            raise CaptionReadNoCaptions(u"empty caption file")
+            raise CaptionReadNoCaptions("empty caption file")
 
         return caption_set
 
@@ -191,8 +199,8 @@ class SAMIReader(BaseReader):
         captions = CaptionList(layout_info=parent_layout)
         milliseconds = 0
 
-        for p in sami_soup.select(u'p[lang|=%s]' % language):
-            milliseconds = int(float(p.parent[u'start']))
+        for p in sami_soup.select('p[lang|=%s]' % language):
+            milliseconds = int(float(p.parent['start']))
             start = milliseconds * 1000
             end = 0
 
@@ -233,12 +241,12 @@ class SAMIReader(BaseReader):
         return captions
 
     def _get_style_name_from_tag(self, tag):
-        if tag == u'i':
-            return u'italics'
-        elif tag == u'b':
-            return u'bold'
-        elif tag == u'u':
-            return u'underline'
+        if tag == 'i':
+            return 'italics'
+        elif tag == 'b':
+            return 'bold'
+        elif tag == 'u':
+            return 'underline'
         else:
             raise RuntimeError("Unknown style tag")
 
@@ -253,17 +261,17 @@ class SAMIReader(BaseReader):
             # (e.g. &amp;) automatically. The following variable, therefore,
             # should contain a plain unicode string.
             # strips indentation whitespace only
-            pattern = re.compile(u"^(?:[\n\r]+\s*)?(.+)")
+            pattern = re.compile("^(?:[\n\r]+\s*)?(.+)")
             result = pattern.search(tag)
             if not result:
                 return
             tag_text = result.groups()[0]
             self.line.append(CaptionNode.create_text(tag_text, inherit_from))
         # convert line breaks
-        elif tag.name == u'br':
+        elif tag.name == 'br':
             self.line.append(CaptionNode.create_break(inherit_from))
         # convert italics, bold, and underline
-        elif tag.name == u'i' or tag.name == u'b' or tag.name == u'u':
+        elif tag.name == 'i' or tag.name == 'b' or tag.name == 'u':
             style_name = self._get_style_name_from_tag(tag.name)
             self.line.append(
                 CaptionNode.create_style(True, {style_name: True})
@@ -273,7 +281,7 @@ class SAMIReader(BaseReader):
                 self._translate_tag(a, inherit_from)
             self.line.append(
                 CaptionNode.create_style(False, {style_name: True}))
-        elif tag.name == u'span':
+        elif tag.name == 'span':
             self._translate_span(tag, inherit_from)
         else:
             # recursively call function for any children elements
@@ -305,12 +313,12 @@ class SAMIReader(BaseReader):
         attrs = {}
         css_attrs = tag.attrs
 
-        if u'class' in css_attrs:
-            attrs[u'class'] = css_attrs[u'class'][0].lower()
-        if u'id' in css_attrs:
-            attrs[u'class'] = css_attrs[u'id'].lower()
-        if u'style' in css_attrs:
-            styles = css_attrs[u'style'].split(u';')
+        if 'class' in css_attrs:
+            attrs['class'] = css_attrs['class'][0].lower()
+        if 'id' in css_attrs:
+            attrs['class'] = css_attrs['id'].lower()
+        if 'style' in css_attrs:
+            styles = css_attrs['style'].split(';')
             attrs.update(self._translate_style(attrs, styles))
 
         return attrs
@@ -318,12 +326,12 @@ class SAMIReader(BaseReader):
     # convert attributes from inline CSS
     def _translate_style(self, attrs, styles):
         for style in styles:
-            style = style.split(u':')
+            style = style.split(':')
             if len(style) == 2:
                 css_property, value = style
             else:
                 continue
-            if css_property == u'text-align':
+            if css_property == 'text-align':
                 self._save_first_alignment(value.strip())
             else:
                 self._translate_css_property(attrs, css_property, value)
@@ -333,26 +341,27 @@ class SAMIReader(BaseReader):
     def _translate_parsed_style(self, styles):
         # Keep unknown styles by default
         attrs = styles
-        for css_property, value in styles.items():
+        for css_property in list(styles.keys()):
+            value = styles[css_property]
             self._translate_css_property(attrs, css_property, value)
 
         return attrs
 
     def _translate_css_property(self, attrs, css_property, value):
-        if css_property == u'font-family':
-            attrs[u'font-family'] = value.strip()
-        elif css_property == u'font-size':
-            attrs[u'font-size'] = value.strip()
-        elif css_property == u'font-style' and value.strip() == u'italic':
-            attrs[u'italics'] = True
-        elif css_property == u'text-decoration' and value.strip() == u'underline':
-            attrs[u'underline'] = True
-        elif css_property == u'font-weight' and value.strip() == u'bold':
-            attrs[u'bold'] = True
-        elif css_property == u'lang':
-            attrs[u'lang'] = value.strip()
-        elif css_property == u'color':
-            attrs[u'color'] = value.strip()
+        if css_property == 'font-family':
+            attrs['font-family'] = value.strip()
+        elif css_property == 'font-size':
+            attrs['font-size'] = value.strip()
+        elif css_property == 'font-style' and value.strip() == 'italic':
+            attrs['italics'] = True
+        elif css_property == 'text-decoration' and value.strip() == 'underline':
+            attrs['underline'] = True
+        elif css_property == 'font-weight' and value.strip() == 'bold':
+            attrs['bold'] = True
+        elif css_property == 'lang':
+            attrs['lang'] = value.strip()
+        elif css_property == 'color':
+            attrs['color'] = value.strip()
 
     def _save_first_alignment(self, align):
         """
@@ -386,7 +395,7 @@ class SAMIWriter(BaseWriter):
 
     def write(self, caption_set):
         caption_set = deepcopy(caption_set)
-        sami = BeautifulSoup(SAMI_BASE_MARKUP, u"xml")
+        sami = BeautifulSoup(SAMI_BASE_MARKUP, "lxml-xml")
 
         caption_set.layout_info = self._relativize_and_fit_to_screen(
             caption_set.layout_info)
@@ -416,10 +425,10 @@ class SAMIWriter(BaseWriter):
                     caption, sami, lang, primary, caption_set)
 
         stylesheet = self._recreate_stylesheet(caption_set)
-        sami.find(u'style').append(stylesheet)
+        sami.find('style').append(stylesheet)
 
-        a = sami.prettify(formatter=None).split(u'\n')
-        caption_content = u'\n'.join(a[1:])
+        a = sami.prettify(formatter=None).split('\n')
+        caption_content = '\n'.join(a[1:])
         return caption_content
 
     def _recreate_p_tag(self, caption, sami, lang, primary, captions):
@@ -435,25 +444,25 @@ class SAMIWriter(BaseWriter):
 
         :rtype: BeautifulSoup
         """
-        time = caption.start / 1000
+        time = old_div(caption.start, 1000)
 
         if self.last_time and time != self.last_time:
             sami = self._recreate_blank_tag(
                 sami, caption, lang, primary, captions)
 
-        self.last_time = caption.end / 1000
+        self.last_time = old_div(caption.end, 1000)
 
         sami, sync = self._recreate_sync(sami, lang, primary, time)
 
-        p = sami.new_tag(u"p")
+        p = sami.new_tag("p")
 
-        p_style = u''
-        for attr, value in self._recreate_style(caption.style).items():
-            p_style += u'%s:%s;' % (attr, value)
+        p_style = ''
+        for attr, value in list(self._recreate_style(caption.style).items()):
+            p_style += '%s:%s;' % (attr, value)
         if p_style:
-            p[u'p_style'] = p_style
+            p['p_style'] = p_style
 
-        p[u'class'] = self._recreate_p_lang(caption, lang, captions)
+        p['class'] = self._recreate_p_lang(caption, lang, captions)
         p.string = self._recreate_text(caption.nodes)
 
         sync.append(p)
@@ -474,26 +483,26 @@ class SAMIWriter(BaseWriter):
         :rtype: BeautifulSoup
         """
         if lang == primary:
-            sync = sami.new_tag(u"sync", start=u"%s" % time)
+            sync = sami.new_tag("sync", start="%d" % time)
             sami.body.append(sync)
         else:
-            sync = sami.find(u"sync", start=u"%s" % time)
+            sync = sami.find("sync", start="%d" % time)
             if sync is None:
                 sami, sync = self._find_closest_sync(sami, time)
 
         return sami, sync
 
     def _find_closest_sync(self, sami, time):
-        sync = sami.new_tag(u"sync", start=u"%s" % time)
+        sync = sami.new_tag("sync", start="%d" % time)
 
-        earlier = sami.find_all(u"sync", start=lambda x: int(x) < time)
+        earlier = sami.find_all("sync", start=lambda x: int(x) < time)
         if earlier:
             last_sync = earlier[-1]
             last_sync.insert_after(sync)
         else:
             def later_syncs(start):
                 return int(start) > time
-            later = sami.find_all(u"sync", start=later_syncs)
+            later = sami.find_all("sync", start=later_syncs)
             if later:
                 last_sync = later[0]
                 last_sync.insert_before(sync)
@@ -502,9 +511,9 @@ class SAMIWriter(BaseWriter):
     def _recreate_blank_tag(self, sami, caption, lang, primary, captions):
         sami, sync = self._recreate_sync(sami, lang, primary, self.last_time)
 
-        p = sami.new_tag(u"p")
-        p[u'class'] = self._recreate_p_lang(caption, lang, captions)
-        p.string = u'&nbsp;'
+        p = sami.new_tag("p")
+        p['class'] = self._recreate_p_lang(caption, lang, captions)
+        p.string = '&nbsp;'
 
         sync.append(p)
 
@@ -512,14 +521,14 @@ class SAMIWriter(BaseWriter):
 
     def _recreate_p_lang(self, caption, lang, captions):
         try:
-            if u'lang' in captions.get_style(caption.style[u'class']):
-                return caption.style[u'class']
+            if 'lang' in captions.get_style(caption.style['class']):
+                return caption.style['class']
         except KeyError:
             pass
         return lang
 
     def _recreate_stylesheet(self, caption_set):
-        stylesheet = u'<!--'
+        stylesheet = '<!--'
 
         for attr, value in caption_set.get_styles():
             if value != {}:
@@ -527,12 +536,12 @@ class SAMIWriter(BaseWriter):
                     attr, value, caption_set.layout_info)
 
         for lang in caption_set.get_languages():
-            lang_string = u'lang: {}'.format(lang)
+            lang_string = 'lang: {}'.format(lang)
             if lang_string not in stylesheet:
                 stylesheet += self._recreate_style_block(
-                    lang, {u'lang': lang}, caption_set.get_layout_info(lang))
+                    lang, {'lang': lang}, caption_set.get_layout_info(lang))
 
-        return stylesheet + u'   -->'
+        return stylesheet + '   -->'
 
     def _recreate_style_block(self, target, rules, layout_info):
         """
@@ -543,35 +552,35 @@ class SAMIWriter(BaseWriter):
         :param layout_info: A Layout object providing positioning information
             to be converted to CSS
         """
-        if target not in [u'p', u'sync', u'span']:
+        if target not in ['p', 'sync', 'span']:
             # If it's not a valid SAMI element, then it's a custom class name
-            selector = u'.{}'.format(target)
+            selector = '.{}'.format(target)
         else:
             selector = target
 
-        sami_style = u'\n    {} {{\n    '.format(selector)
+        sami_style = '\n    {} {{\n    '.format(selector)
 
         if layout_info and layout_info.padding:
             rules.update({
-                'margin-top': unicode(layout_info.padding.before),
-                'margin-right': unicode(layout_info.padding.end),
-                'margin-bottom': unicode(layout_info.padding.after),
-                'margin-left': unicode(layout_info.padding.start),
+                'margin-top': six.text_type(layout_info.padding.before),
+                'margin-right': six.text_type(layout_info.padding.end),
+                'margin-bottom': six.text_type(layout_info.padding.after),
+                'margin-left': six.text_type(layout_info.padding.start),
             })
 
-        for attr, value in self._recreate_style(rules).items():
-            sami_style += u' {}: {};\n    '.format(attr, value)
+        for attr, value in sorted(self._recreate_style(rules).items()):
+            sami_style += ' {}: {};\n    '.format(attr, value)
 
-        return sami_style + u'}\n'
+        return sami_style + '}\n'
 
     def _recreate_text(self, caption):
-        line = u''
+        line = ''
 
         for node in caption:
             if node.type_ == CaptionNode.TEXT:
-                line += self._encode(node.content) + u' '
+                line += self._encode(node.content) + ' '
             elif node.type_ == CaptionNode.BREAK:
-                line = line.rstrip() + u'<br/>\n    '
+                line = line.rstrip() + '<br/>\n    '
             elif node.type_ == CaptionNode.STYLE:
                 line = self._recreate_line_style(line, node)
 
@@ -580,28 +589,28 @@ class SAMIWriter(BaseWriter):
     def _recreate_line_style(self, line, node):
         if node.start:
             if self.open_span:
-                line = line.rstrip() + u'</span> '
+                line = line.rstrip() + '</span> '
             line = self._recreate_span(line, node.content)
         else:
             if self.open_span:
-                line = line.rstrip() + u'</span> '
+                line = line.rstrip() + '</span> '
                 self.open_span = False
 
         return line
 
     def _recreate_span(self, line, content):
-        style = u''
-        klass = u''
-        if u'class' in content:
-            klass += u' class="%s"' % content[u'class']
+        style = ''
+        klass = ''
+        if 'class' in content:
+            klass += ' class="%s"' % content['class']
 
-        for attr, value in self._recreate_style(content).items():
-            style += u'%s:%s;' % (attr, value)
+        for attr, value in list(self._recreate_style(content).items()):
+            style += '%s:%s;' % (attr, value)
 
         if style or klass:
             if style:
-                style = u' style="%s"' % style
-            line += u'<span%s%s>' % (klass, style)
+                style = ' style="%s"' % style
+            line += '<span%s%s>' % (klass, style)
             self.open_span = True
 
         return line
@@ -612,14 +621,14 @@ class SAMIWriter(BaseWriter):
         """
         sami_style = {}
 
-        for key, value in rules.items():
+        for key, value in list(rules.items()):
             # Recreate original CSS rules from internal style
-            if key == u'italics' and value == True:
-                sami_style[u'font-style'] = u'italic'
-            elif key == u'bold' and value == True:
-                sami_style[u'font-weight'] = u'bold'
-            elif key == u'underline' and value == True:
-                sami_style[u'text-decoration'] = u'underline'
+            if key == 'italics' and value == True:
+                sami_style['font-style'] = 'italic'
+            elif key == 'bold' and value == True:
+                sami_style['font-weight'] = 'bold'
+            elif key == 'underline' and value == True:
+                sami_style['text-decoration'] = 'underline'
             else:
                 sami_style[key] = value
 
@@ -643,88 +652,89 @@ class SAMIParser(HTMLParser):
         self.parseString = parseString
         self.ColorValue = css.ColorValue
         HTMLParser.__init__(self, *args, **kw)
-        self.sami = u''
-        self.line = u''
+        self.sami = ''
+        self.line = ''
         self.styles = {}
         self.queue = deque()
         self.langs = set()
-        self.last_element = u''
+        self.last_element = ''
         self.name2codepoint = name2codepoint.copy()
-        self.name2codepoint[u'apos'] = 0x0027
+        self.name2codepoint['apos'] = 0x0027
+        self.convert_charrefs = False
 
     def handle_starttag(self, tag, attrs):
         """
         Override the parser's handling of starttags
         :param tag: unicode string indicating the tag type (e.g. "head" or "p")
-        :param tag: list of attribute tuples of type (u'name', u'value')
+        :param tag: list of attribute tuples of type ('name', 'value')
         """
         self.last_element = tag
 
         # treat divs as spans
-        if tag == u'div':
-            tag = u'span'
+        if tag == 'div':
+            tag = 'span'
 
         # figure out the caption language of P tags
-        if tag == u'p':
+        if tag == 'p':
             lang = self._find_lang(attrs)
 
             # if no language detected, set it as the default
             lang = lang or DEFAULT_LANGUAGE_CODE
-            attrs.append((u'lang', lang))
+            attrs.append(('lang', lang))
             self.langs.add(lang)
 
         # clean-up line breaks
-        if tag == u'br':
-            self.sami += u"<br/>"
+        if tag == 'br':
+            self.sami += "<br/>"
         # add tag to queue
         else:
             # if already in queue, first close tags off in LIFO order
             while tag in self.queue:
                 closer = self.queue.pop()
-                self.sami = self.sami + u"</%s>" % closer
+                self.sami = self.sami + "</%s>" % closer
             # open new tag in queue
             self.queue.append(tag)
             # add tag with attributes
             for attr, value in attrs:
-                tag += u' %s="%s"' % (attr.lower(), value)
-            self.sami += u"<%s>" % tag
+                tag += ' %s="%s"' % (attr.lower(), value)
+            self.sami += "<%s>" % tag
 
     # override the parser's handling of endtags
     def handle_endtag(self, tag):
         # treat divs as spans
-        if tag == u'div':
-            tag = u'span'
+        if tag == 'div':
+            tag = 'span'
 
         # handle incorrectly formatted sync/p tags
-        if tag in [u'p', u'sync'] and tag == self.last_element:
+        if tag in ['p', 'sync'] and tag == self.last_element:
             return
 
         # close off tags in LIFO order, if matching starting tag in queue
         while tag in self.queue:
             closing_tag = self.queue.pop()
-            self.sami += u"</%s>" % closing_tag
+            self.sami += "</%s>" % closing_tag
 
     def handle_entityref(self, name):
-        if name in [u'gt', u'lt']:
-            self.sami += u'&%s;' % name
+        if name in ['gt', 'lt']:
+            self.sami += '&%s;' % name
         else:
             try:
-                self.sami += unichr(self.name2codepoint[name])
+                self.sami += chr(self.name2codepoint[name])
             except (KeyError, ValueError):
-                self.sami += u'&%s' % name
+                self.sami += '&%s' % name
 
-        self.last_element = u''
+        self.last_element = ''
 
     def handle_charref(self, name):
-        if name[0] == u'x':
-            self.sami += unichr(int(name[1:], 16))
+        if name[0] == 'x':
+            self.sami += chr(int(name[1:], 16))
         else:
-            self.sami += unichr(int(name))
+            self.sami += chr(int(name))
 
     # override the parser's handling of data
     def handle_data(self, data):
         self.sami += data
-        self.last_element = u''
+        self.last_element = ''
 
     # override the parser's feed function
     def feed(self, data):
@@ -732,29 +742,29 @@ class SAMIParser(HTMLParser):
         :param data: Raw SAMI unicode string
         :returns: tuple (unicode, dict, set)
         """
-        no_cc = u'no closed captioning available'
+        no_cc = 'no closed captioning available'
 
-        if u'<html' in data.lower():
+        if '<html' in data.lower():
             raise CaptionReadSyntaxError(
-                u'SAMI File seems to be an HTML file.')
+                'SAMI File seems to be an HTML file.')
         elif no_cc in data.lower():
-            raise CaptionReadSyntaxError(u'SAMI File contains "%s"' % no_cc)
+            raise CaptionReadSyntaxError('SAMI File contains "%s"' % no_cc)
 
         # try to find style tag in SAMI
         try:
             # prevent BS4 error with huge SAMI files with unclosed tags
-            index = data.lower().find(u"</head>")
+            index = data.lower().find("</head>")
 
             self.styles = self._css_parse(
-                BeautifulSoup(data[:index]).find(u'style').get_text())
+                BeautifulSoup(data[:index], "lxml").find('style').get_text())
         except AttributeError:
             self.styles = {}
 
         # fix erroneous italics tags
-        data = data.replace(u'<i/>', u'<i>')
+        data = data.replace('<i/>', '<i>')
 
         # fix awkward tags found in some SAMIs
-        data = data.replace(u';>', u'>')
+        data = data.replace(';>', '>')
         try:
             HTMLParser.feed(self, data)
         except HTMLParseError as e:
@@ -763,7 +773,7 @@ class SAMIParser(HTMLParser):
         # close any tags that remain in the queue
         while self.queue != deque([]):
             closing_tag = self.queue.pop()
-            self.sami += u"</%s>" % closing_tag
+            self.sami += "</%s>" % closing_tag
 
         return self.sami, self.styles, self.langs
 
@@ -779,15 +789,15 @@ class SAMIParser(HTMLParser):
         for rule in sheet:
             new_style = {}
             selector = rule.selectorText.lower()
-            if selector[0] in [u'#', u'.']:
+            if selector[0] in ['#', '.']:
                 selector = selector[1:]
             # keep any style attributes that are needed
             for prop in rule.style:
-                if prop.name == u'color':
+                if prop.name == 'color':
                     cv = self.ColorValue(prop.value)
                     # Code for RGB to hex conversion comes from
                     # http://bit.ly/1kwfBnQ
-                    new_style[u'color'] = u"#%02x%02x%02x" % (
+                    new_style['color'] = "#%02x%02x%02x" % (
                         cv.red, cv.green, cv.blue)
                 else:
                     new_style[prop.name] = prop.value
@@ -799,12 +809,12 @@ class SAMIParser(HTMLParser):
     def _find_lang(self, attrs):
         for attr, value in attrs:
             # if lang is an attribute of the tag
-            if attr.lower() == u'lang':
+            if attr.lower() == 'lang':
                 return value[:2]
             # if the P tag has a class, try and find the language
-            if attr.lower() == u'class':
+            if attr.lower() == 'class':
                 try:
-                    return self.styles[value.lower()][u'lang']
+                    return self.styles[value.lower()]['lang']
                 except KeyError:
                     pass
 

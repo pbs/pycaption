@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from __future__ import unicode_literals
 import os
 from setuptools import setup, find_packages
 
@@ -9,7 +10,10 @@ README_PATH = os.path.join(
 dependencies = [
     'beautifulsoup4>=4.2.1,<4.5.0',
     'lxml>=3.2.3',
-    'cssutils==0.9.10',
+    'cssutils>=0.9.10',
+    'future',
+    'enum34',
+    'six>=1.9.0'
 ]
 
 setup(
