@@ -330,7 +330,7 @@ class CaptionSet(object):
         return self._styles.get(selector, {})
 
     def get_styles(self):
-        return sorted(self._styles.items())
+        return self._styles.items()
 
     def set_styles(self, styles):
         self._styles = styles
