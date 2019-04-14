@@ -412,23 +412,23 @@ SAMPLE_SAMI_IGNORE_LAYOUT = u"""<sami>
  <head>
   <style type="text/css">
    <!--
-    .subttl {
-     lang: en-US;
-     name: "Subtitles";
-     margin-left: 20px;
-     margin-bottom: 20px;
-     margin-top: 20px;
-     margin-right: 20px;
-     samitype: CC;
-    }
-
     p {
-     font-size: 24pt;
-     font-weight: bold;
+     background-color: #000;
      color: #ffffff;
      font-family: Tahoma;
-     background-color: #000;
+     font-size: 24pt;
+     font-weight: bold;
      text-align: center;
+    }
+
+    .subttl {
+     lang: en-US;
+     margin-bottom: 20px;
+     margin-left: 20px;
+     margin-right: 20px;
+     margin-top: 20px;
+     name: "Subtitles";
+     samitype: CC;
     }
    -->
   </style>

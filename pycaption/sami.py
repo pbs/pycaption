@@ -45,7 +45,7 @@ import six
 import re
 from future.backports.html.parser import HTMLParseError
 
-from collections import deque
+from collections import deque, OrderedDict
 from html.entities import name2codepoint
 from html.parser import HTMLParser
 from logging import FATAL
@@ -784,7 +784,7 @@ class SAMIParser(HTMLParser):
         :rtype: dict
         """
         sheet = self.parseString(css)
-        style_sheet = {}
+        style_sheet = []
 
         for rule in sheet:
             new_style = {}
@@ -802,9 +802,9 @@ class SAMIParser(HTMLParser):
                 else:
                     new_style[prop.name] = prop.value
             if new_style:
-                style_sheet[selector] = new_style
+                style_sheet.append((selector, new_style))
 
-        return style_sheet
+        return OrderedDict(style_sheet)
 
     def _find_lang(self, attrs):
         for attr, value in attrs:
