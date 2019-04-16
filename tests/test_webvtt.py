@@ -147,7 +147,7 @@ class WebVTTReaderTestCase(unittest.TestCase):
     def test_zero_start(self):
         captions = self.reader.read(SAMPLE_WEBVTT_LAST_CUE_ZERO_START)
         cue = captions.get_captions(u'en-US')[0]
-        self.assertEquals(cue.start, 0)
+        self.assertEqual(cue.start, 0)
 
 
 class WebVTTWriterTestCase(unittest.TestCase):
@@ -163,5 +163,5 @@ class WebVTTWriterTestCase(unittest.TestCase):
     def test_break_node_positioning_is_ignored(self):
         caption_set = DFXPReader().read(DFXP_STYLE_REGION_ALIGN_CONFLICT)
         results = WebVTTWriter().write(caption_set)
-        self.assertEquals(
+        self.assertEqual(
             WEBVTT_FROM_DFXP_WITH_CONFLICTING_ALIGN, results)

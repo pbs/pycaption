@@ -7,7 +7,8 @@ import re
 
 from copy import deepcopy
 
-from bs4 import BeautifulSoup, NavigableString
+from bs4 import BeautifulSoup
+from bs4.element import PreformattedString, NavigableString
 from xml.sax.saxutils import escape
 
 from ..base import (
@@ -342,7 +343,7 @@ class DFXPWriter(BaseWriter):
 
             body.append(div)
         self.region_creator.cleanup_regions()
-        caption_content = dfxp.prettify(formatter=None)
+        caption_content = dfxp.prettify()
         return caption_content
 
     @staticmethod
@@ -416,7 +417,7 @@ class DFXPWriter(BaseWriter):
                 line = self._recreate_span(
                     line, node, dfxp, caption_set, caption, lang)
 
-        return line.rstrip()
+        return PreformattedString(line.rstrip())
 
     def _recreate_span(self, line, node, dfxp, caption_set=None, caption=None,
                        lang=None):

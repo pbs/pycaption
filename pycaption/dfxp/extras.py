@@ -9,6 +9,7 @@ from ..base import BaseWriter, CaptionNode, merge_concurrent_captions
 
 from xml.sax.saxutils import escape
 from bs4 import BeautifulSoup
+from bs4.element import PreformattedString
 
 LEGACY_DFXP_BASE_MARKUP = u'''
 <tt xmlns="http://www.w3.org/ns/ttml"
@@ -137,7 +138,7 @@ class LegacyDFXPWriter(BaseWriter):
 
             body.append(div)
 
-        caption_content = dfxp.prettify(formatter=None)
+        caption_content = dfxp.prettify()
         return caption_content
 
     # force the DFXP to only have one language, trying to match on "force"
@@ -201,7 +202,7 @@ class LegacyDFXPWriter(BaseWriter):
             elif node.type_ == CaptionNode.STYLE:
                 line = self._recreate_span(line, node, dfxp)
 
-        return line.rstrip()
+        return PreformattedString(line.rstrip())
 
     def _recreate_span(self, line, node, dfxp):
         if node.start:

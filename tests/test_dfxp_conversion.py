@@ -66,7 +66,7 @@ class DFXPtoDFXPTestCase(unittest.TestCase, DFXPTestingMixIn):
         style = soup.find(u'style', {u'xml:id': DFXP_DEFAULT_STYLE_ID})
 
         self.assertTrue(style)
-        self.assertEquals(style.attrs, default_style)
+        self.assertEqual(style.attrs, default_style)
 
     def test_default_styling_p_tags(self):
         caption_set = DFXPReader().read(SAMPLE_DFXP)
@@ -74,7 +74,7 @@ class DFXPtoDFXPTestCase(unittest.TestCase, DFXPTestingMixIn):
 
         soup = BeautifulSoup(result, u'xml')
         for p in soup.find_all(u'p'):
-            self.assertEquals(p.attrs.get(u'style'), 'p')
+            self.assertEqual(p.attrs.get(u'style'), 'p')
 
     def test_default_region_tag(self):
         caption_set = DFXPReader().read(SAMPLE_DFXP)
@@ -87,7 +87,7 @@ class DFXPtoDFXPTestCase(unittest.TestCase, DFXPTestingMixIn):
         default_region[u'xml:id'] = DFXP_DEFAULT_REGION_ID
 
         self.assertTrue(region)
-        self.assertEquals(region.attrs[u'xml:id'], DFXP_DEFAULT_REGION_ID)
+        self.assertEqual(region.attrs[u'xml:id'], DFXP_DEFAULT_REGION_ID)
         self.assertEqual(region.attrs, default_region)
 
     def test_default_region_p_tags(self):
@@ -96,7 +96,7 @@ class DFXPtoDFXPTestCase(unittest.TestCase, DFXPTestingMixIn):
 
         soup = BeautifulSoup(result, u'xml')
         for p in soup.find_all(u'p'):
-            self.assertEquals(p.attrs.get(u'region'), DFXP_DEFAULT_REGION_ID)
+            self.assertEqual(p.attrs.get(u'region'), DFXP_DEFAULT_REGION_ID)
 
     def test_correct_region_attributes_are_recreated(self):
         caption_set = DFXPReader().read(SAMPLE_DFXP_MULTIPLE_REGIONS_INPUT)
@@ -231,7 +231,7 @@ class DFXPtoWebVTTTestCase(unittest.TestCase, WebVTTTestingMixIn):
         caption_set = DFXPReader().read(SAMPLE_DFXP_LONG_CUE)
         results = WebVTTWriter().write(caption_set)
         self.assertTrue(isinstance(results, text_type))
-        self.assertEquals(
+        self.assertEqual(
             SAMPLE_WEBVTT_OUTPUT_LONG_CUE, results)
 
     def test_dfxp_to_webvtt_preserves_proper_alignment(self):
@@ -240,7 +240,7 @@ class DFXPtoWebVTTTestCase(unittest.TestCase, WebVTTTestingMixIn):
         # WebVTTWriter.
         caption_set = DFXPReader().read(DFXP_STYLE_REGION_ALIGN_CONFLICT)
         results = WebVTTWriter().write(caption_set)
-        self.assertEquals(
+        self.assertEqual(
             WEBVTT_FROM_DFXP_WITH_CONFLICTING_ALIGN, results)
 
 
