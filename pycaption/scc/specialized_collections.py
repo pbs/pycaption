@@ -1,3 +1,5 @@
+from __future__ import unicode_literals
+from builtins import object
 from ..base import CaptionList, Caption, CaptionNode
 from ..geometry import (UnitEnum, Size, Layout, Point, Alignment,
                         VerticalAlignmentEnum, HorizontalAlignmentEnum)

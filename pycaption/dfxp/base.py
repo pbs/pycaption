@@ -1,3 +1,8 @@
+from __future__ import unicode_literals
+from __future__ import division
+from builtins import object
+from past.utils import old_div
+import six
 import re
 
 from copy import deepcopy
@@ -61,7 +66,7 @@ class DFXPReader(BaseReader):
             return False
 
     def read(self, content):
-        if type(content) != unicode:
+        if type(content) != six.text_type:
             raise InvalidInputError(u'The content is not a unicode string.')
 
         dfxp_document = self._get_dfxp_parser_class()(
@@ -133,7 +138,7 @@ class DFXPReader(BaseReader):
                 timesplit[2] = timesplit[2] + u'.000'
             secsplit = timesplit[2].split(u'.')
             if len(timesplit) > 3:
-                secsplit.append((int(timesplit[3]) / 30) * 100)
+                secsplit.append((old_div(int(timesplit[3]), 30)) * 100)
             while len(secsplit[1]) < 3:
                 secsplit[1] += u'0'
             microseconds = (int(timesplit[0]) * 3600000000 +
@@ -321,7 +326,7 @@ class DFXPWriter(BaseWriter):
 
         for lang in langs:
             div = dfxp.new_tag(u'div')
-            div[u'xml:lang'] = unicode(lang)
+            div[u'xml:lang'] = six.text_type(lang)
             self._assign_positioning_data(div, lang, caption_set)
 
             for caption in caption_set.get_captions(lang):
@@ -424,7 +429,7 @@ class DFXPWriter(BaseWriter):
             styles = u''
 
             content_with_style = _recreate_style(node.content, dfxp)
-            for style, value in content_with_style.items():
+            for style, value in list(content_with_style.items()):
                 styles += u' %s="%s"' % (style, value)
             if node.layout_info:
                 region_id, region_attribs = (
@@ -437,7 +442,7 @@ class DFXPWriter(BaseWriter):
                     styles += u' ' + u' '.join(
                         [
                             u'{key}="{val}"'.format(key=k_, val=v_)
-                            for k_, v_ in region_attribs.items()
+                            for k_, v_ in list(region_attribs.items())
                         ]
                     )
 
@@ -1056,7 +1061,7 @@ class RegionCreator(object):
 
         :type prefix: unicode
         """
-        new_id = unicode((prefix or u'') + unicode(self._id_seed))
+        new_id = six.text_type((prefix or u'') + six.text_type(self._id_seed))
         self._id_seed += 1
         return new_id
 

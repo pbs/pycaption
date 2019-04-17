@@ -1,6 +1,8 @@
+from __future__ import unicode_literals
 import unittest
 
 from pycaption import DFXPReader, CaptionReadNoCaptions
+from pycaption.geometry import UnitEnum, HorizontalAlignmentEnum, VerticalAlignmentEnum
 from pycaption.exceptions import CaptionReadSyntaxError, InvalidInputError, CaptionReadError
 
 from .samples.dfxp import (
@@ -83,9 +85,9 @@ class DFXPReaderTestCase(unittest.TestCase):
             SAMPLE_DFXP_MULTIPLE_CAPTIONS_WITH_THE_SAME_TIMING
         )
 
-        expected_texts = [u'Some text here',
-                          u'Some text there',
-                          u'Caption texts are everywhere!']
+        expected_texts = ['Some text here',
+                          'Some text there',
+                          'Caption texts are everywhere!']
         actual_texts = [c_.nodes[0].content for c_ in
                         captionset.get_captions("en-US")]
 
@@ -96,9 +98,12 @@ class DFXPReaderTestCase(unittest.TestCase):
             SAMPLE_DFXP_MULTIPLE_CAPTIONS_WITH_THE_SAME_TIMING
         )
         expected_layouts = [
-            (((10, u'%'), (10, u'%')), None, None, (u'center', u'bottom')),
-            (((40, u'%'), (40, u'%')), None, None, (u'center', u'bottom')),
-            (((10, u'%'), (70, u'%')), None, None, (u'center', u'bottom'))]
+            (((10, UnitEnum.PERCENT), (10, UnitEnum.PERCENT)), None, None, (HorizontalAlignmentEnum.CENTER,
+                                                                            VerticalAlignmentEnum.BOTTOM)),
+            (((40, UnitEnum.PERCENT), (40, UnitEnum.PERCENT)), None, None, (HorizontalAlignmentEnum.CENTER,
+                                                                            VerticalAlignmentEnum.BOTTOM)),
+            (((10, UnitEnum.PERCENT), (70, UnitEnum.PERCENT)), None, None, (HorizontalAlignmentEnum.CENTER,
+                                                                            VerticalAlignmentEnum.BOTTOM))]
         actual_layouts = [c_.layout_info.serialized() for c_ in
                           captionset.get_captions('en-US')]
 

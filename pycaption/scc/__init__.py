@@ -76,11 +76,15 @@ http://www.theneitherworld.com/mcpoodle/SCC_TOOLS/DOCS/SCC_FORMAT.HTML
  dictionary. This is legacy logic, that I didn't know how to handle, and
  just carried over when implementing positioning.
 """
+from __future__ import unicode_literals
+from __future__ import division
 
-
+from builtins import range
+from past.utils import old_div
+from builtins import object
+import six
 import re
 import math
-import string
 import textwrap
 
 from pycaption.base import (
@@ -197,10 +201,10 @@ class SCCReader(BaseReader):
     def read(self, content, lang=u'en-US', simulate_roll_up=False, offset=0):
         """Converts the unicode string into a CaptionSet
 
-        :type content: unicode
+        :type content: six.text_type
         :param content: The SCC content to be converted to a CaptionSet
 
-        :type lang: unicode
+        :type lang: six.text_type
         :param lang: The language of the caption
 
         :type simulate_roll_up: bool
@@ -213,7 +217,7 @@ class SCCReader(BaseReader):
 
         :rtype: CaptionSet
         """
-        if type(content) != unicode:
+        if type(content) != six.text_type:
             raise InvalidInputError(u'The content is not a unicode string.')
 
         self.simulate_roll_up = simulate_roll_up
@@ -235,7 +239,7 @@ class SCCReader(BaseReader):
             # less than .05s kill it (this is likely caused by a standalone
             # EOC marker in the SCC file)
             if 0 < cap.end - cap.start < 50000:
-                raise ValueError('unsupported length found in SCC input file: ' + str(cap))
+                raise ValueError('unsupported length found in SCC input file: ' + six.text_type(cap))
 
         if captions.is_empty():
             raise CaptionReadNoCaptions(u"empty caption file")
@@ -504,7 +508,7 @@ class SCCWriter(BaseWriter):
         caption_set = deepcopy(caption_set)
 
         # Only support one language.
-        lang = caption_set.get_languages()[0]
+        lang = list(caption_set.get_languages())[0]
         captions = caption_set.get_captions(lang)
 
         # PASS 1: compute codes for each caption
@@ -515,7 +519,7 @@ class SCCWriter(BaseWriter):
         # Advance start times so as to have time to write to the pop-on
         # buffer; possibly remove the previous clear-screen command
         for index, (code, start, end) in enumerate(codes):
-            code_words = len(code) / 5 + 8
+            code_words = old_div(len(code), 5) + 8
             code_time_microseconds = code_words * MICROSECONDS_PER_CODEWORD
             code_start = start - code_time_microseconds
             if index == 0:
@@ -542,12 +546,12 @@ class SCCWriter(BaseWriter):
     def _layout_line(caption):
         def caption_node_to_text(caption_node):
             if caption_node.type_ == CaptionNode.TEXT:
-                return unicode(caption_node.content)
+                return six.text_type(caption_node.content)
             elif caption_node.type_ == CaptionNode.BREAK:
                 return u'\n'
         caption_text = u''.join(
             [caption_node_to_text(node) for node in caption.nodes])
-        inner_lines = string.split(caption_text, u'\n')
+        inner_lines = caption_text.split('\n')
         inner_lines_laid_out = [textwrap.fill(x, 32) for x in inner_lines]
         return u'\n'.join(inner_lines_laid_out)
 
@@ -583,7 +587,7 @@ class SCCWriter(BaseWriter):
 
     def _text_to_code(self, s):
         code = u''
-        lines = string.split(self._layout_line(s), u'\n')
+        lines = self._layout_line(s).split('\n')
         for row, line in enumerate(lines):
             row += 16 - len(lines)
             # Move cursor to column 0 of the destination row
@@ -602,9 +606,9 @@ class SCCWriter(BaseWriter):
         seconds_float = microseconds / 1000.0 / 1000.0
         # Convert to non-drop-frame timecode
         seconds_float *= 1000.0 / 1001.0
-        hours = math.floor(seconds_float / 3600)
+        hours = math.floor(old_div(seconds_float, 3600))
         seconds_float -= hours * 3600
-        minutes = math.floor(seconds_float / 60)
+        minutes = math.floor(old_div(seconds_float, 60))
         seconds_float -= minutes * 60
         seconds = math.floor(seconds_float)
         seconds_float -= seconds
@@ -629,7 +633,7 @@ class _SccTimeTranslator(object):
         :rtype: int
         """
         return self._translate_time(
-            self._time[:-2] + unicode(int(self._time[-2:]) + self._frames),
+            self._time[:-2] + six.text_type(int(self._time[-2:]) + self._frames),
             self.offset
         )
 

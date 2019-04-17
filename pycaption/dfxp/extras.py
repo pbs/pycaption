@@ -1,3 +1,4 @@
+from __future__ import unicode_literals
 # We thought about making pycaption.base objects immutable. This would be nice
 # in a lot of cases, but since the transformations on them could be quite
 # complex, the deepcopy method is good enough sometimes.
@@ -207,7 +208,7 @@ class LegacyDFXPWriter(BaseWriter):
             styles = u''
 
             content_with_style = self._recreate_style(node.content, dfxp)
-            for style, value in content_with_style.items():
+            for style, value in list(content_with_style.items()):
                 styles += u' %s="%s"' % (style, value)
 
             if styles:

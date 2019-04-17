@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+from __future__ import unicode_literals
 SAMPLE_SRT = u"""1
 00:00:09,209 --> 00:00:12,312
 ( clock ticking )

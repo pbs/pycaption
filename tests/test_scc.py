@@ -1,5 +1,9 @@
 # -*- coding: utf-8 -*-
+from __future__ import unicode_literals
+from builtins import object
+import six
 import unittest
+from pycaption.geometry import UnitEnum, HorizontalAlignmentEnum, VerticalAlignmentEnum
 from pycaption.scc.specialized_collections import (InstructionNodeCreator,
                                                    TimingCorrectingCaptionList)
 
@@ -43,26 +47,26 @@ class SCCReaderTestCase(unittest.TestCase):
             SCCReader().read, SAMPLE_SCC_EMPTY)
 
     def test_scc_positioning_is_read(self):
-        captions = SCCReader().read(unicode(SAMPLE_SCC_MULTIPLE_POSITIONING))
+        captions = SCCReader().read(six.text_type(SAMPLE_SCC_MULTIPLE_POSITIONING))
 
         # SCC generates only origin, and we always expect it.
         expected_positioning = [
-            ((0.0, u'%'), (80.0, u'%')),
-            ((37.5, u'%'), (0.0, u'%')),
-            ((75.0, u'%'), (20.0, u'%')),
-            ((12.5, u'%'), (46.666666666666664, u'%')),
-            ((12.5, u'%'), (93.33333333333333, u'%')),
-            ((37.5, u'%'), (53.333333333333336, u'%')),
-            ((75.0, u'%'), (13.333333333333334, u'%')),
-            ((12.5, u'%'), (33.333333333333336, u'%')),
-            ((12.5, u'%'), (86.66666666666667, u'%')),
-            ((75.0, u'%'), (6.666666666666667, u'%')),
-            ((37.5, u'%'), (40.0, u'%')),
-            ((12.5, u'%'), (73.33333333333333, u'%'))
+            ((0.0, UnitEnum.PERCENT), (80.0, UnitEnum.PERCENT)),
+            ((37.5, UnitEnum.PERCENT), (0.0, UnitEnum.PERCENT)),
+            ((75.0, UnitEnum.PERCENT), (20.0, UnitEnum.PERCENT)),
+            ((12.5, UnitEnum.PERCENT), (46.666666666666664, UnitEnum.PERCENT)),
+            ((12.5, UnitEnum.PERCENT), (93.33333333333333, UnitEnum.PERCENT)),
+            ((37.5, UnitEnum.PERCENT), (53.333333333333336, UnitEnum.PERCENT)),
+            ((75.0, UnitEnum.PERCENT), (13.333333333333334, UnitEnum.PERCENT)),
+            ((12.5, UnitEnum.PERCENT), (33.333333333333336, UnitEnum.PERCENT)),
+            ((12.5, UnitEnum.PERCENT), (86.66666666666667, UnitEnum.PERCENT)),
+            ((75.0, UnitEnum.PERCENT), (6.666666666666667, UnitEnum.PERCENT)),
+            ((37.5, UnitEnum.PERCENT), (40.0, UnitEnum.PERCENT)),
+            ((12.5, UnitEnum.PERCENT), (73.33333333333333, UnitEnum.PERCENT))
         ]
         actual_positioning = [
             caption_.layout_info.origin.serialized() for caption_ in
-            captions.get_captions(u'en-US')
+            captions.get_captions('en-US')
         ]
 
         self.assertEqual(expected_positioning, actual_positioning)
@@ -76,7 +80,7 @@ class SCCReaderTestCase(unittest.TestCase):
                             (3208266666.666667, 3269700000.0)]
 
         actual_timings = [
-            (c_.start, c_.end) for c_ in caption_set.get_captions(u'en-US')
+            (c_.start, c_.end) for c_ in caption_set.get_captions('en-US')
         ]
         self.assertEqual(expected_timings, actual_timings)
 
@@ -97,28 +101,28 @@ class SCCReaderTestCase(unittest.TestCase):
             return node.start
 
         caption_set = SCCReader().read(SAMPLE_SCC_WITH_ITALICS)
-        nodes = caption_set.get_captions(u'en-US')[0].nodes
+        nodes = caption_set.get_captions('en-US')[0].nodes
 
         # We assert that the text is specified in italics.
         # If Style nodes are replaced, the way these 3 assertions are made
         # will most likely change
         self.assertEqual(switches_italics(nodes[0]), True)
         self.assertEqual(switches_italics(nodes[2]), False)
-        self.assertEqual(nodes[1].content, u'abababab')
+        self.assertEqual(nodes[1].content, 'abababab')
 
     def test_default_positioning_when_no_positioning_is_specified(self):
         caption_set = SCCReader().read(SAMPLE_NO_POSITIONING_AT_ALL_SCC)
 
         actual_caption_layouts = [
             caption.layout_info.serialized()
-            for caption in caption_set.get_captions(u'en-US')
+            for caption in caption_set.get_captions('en-US')
         ]
 
         expected_caption_layouts = [
-            (((0.0, u'%'), (86.66666666666667, u'%')), None, None,
-             (u'center', u'top')),
-            (((0.0, u'%'), (86.66666666666667, u'%')), None, None,
-             (u'center', u'top'))]
+            (((0.0, UnitEnum.PERCENT), (86.66666666666667, UnitEnum.PERCENT)), None, None,
+             (HorizontalAlignmentEnum.CENTER, VerticalAlignmentEnum.TOP)),
+            (((0.0, UnitEnum.PERCENT), (86.66666666666667, UnitEnum.PERCENT)), None, None,
+             (HorizontalAlignmentEnum.CENTER, VerticalAlignmentEnum.TOP))]
 
         actual_node_layout_infos = [
             {idx: [node.layout_info.serialized() for node in caption.nodes]}
@@ -126,14 +130,14 @@ class SCCReaderTestCase(unittest.TestCase):
         ]
 
         expected_node_layout_infos = [
-            {0: [(((0.0, u'%'), (86.66666666666667, u'%')),
+            {0: [(((0.0, UnitEnum.PERCENT), (86.66666666666667, UnitEnum.PERCENT)),
                   None,
                   None,
-                  (u'center', u'top'))]},
-            {1: [(((0.0, u'%'), (86.66666666666667, u'%')),
+                  (HorizontalAlignmentEnum.CENTER, VerticalAlignmentEnum.TOP))]},
+            {1: [(((0.0, UnitEnum.PERCENT), (86.66666666666667, UnitEnum.PERCENT)),
                   None,
                   None,
-                  (u'center', u'top'))]}
+                  (HorizontalAlignmentEnum.CENTER, VerticalAlignmentEnum.TOP))]}
         ]
 
         self.assertEqual(expected_node_layout_infos, actual_node_layout_infos)
@@ -143,9 +147,9 @@ class SCCReaderTestCase(unittest.TestCase):
         caption_set = SCCReader().read(
             SAMPLE_SCC_PRODUCES_CAPTIONS_WITH_START_AND_END_TIME_THE_SAME
         )
-        expected_timings = [(u'00:01:35.666', u'00:01:40.866'),
-                            (u'00:01:35.666', u'00:01:40.866'),
-                            (u'00:01:35.666', u'00:01:40.866')]
+        expected_timings = [('00:01:35.666', '00:01:40.866'),
+                            ('00:01:35.666', '00:01:40.866'),
+                            ('00:01:35.666', '00:01:40.866')]
 
         actual_timings = [(c_.format_start(), c_.format_end()) for c_ in
                           caption_set.get_captions('en-US')]
@@ -166,37 +170,37 @@ class CoverageOnlyTestCase(unittest.TestCase):
         # There were no tests for ROLL-UP captions, but the library processed
         # Roll-Up captions. Make sure nothing changes during the refactoring
         scc1 = SCCReader().read(SAMPLE_SCC_ROLL_UP_RU2)
-        captions = scc1.get_captions(u'en-US')
+        captions = scc1.get_captions('en-US')
         actual_texts = [cap_.nodes[0].content for cap_ in captions]
-        expected_texts = [u'>>> HI',
+        expected_texts = ['>>> HI',
                           u"I'M KEVIN CUNNING AND AT",
                           # Notice the missing 'N' at the end. This is because
                           # the input is not OK (should only use 4 byte "words"
                           # (filling in with '80' where only 2 bytes are
                           # meaningful)
                           u"INVESTOR'S BANK WE BELIEVE I",
-                          u'HELPING THE LOCAL NEIGHBORHOOD',
-                          u'AND IMPROVING THE LIVES OF ALL',
-                          u'WE SERVE',
+                          'HELPING THE LOCAL NEIGHBORHOOD',
+                          'AND IMPROVING THE LIVES OF ALL',
+                          'WE SERVE',
                           # special chars. Last one should be printer 2 times
                           # XXX this is a bug.
-                          u'®°½',
+                          '®°½',
                           # special/ extended chars delete last 0-4 chars.
                           # XXX - this is a bug.
-                          u'ABû',
-                          u'ÁÉÓ¡',
+                          'ABû',
+                          'ÁÉÓ¡',
                           u"WHERE YOU'RE STANDING NOW,",
                           u"LOOKING OUT THERE, THAT'S AL",
-                          u'THE CROWD.',
-                          u'>> IT WAS GOOD TO BE IN TH',
+                          'THE CROWD.',
+                          '>> IT WAS GOOD TO BE IN TH',
                           u"And restore Iowa's land, water",
-                          u'And wildlife.',
-                          u'>> Bike Iowa, your source for']
+                          'And wildlife.',
+                          '>> Bike Iowa, your source for']
         self.assertEqual(expected_texts, actual_texts)
 
     def test_freeze_semicolon_spec_time(self):
         scc1 = SCCReader().read(SAMPLE_SCC_ROLL_UP_RU2)
-        captions = scc1.get_captions(u'en-US')
+        captions = scc1.get_captions('en-US')
         expected_timings = [(766666.6666666667, 2800000.0),
                             (2800000.0, 4600000.0),
                             (4600000.0, 6166666.666666667),
@@ -231,7 +235,7 @@ class CoverageOnlyTestCase(unittest.TestCase):
                             (32165466.66666666, 36202833.33333332)]
 
         actual_timings = [
-            (c_.start, c_.end) for c_ in scc1.get_captions(u'en-US')]
+            (c_.start, c_.end) for c_ in scc1.get_captions('en-US')]
         self.assertEqual(expected_timings, actual_timings)
 
 
