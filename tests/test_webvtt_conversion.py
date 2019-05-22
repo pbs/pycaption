@@ -37,14 +37,14 @@ class WebVTTtoWebVTTTestCase(unittest.TestCase, WebVTTTestingMixIn):
         caption_set = WebVTTReader().read(
             SAMPLE_WEBVTT_FROM_DFXP_WITH_POSITIONING)
         results = WebVTTWriter().write(caption_set)
-        self.assertEquals(
+        self.assertEqual(
             SAMPLE_WEBVTT_FROM_DFXP_WITH_POSITIONING, results)
 
     def test_empty_cues_are_deleted(self):
         caption_set = WebVTTReader().read(
             SAMPLE_WEBVTT_EMPTY_CUE)
         results = WebVTTWriter().write(caption_set)
-        self.assertEquals(
+        self.assertEqual(
             SAMPLE_WEBVTT_FROM_EMPTY_CUE, results)
 
 #     # TODO: Write a test that includes a WebVTT file with style tags

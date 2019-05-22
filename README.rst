@@ -3,19 +3,30 @@ py-caption
 
 |Build Status|
 
+**PLEASE SEE** `pbs/pycaption <https://github.com/pbs/pycaption>`__ **FOR OFFICIAL RELEASES.**
+
 ``pycaption`` is a caption reading/writing module. Use one of the given Readers
 to read content into a CaptionSet object, and then use one of the Writers to
 output the CaptionSet into captions of your desired format.
 
-Requires Python 2.7.
+Version 2.0.0@learningequality passes all tests with Python 2.7, 3.4, 3.5, and 3.6.
 
 For details, see the `documentation <http://pycaption.readthedocs.org>`__.
 
 Changelog
 ---------
 
-0.5.x
-^^^^^
+2.0.0@learningequality
+^^^^^^^^^^^^^^^^^^^^^^
+- Python 2 and 3 support (see branch py27@pbs)
+- Upgraded ``beautifulsoup4`` package
+
+1.0.0@pbs
+^^^^^^^^^
+- Added Python 3 support (see `pbs/pycaption <https://github.com/pbs/pycaption>`__).
+
+0.5.x@pbs
+^^^^^^^^^
 - Added positioning support
 - Created documentation
 

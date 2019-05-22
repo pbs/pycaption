@@ -20,23 +20,23 @@ class DFXPReaderTestCase(unittest.TestCase):
 
     def test_caption_length(self):
         captions = DFXPReader().read(SAMPLE_DFXP)
-        self.assertEquals(7, len(captions.get_captions(u"en-US")))
+        self.assertEqual(7, len(captions.get_captions(u"en-US")))
 
     def test_proper_timestamps(self):
         captions = DFXPReader().read(SAMPLE_DFXP)
         paragraph = captions.get_captions(u"en-US")[2]
 
-        self.assertEquals(17000000, paragraph.start)
-        self.assertEquals(18752000, paragraph.end)
+        self.assertEqual(17000000, paragraph.start)
+        self.assertEqual(18752000, paragraph.end)
 
     def test_offset_time(self):
         reader = DFXPReader()
-        self.assertEquals(1, reader._translate_time(u"0.001ms"))
-        self.assertEquals(2000, reader._translate_time(u"2ms"))
-        self.assertEquals(1000000, reader._translate_time(u"1s"))
-        self.assertEquals(1234567, reader._translate_time(u"1.234567s"))
-        self.assertEquals(180000000, reader._translate_time(u"3m"))
-        self.assertEquals(14400000000, reader._translate_time(u"4h"))
+        self.assertEqual(1, reader._translate_time(u"0.001ms"))
+        self.assertEqual(2000, reader._translate_time(u"2ms"))
+        self.assertEqual(1000000, reader._translate_time(u"1s"))
+        self.assertEqual(1234567, reader._translate_time(u"1.234567s"))
+        self.assertEqual(180000000, reader._translate_time(u"3m"))
+        self.assertEqual(14400000000, reader._translate_time(u"4h"))
         # Tick values are not supported
         self.assertRaises(
 	        InvalidInputError, reader._translate_time, u"2.3t"
@@ -49,7 +49,7 @@ class DFXPReaderTestCase(unittest.TestCase):
 
     def test_invalid_markup_is_properly_handled(self):
         captions = DFXPReader().read(SAMPLE_DFXP_SYNTAX_ERROR)
-        self.assertEquals(2, len(captions.get_captions(u"en-US")))
+        self.assertEqual(2, len(captions.get_captions(u"en-US")))
 
     def test_caption_error_for_invalid_positioning_values(self):
         invalid_value_dfxp = (

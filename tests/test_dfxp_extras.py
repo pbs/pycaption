@@ -78,7 +78,7 @@ class SinglePositioningDFXPWRiterTestCase(unittest.TestCase):
 
         dfxp = SinglePositioningDFXPWriter(new_region).write(caption_set)
 
-        region = BeautifulSoup(dfxp).find('region')
+        region = BeautifulSoup(dfxp, 'lxml').find('region')
         self.assertTrue('xml:id' in region.attrs)
         self.assertNotEqual(region.attrs['xml:id'], DFXP_DEFAULT_REGION_ID)
         self.assertEqual(len(region.attrs), 3)

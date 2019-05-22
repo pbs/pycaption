@@ -19,7 +19,7 @@ class WebVTTTestingMixIn(object):
         """
         first_items = self._extract_webvtt_captions(first)
         second_items = self._extract_webvtt_captions(second)
-        self.assertEquals(first_items, second_items)
+        self.assertEqual(first_items, second_items)
 
 
 class SRTTestingMixIn(object):
@@ -36,7 +36,7 @@ class SRTTestingMixIn(object):
         """
         first_items = self._extract_srt_captions(first)
         second_items = self._extract_srt_captions(second)
-        self.assertEquals(first_items, second_items)
+        self.assertEqual(first_items, second_items)
 
 
 class CaptionSetTestingMixIn(object):
@@ -60,7 +60,7 @@ class CaptionSetTestingMixIn(object):
         text_1 = [get_text_for_caption(caption) for caption in captions_1]
         text_2 = [get_text_for_caption(caption) for caption in captions_2]
 
-        self.assertEquals(text_1, text_2)
+        self.assertEqual(text_1, text_2)
 
         def close_enough(ts1, ts2):
             return abs(ts1 - ts2) < tolerance_microseconds
@@ -70,14 +70,14 @@ class CaptionSetTestingMixIn(object):
             for caption_1, caption_2 in zip(captions_1, captions_2)
             if not close_enough(caption_1.start, caption_2.start)
         ]
-        self.assertEquals(start_differences, [])
+        self.assertEqual(start_differences, [])
 
         end_differences = [
             (caption_1.end, caption_2.end)
             for caption_1, caption_2 in zip(captions_1, captions_2)
             if not close_enough(caption_1.end, caption_2.end)
         ]
-        self.assertEquals(end_differences, [])
+        self.assertEqual(end_differences, [])
 
 
 class DFXPTestingMixIn(object):
@@ -104,8 +104,8 @@ class DFXPTestingMixIn(object):
     def assertDFXPEquals(self, first, second,
                          ignore_styling=False,
                          ignore_spans=False):
-        first_soup = BeautifulSoup(first)
-        second_soup = BeautifulSoup(second)
+        first_soup = BeautifulSoup(first, 'lxml')
+        second_soup = BeautifulSoup(second, 'lxml')
 
         if ignore_styling:
             self._remove_styling(first_soup)
@@ -118,7 +118,7 @@ class DFXPTestingMixIn(object):
         self._trim_text(first_soup)
         self._trim_text(second_soup)
 
-        self.assertEquals(first_soup, second_soup)
+        self.assertEqual(first_soup, second_soup)
 
 
 class SAMITestingMixIn(object):
@@ -132,9 +132,9 @@ class SAMITestingMixIn(object):
             for caption in soup.select(u'sync'))
 
     def assertSAMIEquals(self, first, second):
-        first_soup = BeautifulSoup(first)
-        second_soup = BeautifulSoup(second)
+        first_soup = BeautifulSoup(first, 'lxml')
+        second_soup = BeautifulSoup(second, 'lxml')
 
         first_items = self._extract_sami_captions(first_soup)
         second_items = self._extract_sami_captions(second_soup)
-        self.assertEquals(first_items, second_items)
+        self.assertEqual(first_items, second_items)

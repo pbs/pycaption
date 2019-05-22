@@ -29,7 +29,7 @@ class SCCReaderTestCase(unittest.TestCase):
     def test_caption_length(self):
         captions = SCCReader().read(SAMPLE_SCC_POP_ON)
 
-        self.assertEquals(7, len(captions.get_captions(u"en-US")))
+        self.assertEqual(7, len(captions.get_captions(u"en-US")))
 
     def test_proper_timestamps(self):
         captions = SCCReader().read(SAMPLE_SCC_POP_ON)
