@@ -20,6 +20,7 @@ Changelog
 ^^^^^^^^^^^^^^^^^^^^^^^
 - Python 2 and 3 support (see branch `py27\@pbs <https://github.com/pbs/pycaption/tree/py27>`__)
 - Upgraded ``beautifulsoup4`` package to a more current version, and resolved issues with tests due to upgrade. See full detailed changes `here <https://github.com/learningequality/pycaption/pull/1>`__.
+- Removed ``from future import standard_library`` as it can cause issues with other packages and its removal causes no test failures.
 
 1.0.0\@pbs
 ^^^^^^^^^^
