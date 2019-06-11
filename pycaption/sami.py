@@ -37,8 +37,6 @@ OBS:
 """
 from __future__ import unicode_literals
 from __future__ import division
-from future import standard_library
-standard_library.install_aliases()
 from builtins import chr
 from past.utils import old_div
 import six
