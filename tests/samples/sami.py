@@ -290,7 +290,7 @@ SAMPLE_SAMI_WITH_SPAN = u"""
     <STYLE TYPE="Text/css">
     <!--
         P {font-size: 24pt; text-align: center; font-family: Tahoma; font-weight: bold; color: #FFFFFF; background-color: #000000;}
-        .SUBTTL {Name: 'Subtitles'; Lang: en-US; SAMIType: CC; margin-top: 20px; margin-right: 20px; margin-bottom: 20px; margin-left: 20px;}
+        .ENCC {Name: 'Subtitles'; Lang: en-US; SAMIType: CC; margin-top: 20px; margin-right: 20px; margin-bottom: 20px; margin-left: 20px;}
     -->
     </STYLE>
 </HEAD>
@@ -310,7 +310,7 @@ SAMPLE_SAMI_WITH_BAD_SPAN_ALIGN = u"""
     <STYLE TYPE="Text/css">
     <!--
         P {font-size: 24pt; text-align: center; font-family: Tahoma; font-weight: bold; color: #FFFFFF; background-color: #000000;}
-        .SUBTTL {Name: 'Subtitles'; Lang: en-US; SAMIType: CC; margin-top: 20px; margin-right: 20px; margin-bottom: 20px; margin-left: 20px;}
+        .ENCC {Name: 'Subtitles'; Lang: en-US; SAMIType: CC; margin-top: 20px; margin-right: 20px; margin-bottom: 20px; margin-left: 20px;}
     -->
     </STYLE>
 </HEAD>
@@ -330,7 +330,7 @@ SAMPLE_SAMI_WITH_BAD_DIV_ALIGN = u"""
     <STYLE TYPE="Text/css">
     <!--
         P {font-size: 24pt; text-align: center; font-family: Tahoma; font-weight: bold; color: #FFFFFF; background-color: #000000;}
-        .SUBTTL {Name: 'Subtitles'; Lang: en-US; SAMIType: CC; margin-top: 20px; margin-right: 20px; margin-bottom: 20px; margin-left: 20px;}
+        .ENCC {Name: 'Subtitles'; Lang: en-US; SAMIType: CC; margin-top: 20px; margin-right: 20px; margin-bottom: 20px; margin-left: 20px;}
     -->
     </STYLE>
 </HEAD>
@@ -350,7 +350,7 @@ SAMPLE_SAMI_WITH_P_ALIGN = u"""
     <STYLE TYPE="Text/css">
     <!--
         P {font-size: 24pt; text-align: center; font-family: Tahoma; font-weight: bold; color: #FFFFFF; background-color: #000000;}
-        .SUBTTL {Name: 'Subtitles'; Lang: en-US; SAMIType: CC; margin-top: 20px; margin-right: 20px; margin-bottom: 20px; margin-left: 20px;}
+        .ENCC {Name: 'Subtitles'; Lang: en-US; SAMIType: CC; margin-top: 20px; margin-right: 20px; margin-bottom: 20px; margin-left: 20px;}
     -->
     </STYLE>
 </HEAD>
@@ -370,7 +370,7 @@ SAMPLE_SAMI_WITH_P_AND_SPAN_ALIGN = u"""
     <STYLE TYPE="Text/css">
     <!--
         P {font-size: 24pt; text-align: center; font-family: Tahoma; font-weight: bold; color: #FFFFFF; background-color: #000000;}
-        .SUBTTL {Name: 'Subtitles'; Lang: en-US; SAMIType: CC; margin-top: 20px; margin-right: 20px; margin-bottom: 20px; margin-left: 20px;}
+        .ENCC {Name: 'Subtitles'; Lang: en-US; SAMIType: CC; margin-top: 20px; margin-right: 20px; margin-bottom: 20px; margin-left: 20px;}
     -->
     </STYLE>
 </HEAD>
@@ -390,7 +390,7 @@ SAMPLE_SAMI_WITH_MULTIPLE_SPAN_ALIGNS = u"""
     <STYLE TYPE="Text/css">
     <!--
         P {font-size: 24pt; text-align: center; font-family: Tahoma; font-weight: bold; color: #FFFFFF; background-color: #000000;}
-        .SUBTTL {Name: 'Subtitles'; Lang: en-US; SAMIType: CC; margin-top: 20px; margin-right: 20px; margin-bottom: 20px; margin-left: 20px;}
+        .ENCC {Name: 'Subtitles'; Lang: en-US; SAMIType: CC; margin-top: 20px; margin-right: 20px; margin-bottom: 20px; margin-left: 20px;}
     -->
     </STYLE>
 </HEAD>
@@ -421,7 +421,7 @@ SAMPLE_SAMI_IGNORE_LAYOUT = u"""<sami>
      text-align: center;
     }
 
-    .subttl {
+    .encc {
      lang: en-US;
      margin-bottom: 20px;
      margin-left: 20px;
@@ -435,7 +435,7 @@ SAMPLE_SAMI_IGNORE_LAYOUT = u"""<sami>
  </head>
  <body>
   <sync start="133">
-   <p class="en-US" p_style="class:encc;">
+   <p class="encc" p_style="class:encc;">
     Some say  we have this vision of Einstein  as an old, wrinkly man
    </p>
   </sync>
