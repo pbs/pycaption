@@ -4,7 +4,8 @@ from six import text_type
 
 from .exceptions import CaptionReadError, CaptionReadTimingError
 
-DEFAULT_LANGUAGE_CODE = 'en-US'
+# `und` a special identifier for an undetermined language according to ISO 639-2
+DEFAULT_LANGUAGE_CODE = 'und'
 
 
 def force_byte_string(content):
