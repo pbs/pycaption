@@ -49,7 +49,7 @@ class DFXPReaderTestCase(unittest.TestCase):
 
     def test_invalid_markup_is_properly_handled(self):
         captions = DFXPReader().read(SAMPLE_DFXP_SYNTAX_ERROR)
-        self.assertEqual(2, len(captions.get_captions(u"en-US")))
+        self.assertEqual(2, len(captions.get_captions(u"en")))
 
     def test_caption_error_for_invalid_positioning_values(self):
         invalid_value_dfxp = (
