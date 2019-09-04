@@ -23,6 +23,7 @@ Changelog
 - Removed ``from future import standard_library`` as it can cause issues with other packages and its removal causes no test failures.
 - Fixed ``DFXPReader`` issue with default language (see `this PR <https://github.com/pbs/pycaption/pull/188>`__)
 - Changed global default language to ISO-639-2 undetermined language code ``und`` (see `this PR <https://github.com/pbs/pycaption/pull/188>`__)
+- Pinned ``lxml<4.4.0`` to maintain Python 3.4 compatibility for now
 
 1.0.0\@pbs
 ^^^^^^^^^^
