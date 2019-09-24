@@ -1,3 +1,5 @@
+import bs4
+
 from .base import (
     CaptionConverter, CaptionNode, Caption, CaptionList, CaptionSet)
 from .dfxp import DFXPWriter, DFXPReader
@@ -19,6 +21,24 @@ __all__ = [
 
 SUPPORTED_READERS = (
     DFXPReader, WebVTTReader, SAMIReader, SRTReader, SCCReader)
+
+# monkeypatch for https://bugs.launchpad.net/beautifulsoup/+bug/1840141
+
+def patched__new__(cls, prefix, name, namespace=None):
+    if not name:
+        obj = str.__new__(cls, prefix)
+    elif prefix is None:
+        # Not really namespaced.
+        obj = str.__new__(cls, name)
+    else:
+        obj = str.__new__(cls, prefix + ":" + name)
+    obj.prefix = prefix
+    obj.name = name
+    obj.namespace = namespace
+    return obj
+
+
+bs4.element.NamespacedAttribute.__new__ = patched__new__
 
 
 def detect_format(caps):

@@ -67,9 +67,3 @@ class SCCToWebVTTTestCase(unittest.TestCase):
             webvtt,
             SAMPLE_WEBVTT_FROM_SCC_PROPERLY_WRITES_NEWLINES_OUTPUT
         )
-
-
-class SCCEOCNewlineTest(unittest.TestCase):
-    def test_eoc_on_newline_rejection(self):
-        with self.assertRaises(ValueError):
-            caption_set = SCCReader().read(SAMPLE_SCC_FLASHING_CAPTIONS)
