@@ -10,7 +10,6 @@ CONVENTIONS:
 from __future__ import unicode_literals
 from __future__ import division
 
-from past.builtins import cmp
 from builtins import object
 from enum import Enum
 import six
@@ -439,7 +438,7 @@ class Size(object):
 
     def __cmp__(self, other):
         if self.unit == other.unit:
-            return cmp(self.value, other.value)
+            return (self.value > other.value) - (self.value < other.value)
         else:
             raise ValueError(u"The sizes should have the same measure units.")
 
