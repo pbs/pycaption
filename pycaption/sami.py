@@ -40,7 +40,6 @@ from __future__ import division
 from future import standard_library
 standard_library.install_aliases()
 from builtins import chr
-from past.utils import old_div
 import six
 import re
 from future.backports.html.parser import HTMLParseError
@@ -444,13 +443,13 @@ class SAMIWriter(BaseWriter):
 
         :rtype: BeautifulSoup
         """
-        time = old_div(caption.start, 1000)
+        time = caption.start // 1000
 
         if self.last_time and time != self.last_time:
             sami = self._recreate_blank_tag(
                 sami, caption, lang, primary, captions)
 
-        self.last_time = old_div(caption.end, 1000)
+        self.last_time = caption.end // 1000
 
         sami, sync = self._recreate_sync(sami, lang, primary, time)
 

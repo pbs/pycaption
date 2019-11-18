@@ -11,7 +11,6 @@ from __future__ import unicode_literals
 from __future__ import division
 
 from past.builtins import cmp
-from past.utils import old_div
 from builtins import object
 from enum import Enum
 import six
@@ -491,7 +490,7 @@ class Size(object):
             unit = UnitEnum.PIXEL
 
         if unit == UnitEnum.PIXEL:
-            value = old_div(value * 100.0, (video_width or video_height))
+            value = (value * 100.0) / (video_width or video_height)
             unit = UnitEnum.PERCENT
 
         if unit == UnitEnum.CELL:
@@ -499,7 +498,7 @@ class Size(object):
             # (w3.org/TR/ttaf1-dfxp/#parameter-attribute-cellResolution)
             # For now we will use the default values (32 columns and 15 rows)
             cell_reference = 32 if video_width else 15
-            value = old_div(value * 100.0, cell_reference)
+            value = (value * 100.0) / cell_reference
             unit = UnitEnum.PERCENT
 
         return Size(value, unit)
