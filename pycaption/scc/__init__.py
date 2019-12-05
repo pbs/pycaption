@@ -228,9 +228,9 @@ class SCCReader(BaseReader):
         # check captions for incorrect lengths
         for cap in captions.get_captions(lang):
             # if there's an end time on a caption and the difference is
-            # less than .05s kill it (this is likely caused by a standalone
+            # less than .01s kill it (this is likely caused by a standalone
             # EOC marker in the SCC file)
-            if 0 < cap.end - cap.start < 50000:
+            if 0 < cap.end - cap.start < 10000:
                 raise ValueError('unsupported length found in SCC input file: ' + str(cap))
 
         if captions.is_empty():
@@ -350,6 +350,10 @@ class SCCReader(BaseReader):
         # if it's printed 2 times one after another?
         if self._handle_double_command(word):
             return
+
+        # HACK - Make sure buffer is ready by simulating 94ae
+        if self.buffer._position_tracer is None:
+            self._translate_command('94ae')
 
         # add to buffer
         self.buffer.add_chars(EXTENDED_CHARS[word])
