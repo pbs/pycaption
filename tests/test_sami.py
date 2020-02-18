@@ -1,5 +1,4 @@
 import unittest
-import six
 
 from pycaption import SAMIReader, CaptionReadNoCaptions
 from pycaption.geometry import HorizontalAlignmentEnum, Size, UnitEnum

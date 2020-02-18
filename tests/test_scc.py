@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 import unittest
-from six import text_type
 from pycaption.geometry import UnitEnum, HorizontalAlignmentEnum, VerticalAlignmentEnum
 from pycaption.scc.specialized_collections import (InstructionNodeCreator,
                                                    TimingCorrectingCaptionList)
@@ -45,7 +44,7 @@ class SCCReaderTestCase(unittest.TestCase):
             SCCReader().read, SAMPLE_SCC_EMPTY)
 
     def test_scc_positioning_is_read(self):
-        captions = SCCReader().read(text_type(SAMPLE_SCC_MULTIPLE_POSITIONING))
+        captions = SCCReader().read(str(SAMPLE_SCC_MULTIPLE_POSITIONING))
 
         # SCC generates only origin, and we always expect it.
         expected_positioning = [

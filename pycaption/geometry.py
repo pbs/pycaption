@@ -7,7 +7,6 @@ CONVENTIONS:
   responsible for the recalculation should return a new object with the
   necessary modifications.
 """
-import six
 
 from enum import Enum
 from .exceptions import RelativizationError
@@ -129,7 +128,7 @@ class TwoDimensionalObject(object):
 
         :type attribute: unicode
         """
-        horizontal, vertical = six.text_type(attribute).split(' ')
+        horizontal, vertical = str(attribute).split(' ')
         horizontal = Size.from_string(horizontal)
         vertical = Size.from_string(vertical)
 
@@ -404,7 +403,6 @@ class Point(TwoDimensionalObject):
             x=self.x.to_xml_attribute(), y=self.y.to_xml_attribute())
 
 
-@six.python_2_unicode_compatible
 class Size(object):
     """Ties together a number with a unit, to represent a size.
 
@@ -562,7 +560,7 @@ class Size(object):
     def to_xml_attribute(self, **kwargs):
         """Returns a unicode representation of this object, as an xml attribute
         """
-        return six.text_type(self)
+        return str(self)
 
     def serialized(self):
         """Returns the "useful" values of this object"""
@@ -628,7 +626,7 @@ class Padding(object):
         :param attribute: a string like object, representing a dfxp attr. value
         :return: a Padding object
         """
-        values_list = six.text_type(attribute).split(' ')
+        values_list = str(attribute).split(' ')
         sizes = []
 
         for value in values_list:

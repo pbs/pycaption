@@ -82,8 +82,6 @@ import math
 import textwrap
 from copy import deepcopy
 
-import six
-
 from pycaption.base import (
     BaseReader, BaseWriter, CaptionSet, CaptionNode,
 )
@@ -193,10 +191,10 @@ class SCCReader(BaseReader):
     def read(self, content, lang='en-US', simulate_roll_up=False, offset=0):
         """Converts the unicode string into a CaptionSet
 
-        :type content: six.text_type
+        :type content: str
         :param content: The SCC content to be converted to a CaptionSet
 
-        :type lang: six.text_type
+        :type lang: str
         :param lang: The language of the caption
 
         :type simulate_roll_up: bool
@@ -209,7 +207,7 @@ class SCCReader(BaseReader):
 
         :rtype: CaptionSet
         """
-        if type(content) != six.text_type:
+        if type(content) != str:
             raise InvalidInputError('The content is not a unicode string.')
 
         self.simulate_roll_up = simulate_roll_up
@@ -538,7 +536,7 @@ class SCCWriter(BaseWriter):
     def _layout_line(caption):
         def caption_node_to_text(caption_node):
             if caption_node.type_ == CaptionNode.TEXT:
-                return six.text_type(caption_node.content)
+                return str(caption_node.content)
             elif caption_node.type_ == CaptionNode.BREAK:
                 return '\n'
         caption_text = ''.join(
@@ -625,7 +623,7 @@ class _SccTimeTranslator(object):
         :rtype: int
         """
         return self._translate_time(
-            self._time[:-2] + six.text_type(int(self._time[-2:]) + self._frames),
+            self._time[:-2] + str(int(self._time[-2:]) + self._frames),
             self.offset
         )
 

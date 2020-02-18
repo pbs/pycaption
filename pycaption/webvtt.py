@@ -1,5 +1,4 @@
 import re
-import six
 import sys
 import datetime
 from copy import deepcopy
@@ -58,7 +57,7 @@ class WebVTTReader(BaseReader):
         return 'WEBVTT' in content
 
     def read(self, content, lang='en-US'):
-        if type(content) != six.text_type:
+        if type(content) != str:
             raise InvalidInputError('The content is not a unicode string.')
 
         caption_set = CaptionSet({lang: self._parse(content.splitlines())})
@@ -86,8 +85,8 @@ class WebVTTReader(BaseReader):
                     start, end, layout_info = self._parse_timing_line(
                         line, last_start_time)
                 except CaptionReadError as e:
-                    new_message = '%s (line %d)' % (e.args[0], timing_line)
-                    six.reraise(type(e), type(e)(new_message), sys.exc_info()[2])
+                    e.new_message = '%s (line %d)' % (e.args[0], timing_line)
+                    raise
 
             elif '' == line:
                 if found_timing:
@@ -380,11 +379,11 @@ class WebVTTWriter(BaseWriter):
         if alignment and alignment != HorizontalAlignmentEnum.CENTER:
             cue_settings += " align:" + WEBVTT_VERSION_OF[alignment]
         if left_offset:
-            cue_settings += " position:{},line-left".format(six.text_type(left_offset))
+            cue_settings += " position:{},line-left".format(str(left_offset))
         if top_offset:
-            cue_settings += " line:" + six.text_type(top_offset)
+            cue_settings += " line:" + str(top_offset)
         if cue_width:
-            cue_settings += " size:" + six.text_type(cue_width)
+            cue_settings += " size:" + str(cue_width)
 
         return cue_settings
 

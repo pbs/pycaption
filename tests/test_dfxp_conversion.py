@@ -3,8 +3,6 @@
 import unittest
 
 from bs4 import BeautifulSoup
-from six import text_type
-import six
 
 from pycaption import (
     DFXPReader, DFXPWriter, SRTWriter, SAMIWriter, WebVTTWriter)
@@ -51,7 +49,7 @@ class DFXPtoDFXPTestCase(unittest.TestCase, DFXPTestingMixIn):
     def test_dfxp_to_dfxp_conversion(self):
         caption_set = DFXPReader().read(SAMPLE_DFXP)
         results = DFXPWriter().write(caption_set)
-        self.assertTrue(isinstance(results, text_type))
+        self.assertTrue(isinstance(results, str))
         self.assertDFXPEquals(SAMPLE_DFXP_OUTPUT, results)
 
     def test_default_styling_tag(self):
@@ -117,18 +115,10 @@ class DFXPtoDFXPTestCase(unittest.TestCase, DFXPTestingMixIn):
             fit_to_screen=False,
             write_inline_positioning=True).write(caption_set)
 
-        if six.PY2:
-            self.assertDFXPEquals(
-                result,
-                SAMPLE_DFXP_INVALID_BUT_SUPPORTED_POSITIONING_OUTPUT
-            )
-        else:
-            # attributes are sorted differently I guess testing for same
-            # length is close enough
-            self.assertDFXPEquals(
-                result,
-                SAMPLE_DFXP_INVALID_BUT_SUPPORTED_POSITIONING_OUTPUT
-            )
+        self.assertDFXPEquals(
+            result,
+            SAMPLE_DFXP_INVALID_BUT_SUPPORTED_POSITIONING_OUTPUT
+        )
 
     def test_dont_create_style_tags_with_no_id(self):
         # The <style> tags can have no 'xml:id' attribute. Previously, in this
@@ -175,7 +165,7 @@ class DFXPtoSRTTestCase(unittest.TestCase, SRTTestingMixIn):
     def test_dfxp_to_srt_conversion(self):
         caption_set = DFXPReader().read(SAMPLE_DFXP)
         results = SRTWriter().write(caption_set)
-        self.assertTrue(isinstance(results, text_type))
+        self.assertTrue(isinstance(results, str))
         self.assertSRTEquals(SAMPLE_SRT, results)
 
 
@@ -184,7 +174,7 @@ class DFXPtoSAMITestCase(unittest.TestCase, SAMITestingMixIn):
     def test_dfxp_to_sami_conversion(self):
         caption_set = DFXPReader().read(SAMPLE_DFXP)
         results = SAMIWriter().write(caption_set)
-        self.assertTrue(isinstance(results, text_type))
+        self.assertTrue(isinstance(results, str))
         self.assertSAMIEquals(SAMPLE_SAMI, results)
 
     def test_dfxp_to_sami_with_margins(self):
@@ -204,25 +194,25 @@ class DFXPtoWebVTTTestCase(unittest.TestCase, WebVTTTestingMixIn):
     def test_dfxp_to_webvtt_conversion(self):
         caption_set = DFXPReader().read(SAMPLE_DFXP)
         results = WebVTTWriter().write(caption_set)
-        self.assertTrue(isinstance(results, text_type))
+        self.assertTrue(isinstance(results, str))
         self.assertWebVTTEquals(SAMPLE_WEBVTT_FROM_DFXP, results)
 
     def test_dfxp_with_inline_style_to_webvtt_conversion(self):
         caption_set = DFXPReader().read(SAMPLE_DFXP_WITH_INLINE_STYLE)
         results = WebVTTWriter().write(caption_set)
-        self.assertTrue(isinstance(results, text_type))
+        self.assertTrue(isinstance(results, str))
         self.assertWebVTTEquals(SAMPLE_WEBVTT_FROM_DFXP_WITH_STYLE, results)
 
     def test_dfxp_with_defined_style_to_webvtt_conversion(self):
         caption_set = DFXPReader().read(SAMPLE_DFXP_WITH_DEFINED_STYLE)
         results = WebVTTWriter().write(caption_set)
-        self.assertTrue(isinstance(results, text_type))
+        self.assertTrue(isinstance(results, str))
         self.assertWebVTTEquals(SAMPLE_WEBVTT_FROM_DFXP_WITH_STYLE, results)
 
     def test_dfxp_with_inherited_style_to_webvtt_conversion(self):
         caption_set = DFXPReader().read(SAMPLE_DFXP_WITH_INHERITED_STYLE)
         results = WebVTTWriter().write(caption_set)
-        self.assertTrue(isinstance(results, text_type))
+        self.assertTrue(isinstance(results, str))
         self.assertWebVTTEquals(SAMPLE_WEBVTT_FROM_DFXP_WITH_STYLE, results)
 
     def test_dfxp_with_positioning_to_webvtt_conversion(self):
@@ -230,14 +220,14 @@ class DFXPtoWebVTTTestCase(unittest.TestCase, WebVTTTestingMixIn):
         results = WebVTTWriter(
             video_width=VIDEO_WIDTH, video_height=VIDEO_HEIGHT
         ).write(caption_set)
-        self.assertTrue(isinstance(results, text_type))
+        self.assertTrue(isinstance(results, str))
         self.assertWebVTTEquals(
             SAMPLE_WEBVTT_FROM_DFXP_WITH_POSITIONING_AND_STYLE, results)
 
     def test_dfxp_to_webvtt_adds_explicit_size(self):
         caption_set = DFXPReader().read(SAMPLE_DFXP_LONG_CUE)
         results = WebVTTWriter().write(caption_set)
-        self.assertTrue(isinstance(results, text_type))
+        self.assertTrue(isinstance(results, str))
         self.assertEqual(
             SAMPLE_WEBVTT_OUTPUT_LONG_CUE, results)
 

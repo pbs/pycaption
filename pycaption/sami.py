@@ -36,7 +36,6 @@ OBS:
 
 """
 import re
-import six
 from logging import FATAL
 from collections import deque
 from copy import deepcopy
@@ -85,7 +84,7 @@ class SAMIReader(BaseReader):
             return False
 
     def read(self, content):
-        if type(content) != six.text_type:
+        if type(content) != str:
             raise InvalidInputError('The content is not a unicode string.')
 
         content, doc_styles, doc_langs = (
@@ -552,10 +551,10 @@ class SAMIWriter(BaseWriter):
 
         if layout_info and layout_info.padding:
             rules.update({
-                'margin-top': six.text_type(layout_info.padding.before),
-                'margin-right': six.text_type(layout_info.padding.end),
-                'margin-bottom': six.text_type(layout_info.padding.after),
-                'margin-left': six.text_type(layout_info.padding.start),
+                'margin-top': str(layout_info.padding.before),
+                'margin-right': str(layout_info.padding.end),
+                'margin-bottom': str(layout_info.padding.after),
+                'margin-left': str(layout_info.padding.start),
             })
 
         for attr, value in sorted(self._recreate_style(rules).items()):
