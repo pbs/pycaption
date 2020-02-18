@@ -965,17 +965,9 @@ PAC_BYTES_TO_POSITIONING_MAP = _restructure_bytes_to_position_map(
 
 
 # Inverted character lookup
-CHARACTER_TO_CODE = {
-    character: code
-    for code, character in viewitems(CHARACTERS)
-}
-
-SPECIAL_OR_EXTENDED_CHAR_TO_CODE = {
-    character: code for code, character in viewitems(EXTENDED_CHARS)
-}
-SPECIAL_OR_EXTENDED_CHAR_TO_CODE.update(
-    {character: code for code, character in viewitems(SPECIAL_CHARS)}
-)
+CHARACTER_TO_CODE = dict(zip(CHARACTERS.values(), CHARACTERS.keys()))
+SPECIAL_OR_EXTENDED_CHAR_TO_CODE = dict(zip(EXTENDED_CHARS.values(), EXTENDED_CHARS.keys()))
+SPECIAL_OR_EXTENDED_CHAR_TO_CODE.update(dict(zip(SPECIAL_CHARS.values(), SPECIAL_CHARS.keys())))
 
 # Time to transmit a single codeword = 1 second / 29.97
 MICROSECONDS_PER_CODEWORD = 1000.0 * 1000.0 / (30.0 * 1000.0 / 1001.0)
