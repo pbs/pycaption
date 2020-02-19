@@ -1,3 +1,4 @@
 beautifulsoup4>=4.8.1
 lxml>=3.2.3
 cssutils>=0.9.10
+Pillow>=7.0.0
