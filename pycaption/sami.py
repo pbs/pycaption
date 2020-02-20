@@ -39,7 +39,6 @@ import re
 from logging import FATAL
 from collections import deque
 from copy import deepcopy
-from future.backports.html.parser import HTMLParseError
 
 from html.parser import HTMLParser
 from html.entities import name2codepoint
@@ -750,7 +749,7 @@ class SAMIParser(HTMLParser):
         data = data.replace(';>', '>')
         try:
             HTMLParser.feed(self, data)
-        except HTMLParseError as e:
+        except AttributeError as e:
             raise CaptionReadSyntaxError(e)
 
         # close any tags that remain in the queue
