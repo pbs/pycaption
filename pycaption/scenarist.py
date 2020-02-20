@@ -1,6 +1,7 @@
 import os
 import tempfile
 import zipfile
+from datetime import timedelta
 from io import BytesIO
 from math import sqrt
 
@@ -11,7 +12,7 @@ from pycaption.base import BaseWriter, CaptionSet, Caption
 
 HEADER = """st_format 2
 SubTitle\tFace_Painting
-Tape_Type\tNON_DROP
+Tape_Type\t{tape_type}
 Display_Start\tnon_forced
 Pixel_Area\t(2 479)
 Display_Area\t(0 2 719 479)
@@ -35,6 +36,7 @@ a = """
 
 """
 
+
 def zipit(path, arch, mode='w'):
     archive = zipfile.ZipFile(arch, mode, zipfile.ZIP_DEFLATED)
     if os.path.isdir(path):
@@ -57,31 +59,41 @@ def _zippy(base_path, path, archive):
 
 
 class ScenaristDVDWriter(BaseWriter):
-    paColor = (255, 255, 255) # letter body
-    e1Color = (190, 190, 190) # antialiasing color
-    e2Color = (0, 0, 0) # border color
-    bgColor = (0, 255, 0) # background color
+    paColor = (255, 255, 255)  # letter body
+    e1Color = (190, 190, 190)  # antialiasing color
+    e2Color = (0, 0, 0)  # border color
+    bgColor = (0, 255, 0)  # background color
 
     palette = [paColor, e1Color, e2Color, bgColor]
 
-
-    def __init__(self, relativize=True, video_width=720, video_height=480, fit_to_screen=True):
+    def __init__(self, relativize=True, video_width=720, video_height=480, fit_to_screen=True, tape_type='NON_DROP',
+                 frame_rate=25):
         super().__init__(relativize, video_width, video_height, fit_to_screen)
+        self.tape_type = tape_type
+        self.frame_rate = frame_rate
 
     def write(self, caption_set: CaptionSet):
         lang = caption_set.get_languages().pop()
         caps = caption_set.get_captions(lang)
 
-
         buf = BytesIO()
         with tempfile.TemporaryDirectory() as tmpDir:
             with open(tmpDir + '/subtitles.sst', 'w+') as sst:
                 index = 1
+                sst.write(HEADER.format(
+                    bg_red=self.bgColor[0], bg_green=self.bgColor[1], bg_blue=self.bgColor[2],
+                    pa_red=self.paColor[0], pa_green=self.paColor[1], pa_blue=self.paColor[2],
+                    e1_red=self.e1Color[0], e1_green=self.e1Color[1], e1_blue=self.e1Color[2],
+                    e2_red=self.e2Color[0], e2_green=self.e2Color[1], e2_blue=self.e2Color[2],
+                    tape_type=self.tape_type,
+                ))
                 for cap in caps:
-                    sst.write("%04d %s %s subtitle%04d.tif\n" % (index, cap.format_start(), cap.format_end(), index))
-                    backgroundColor = 3#self.bgColor
+
+                    sst.write("%04d %s %s subtitle%04d.tif\n" % (
+                    index, self.format_ts(cap.start), self.format_ts(cap.end), index))
+                    backgroundColor = 3  # self.bgColor
                     img = Image.new('RGB', (self.video_width, self.video_height), self.bgColor)
-                    #img.putpalette(self.paletteRaw)
+                    # img.putpalette(self.paletteRaw)
                     draw = ImageDraw.Draw(img)
                     self.printLine(draw, cap)
 
@@ -100,9 +112,8 @@ class ScenaristDVDWriter(BaseWriter):
                                     dist = tmp
                                     best_fit = c
                             img.putpixel((px, py), best_fit)
-                    img.save(tmpDir + '/subtitle%04d.tif' % index)  #
+                    img.save(tmpDir + '/subtitle%04d.tif' % index, compression="tiff_deflate")  #
                     # None, "tiff_ccitt", "group3", "group4", "tiff_jpeg", "tiff_adobe_deflate", "tiff_thunderscan", "tiff_deflate", "tiff_sgilog", "tiff_sgilog24", "tiff_raw_16"
-
 
                     index = index + 1
 
@@ -110,39 +121,26 @@ class ScenaristDVDWriter(BaseWriter):
         buf.seek(0)
         return buf.read()
 
-    def quantizetopalette(self, silf, palette, dither=False):
-        """Convert an RGB or L mode image to use a given P image's palette."""
-
-        silf.load()
-
-        # use palette from reference image
-        palette.load()
-        if palette.mode != "P":
-            raise ValueError("bad mode for palette image")
-        if silf.mode != "RGB" and silf.mode != "L":
-            raise ValueError(
-                "only RGB or L mode images can be quantized to a palette"
-            )
-        im = silf.im.convert("P", 1 if dither else 0, palette.im)
-        # the 0 above means turn OFF dithering
-
-        # Later versions of Pillow (4.x) rename _makeself to _new
-        try:
-            return silf._new(im)
-        except AttributeError:
-            return silf._makeself(im)
+    def format_ts(self, value):
+        datetime_value = timedelta(seconds=(int(value / 1000000)))
+        str_value = str(datetime_value)[:11]
+        if str_value.startswith('0:'):
+            str_value = '0' + str_value
+        str_value = str_value + ':%02d' % (int((int(value / 1000) % 1000) / int(1000 / self.frame_rate)))
+        return str_value
 
     def printLine(self, draw: ImageDraw, caption: Caption):
         text = caption.get_text()
 
         fnt = ImageFont.truetype(os.path.dirname(__file__) + '/NotoSansDisplay-Regular.ttf', 30)
+        # https://github.com/googlefonts/noto-fonts/issues/1663
         txtWidth, txtHeight = draw.textsize(text, font=fnt)
         x = self.video_width / 2 - txtWidth / 2
-        y = self.video_height - txtHeight - 10 # padding for readability
+        y = self.video_height - txtHeight - 10  # padding for readability
 
         borderColor = self.e2Color
         fontColor = self.paColor
-        for adj in range(3):
+        for adj in range(2):
             # move right
             draw.text((x - adj, y), text, font=fnt, fill=borderColor)
             # move left
