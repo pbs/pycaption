@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 from itertools import product
-from future.utils import viewitems
 
 COMMANDS = {
     '9420': '',
