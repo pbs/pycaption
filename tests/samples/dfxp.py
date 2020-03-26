@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-from __future__ import unicode_literals
 
 SAMPLE_DFXP = """\
 <?xml version="1.0" encoding="utf-8"?>

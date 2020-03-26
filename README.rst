@@ -10,11 +10,16 @@ to read content into a CaptionSet object, and then use one of the Writers to
 output the CaptionSet into captions of your desired format.
 
 Version 2.0.0\@learningequality passes all tests with Python 2.7, 3.4, 3.5, 3.6, and 3.7.
+Version 2.1.0\@learningequality passes all tests with Python 3.5+, 3.6, and 3.7.
 
 For details, see the `documentation <http://pycaption.readthedocs.org>`__.
 
 Changelog
 ---------
+
+2.1.0\@learningequality
+^^^^^^^^^^^^^^^^^^^^^^^
+- Python 2.7 and 3.4 support removed
 
 2.0.0\@learningequality
 ^^^^^^^^^^^^^^^^^^^^^^^

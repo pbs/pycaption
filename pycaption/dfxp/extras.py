@@ -1,4 +1,3 @@
-from __future__ import unicode_literals
 # We thought about making pycaption.base objects immutable. This would be nice
 # in a lot of cases, but since the transformations on them could be quite
 # complex, the deepcopy method is good enough sometimes.

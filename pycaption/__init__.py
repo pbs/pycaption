@@ -1,4 +1,3 @@
-from __future__ import unicode_literals
 from .base import (
     CaptionConverter, CaptionNode, Caption, CaptionList, CaptionSet)
 from .dfxp import DFXPWriter, DFXPReader

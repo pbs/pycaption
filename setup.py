@@ -11,14 +11,12 @@ dependencies = [
     'beautifulsoup4>=4.6.3',
     'lxml>=3.2.3,<4.4.0',
     'cssutils>=0.9.10',
-    'future',
-    'enum34',
     'six>=1.9.0'
 ]
 
 setup(
     name='le-pycaption',
-    version='2.0.0-alpha3',
+    version='2.1.0-alpha1',
     description='Closed caption converter',
     long_description=open(README_PATH).read(),
     author='Joe Norton <joey@nortoncrew.com>',
@@ -31,8 +29,6 @@ setup(
     classifiers=[
         'Development Status :: 3 - Alpha',
         'License :: OSI Approved :: Apache Software License',
-        'Programming Language :: Python :: 2.7',
-        'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',

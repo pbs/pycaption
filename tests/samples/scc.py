@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 #
 
-from __future__ import unicode_literals
 SAMPLE_SCC_CREATED_DFXP_WITH_WRONGLY_CLOSING_SPANS = u"""\
 Scenarist_SCC V1.0
 
