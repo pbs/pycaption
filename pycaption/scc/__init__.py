@@ -76,8 +76,6 @@ http://www.theneitherworld.com/mcpoodle/SCC_TOOLS/DOCS/SCC_FORMAT.HTML
  dictionary. This is legacy logic, that I didn't know how to handle, and
  just carried over when implementing positioning.
 """
-from __future__ import unicode_literals
-from __future__ import division
 
 from builtins import range
 from past.utils import old_div

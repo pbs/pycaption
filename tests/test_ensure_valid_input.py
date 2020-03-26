@@ -1,4 +1,3 @@
-from __future__ import unicode_literals
 import unittest
 
 from pycaption import DFXPReader, SAMIReader, SCCReader, SRTReader, WebVTTReader

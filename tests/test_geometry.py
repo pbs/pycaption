@@ -1,4 +1,3 @@
-from __future__ import unicode_literals
 import unittest
 
 from pycaption.geometry import Size, Point, Stretch, Padding, UnitEnum, Layout

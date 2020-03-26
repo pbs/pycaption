@@ -35,13 +35,10 @@ OBS:
       because this is irrelevant.
 
 """
-from __future__ import unicode_literals
-from __future__ import division
 from builtins import chr
 from past.utils import old_div
 import six
 import re
-from future.backports.html.parser import HTMLParseError
 
 from collections import deque, OrderedDict
 from html.entities import name2codepoint
@@ -765,7 +762,7 @@ class SAMIParser(HTMLParser):
         data = data.replace(';>', '>')
         try:
             HTMLParser.feed(self, data)
-        except HTMLParseError as e:
+        except BaseException as e:
             raise CaptionReadSyntaxError(e)
 
         # close any tags that remain in the queue

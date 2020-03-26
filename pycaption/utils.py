@@ -1,4 +1,3 @@
-from __future__ import unicode_literals
 def is_leaf(element):
     """
     Return True if the element is a leaf, False otherwise. The element is

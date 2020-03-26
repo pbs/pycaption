@@ -7,8 +7,6 @@ CONVENTIONS:
   responsible for the recalculation should return a new object with the
   necessary modifications.
 """
-from __future__ import unicode_literals
-from __future__ import division
 
 from past.builtins import cmp
 from past.utils import old_div

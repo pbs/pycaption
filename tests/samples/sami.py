@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-from __future__ import unicode_literals
 SAMPLE_SAMI = u"""
 <SAMI><HEAD><TITLE>NOVA3213</TITLE><STYLE TYPE="text/css">
 <!--
