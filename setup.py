@@ -16,13 +16,13 @@ dependencies = [
 ]
 
 setup(
-    name='pycaption',
-    version='1.1.0',
+    name='pycaption-od',
+    version='1.0.0',
     description='Closed caption converter',
     long_description=open(README_PATH).read(),
-    author='Joe Norton',
-    author_email='joey@nortoncrew.com',
-    url='https://github.com/pbs/pycaption',
+    author='OverDrive',
+    author_email='ktighe@overdrive.com',
+    url='https://github.com/ktighe-od/pycaption-od',
     install_requires=dependencies,
     packages=find_packages(),
     include_package_data=True,
