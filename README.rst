@@ -7,8 +7,7 @@ py-caption
 to read content into a CaptionSet object, and then use one of the Writers to
 output the CaptionSet into captions of your desired format.
 
-Tested with Python 3.4 and 3.5.
-(for Python 2 use pycaption < 1.0.0)
+Tested with Python 3.5.
 
 For details, see the `documentation <http://pycaption.readthedocs.org>`__.
 
