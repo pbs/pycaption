@@ -43,6 +43,7 @@ class SRTtoSCCtoSRTTestCase(unittest.TestCase, CaptionSetTestingMixIn):
 
 
 class SCCtoDFXPTestCase(unittest.TestCase):
+    maxDiff = None
     def test_scc_to_dfxp(self):
         caption_set = SCCReader().read(SAMPLE_SCC_MULTIPLE_POSITIONING)
         dfxp = DFXPWriter(

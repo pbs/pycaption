@@ -82,6 +82,7 @@ class DFXPTestingMixIn(object):
     """
     Provide specialized test case capabilities for asserting on DFXP content.
     """
+    maxDiff = None
 
     def _remove_styling(self, soup):
         for style in soup('styling'):
