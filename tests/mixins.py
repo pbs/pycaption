@@ -6,6 +6,7 @@ class WebVTTTestingMixIn(object):
     """
     Provide specialized test case capabilities for asserting on WebVTT content.
     """
+    maxDiff = None
 
     def _extract_webvtt_captions(self, content):
         return tuple(line.strip() for line in content.splitlines())
@@ -81,6 +82,7 @@ class DFXPTestingMixIn(object):
     """
     Provide specialized test case capabilities for asserting on DFXP content.
     """
+    maxDiff = None
 
     def _remove_styling(self, soup):
         for style in soup('styling'):
