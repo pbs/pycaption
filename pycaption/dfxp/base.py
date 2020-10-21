@@ -2,6 +2,8 @@ import re
 from copy import deepcopy
 from xml.sax.saxutils import escape
 from bs4 import BeautifulSoup, NavigableString
+from datetime import timedelta
+from six import text_type
 
 from ..base import (
     BaseReader, BaseWriter, CaptionSet, CaptionList, Caption, CaptionNode,
@@ -58,9 +60,91 @@ class DFXPReader(BaseReader):
         else:
             return False
 
+    def format_timestamp(self, value):
+        datetime_value = timedelta(milliseconds=(int(value / 1000)))
+        str_value = text_type(datetime_value)[:11]
+        if not datetime_value.microseconds:
+            str_value += '.000'
+        return '0' + str_value
+
     def read(self, content):
         if type(content) != str:
             raise InvalidInputError('The content is not a unicode string.')
+
+        if 'xml:id=' in content.lower():
+            dfxp_doc = self._get_dfxp_parser_class()(
+                content, read_invalid_positioning=self.read_invalid_positioning)
+
+            # <p xml:id="Caption#" begin="00:00:00.000" end="00:00:00.000">CAPTION CONTENT GOES HERE</p>
+            caption_template = '<p xml:id="{0}" begin="{1}" end="{2}">{3}</p>'
+            lines = content.splitlines()
+            para_tag_array = dfxp_doc.find_all('p')
+            para_tag_index = 0
+            updated_line = []
+            new_xml_id = 1
+            for i, line in enumerate(lines):
+                if '<p ' not in line:
+                    updated_line.append(line)
+                    continue
+
+                # Gather items for caption line editing
+                start, end = self._find_times(para_tag_array[para_tag_index])
+                xml_id = para_tag_array[para_tag_index]['xml:id']
+                base_xml_id = ''.join([i for i in xml_id if not i.isdigit()])
+                para_tag_index += 1
+
+                text_start_index = line.find('>') + 1
+                text_end_index = line.find('</p>')
+                para_text = line[text_start_index:text_end_index]
+
+                break_count = line.count('<br/>')
+                if break_count < 2:
+                    xml_id_str = base_xml_id + '{}'.format(new_xml_id)
+                    start_value = self.format_timestamp(start)
+                    end_value = self.format_timestamp(end)
+                    updated_line.append(caption_template.format(xml_id_str, start_value, end_value, para_text))
+                    new_xml_id += 1
+                    continue
+
+                # Caption line needs breaking up based on <br/>
+                delimit_len = len('<br/>')
+                break_index_list = []
+                for index, value in enumerate(para_text):
+                    if para_text[index:index + delimit_len] == '<br/>':
+                        break_index_list.append(index)
+
+                edit_markers = break_index_list[1::2]
+                text_length = len(para_text)
+                total_para_char_count = float(len(para_text))
+                marker_index = 0
+
+                millis_placeholder = start
+                for j, marker in enumerate(edit_markers):
+                    xml_id_str = base_xml_id + '{}'.format(new_xml_id)
+                    new_para_text = para_text[marker_index:marker]
+                    line_char_count = len(new_para_text)
+                    total_time_available = end - start
+                    line_char_percent = line_char_count / total_para_char_count
+                    line_time_millis = line_char_percent * total_time_available
+
+                    start_value = self.format_timestamp(millis_placeholder)
+                    millis_placeholder = millis_placeholder + line_time_millis
+                    end_value = self.format_timestamp(millis_placeholder)
+
+                    updated_line.append(caption_template.format(xml_id_str, start_value, end_value, new_para_text))
+                    marker_index = marker + len('<br/>')
+                    new_xml_id += 1
+
+                    # Fix up last edit
+                    if j == len(edit_markers) - 1:
+                        xml_id_str = base_xml_id + '{}'.format(new_xml_id)
+                        last_para_text = para_text[marker_index:text_length]
+                        start_value = self.format_timestamp(millis_placeholder)
+                        end_value = self.format_timestamp(end)
+                        updated_line.append(caption_template.format(xml_id_str, start_value, end_value, last_para_text))
+                new_xml_id += 1
+
+            content = '\n'.join(updated_line)
 
         dfxp_document = self._get_dfxp_parser_class()(
             content, read_invalid_positioning=self.read_invalid_positioning)
