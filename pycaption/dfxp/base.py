@@ -83,7 +83,7 @@ class DFXPReader(BaseReader):
             updated_line = []
             new_xml_id = 1
             for i, line in enumerate(lines):
-                if '<p ' not in line:
+                if '<p ' not in line or '</p>' not in line:
                     updated_line.append(line)
                     continue
 
