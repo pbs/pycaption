@@ -1,4 +1,4 @@
 py-caption
 ==========
 
-We have customized  pbs/pycaption for our need
+We have customized https://github.com/pbs/pycaption for our need.
