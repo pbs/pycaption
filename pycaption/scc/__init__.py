@@ -493,7 +493,7 @@ class SCCWriter(BaseWriter):
 
     def write(self, caption_set):
         output = HEADER + '\n\n'
-
+       
         if caption_set.is_empty():
             return output
 
@@ -503,6 +503,8 @@ class SCCWriter(BaseWriter):
         lang = list(caption_set.get_languages())[0]
         captions = caption_set.get_captions(lang)
 
+        output += '%s\t942c\n\n' % self._format_timestamp(captions[0].start)
+
         # PASS 1: compute codes for each caption
         codes = [(self._text_to_code(caption), caption.start, caption.end)
                  for caption in captions]
@@ -510,26 +512,31 @@ class SCCWriter(BaseWriter):
         # PASS 2:
         # Advance start times so as to have time to write to the pop-on
         # buffer; possibly remove the previous clear-screen command
+
+        # TODO Technoleads do not need buffering
         for index, (code, start, end) in enumerate(codes):
             code_words = len(code) / 5 + 8
             code_time_microseconds = code_words * MICROSECONDS_PER_CODEWORD
-            code_start = start - code_time_microseconds
+            # code_start = start - code_time_microseconds
+            code_start = start
             if index == 0:
                 continue
             previous_code, previous_start, previous_end = codes[index-1]
-            if previous_end + 3 * MICROSECONDS_PER_CODEWORD >= code_start:
+            # if previous_end + 4 * MICROSECONDS_PER_CODEWORD >= code_start:
+            if previous_end + 4 * MICROSECONDS_PER_CODEWORD + code_time_microseconds >= code_start:
                 codes[index-1] = (previous_code, previous_start, None)
             codes[index] = (code, code_start, end)
 
         # PASS 3:
         # Write captions.
+       
         for (code, start, end) in codes:
             output += ('%s\t' % self._format_timestamp(start))
-            output += '94ae 94ae 9420 9420 '
+            output += '9420 '
             output += code
-            output += '942c 942c 942f 942f\n\n'
+            output += '942c 8080 8080 942f\n\n'
             if end is not None:
-                output += '%s\t942c 942c\n\n' % self._format_timestamp(end)
+                output += '%s\t942c\n\n' % self._format_timestamp(end)
 
         return output
 
@@ -597,7 +604,7 @@ class SCCWriter(BaseWriter):
     def _format_timestamp(microseconds):
         seconds_float = microseconds / 1000.0 / 1000.0
         # Convert to non-drop-frame timecode
-        seconds_float *= 1000.0 / 1001.0
+        # seconds_float *= 1000.0 / 1001.0
         hours = math.floor(seconds_float / 3600)
         seconds_float -= hours * 3600
         minutes = math.floor(seconds_float / 60)
@@ -605,7 +612,7 @@ class SCCWriter(BaseWriter):
         seconds = math.floor(seconds_float)
         seconds_float -= seconds
         frames = math.floor(seconds_float * 30)
-        return '%02d:%02d:%02d:%02d' % (hours, minutes, seconds, frames)
+        return '%02d:%02d:%02d;%02d' % (hours, minutes, seconds, frames)
 
 
 class _SccTimeTranslator(object):
