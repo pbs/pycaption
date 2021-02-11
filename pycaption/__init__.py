@@ -5,6 +5,7 @@ from .sami import SAMIReader, SAMIWriter
 from .srt import SRTReader, SRTWriter
 from .scc import SCCReader, SCCWriter
 from .webvtt import WebVTTReader, WebVTTWriter
+from .technoleads import TechnoleadsReader, TechnoleadsWriter
 from .exceptions import (
     CaptionReadError, CaptionReadNoCaptions, CaptionReadSyntaxError)
 
@@ -14,11 +15,12 @@ __all__ = [
     'SAMIReader', 'SAMIWriter', 'SRTReader', 'SRTWriter',
     'SCCReader', 'SCCWriter', 'WebVTTReader', 'WebVTTWriter',
     'CaptionReadError', 'CaptionReadNoCaptions', 'CaptionReadSyntaxError',
-    'detect_format', 'CaptionNode', 'Caption', 'CaptionList', 'CaptionSet'
+    'detect_format', 'CaptionNode', 'Caption', 'CaptionList', 'CaptionSet',
+    'TechnoleadsReader'
 ]
 
 SUPPORTED_READERS = (
-    DFXPReader, WebVTTReader, SAMIReader, SRTReader, SCCReader)
+    DFXPReader, WebVTTReader, SAMIReader, SRTReader, SCCReader, TechnoleadsReader)
 
 
 def detect_format(caps):
