@@ -97,6 +97,31 @@ class SRTWriter(BaseWriter):
         return caption_content
 
     def _recreate_lang(self, captions):
+
+        # >>> start fix for #189
+        new_captions = []
+        skips = []
+
+        total_captions = len(captions)
+        for i, caption in enumerate(captions):
+            if i in skips:
+                continue
+            if i < total_captions:
+                for n in range(i + 1, total_captions):
+                    if n in skips:
+                        continue  # wow, we merged one of these captions just earlier!, lets skip
+                    next_caption = captions[n]
+                    if (caption.start, caption.end) != (next_caption.start, next_caption.end):
+                        break  # no more matching timestamps
+                    caption = Caption(
+                        start=caption.start,
+                        end=caption.end,
+                        nodes=caption.nodes + next_caption.nodes
+                    )
+                    skips.append(n)  # skip/delete next caption, as its merged
+            new_captions.append(caption)
+        # <<< end fix for #189
+
         srt = ''
         count = 1
 
