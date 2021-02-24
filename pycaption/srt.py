@@ -97,29 +97,28 @@ class SRTWriter(BaseWriter):
         return caption_content
 
     def _recreate_lang(self, captions):
-        
-        # Merge caption's that are on the exact same timestamp otherwise some
-        # players will play them in reversed order, libass specifically which is
-        # used quite a lot, including VLC and MPV.
-        # Fixes #189 - https://github.com/pbs/pycaption/issues/189
         new_captions = []
-        i = 0
-        while len(captions) > i:
-            # if there's a caption after this, and they have the same timestamps
-            if len(captions) > i+1 and captions[i].start == captions[i+1].start and captions[i].end == captions[i+1].end:
-                # merge them together as a new caption
-                new_caption = Caption(start=captions[i].start, end=captions[i].end, nodes=captions[i].nodes + captions[i+1].nodes)
-                # delete the caption after this as we merged them to the current one
-                del captions[i]
-            else:
-                # don't do anything different
-                new_caption = captions[i]
-            # add final caption to new list
-            new_captions.append(new_caption)
-            # increment index
-            i += 1
-        captions = new_captions
-        
+        skips = []
+
+        total_captions = len(captions)
+        for i, caption in enumerate(captions):
+            if i in skips:
+                continue
+            if i < total_captions:
+                for n in range(i + 1, total_captions):
+                    if n in skips:
+                        continue  # wow, we merged one of these captions just earlier!, lets skip
+                    next_caption = captions[n]
+                    if (caption.start, caption.end) != (next_caption.start, next_caption.end):
+                        break  # no more matching timestamps
+                    caption = Caption(
+                        start=caption.start,
+                        end=caption.end,
+                        nodes=caption.nodes + next_caption.nodes
+                    )
+                    skips.append(n)  # skip/delete next caption, as its merged
+            new_captions.append(caption)
+
         srt = ''
         count = 1
 
