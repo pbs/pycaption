@@ -56,9 +56,19 @@ class SRTReader(BaseReader):
 
     def _srttomicro(self, stamp):
         timesplit = stamp.split(':')
+
+        # TODO(apeterka): add better support for "extended SRT"
+        # This is a workaround for "extended SRT" format, whose timestamp looks like this:
+        # 00:00:18,208 --> 00:00:20,792 X1:230 X2:490 Y1:393 Y2:431
+        if len(timesplit) > 3:
+            timesplit = timesplit[0:3]
+        if ' ' in timesplit[2]:
+            timesplit[2] = timesplit[2].split(' ')[0]
+
         if ',' not in timesplit[2]:
             timesplit[2] += ',000'
         secsplit = timesplit[2].split(',')
+
         microseconds = (int(timesplit[0]) * 3600000000 +
                         int(timesplit[1]) * 60000000 +
                         int(secsplit[0]) * 1000000 +
