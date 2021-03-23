@@ -3,10 +3,8 @@ import tempfile
 import zipfile
 from datetime import timedelta
 from io import BytesIO
-from math import sqrt
 
 from PIL import Image, ImageFont, ImageDraw
-from PIL.ImagePalette import ImagePalette
 
 from pycaption.base import BaseWriter, CaptionSet, Caption
 
@@ -66,6 +64,9 @@ class ScenaristDVDWriter(BaseWriter):
 
     palette = [paColor, e1Color, e2Color, bgColor]
 
+    palette_image = Image.new("P", (1, 1))
+    palette_image.putpalette([*paColor, *e1Color, *e2Color, *bgColor] + [0, 0, 0] * 252)
+
     def __init__(self, relativize=True, video_width=720, video_height=480, fit_to_screen=True, tape_type='NON_DROP',
                  frame_rate=25):
         super().__init__(relativize, video_width, video_height, fit_to_screen)
@@ -77,6 +78,10 @@ class ScenaristDVDWriter(BaseWriter):
         caps = caption_set.get_captions(lang)
 
         buf = BytesIO()
+
+        # https://github.com/googlefonts/noto-fonts/issues/1663
+        fnt = ImageFont.truetype(os.path.dirname(__file__) + '/NotoSansDisplay-Regular.ttf', 30)
+
         with tempfile.TemporaryDirectory() as tmpDir:
             with open(tmpDir + '/subtitles.sst', 'w+') as sst:
                 index = 1
@@ -88,35 +93,22 @@ class ScenaristDVDWriter(BaseWriter):
                     tape_type=self.tape_type,
                 ))
                 for cap in caps:
-
                     sst.write("%04d %s %s subtitle%04d.tif\n" % (
-                    index, self.format_ts(cap.start), self.format_ts(cap.end), index))
-                    backgroundColor = 3  # self.bgColor
-                    img = Image.new('RGB', (self.video_width, self.video_height), self.bgColor)
-                    # img.putpalette(self.paletteRaw)
-                    draw = ImageDraw.Draw(img)
-                    self.printLine(draw, cap)
+                        index,
+                        self.format_ts(cap.start),
+                        self.format_ts(cap.end),
+                        index
+                    ))
 
-                    for py in range(img.height):
-                        for px in range(img.width):
-                            pix = img.getpixel((px, py))
-                            # Perform exhaustive search for closest Euclidean distance
-                            dist = 450
-                            best_fit = (0, 0, 0)
-                            for c in self.palette:
-                                if pix == c:  # If pixel matches exactly, break
-                                    best_fit = c
-                                    break
-                                tmp = sqrt(pow(pix[0] - c[0], 2) + pow(pix[1] - c[1], 2) + pow(pix[2] - c[2], 2))
-                                if tmp < dist:
-                                    dist = tmp
-                                    best_fit = c
-                            img.putpixel((px, py), best_fit)
-                    img.save(tmpDir + '/subtitle%04d.tif' % index, compression="tiff_deflate")  #
-                    # None, "tiff_ccitt", "group3", "group4", "tiff_jpeg", "tiff_adobe_deflate", "tiff_thunderscan", "tiff_deflate", "tiff_sgilog", "tiff_sgilog24", "tiff_raw_16"
+                    img = Image.new('RGB', (self.video_width, self.video_height), self.bgColor)
+                    draw = ImageDraw.Draw(img)
+                    self.printLine(draw, cap, fnt)
+
+                    # quantize the image to our palette
+                    img_quant = img.quantize(palette=self.palette_image)
+                    img_quant.save(tmpDir + '/subtitle%04d.tif' % index, compression="tiff_deflate")
 
                     index = index + 1
-
             zipit(tmpDir, buf)
         buf.seek(0)
         return buf.read()
@@ -129,11 +121,9 @@ class ScenaristDVDWriter(BaseWriter):
         str_value = str_value + ':%02d' % (int((int(value / 1000) % 1000) / int(1000 / self.frame_rate)))
         return str_value
 
-    def printLine(self, draw: ImageDraw, caption: Caption):
+    def printLine(self, draw: ImageDraw, caption: Caption, fnt: ImageFont):
         text = caption.get_text()
 
-        fnt = ImageFont.truetype(os.path.dirname(__file__) + '/NotoSansDisplay-Regular.ttf', 30)
-        # https://github.com/googlefonts/noto-fonts/issues/1663
         txtWidth, txtHeight = draw.textsize(text, font=fnt)
         x = self.video_width / 2 - txtWidth / 2
         y = self.video_height - txtHeight - 10  # padding for readability
@@ -159,4 +149,3 @@ class ScenaristDVDWriter(BaseWriter):
             draw.text((x + adj, y - adj), text, font=fnt, fill=borderColor)
 
         draw.text((x, y), text, font=fnt, fill=fontColor)
-        pass
