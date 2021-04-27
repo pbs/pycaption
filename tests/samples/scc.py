@@ -281,3 +281,9 @@ Scenarist_SCC V1.0
 
 00:25:00;00    942c
 """
+
+SAMPLE_SCC_WITH_EXTENDED_CHARACTERS = """\
+Scenarist_SCC V1.0
+
+00:04:36;06	9420 942c 942f 9420 91d6 cdc1 13b0 5254 c8c1 ba80
+"""

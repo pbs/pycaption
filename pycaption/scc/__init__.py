@@ -351,6 +351,8 @@ class SCCReader(BaseReader):
         if self._handle_double_command(word):
             return
 
+        self.buffer.remove_ascii_duplicate(EXTENDED_CHARS[word])
+
         # add to buffer
         self.buffer.add_chars(EXTENDED_CHARS[word])
 

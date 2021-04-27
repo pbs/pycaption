@@ -1,3 +1,5 @@
+import unicodedata
+
 from ..base import CaptionList, Caption, CaptionNode
 from ..geometry import (UnitEnum, Size, Layout, Point, Alignment,
                         VerticalAlignmentEnum, HorizontalAlignmentEnum)
@@ -326,7 +328,7 @@ class InstructionNodeCreator(object):
         node.add_chars(*chars)
 
     def interpret_command(self, command):
-        """Given a command determines whether tu turn italics on or off,
+        """Given a command determines whether to turn italics on or off,
         or to set the positioning
 
         This is mostly used to convert from the legacy-style commands
@@ -400,6 +402,24 @@ class InstructionNodeCreator(object):
                     pass
 
         return instance
+
+    def remove_ascii_duplicate(self, accented_character):
+        """
+        Characters from the Extended Characters list are usually preceded by
+        their ASCII substitute, in case the decoder is not able to display
+        the special character.
+
+        This is used to remove the substitute character in order to avoid
+        displaying both.
+
+        :type accented_character: unicode
+        """
+        if self._collection and self._collection[-1].is_text_node() and \
+                self._collection[-1].text:
+            ascii_char = unicodedata.normalize('NFD', accented_character)\
+                .encode('ascii', 'ignore').decode("utf-8")
+            if ascii_char and self._collection[-1].text[-1] == ascii_char:
+                self._collection[-1].text = self._collection[-1].text[:-1]
 
 
 def _get_layout_from_tuple(position_tuple):
