@@ -1136,3 +1136,14 @@ SAMPLE_DFXP_EMPTY_PARAGRAPH = """
  </body>
 </tt>
 """
+
+SAMPLE_DFXP_INCORRECT_TIME_FORMAT = """
+<?xml version="1.0" encoding="UTF-8"?>
+<tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml">
+<body>
+  <div>
+    <p begin="0:00:02.07" end="0:05">Hey! Check out this error!</p>
+  </div>
+ </body>
+</tt>
+"""
