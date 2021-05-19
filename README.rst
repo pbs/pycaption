@@ -14,6 +14,23 @@ For details, see the `documentation <http://pycaption.readthedocs.org>`__.
 
 Changelog
 ---------
+1.0.4
+^^^^^
+- Included tests in PyPI tarball
+- Ignore WebVTT empty cues instead of raising an exception
+- Updated BeautifulSoup version to >=4.8.1,<4.9 and fixed failing tests
+- Handled index error when sending bad timestamp for DFXP format
+
+1.0.3
+^^^^^
+- Fixed issue with SCC reader including both special characters and their potential substitute
+- Modified enum34 dependency to versions under Python 3.4
+- Removed Python 3.4 and added 3.6, 3.7 and 3.8 to Travis tests
+
+1.0.2
+^^^^^
+- Fixed typos in SCC positioning codes
+- Added missing SCC positioning codes to positioning map
 
 1.0.0
 ^^^^^
