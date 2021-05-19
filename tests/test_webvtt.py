@@ -9,8 +9,10 @@ from tests.samples.dfxp import DFXP_STYLE_REGION_ALIGN_CONFLICT
 from tests.samples.sami import SAMPLE_SAMI_DOUBLE_BR
 from tests.samples.srt import SAMPLE_SRT
 from tests.samples.webvtt import (
-    SAMPLE_WEBVTT, SAMPLE_WEBVTT_2, SAMPLE_WEBVTT_EMPTY, SAMPLE_WEBVTT_DOUBLE_BR,
-    WEBVTT_FROM_DFXP_WITH_CONFLICTING_ALIGN, SAMPLE_WEBVTT_LAST_CUE_ZERO_START
+    SAMPLE_WEBVTT, SAMPLE_WEBVTT_2, SAMPLE_WEBVTT_EMPTY,
+    SAMPLE_WEBVTT_DOUBLE_BR,
+    WEBVTT_FROM_DFXP_WITH_CONFLICTING_ALIGN, SAMPLE_WEBVTT_LAST_CUE_ZERO_START,
+    SAMPLE_WEBVTT_EMPTY_CUE
 )
 
 
@@ -127,16 +129,6 @@ class WebVTTReaderTestCase(unittest.TestCase):
 
     def test_invalid_files(self):
         self.assertRaises(
-            CaptionReadSyntaxError,
-            WebVTTReader().read,
-            ("\nNOTE Cues without text are invalid.\n"
-                "00:00:20.000 --> 00:00:30.000\n"
-                "\n"
-                "00:00:40.000 --> 00:00:50.000\n"
-                "foo bar baz\n")
-        )
-
-        self.assertRaises(
             CaptionReadError,
             WebVTTReader(ignore_timing_errors=False).read,
             ("00:00:20.000 --> 00:00:10.000\n"
@@ -157,6 +149,10 @@ class WebVTTReaderTestCase(unittest.TestCase):
         captions = self.reader.read(SAMPLE_WEBVTT_LAST_CUE_ZERO_START)
         cue = captions.get_captions('en-US')[0]
         self.assertEqual(cue.start, 0)
+
+    def test_webvtt_empty_cue(self):
+        self.assertEqual(1, len(self.reader.read(
+                SAMPLE_WEBVTT_EMPTY_CUE).get_captions('en-US')))
 
 
 class WebVTTWriterTestCase(unittest.TestCase):
