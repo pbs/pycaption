@@ -129,8 +129,15 @@ class DFXPReader(BaseReader):
     def _translate_time(self, stamp):
         if stamp[-1].isdigit():
             timesplit = stamp.split(':')
+
+            if len(timesplit) != 3:
+                raise CaptionReadSyntaxError('Begin and end time should follow the '
+                                             'hour:minute:seconds.milliseconds format. Milliseconds are optional.'
+                                             'Please correct the following time {}'.format(stamp))
+
             if '.' not in timesplit[2]:
                 timesplit[2] += '.000'
+
             secsplit = timesplit[2].split('.')
             if len(timesplit) > 3:
                 secsplit.append((int(timesplit[3]) / 30) * 100)

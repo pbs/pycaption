@@ -6,12 +6,12 @@ from pycaption.exceptions import CaptionReadSyntaxError, InvalidInputError, Capt
 
 from tests.samples.dfxp import (
     SAMPLE_DFXP, SAMPLE_DFXP_EMPTY, SAMPLE_DFXP_SYNTAX_ERROR,
-    DFXP_WITH_ALTERNATIVE_TIMING_FORMATS, SAMPLE_DFXP_EMPTY_PARAGRAPH
+    DFXP_WITH_ALTERNATIVE_TIMING_FORMATS, SAMPLE_DFXP_EMPTY_PARAGRAPH,
+    SAMPLE_DFXP_INCORRECT_TIME_FORMAT
 )
 
 
 class DFXPReaderTestCase(unittest.TestCase):
-
     def test_detection(self):
         self.assertTrue(DFXPReader().detect(SAMPLE_DFXP))
 
@@ -25,6 +25,11 @@ class DFXPReaderTestCase(unittest.TestCase):
 
         self.assertEqual(17000000, paragraph.start)
         self.assertEqual(18752000, paragraph.end)
+        
+    def test_incorrect_time_format(self):
+        self.assertRaises(CaptionReadSyntaxError,
+                          DFXPReader().read,
+                          SAMPLE_DFXP_INCORRECT_TIME_FORMAT)
 
     def test_offset_time(self):
         reader = DFXPReader()
