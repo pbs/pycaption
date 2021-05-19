@@ -71,8 +71,8 @@ class DFXPReader(BaseReader):
         default_language = dfxp_document.tt.attrs.get('xml:lang', DEFAULT_LANGUAGE_CODE)
 
         # Each div represents all the captions for a single language.
-        for div in dfxp_document.find_all(u'div'):
-            lang = div.attrs.get(u'xml:lang', default_language)
+        for div in dfxp_document.find_all('div'):
+            lang = div.attrs.get('xml:lang', default_language)
 
             caption_dict[lang] = self._translate_div(div)
 
