@@ -23,8 +23,7 @@ Changelog
 
 1.0.3
 ^^^^^
-- Fixed issue with reading both special characters and their potential
-substitute when reading SCC captions
+- Fixed issue with reading both special characters and their potential substitute when reading SCC captions
 - Modified enum34 dependency to versions under Python 3.4
 - Removed Python 3.4 and added 3.6, 3.7 and 3.8 to Travis tests
 
