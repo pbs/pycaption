@@ -131,7 +131,7 @@ Which will output the following:
 
 Default Language
 
-If language is not detected you can set a default one.
+If language is not detected you can set a default one in your environment.
 If there is no default language we use 'und' ( a special identifier for an undetermined language according to ISO 639-2 )
 
 ::
