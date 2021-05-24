@@ -217,8 +217,6 @@ class WebVTTWriter(BaseWriter):
         # fit the API here. Figure that out.  Though some style stuff can be
         # done in-line.  This format is a little bit crazy.
 
-        # WebVTT's language support seems to be a bit crazy, so let's just
-        # support a single one for now.
         if language is None:
             lang = list(caption_set.get_languages())[0]
         else:
