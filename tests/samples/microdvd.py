@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-SAMPLE_MICRODVD = u"""{230}{307}( clock ticking )
+SAMPLE_MICRODVD = """{230}{307}( clock ticking )
 {371}{433}MAN:|When we think|of E equals m c-squared,
 {433}{468}we have this vision of Einstein
 {468}{522}as an old, wrinkly man|with white hair.
@@ -14,5 +14,5 @@ SAMPLE_MICRODVD = u"""{230}{307}( clock ticking )
 {1224}{1255}What?
 """
 
-SAMPLE_MICRODVD_EMPTY = u"""
+SAMPLE_MICRODVD_EMPTY = """
 """
