@@ -129,6 +129,18 @@ Which will output the following:
      </body>
     </tt>
 
+Default Language
+----------------
+
+If language is not detected you can set a default one in your environment.
+If there is no default language we use 'und' ( a special identifier for an undetermined language according to ISO 639-2 )
+
+::
+
+   PYCAPTION_DEFAULT_LANG = "en-US"
+
+
+
 Positioning
 -----------
 

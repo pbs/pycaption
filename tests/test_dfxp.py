@@ -25,7 +25,7 @@ class DFXPReaderTestCase(unittest.TestCase):
 
         self.assertEqual(17000000, paragraph.start)
         self.assertEqual(18752000, paragraph.end)
-        
+
     def test_incorrect_time_format(self):
         self.assertRaises(CaptionReadSyntaxError,
                           DFXPReader().read,
@@ -50,7 +50,7 @@ class DFXPReaderTestCase(unittest.TestCase):
 
     def test_invalid_markup_is_properly_handled(self):
         captions = DFXPReader().read(SAMPLE_DFXP_SYNTAX_ERROR)
-        self.assertEqual(2, len(captions.get_captions("en-US")))
+        self.assertEquals(2, len(captions.get_captions("en")))
 
     def test_caption_error_for_invalid_positioning_values(self):
         invalid_value_dfxp = (

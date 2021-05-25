@@ -164,4 +164,4 @@ class SAMIWithMissingLanguage(unittest.TestCase, SAMITestingMixIn):
         results = SAMIWriter().write(caption_set)
         self.assertTrue(isinstance(results, six.text_type))
         self.assertSAMIEquals(SAMPLE_SAMI_WITH_LANG, results)
-        self.assertTrue("lang: en-US;" in results)
+        self.assertTrue("lang: und;" in results)
