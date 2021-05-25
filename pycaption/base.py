@@ -47,7 +47,7 @@ class BaseReader(object):
             return False
 
     def read(self, content):
-        return CaptionSet()
+        return CaptionSet({DEFAULT_LANGUAGE_CODE: []})
 
 
 class BaseWriter(object):
