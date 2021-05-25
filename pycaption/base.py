@@ -1,10 +1,12 @@
 from datetime import timedelta
 from numbers import Number
 from six import text_type
+import os
 
 from .exceptions import CaptionReadError, CaptionReadTimingError
 
-DEFAULT_LANGUAGE_CODE = 'en-US'
+# `und` a special identifier for an undetermined language according to ISO 639-2
+DEFAULT_LANGUAGE_CODE = os.getenv('PYCAPTION_DEFAULT_LANG', 'und')
 
 
 def force_byte_string(content):
