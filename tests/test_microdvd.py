@@ -1,8 +1,11 @@
 import unittest
+import os
 
 from pycaption import MicroDVDReader, CaptionReadNoCaptions
 
 from .samples.microdvd import SAMPLE_MICRODVD, SAMPLE_MICRODVD_EMPTY
+
+DEFAULT_LANGUAGE_CODE = os.getenv('PYCAPTION_DEFAULT_LANG', 'und')
 
 
 class MicroDVDReaderTestCase(unittest.TestCase):
@@ -12,12 +15,11 @@ class MicroDVDReaderTestCase(unittest.TestCase):
 
     def test_caption_length(self):
         captions = MicroDVDReader().read(SAMPLE_MICRODVD)
-
-        self.assertEquals(12, len(captions.get_captions(u"en-US")))
+        self.assertEquals(12, len(captions.get_captions(DEFAULT_LANGUAGE_CODE)))
 
     def test_proper_timestamps(self):
         captions = MicroDVDReader().read(SAMPLE_MICRODVD)
-        paragraph = captions.get_captions(u"en-US")[2]
+        paragraph = captions.get_captions(DEFAULT_LANGUAGE_CODE)[2]
 
         # due to lossy nature of microsec -> frame# we check that
         # conversion is within a second of expected value

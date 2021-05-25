@@ -1,19 +1,19 @@
 from copy import deepcopy
 
 from .base import (
-    BaseReader, BaseWriter, CaptionSet, Caption, CaptionNode)
+    BaseReader, BaseWriter, CaptionSet, Caption, CaptionNode, DEFAULT_LANGUAGE_CODE)
 from .exceptions import CaptionReadNoCaptions, InvalidInputError
 import re
+
 
 class MicroDVDReader(BaseReader):
     def detect(self, content):
         return re.match("{\d+}{\d+}", content) is not None
 
     def read(self, content, lang=u'en-US'):
-        if type(content) != unicode:
+        if type(content) != str:
             raise InvalidInputError('The content is not a unicode string.')
 
-        caption_set = CaptionSet()
         lines = content.splitlines()
         start_line = 0
         captions = []
@@ -21,36 +21,42 @@ class MicroDVDReader(BaseReader):
         for line in lines:
             m = re.match(r"{(\d+)}{(\d+)}(.*)", line)
             if not m: break
-            caption = Caption()
+
             start, end, txt = m.groups()
 
             if start == '0' and end == '0':
                 fps = float(txt)
                 continue
 
-            caption.start = self._framestomicro(int(start), fps)
-            caption.end = self._framestomicro(int(end), fps)
+            caption_start = self._framestomicro(int(start), fps)
+            caption_end = self._framestomicro(int(end), fps)
+            nodes = []
 
             for line in txt.split('|'):
                 # skip extra blank lines
-                if not caption.nodes or line != u'':
-                    caption.nodes.append(CaptionNode.create_text(line))
-                    caption.nodes.append(CaptionNode.create_break())
+                if line != '':
+                    nodes.append(CaptionNode.create_text(line))
+                    nodes.append(CaptionNode.create_break())
 
             # remove last line break from end of caption list
-            if len(caption.nodes):
-                caption.nodes.pop()
+            if len(nodes):
+                nodes.pop()
+
+                caption = Caption(caption_start, caption_end, nodes)
                 captions.append(caption)
 
-        caption_set.set_captions(lang, captions)
+        default_lang = {DEFAULT_LANGUAGE_CODE: captions}
+
+        caption_set = CaptionSet(default_lang)
+        caption_set.set_captions(DEFAULT_LANGUAGE_CODE, captions)
 
         if caption_set.is_empty():
-            raise CaptionReadNoCaptions(u"empty caption file")
+            raise CaptionReadNoCaptions("empty caption file")
 
         return caption_set
 
     def _framestomicro(self, framenum, fps=25.0):
-        return int(framenum / fps * (10**6))
+        return int(framenum / fps * (10 ** 6))
 
 
 class MicroDVDWriter(BaseWriter):
