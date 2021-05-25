@@ -128,3 +128,201 @@ Which will output the following:
       </div>
      </body>
     </tt>
+
+Default Language
+----------------
+
+If language is not detected you can set a default one in your environment.
+If there is no default language we use 'und' ( a special identifier for an undetermined language according to ISO 639-2 )
+
+::
+
+   PYCAPTION_DEFAULT_LANG = "en-US"
+
+
+
+Positioning
+-----------
+
+Some caption formats support positioning information and PyCaption tries to preserve it when possible. In the process, some adjustments are made. Some of these adjustments can be customized by properly initializing the Writer class.
+
+.. py:class:: BaseWriter(relativize=True, video_width=None, video_height=None, fit_to_screen=True)
+
+    :param relativize: If True (default), converts absolute positioning
+            values (e.g. px) to percentage. ATTENTION: WebVTT does not support
+            absolute positioning. If relativize is set to False and it finds
+            an absolute positioning parameter for a given caption, it will
+            ignore all positioning for that cue and show it in the default
+            position.
+    :param video_width: The width of the video for which the captions being
+            converted were made. This is necessary for relativization.
+    :param video_height: The height of the video for which the captions
+            being converted were made. This is necessary for relativization.
+    :param fit_to_screen: If extent is not set or if origin + extent > 100%,
+            (re)calculate it based on origin. It is a pycaption fix for caption
+            files that are technically valid but contains inconsistent settings
+            that may cause long captions to be cut out of the screen.
+
+Examples
+~~~~~~~~
+
+* DFXP to WebVTT
+
+::
+
+    from pycaption import DFXPReader, WebVTTWriter
+    dfxp = u"""<?xml version="1.0" encoding="utf-8"?>
+    <tt xml:lang="en-us"
+        xmlns="http://www.w3.org/ns/ttml"
+        xmlns:tts='http://www.w3.org/ns/ttml#styling'
+        >
+    <head>
+        <layout>
+            <region xml:id="fourthQuadrant" tts:textAlign='left' tts:origin='320px 180px' tts:extent='320px 180px'/>
+        </layout>
+    </head>
+    <body>
+        <div>
+            <p region="fourthQuadrant" begin='00:00:01.000' end='00:00:03.000'>
+            I'm in the fourth quadrant!
+            </p>
+        </div>
+    </body>
+    </tt>"""
+    caption_set = DFXPReader().read(dfxp)
+    print WebVTTWriter(video_width=640, video_height=360).write(caption_set)
+
+The code above should output:
+
+::
+
+    WEBVTT
+
+    00:01.000 --> 00:03.000 align:left position:50%,start line:50% size:50%
+    I'm in the fourth quadrant!
+
+Note that px values were converted to percentages. This can only be done if
+a reference such as video_width or height are sent as parameters based on which
+we can calculate the relative values. If the WebVTTWriter is initialized without
+them and the input file contains px values, when the `.write` method is called,
+it will raise `RelativizationError`.
+
+* DFXP to DFXP
+
+::
+
+    from pycaption import DFXPReader, DFXPWriter
+    dfxp = u"""<?xml version="1.0" encoding="utf-8"?>
+    <tt xml:lang="en-us"
+        xmlns="http://www.w3.org/ns/ttml"
+        xmlns:tts='http://www.w3.org/ns/ttml#styling'
+        >
+    <head>
+        <layout>
+            <region xml:id="invalidRegion" tts:textAlign='left' tts:origin='360px 180px' tts:extent='420px 240px'/>
+        </layout>
+    </head>
+    <body>
+        <div>
+            <p region="invalidRegion" begin='00:00:01.000' end='00:00:03.000'>
+            I'm a long caption and I'm cropped by the right side of the screen.
+            </p>
+        </div>
+    </body>
+    </tt>"""
+    caption_set = DFXPReader().read(dfxp)
+
+This input is syntactically valid but presents two problems:
+
+#. Positioning relies on absolute values (px). In systems that ingest one video
+   and an associated caption file and outputs several formats for different
+   platforms, this is a problem. A caption shifted 960px to the left in a 1920x1080
+   video, for example, disappears in a 640x360 one.
+#. Assuming a 640x360 resolution, the positioning specified above results in an
+   overflowing cue box which in turn results in cropped content when the caption
+   text is long enough.
+
+Here are some examples of Writer initialization:
+
+::
+
+    >>> print DFXPWriter().write(caption_set)
+    RelativizationError: At least one of video width or height must be given as a reference
+
+    >>> print DFXPWriter(relativize=False).write(caption_set)
+    ValueError: Units must be relativized before extent can be calculated based on origin.
+
+    >>> print DFXPWriter(relativize=False, fit_to_screen=False).write(caption_set)
+    <?xml version="1.0" encoding="utf-8"?>
+    <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling">
+     <head>
+      <styling>
+       <style tts:color="white" tts:fontFamily="monospace" tts:fontSize="1c" xml:id="default"/>
+      </styling>
+      <layout>
+       <region tts:displayAlign="after" tts:extent="420px 240px" tts:origin="360px 180px" tts:textAlign="left" xml:id="r0"/>
+      </layout>
+     </head>
+     <body>
+      <div region="r0" xml:lang="en-US">
+       <p begin="00:00:01.000" end="00:00:03.000" region="r0" style="default">
+        I'm a long caption and I'm cropped by the right side of the screen.
+       </p>
+      </div>
+     </body>
+    </tt>
+
+    >>> print DFXPWriter(video_width=640, video_height=360, fit_to_screen=False).write(caption_set)
+    <?xml version="1.0" encoding="utf-8"?>
+    <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling">
+     <head>
+      <styling>
+       <style tts:color="white" tts:fontFamily="monospace" tts:fontSize="1c" xml:id="default"/>
+      </styling>
+      <layout>
+       <region tts:displayAlign="after" tts:extent="420px 240px" tts:origin="360px 180px" tts:textAlign="left" xml:id="r0"/>
+       <region tts:displayAlign="after" tts:extent="65.63% 66.67%" tts:origin="56.25% 50%" tts:textAlign="left" xml:id="r1"/>
+      </layout>
+     </head>
+     <body>
+      <div region="r0" xml:lang="en-US">
+       <p begin="00:00:01.000" end="00:00:03.000" region="r1" style="default">
+        I'm a long caption and I'm cropped by the right side of the screen.
+       </p>
+      </div>
+     </body>
+    </tt>
+
+In the last example the values are relativized but ``origin + extent > 100%``, which
+still results in the caption being cropped.
+
+::
+
+
+    >>> print DFXPWriter(video_width=640, video_height=360).write(caption_set)
+    <?xml version="1.0" encoding="utf-8"?>
+    <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling">
+     <head>
+      <styling>
+       <style tts:color="white" tts:fontFamily="monospace" tts:fontSize="1c" xml:id="default"/>
+      </styling>
+      <layout>
+       <region tts:displayAlign="after" tts:extent="420px 240px" tts:origin="360px 180px" tts:textAlign="left" xml:id="r0"/>
+       <region tts:displayAlign="after" tts:extent="43.75% 50%" tts:origin="56.25% 50%" tts:textAlign="left" xml:id="r1"/>
+      </layout>
+     </head>
+     <body>
+      <div region="r0" xml:lang="en-US">
+       <p begin="00:00:01.000" end="00:00:03.000" region="r1" style="default">
+        I'm a long caption and I'm cropped by the right side of the screen.
+       </p>
+      </div>
+     </body>
+    </tt>
+
+Now the positioning is corrected and the caption is guaranteed to be within the
+visible region of the screen.
+
+**NOTE**: The region ``r0`` is still defined using absolute values. This is a bug that
+should be fixed in the next release. In any case it is harmless because it is
+overwritten by the relative values in ``r1``.

@@ -176,7 +176,7 @@ SAMPLE_DFXP_WITHOUT_REGION_AND_STYLE = """
 </tt>"""
 
 SAMPLE_DFXP_WITH_POSITIONING = """<?xml version="1.0" encoding="utf-8"?>
-<tt xml:lang="en-us"
+<tt xml:lang="en-US"
     xmlns="http://www.w3.org/ns/ttml"
     xmlns:tts='http://www.w3.org/ns/ttml#styling'
     >
@@ -360,7 +360,7 @@ SAMPLE_DFXP_LONG_CUE_FIT_TO_SCREEN = """<?xml version="1.0" encoding="utf-8"?>
   </layout>
  </head>
  <body>
-  <div region="bottom" xml:lang="en-US">
+  <div region="bottom" xml:lang="en">
    <p begin="00:00:01.000" end="00:00:02.000" region="bottom" style="basic">
     NARRATOR:
    </p>
@@ -773,7 +773,7 @@ SAMPLE_DFXP_STYLE_TAG_WITH_NO_XML_ID_INPUT = """\
   </layout>
  </head>
  <body>
-  <div xml:lang="en-US">
+  <div xml:lang="en">
    <p begin="00:00:09.209" end="00:00:12.312" region="r0" style="p">
     ( clock ticking )
    </p>
@@ -800,7 +800,7 @@ SAMPLE_DFXP_STYLE_TAG_WITH_NO_XML_ID_OUTPUT = """\
   </layout>
  </head>
  <body>
-  <div region="bottom" xml:lang="en-US">
+  <div region="bottom" xml:lang="en">
    <p begin="00:00:09.209" end="00:00:12.312" region="r0" style="p">
     ( clock ticking )
    </p>
@@ -947,7 +947,7 @@ SAMPLE_DFXP_FOR_LEGACY_WRITER_INPUT = """
   </layout>
  </head>
  <body>
-  <div xml:lang="en-US">
+  <div xml:lang="en">
    <p begin="00:00:09.209" end="00:00:12.312" style="p">
     ( clock ticking )
    </p>
@@ -992,7 +992,7 @@ SAMPLE_DFXP_FOR_LEGACY_WRITER_OUTPUT = """\
   </layout>
  </head>
  <body>
-  <div xml:lang="en-US">
+  <div xml:lang="en">
    <p begin="00:00:09.209" end="00:00:12.312" region="bottom" style="p">
     ( clock ticking )
    </p>
@@ -1028,7 +1028,7 @@ SAMPLE_DFXP_FOR_LEGACY_WRITER_OUTPUT = """\
 </tt>"""
 
 DFXP_WITH_CONCURRENT_CAPTIONS = """\
-<tt xml:lang="en-us"
+<tt xml:lang="en-US"
     xmlns="http://www.w3.org/ns/ttml"
     xmlns:tts='http://www.w3.org/ns/ttml#styling'
     >
@@ -1061,7 +1061,7 @@ DFXP_WITH_CONCURRENT_CAPTIONS = """\
 
 # 'style_name' is the template parameter to use in str.format
 DFXP_WITH_TEMPLATED_STYLE = """\
-<tt xml:lang="en-us"
+<tt xml:lang="en-US"
     xmlns="http://www.w3.org/ns/ttml"
     xmlns:tts='http://www.w3.org/ns/ttml#styling'
     >
@@ -1084,7 +1084,7 @@ DFXP_WITH_TEMPLATED_STYLE = """\
 """
 
 DFXP_WITH_ESCAPED_APOSTROPHE = """\
-<tt xml:lang="en-us"
+<tt xml:lang="en-US"
     xmlns="http://www.w3.org/ns/ttml"
     xmlns:tts='http://www.w3.org/ns/ttml#styling'
     >
@@ -1103,7 +1103,7 @@ DFXP_WITH_ESCAPED_APOSTROPHE = """\
 </tt>"""
 
 DFXP_WITH_ALTERNATIVE_TIMING_FORMATS = """\
-<tt xml:lang="en-us"
+<tt xml:lang="en-US"
     xmlns="http://www.w3.org/ns/ttml"
     xmlns:tts='http://www.w3.org/ns/ttml#styling'
     >

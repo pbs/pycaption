@@ -7,9 +7,10 @@ CONVENTIONS:
   responsible for the recalculation should return a new object with the
   necessary modifications.
 """
+from enum import Enum
+
 import six
 
-from enum import Enum
 from .exceptions import RelativizationError
 
 
@@ -72,10 +73,10 @@ class Alignment(object):
 
     def __eq__(self, other):
         return (
-            other and
-            type(self) == type(other) and
-            self.horizontal == other.horizontal and
-            self.vertical == other.vertical
+                other and
+                type(self) == type(other) and
+                self.horizontal == other.horizontal and
+                self.vertical == other.vertical
         )
 
     def __repr__(self):
@@ -120,6 +121,7 @@ class Alignment(object):
 class TwoDimensionalObject(object):
     """Adds a couple useful methods to its subclasses, nothing fancy.
     """
+
     @classmethod
     # TODO - highly cachable. Should use WeakValueDictionary here to return
     # flyweights, not new objects.
@@ -141,6 +143,7 @@ class Stretch(TwoDimensionalObject):
     or the padding in a rectangle (how much space should be left empty until
     text can be displayed)
     """
+
     def __init__(self, horizontal, vertical):
         """Use the .from_xxx methods. They know what's best for you.
 
@@ -161,8 +164,8 @@ class Stretch(TwoDimensionalObject):
         :return: True/False
         """
         return (
-            self.horizontal.unit == measure_unit and
-            self.vertical.unit == measure_unit
+                self.horizontal.unit == measure_unit and
+                self.vertical.unit == measure_unit
         )
 
     def __repr__(self):
@@ -179,10 +182,10 @@ class Stretch(TwoDimensionalObject):
 
     def __eq__(self, other):
         return (
-            other and
-            type(self) == type(other) and
-            self.horizontal == other.horizontal and
-            self.vertical == other.vertical
+                other and
+                type(self) == type(other) and
+                self.horizontal == other.horizontal and
+                self.vertical == other.vertical
         )
 
     def __hash__(self):
@@ -230,6 +233,7 @@ class Region(object):
 
     Don't instantiate by hand. use Region.from_points or Region.from_extent
     """
+
     @classmethod
     def from_points(cls, p1, p2):
         """Create a rectangle, knowing 2 points on the plane.
@@ -289,10 +293,10 @@ class Region(object):
 
     def __eq__(self, other):
         return (
-            other and
-            type(self) == type(other) and
-            self.extent == other.extent and
-            self.origin == other.origin
+                other and
+                type(self) == type(other) and
+                self.extent == other.extent and
+                self.origin == other.origin
         )
 
     def __hash__(self):
@@ -306,6 +310,7 @@ class Region(object):
 class Point(TwoDimensionalObject):
     """Represent a point in 2d space.
     """
+
     def __init__(self, x, y):
         """
         :type x: Size
@@ -381,10 +386,10 @@ class Point(TwoDimensionalObject):
 
     def __eq__(self, other):
         return (
-            other and
-            type(self) == type(other) and
-            self.x == other.x and
-            self.y == other.y
+                other and
+                type(self) == type(other) and
+                self.x == other.x and
+                self.y == other.y
         )
 
     def __hash__(self):
@@ -410,6 +415,7 @@ class Size(object):
 
     Use as value objects! (don't change after creation)
     """
+
     def __init__(self, value, unit):
         """
         :param value: A number (float or int will do)
@@ -417,7 +423,7 @@ class Size(object):
         """
         if value is None:
             raise ValueError("Size must be initialized with a value.")
-        if not isinstance(unit,UnitEnum):
+        if not isinstance(unit, UnitEnum):
             raise ValueError("Size must be initialized with a valid unit.")
 
         self.value = float(value)
@@ -441,7 +447,6 @@ class Size(object):
 
     def __lt__(self, other):
         return self.value < other.value
-
 
     def __add__(self, other):
         if self.unit == other.unit:
@@ -469,10 +474,12 @@ class Size(object):
         # The input must be valid so that any conversion can be done
         if not (video_width or video_height):
             raise RelativizationError(
-                "Either video width or height must be given as a reference")
+                "At least one of video width or height"
+                " must be given as a reference")
         elif video_width and video_height:
             raise RelativizationError(
-                "Only video width or height can be given as reference")
+                "Only one of video width or height can be given as reference"
+                " per value being converted")
 
         if unit == UnitEnum.EM:
             # TODO: Implement proper conversion of em in function of font-size
@@ -534,7 +541,7 @@ class Size(object):
             if value is None:
                 raise ValueError(
                     """Couldn't recognize the value "{value}" as a number"""
-                    .format(value=raw_number)
+                        .format(value=raw_number)
                 )
             instance = cls(value, unit)
             return instance
@@ -543,7 +550,8 @@ class Size(object):
                 "The specified value is not valid because its unit "
                 "is not recognized: {value}. "
                 "The only supported units are: {supported}"
-                .format(value=raw_number, supported=', '.join(UnitEnum._member_map_))
+                    .format(value=raw_number,
+                            supported=', '.join(UnitEnum._member_map_))
             )
 
     def __repr__(self):
@@ -570,10 +578,10 @@ class Size(object):
 
     def __eq__(self, other):
         return (
-            other and
-            type(self) == type(other) and
-            self.value == other.value and
-            self.unit == other.unit
+                other and
+                type(self) == type(other) and
+                self.value == other.value and
+                self.unit == other.unit
         )
 
     def __hash__(self):
@@ -595,6 +603,7 @@ class Padding(object):
     A valid Padding object must always have all paddings set and different from
     None. If this is not true Writers may fail for they rely on this assumption.
     """
+
     def __init__(self, before=None, after=None, start=None, end=None):
         """
         :type before: Size
@@ -670,12 +679,12 @@ class Padding(object):
 
     def __eq__(self, other):
         return (
-            other and
-            type(self) == type(other) and
-            self.before == other.before and
-            self.after == other.after and
-            self.start == other.start and
-            self.end == other.end
+                other and
+                type(self) == type(other) and
+                self.before == other.before and
+                self.after == other.after and
+                self.start == other.start and
+                self.end == other.end
         )
 
     def __hash__(self):
@@ -741,6 +750,7 @@ class Layout(object):
      Inheritance of this property, from the CaptionSet to its children is
      specific for each caption type.
     """
+
     def __init__(self, origin=None, extent=None, padding=None, alignment=None,
                  webvtt_positioning=None, inherit_from=None):
         """
@@ -808,11 +818,11 @@ class Layout(object):
 
     def __eq__(self, other):
         return (
-            type(self) == type(other) and
-            self.origin == other.origin and
-            self.extent == other.extent and
-            self.padding == other.padding and
-            self.alignment == other.alignment
+                type(self) == type(other) and
+                self.origin == other.origin and
+                self.extent == other.extent and
+                self.padding == other.padding and
+                self.alignment == other.alignment
         )
 
     def __ne__(self, other):
