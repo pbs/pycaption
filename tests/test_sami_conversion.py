@@ -4,7 +4,7 @@ from builtins import str
 import six
 
 from pycaption import (
-    SAMIReader, SAMIWriter, SRTWriter, DFXPWriter, WebVTTWriter)
+    SAMIReader, SAMIWriter, SRTWriter, DFXPWriter, WebVTTWriter, MicroDVDWriter, MicroDVDWriter)
 
 from .samples.dfxp import (
     DFXP_FROM_SAMI_WITH_POSITIONING, SAMPLE_DFXP_FROM_SAMI_WITH_MARGINS,
@@ -25,7 +25,9 @@ from .samples.webvtt import (
     SAMPLE_WEBVTT_FROM_SAMI_WITH_ID_STYLE
 )
 
-from .mixins import SRTTestingMixIn, DFXPTestingMixIn, SAMITestingMixIn, WebVTTTestingMixIn
+from .samples.microdvd import SAMPLE_MICRODVD_2
+
+from .mixins import SRTTestingMixIn, DFXPTestingMixIn, SAMITestingMixIn, WebVTTTestingMixIn, MicroDVDTestingMixIn
 
 # Arbitrary values used to test relativization
 VIDEO_WIDTH = 640
@@ -155,6 +157,16 @@ class SAMItoWebVTTTestCase(unittest.TestCase, WebVTTTestingMixIn):
             video_width=640, video_height=360).write(caption_set)
         self.assertTrue(isinstance(results, six.text_type))
         self.assertWebVTTEquals(SAMPLE_WEBVTT_FROM_SAMI_WITH_ID_STYLE, results)
+
+
+class SAMItoMicroDVDTestCase(unittest.TestCase, MicroDVDTestingMixIn):
+
+    def test_sami_to_micro_dvd_conversion(self):
+        caption_set = SAMIReader().read(SAMPLE_SAMI)
+        results = MicroDVDWriter().write(caption_set)
+
+        self.assertTrue(isinstance(results, six.text_type))
+        self.assertMicroDVDEquals(SAMPLE_MICRODVD_2, results)
 
 
 class SAMIWithMissingLanguage(unittest.TestCase, SAMITestingMixIn):
