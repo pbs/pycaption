@@ -3,7 +3,8 @@ import os
 try:
     import nltk.data
 except ImportError:
-    raise ImportError('You must install nltk==2.0.4 and numpy==1.7.1 to be able to use this.')
+    raise ImportError(
+        'You must install nltk==2.0.4 and numpy==1.7.1 to be able to use this.')
 from pycaption.base import BaseWriter, CaptionNode
 
 
@@ -19,7 +20,8 @@ class TranscriptWriter(BaseWriter):
             lang_transcript = '* %s Transcript *\n' % lang.upper()
 
             for caption in captions.get_captions(lang):
-                lang_transcript = self._strip_text(caption.nodes, lang_transcript)
+                lang_transcript = self._strip_text(caption.nodes,
+                                                   lang_transcript)
 
             lang_transcript = '\n'.join(self.nltk.tokenize(lang_transcript))
             transcripts.append(lang_transcript)
@@ -27,4 +29,5 @@ class TranscriptWriter(BaseWriter):
         return '\n'.join(transcripts)
 
     def _strip_text(self, elements, lang_transcript):
-        return u' '.join([lang_transcript] + [el.content for el in elements if el.type_ == CaptionNode.TEXT])
+        return u' '.join([lang_transcript] + [el.content for el in elements if
+                                              el.type_ == CaptionNode.TEXT])
