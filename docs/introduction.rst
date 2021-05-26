@@ -12,7 +12,7 @@ Turn a caption into multiple caption outputs:
 
 ::
 
-    srt_caps = u'''1
+    srt_caps = '''1
     00:00:09,209 --> 00:00:12,312
     This is an example SRT file,
     which, while extremely short,
@@ -21,9 +21,10 @@ Turn a caption into multiple caption outputs:
 
     converter = CaptionConverter()
     converter.read(srt_caps, SRTReader())
-    print converter.write(SAMIWriter())
-    print converter.write(DFXPWriter())
-    print converter.write(pycaption.transcript.TranscriptWriter())
+    print( converter.write(SAMIWriter()) )
+    print( converter.write(DFXPWriter()) )
+    print( converter.write(pycaption.transcript.TranscriptWriter()) )
+    print( converter.write(MicroDVDWriter()) )
 
 Not sure what format the caption is in? Detect it:
 
@@ -31,28 +32,30 @@ Not sure what format the caption is in? Detect it:
 
     from pycaption import detect_format
 
-    caps = u'''1
+    caps = '''1
     00:00:01,500 --> 00:00:12,345
     Small caption'''
 
     reader = detect_format(caps)
     if reader:
-        print SAMIWriter().write(reader().read(caps))
+        print( SAMIWriter().write(reader().read(caps)) )
 
 Or if you expect to have only a subset of the supported input formats:
 
 ::
 
-    caps = u'''1
+    caps = '''1
     00:00:01,500 --> 00:00:12,345
     Small caption'''
 
     if SRTReader().detect(caps):
-        print SAMIWriter().write(SRTReader().read(caps))
+        print( SAMIWriter().write(SRTReader().read(caps)) )
     elif DFXPReader().detect(caps):
-        print SAMIWriter().write(DFXPReader().read(caps))
+        print( SAMIWriter().write(DFXPReader().read(caps)) )
     elif SCCReader().detect(caps):
-        print SAMIWriter().write(SCCReader().read(caps))
+        print( SAMIWriter().write(SCCReader().read(caps)) )
+    elif MicroDVDReader().detect(caps)
+        print( SAMIWriter().write(MicroDVDReader().read(caps)) )
 
 Python Usage
 ------------
