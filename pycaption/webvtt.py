@@ -219,7 +219,7 @@ class WebVTTWriter(BaseWriter):
         # done in-line.  This format is a little bit crazy.
 
         if lang is None:
-            lang = list(caption_set.get_languages())[0]
+            lang = caption_set.get_languages()[0]
 
         self.global_layout = caption_set.get_layout_info(lang)
 
