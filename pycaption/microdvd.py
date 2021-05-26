@@ -1,7 +1,7 @@
 from copy import deepcopy
 
 from .base import (
-    BaseReader, BaseWriter, CaptionSet, Caption, CaptionNode, DEFAULT_LANGUAGE_CODE)
+    BaseReader, BaseWriter, CaptionSet, CaptionList, Caption, CaptionNode, DEFAULT_LANGUAGE_CODE)
 from .exceptions import CaptionReadNoCaptions, InvalidInputError
 import re
 
@@ -10,13 +10,12 @@ class MicroDVDReader(BaseReader):
     def detect(self, content):
         return re.match("{\d+}{\d+}", content) is not None
 
-    def read(self, content, lang=u'en-US'):
+    def read(self, content, lang=DEFAULT_LANGUAGE_CODE):
         if type(content) != str:
             raise InvalidInputError('The content is not a unicode string.')
 
         lines = content.splitlines()
-        start_line = 0
-        captions = []
+        captions = CaptionList()
         fps = 25.0
         for line in lines:
             m = re.match(r"{(\d+)}{(\d+)}(.*)", line)
@@ -45,13 +44,11 @@ class MicroDVDReader(BaseReader):
                 caption = Caption(caption_start, caption_end, nodes)
                 captions.append(caption)
 
-        default_lang = {DEFAULT_LANGUAGE_CODE: captions}
-
-        caption_set = CaptionSet(default_lang)
-        caption_set.set_captions(DEFAULT_LANGUAGE_CODE, captions)
+        caption_set = CaptionSet({lang: captions})
+        caption_set.set_captions(lang, captions)
 
         if caption_set.is_empty():
-            raise CaptionReadNoCaptions("empty caption file")
+            raise CaptionReadNoCaptions("Empty caption file")
 
         return caption_set
 
@@ -76,24 +73,24 @@ class MicroDVDWriter(BaseWriter):
         return int(micro * fps / (10**6))
 
     def _recreate_lang(self, captions):
-        sub = u''
-        count = 1
+        sub = ''
+  
         for caption in captions:
             start = self._microtoframes(caption.start)
             end = self._microtoframes(caption.end)
-            sub += u'{%s}{%s}' % (start, end)
+            sub += '{%s}{%s}' % (start, end)
 
-            new_content = u''
+            new_content = ''
             for node in caption.nodes:
                 new_content = self._recreate_line(new_content, node)
 
             # Eliminate excessive line breaks
             new_content = new_content.strip() + '\n'
-            while u'\n\n' in new_content:
-                new_content = new_content.replace(u'\n\n', u'\n')
+            while '\n\n' in new_content:
+                new_content = new_content.replace('\n\n', '\n')
             # Break unnecessary on last line
-            while u'|\n' in new_content:
-                new_content = new_content.replace(u'|\n', u'\n')
+            while '|\n' in new_content:
+                new_content = new_content.replace('|\n', '\n')
 
             sub += new_content
 
@@ -101,8 +98,8 @@ class MicroDVDWriter(BaseWriter):
 
     def _recreate_line(self, sub, line):
         if line.type_ == CaptionNode.TEXT:
-            return sub + u'%s' % line.content
+            return sub + '%s' % line.content
         elif line.type_ == CaptionNode.BREAK:
-            return sub + u'|'
+            return sub + '|'
         else:
             return sub
