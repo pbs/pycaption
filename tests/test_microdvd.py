@@ -5,7 +5,7 @@ from pycaption import MicroDVDReader, CaptionReadNoCaptions
 
 from .samples.microdvd import SAMPLE_MICRODVD, SAMPLE_MICRODVD_EMPTY
 
-DEFAULT_LANGUAGE_CODE = os.getenv('PYCAPTION_DEFAULT_LANG', 'und')
+from pycaption.base import DEFAULT_LANGUAGE_CODE
 
 
 class MicroDVDReaderTestCase(unittest.TestCase):
@@ -15,7 +15,7 @@ class MicroDVDReaderTestCase(unittest.TestCase):
 
     def test_caption_length(self):
         captions = MicroDVDReader().read(SAMPLE_MICRODVD)
-        self.assertEquals(12, len(captions.get_captions(DEFAULT_LANGUAGE_CODE)))
+        self.assertEquals(7, len(captions.get_captions(DEFAULT_LANGUAGE_CODE)))
 
     def test_proper_timestamps(self):
         captions = MicroDVDReader().read(SAMPLE_MICRODVD)
