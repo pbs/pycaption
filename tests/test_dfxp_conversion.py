@@ -255,7 +255,7 @@ class DFXPtoWebVTTTestCase(unittest.TestCase, WebVTTTestingMixIn):
 
 class DFXPtoMicroDVDTestCase(unittest.TestCase, MicroDVDTestingMixIn):
 
-    def test_srt_to_sami_conversion(self):
+    def test_dfxp_to_microdvd_conversion(self):
         caption_set = DFXPReader().read(SAMPLE_DFXP)
         results = MicroDVDWriter().write(caption_set)
         self.assertTrue(isinstance(results, six.text_type))
