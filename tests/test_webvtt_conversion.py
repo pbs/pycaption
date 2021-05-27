@@ -76,7 +76,7 @@ class WebVTTtoSRTTestCase(unittest.TestCase, SRTTestingMixIn):
 
 class WebVTTtoMicroDVDTestCase(unittest.TestCase, MicroDVDTestingMixIn):
 
-    def test_srt_to_sami_conversion(self):
+    def test_webvtt_to_microdvd_conversion(self):
         caption_set = WebVTTReader().read(SAMPLE_WEBVTT)
         results = MicroDVDWriter().write(caption_set)
         self.assertTrue(isinstance(results, six.text_type))
