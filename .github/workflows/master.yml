@@ -1,0 +1,46 @@
+name: Run Test
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: [3.5, 3.6, 3.7, 3.8]
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Run test
+        run: python setup.py test
+        continue-on-error: true
+
+      - name: Notify if test FAILED
+        uses: archive/github-actions-slack@v2.0.0
+        with:
+          slack-bot-user-oauth-access-token: ${{ secrets.SLACK_BOT_TOKEN }}
+          slack-channel: ${{ secrets.SLACK_CHANNEL_ID }}
+          slack-text: ':boom:' Tests failed.
+        if: steps.tests.outcome == 'failure'
+
+      - name: Mark test failure
+        run: exit 1
+        if: steps.tests.outcome == 'failure'
+
+      - name: Slack notify tests PASSED
+        uses: archive/github-actions-slack@v2.0.0
+        with:
+          slack-bot-user-oauth-access-token: ${{ secrets.SLACK_BOT_TOKEN }}
+          slack-channel: ${{ secrets.SLACK_CHANNEL_ID }}
+          slack-text: ':rocket:' Tests passed.
+        if: steps.tests.outcome == 'success'
