@@ -30,7 +30,7 @@ jobs:
         with:
           slack-bot-user-oauth-access-token: ${{ secrets.SLACK_BOT_TOKEN }}
           slack-channel: ${{ secrets.SLACK_CHANNEL_ID }}
-          slack-text: ':boom:' Tests failed.
+          slack-text: ":boom: Tests failed."
         if: steps.tests.outcome == 'failure'
 
       - name: Mark test failure
@@ -42,5 +42,5 @@ jobs:
         with:
           slack-bot-user-oauth-access-token: ${{ secrets.SLACK_BOT_TOKEN }}
           slack-channel: ${{ secrets.SLACK_CHANNEL_ID }}
-          slack-text: ':rocket:' Tests passed.
+          slack-text: ":rocket: Tests passed."
         if: steps.tests.outcome == 'success'
