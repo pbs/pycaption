@@ -31,7 +31,7 @@ jobs:
         with:
           slack-bot-user-oauth-access-token: ${{ secrets.SLACK_BOT_TOKEN }}
           slack-channel: ${{ secrets.SLACK_CHANNEL_ID }}
-          slack-text: ":boom: Pycaption tests failed for ${{ matrix.python-version }}"
+          slack-text: ":boom: Pycaption tests failed for Python ${{ matrix.python-version }}"
         if: steps.tests.outcome == 'failure'
 
       - name: Mark test failure
@@ -43,5 +43,5 @@ jobs:
         with:
           slack-bot-user-oauth-access-token: ${{ secrets.SLACK_BOT_TOKEN }}
           slack-channel: ${{ secrets.SLACK_CHANNEL_ID }}
-          slack-text: ":rocket: Pycaption tests passed for ${{ matrix.python-version }}"
+          slack-text: ":rocket: Pycaption tests passed for Python ${{ matrix.python-version }}"
         if: steps.tests.outcome == 'success'
