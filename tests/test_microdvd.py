@@ -2,8 +2,9 @@ import unittest
 import os
 
 from pycaption import MicroDVDReader, CaptionReadNoCaptions
+from pycaption.exceptions import InvalidFormatError
 
-from .samples.microdvd import SAMPLE_MICRODVD, SAMPLE_MICRODVD_EMPTY
+from .samples.microdvd import SAMPLE_MICRODVD, SAMPLE_MICRODVD_EMPTY, INVALID_FORMAT_SAMPLE_MICRODVD
 
 from pycaption.base import DEFAULT_LANGUAGE_CODE
 
@@ -31,3 +32,9 @@ class MicroDVDReaderTestCase(unittest.TestCase):
         self.assertRaises(
             CaptionReadNoCaptions,
             MicroDVDReader().read, SAMPLE_MICRODVD_EMPTY)
+
+    def test_invalid_format(self):
+        self.assertRaises(
+            InvalidFormatError,
+            MicroDVDReader().read, INVALID_FORMAT_SAMPLE_MICRODVD)
+
