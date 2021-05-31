@@ -20,7 +20,12 @@ SAMPLE_MICRODVD_2 = """{230}{307}( clock ticking )
 
 INVALID_FORMAT_SAMPLE_MICRODVD = """{230}{307}( clock ticking )
 {}{425}{567} MAN:|When we think|\u266a ...say bow, wow, \u266a
-{425}{468}we have this vision of Einstein"""
+{425}{468}we have this vision of Einstein
+"""
+
+MISSING_FPS_SAMPLE_MICRODVD = """{301}{307}( clock ticking )
+{0}{0} MAN:|When we think|\u266a ...say bow, wow, \u266a
+"""
 
 SAMPLE_MICRODVD_EMPTY = """
 """

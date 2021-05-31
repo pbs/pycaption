@@ -2,7 +2,7 @@ from copy import deepcopy
 
 from .base import (
     BaseReader, BaseWriter, CaptionSet, CaptionList, Caption, CaptionNode, DEFAULT_LANGUAGE_CODE)
-from .exceptions import CaptionReadNoCaptions, InvalidFormatError
+from .exceptions import CaptionReadNoCaptions, InvalidFormatError, CaptionReadTimingError
 import re
 
 
@@ -28,8 +28,11 @@ class MicroDVDReader(BaseReader):
             start, end, txt = m.groups()
 
             if start == '0' and end == '0':
-                fps = float(txt)
-                continue
+                try:
+                    fps = float(txt)
+                    continue
+                except ValueError:
+                    raise CaptionReadTimingError('FPS information is not provided')
 
             caption_start = self._framestomicro(int(start), fps)
             caption_end = self._framestomicro(int(end), fps)
