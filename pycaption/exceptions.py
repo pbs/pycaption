@@ -41,6 +41,6 @@ class InvalidInputError(RuntimeError):
 
 
 class InvalidFormatError(CaptionReadError):
-    """ Error raised when the input does not match the expected format
+    """ Error raised when caption phrase does not match the expected format
     """
 
