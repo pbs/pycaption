@@ -18,5 +18,9 @@ SAMPLE_MICRODVD_2 = """{230}{307}( clock ticking )
 {805}{905}<LAUGHING & WHOOPS!>
 """
 
+INVALID_FORMAT_SAMPLE_MICRODVD = """{230}{307}( clock ticking )
+{}{425}{567} MAN:|When we think|\u266a ...say bow, wow, \u266a
+{425}{468}we have this vision of Einstein"""
+
 SAMPLE_MICRODVD_EMPTY = """
 """
