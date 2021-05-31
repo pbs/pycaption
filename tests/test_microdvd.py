@@ -2,9 +2,10 @@ import unittest
 import os
 
 from pycaption import MicroDVDReader, CaptionReadNoCaptions
-from pycaption.exceptions import InvalidFormatError
+from pycaption.exceptions import InvalidFormatError, CaptionReadTimingError
 
-from .samples.microdvd import SAMPLE_MICRODVD, SAMPLE_MICRODVD_EMPTY, INVALID_FORMAT_SAMPLE_MICRODVD
+from .samples.microdvd import (SAMPLE_MICRODVD, SAMPLE_MICRODVD_EMPTY, INVALID_FORMAT_SAMPLE_MICRODVD,
+                               MISSING_FPS_SAMPLE_MICRODVD)
 
 from pycaption.base import DEFAULT_LANGUAGE_CODE
 
@@ -37,4 +38,9 @@ class MicroDVDReaderTestCase(unittest.TestCase):
         self.assertRaises(
             InvalidFormatError,
             MicroDVDReader().read, INVALID_FORMAT_SAMPLE_MICRODVD)
+
+    def test_no_fps_provided(self):
+        self.assertRaises(
+            CaptionReadTimingError,
+            MicroDVDReader().read, MISSING_FPS_SAMPLE_MICRODVD)
 
