@@ -4,15 +4,16 @@ from pycaption import (
     WebVTTReader, WebVTTWriter, SAMIReader, DFXPReader,
     CaptionReadNoCaptions, CaptionReadError, CaptionReadSyntaxError
 )
-
 from tests.samples.dfxp import DFXP_STYLE_REGION_ALIGN_CONFLICT
-from tests.samples.sami import SAMPLE_SAMI_DOUBLE_BR
+from tests.samples.sami import SAMPLE_SAMI_DOUBLE_BR, \
+    SAMPLE_SAMI_WITH_MULTI_LANG
 from tests.samples.srt import SAMPLE_SRT
 from tests.samples.webvtt import (
+    SAMPLE_WEBVTT_EMPTY_CUE,
     SAMPLE_WEBVTT, SAMPLE_WEBVTT_2, SAMPLE_WEBVTT_EMPTY,
     SAMPLE_WEBVTT_DOUBLE_BR,
     WEBVTT_FROM_DFXP_WITH_CONFLICTING_ALIGN, SAMPLE_WEBVTT_LAST_CUE_ZERO_START,
-    SAMPLE_WEBVTT_EMPTY_CUE
+    SAMPLE_WEBVTT_MULTI_LANG_DE, SAMPLE_WEBVTT_MULTI_LANG_EN
 )
 
 
@@ -132,17 +133,17 @@ class WebVTTReaderTestCase(unittest.TestCase):
             CaptionReadError,
             WebVTTReader(ignore_timing_errors=False).read,
             ("00:00:20.000 --> 00:00:10.000\n"
-                "Start time is greater than end time.")
+             "Start time is greater than end time.")
         )
 
         self.assertRaises(
             CaptionReadError,
             WebVTTReader(ignore_timing_errors=False).read,
             ("00:00:20.000 --> 00:00:30.000\n"
-                "Start times should be consecutive.\n"
-                "\n"
-                "00:00:10.000 --> 00:00:20.000\n"
-                "This cue starts before the previous one.\n")
+             "Start times should be consecutive.\n"
+             "\n"
+             "00:00:10.000 --> 00:00:20.000\n"
+             "This cue starts before the previous one.\n")
         )
 
     def test_zero_start(self):
@@ -152,7 +153,7 @@ class WebVTTReaderTestCase(unittest.TestCase):
 
     def test_webvtt_empty_cue(self):
         self.assertEqual(1, len(self.reader.read(
-                SAMPLE_WEBVTT_EMPTY_CUE).get_captions('en-US')))
+            SAMPLE_WEBVTT_EMPTY_CUE).get_captions('en-US')))
 
 
 class WebVTTWriterTestCase(unittest.TestCase):
@@ -169,3 +170,10 @@ class WebVTTWriterTestCase(unittest.TestCase):
         caption_set = DFXPReader().read(DFXP_STYLE_REGION_ALIGN_CONFLICT)
         results = WebVTTWriter().write(caption_set)
         self.assertEqual(WEBVTT_FROM_DFXP_WITH_CONFLICTING_ALIGN, results)
+
+    def test_lang_option(self):
+        caption_set = SAMIReader().read(SAMPLE_SAMI_WITH_MULTI_LANG)
+        results = WebVTTWriter().write(caption_set, 'de-DE')
+        self.assertEqual(SAMPLE_WEBVTT_MULTI_LANG_DE, results)
+        results = WebVTTWriter().write(caption_set, 'en-US')
+        self.assertEqual(SAMPLE_WEBVTT_MULTI_LANG_EN, results)

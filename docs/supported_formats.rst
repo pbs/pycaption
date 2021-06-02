@@ -51,6 +51,14 @@ specification is currently (as of February 2015) in draft stage and
 therefore not all features are implemented by major players, the same
 being true for ``pycaption``.
 
+By default, the reader assumes the language is English and the writer
+returns the first language it finds in the caption set. You can specify
+a language using the ``lang`` parameter:
+
+::
+
+    pycaps = WebVTTReader().read(content, lang='fr')
+
 Styling
 ^^^^^^^
 

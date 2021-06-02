@@ -202,9 +202,10 @@ class WebVTTWriter(BaseWriter):
     video_width = None
     video_height = None
 
-    def write(self, caption_set):
+    def write(self, caption_set, lang=None):
         """
         :type caption_set: CaptionSet
+        :type lang: str
         """
         output = self.HEADER
 
@@ -217,9 +218,8 @@ class WebVTTWriter(BaseWriter):
         # fit the API here. Figure that out.  Though some style stuff can be
         # done in-line.  This format is a little bit crazy.
 
-        # WebVTT's language support seems to be a bit crazy, so let's just
-        # support a single one for now.
-        lang = list(caption_set.get_languages())[0]
+        if lang is None:
+            lang = caption_set.get_languages()[0]
 
         self.global_layout = caption_set.get_layout_info(lang)
 
