@@ -445,7 +445,7 @@ SAMPLE_SAMI_WITH_MULTIPLE_P = """
     <STYLE TYPE="Text/css">
     <!--
         P {font-size: 24pt; text-align: center; font-family: Tahoma; font-weight: bold; color: #FFFFFF; background-color: #000000;}
-        .SUBTTL {Name: 'Subtitles'; Lang: en-US; SAMIType: CC; margin-top: 20px; margin-right: 20px; margin-bottom: 20px; margin-left: 20px;}
+        .ENCC {Name: 'Subtitles'; Lang: en-US; SAMIType: CC; margin-top: 20px; margin-right: 20px; margin-bottom: 20px; margin-left: 20px;}
     -->
     </STYLE>
 </HEAD>
