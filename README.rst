@@ -14,6 +14,15 @@ For details, see the `documentation <http://pycaption.readthedocs.org>`__.
 
 Changelog
 ---------
+1.0.5
+^^^^^
+- Added language parameter to WebVTTWriter
+- Fix for TranscriptWriter merging words at caption boundary
+- Updated documentation with positioning information
+- Updated DFXP reader to fallback to the document's language if no language is present on individual <div>
+- Introduced PYCAPTION_DEFAULT_LANG environment variable and set it to default to 'und'
+- Fixed DFXPReader timestamp validation to accept frames and frames conversion to microseconds
+
 1.0.4
 ^^^^^
 - Included tests in PyPI tarball
