@@ -7,7 +7,7 @@ from pycaption import (
     SAMIReader, SAMIWriter, SRTWriter, DFXPWriter, WebVTTWriter)
 
 from .samples.dfxp import (
-    DFXP_FROM_SAMI_WITH_POSITIONING, SAMPLE_DFXP_FROM_SAMI_WITH_MARGINS,
+    SAMPLE_DFXP_FROM_SAMI_WITH_POSITIONING, SAMPLE_DFXP_FROM_SAMI_WITH_MARGINS,
     SAMPLE_DFXP_FROM_SAMI_WITH_LANG_MARGINS, SAMPLE_DFXP_FROM_SAMI_WITH_SPAN,
     SAMPLE_DFXP_FROM_SAMI_WITH_BAD_SPAN_ALIGN
 )
@@ -67,7 +67,7 @@ class SAMItoDFXPTestCase(unittest.TestCase, DFXPTestingMixIn):
                              fit_to_screen=False).write(caption_set)
         self.assertTrue(isinstance(results, six.text_type))
         self.assertDFXPEquals(
-            DFXP_FROM_SAMI_WITH_POSITIONING,
+            SAMPLE_DFXP_FROM_SAMI_WITH_POSITIONING,
             results
         )
 

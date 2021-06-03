@@ -28,7 +28,7 @@ from .samples.dfxp import (
     SAMPLE_DFXP_OUTPUT, SAMPLE_DFXP_STYLE_TAG_WITH_NO_XML_ID_INPUT,
     SAMPLE_DFXP_STYLE_TAG_WITH_NO_XML_ID_OUTPUT,
     SAMPLE_DFXP_LONG_CUE_FIT_TO_SCREEN, SAMPLE_DFXP_FOR_LEGACY_WRITER_INPUT,
-    SAMPLE_DFXP_FOR_LEGACY_WRITER_OUTPUT, DFXP_WITH_ESCAPED_APOSTROPHE
+    SAMPLE_DFXP_FOR_LEGACY_WRITER_OUTPUT, SAMPLE_DFXP_WITH_ESCAPED_APOSTROPHE
 )
 from .samples.sami import SAMPLE_SAMI
 from .samples.srt import SAMPLE_SRT
@@ -159,7 +159,7 @@ class DFXPtoDFXPTestCase(unittest.TestCase, DFXPTestingMixIn):
         self.assertEqual(result, SAMPLE_DFXP_LONG_CUE_FIT_TO_SCREEN)
 
     def test_proper_xml_entity_escaping(self):
-        caption_set = DFXPReader().read(DFXP_WITH_ESCAPED_APOSTROPHE)
+        caption_set = DFXPReader().read(SAMPLE_DFXP_WITH_ESCAPED_APOSTROPHE)
         cue_text = caption_set.get_captions('en-US')[0].nodes[0].content
         self.assertEqual(
             cue_text, "<< \"Andy's Caf\xe9 & Restaurant\" this way")
