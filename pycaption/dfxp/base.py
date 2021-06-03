@@ -132,10 +132,13 @@ class DFXPReader(BaseReader):
         if stamp[-1].isdigit():
             timesplit = stamp.split(':')
 
-            if len(timesplit) != 3:
-                raise CaptionReadSyntaxError('Begin and end time should follow the '
-                                             'hour:minute:seconds.milliseconds format. Milliseconds are optional.'
-                                             'Please correct the following time {}'.format(stamp))
+            if len(timesplit) < 3:
+                raise CaptionReadSyntaxError(
+                    'Begin and end time should follow the '
+                    'hour:minute:seconds.milliseconds or '
+                    'hour:minute:seconds:frames format. '
+                    'Milliseconds and frames are optional.'
+                    'Please correct the following time {}'.format(stamp))
 
             if '.' not in timesplit[2]:
                 timesplit[2] += '.000'
