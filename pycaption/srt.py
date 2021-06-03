@@ -97,6 +97,9 @@ class SRTWriter(BaseWriter):
         return caption_content
 
     def _recreate_lang(self, captions):
+        # Merge caption's that are on the exact same timestamp otherwise some
+        # players will play them in reversed order, libass specifically which is
+        # used quite a lot, including VLC and MPV.
         new_captions = []
         skips = []
 
@@ -118,6 +121,8 @@ class SRTWriter(BaseWriter):
                     )
                     skips.append(n)  # skip/delete next caption, as its merged
             new_captions.append(caption)
+
+        captions = new_captions
 
         srt = ''
         count = 1

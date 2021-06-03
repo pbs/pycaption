@@ -1,10 +1,10 @@
 import unittest
 
-from pycaption import SRTReader, CaptionReadNoCaptions
+from pycaption import SRTReader, SRTWriter, CaptionReadNoCaptions
 
 from tests.samples.srt import (
     SAMPLE_SRT, SAMPLE_SRT_NUMERIC,
-    SAMPLE_SRT_EMPTY, SAMPLE_SRT_BLANK_LINES, SAMPLE_SRT_TRAILING_BLANKS)
+    SAMPLE_SRT_EMPTY, SAMPLE_SRT_BLANK_LINES, SAMPLE_SRT_TRAILING_BLANKS, SAMPLES_SRT_SAME_TIME)
 
 
 class SRTReaderTestCase(unittest.TestCase):
@@ -40,3 +40,9 @@ class SRTReaderTestCase(unittest.TestCase):
     def test_extra_trailing_empty_line(self):
         captions = SRTReader().read(SAMPLE_SRT_TRAILING_BLANKS)
         self.assertEqual(2, len(captions.get_captions("en-US")))
+
+    def test_multiple_lines_for_one_sentence(self):
+        caption_set = SRTReader().read(SAMPLES_SRT_SAME_TIME)
+        results = SRTWriter().write(caption_set)
+        self.assertEqual(4, len(results.split('-->')))
+
