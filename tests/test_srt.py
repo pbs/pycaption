@@ -1,4 +1,4 @@
-import unittest
+import unittest, re
 
 from pycaption import SRTReader, SRTWriter, CaptionReadNoCaptions
 
@@ -44,5 +44,7 @@ class SRTReaderTestCase(unittest.TestCase):
     def test_multiple_lines_for_one_sentence(self):
         caption_set = SRTReader().read(SAMPLES_SRT_SAME_TIME)
         results = SRTWriter().write(caption_set)
-        self.assertEqual(4, len(results.split('-->')))
+        sentences = (re.split(r"\d{2}:\d{2}:\d{2},\d{3} -->", results))
+        sentences.pop(0)
+        self.assertEqual(3, len(sentences))
 
