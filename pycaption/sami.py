@@ -740,7 +740,7 @@ class SAMIParser(HTMLParser):
             index = data.lower().find("</head>")
             style = BeautifulSoup(data[:index], "lxml").find('style')
             if style and style.contents:
-                self.styles = self._css_parse(style.contents[0])
+                self.styles = self._css_parse(' '.join(style.contents))
         except AttributeError:
             self.styles = {}
 
