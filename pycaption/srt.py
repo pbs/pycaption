@@ -100,29 +100,20 @@ class SRTWriter(BaseWriter):
         # Merge caption's that are on the exact same timestamp otherwise some
         # players will play them in reversed order, libass specifically which is
         # used quite a lot, including VLC and MPV.
-        new_captions = []
-        skips = []
 
-        total_captions = len(captions)
-        for i, caption in enumerate(captions):
-            if i in skips:
-                continue
-            if i < total_captions:
-                for n in range(i + 1, total_captions):
-                    if n in skips:
-                        continue  # wow, we merged one of these captions just earlier!, lets skip
-                    next_caption = captions[n]
-                    if (caption.start, caption.end) != (next_caption.start, next_caption.end):
-                        break  # no more matching timestamps
-                    caption = Caption(
-                        start=caption.start,
-                        end=caption.end,
-                        nodes=caption.nodes + next_caption.nodes
-                    )
-                    skips.append(n)  # skip/delete next caption, as its merged
-            new_captions.append(caption)
+        merged_captions = [captions[0]] if captions else []
 
-        captions = new_captions
+        for caption in captions[1:]:
+            # Merge if the timestamp is the same as last caption
+            if (caption.start, caption.end) == (merged_captions[-1].start, merged_captions[-1].end):
+                merged_captions[-1] = Caption(
+                    start=caption.start,
+                    end=caption.end,
+                    nodes=merged_captions[-1].nodes + caption.nodes)
+            else:
+                # Different timestamp, end of merging, append new caption
+                merged_captions.append(caption)
+        captions = merged_captions
 
         srt = ''
         count = 1
