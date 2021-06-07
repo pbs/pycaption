@@ -39,8 +39,3 @@ class InvalidInputError(RuntimeError):
     """ Error raised when the input is invalid (i.e. a unicode string)
     """
 
-
-class InvalidFormatError(CaptionReadError):
-    """ Error raised when caption phrase does not match the expected format
-    """
-

@@ -2,7 +2,7 @@ from copy import deepcopy
 
 from .base import (
     BaseReader, BaseWriter, CaptionSet, CaptionList, Caption, CaptionNode, DEFAULT_LANGUAGE_CODE)
-from .exceptions import CaptionReadNoCaptions, InvalidFormatError, CaptionReadTimingError
+from .exceptions import CaptionReadNoCaptions, CaptionReadSyntaxError, CaptionReadTimingError
 import re
 
 
@@ -18,12 +18,10 @@ class MicroDVDReader(BaseReader):
         captions = CaptionList()
         fps = 25.0
         for line in lines:
-            if line != '':
-                m = re.match(r"{(\d+)}{(\d+)}(.*)", line)
+            if not line: continue
 
-                if not m: raise InvalidFormatError("Line does not match expected format")
-            else:
-                continue
+            m = re.match(r"{(\d+)}{(\d+)}(.*)", line)
+            if not m: raise CaptionReadSyntaxError("Line does not match expected format")
 
             start, end, txt = m.groups()
 
