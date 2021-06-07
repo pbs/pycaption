@@ -4,8 +4,13 @@ from .base import (
     BaseReader, BaseWriter, CaptionSet, CaptionList, Caption, CaptionNode)
 from .exceptions import CaptionReadNoCaptions, InvalidInputError
 
+import re
+
 
 class SRTReader(BaseReader):
+    RE_HTML = re.compile(r'<[^>]+>')
+    RE_ASS = re.compile(r'{[^}]+}')
+
     def detect(self, content):
         lines = content.splitlines()
         if lines[0].isdigit() and '-->' in lines[1]:
@@ -13,7 +18,7 @@ class SRTReader(BaseReader):
         else:
             return False
 
-    def read(self, content, lang='en-US'):
+    def read(self, content, lang='en-US', strip_html=False, strip_ass_tags=False):
         if type(content) != str:
             raise InvalidInputError('The content is not a unicode string.')
 
@@ -36,7 +41,14 @@ class SRTReader(BaseReader):
             for line in lines[start_line + 2:end_line - 1]:
                 # skip extra blank lines
                 if not nodes or line != '':
-                    nodes.append(CaptionNode.create_text(line))
+                    txt = line
+                    if strip_html:
+                        txt = SRTReader.RE_HTML.sub('', txt)
+
+                    if strip_ass_tags:
+                        txt = SRTReader.RE_ASS.sub('', txt)
+
+                    nodes.append(CaptionNode.create_text(txt))
                     nodes.append(CaptionNode.create_break())
 
             if len(nodes):
