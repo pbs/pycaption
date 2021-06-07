@@ -7,7 +7,7 @@ from six import text_type
 import six
 
 from pycaption import (
-    DFXPReader, DFXPWriter, SRTWriter, SAMIWriter, WebVTTWriter)
+    DFXPReader, DFXPWriter, SRTWriter, SAMIWriter, WebVTTWriter, MicroDVDWriter)
 
 from pycaption.dfxp.extras import LegacyDFXPWriter
 
@@ -38,8 +38,10 @@ from .samples.webvtt import (
     SAMPLE_WEBVTT_OUTPUT_LONG_CUE, WEBVTT_FROM_DFXP_WITH_CONFLICTING_ALIGN
 )
 
+from .samples.microdvd import SAMPLE_MICRODVD_2
+
 from .mixins import (
-    SRTTestingMixIn, SAMITestingMixIn, DFXPTestingMixIn, WebVTTTestingMixIn)
+    SRTTestingMixIn, SAMITestingMixIn, DFXPTestingMixIn, WebVTTTestingMixIn, MicroDVDTestingMixIn)
 
 # Arbitrary values used to test relativization
 VIDEO_WIDTH = 640
@@ -249,6 +251,15 @@ class DFXPtoWebVTTTestCase(unittest.TestCase, WebVTTTestingMixIn):
         results = WebVTTWriter().write(caption_set)
         self.assertEqual(
             WEBVTT_FROM_DFXP_WITH_CONFLICTING_ALIGN, results)
+
+
+class DFXPtoMicroDVDTestCase(unittest.TestCase, MicroDVDTestingMixIn):
+
+    def test_dfxp_to_microdvd_conversion(self):
+        caption_set = DFXPReader().read(SAMPLE_DFXP)
+        results = MicroDVDWriter().write(caption_set)
+        self.assertTrue(isinstance(results, six.text_type))
+        self.assertMicroDVDEquals(SAMPLE_MICRODVD_2, results)
 
 
 class LegacyDFXPTestCase(unittest.TestCase):

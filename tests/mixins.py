@@ -135,3 +135,20 @@ class SAMITestingMixIn(object):
         first_items = self._extract_sami_captions(first_soup)
         second_items = self._extract_sami_captions(second_soup)
         self.assertEqual(first_items, second_items)
+
+
+class MicroDVDTestingMixIn(object):
+    """
+    Provide specialized test case capabilities for asserting on MicroDVD content.
+    """
+
+    def _extract_micro_dvd_captions(self, content):
+        return tuple(line.strip() for line in content.splitlines())
+
+    def assertMicroDVDEquals(self, first, second):
+        """
+        Assert that two MicroDVD contents are equal.
+        """
+        first_items = self._extract_micro_dvd_captions(first)
+        second_items = self._extract_micro_dvd_captions(second)
+        self.assertEqual(first_items, second_items)

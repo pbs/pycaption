@@ -199,8 +199,13 @@ class SAMIReader(BaseReader):
             start = milliseconds * 1000
             end = 0
 
-            if captions != [] and captions[-1].end == 0:
-                captions[-1].end = milliseconds * 1000
+            # Setting current start time as end time for previous elements with 0 as ending
+            # ( when we have more p elements inside a SYNC element )
+            for i in reversed(range(len(captions))):
+                if captions[i].end != 0:
+                    break
+                if captions[i].start != start:
+                    captions[i].end = start
 
             if p.get_text().strip():
                 self.first_alignment = None

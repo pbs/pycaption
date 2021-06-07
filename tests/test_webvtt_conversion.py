@@ -4,7 +4,7 @@ from builtins import str
 import six
 
 from pycaption import (
-    WebVTTReader, WebVTTWriter, SRTWriter, SAMIWriter, DFXPWriter)
+    WebVTTReader, WebVTTWriter, SRTWriter, SAMIWriter, DFXPWriter, MicroDVDWriter)
 
 from tests.samples.dfxp import SAMPLE_DFXP
 from tests.samples.sami import SAMPLE_SAMI
@@ -13,8 +13,9 @@ from tests.samples.webvtt import (
     SAMPLE_WEBVTT, SAMPLE_WEBVTT_FROM_WEBVTT,
     SAMPLE_WEBVTT_FROM_DFXP_WITH_POSITIONING, SAMPLE_WEBVTT_WITH_CUE_SETTINGS
 )
+from .samples.microdvd import SAMPLE_MICRODVD
 from tests.mixins import (
-    WebVTTTestingMixIn, DFXPTestingMixIn, SAMITestingMixIn, SRTTestingMixIn
+    WebVTTTestingMixIn, DFXPTestingMixIn, SAMITestingMixIn, SRTTestingMixIn, MicroDVDTestingMixIn
 )
 
 
@@ -71,3 +72,12 @@ class WebVTTtoSRTTestCase(unittest.TestCase, SRTTestingMixIn):
         results = SRTWriter().write(caption_set)
         self.assertTrue(isinstance(results, six.text_type))
         self.assertSRTEquals(SAMPLE_SRT, results)
+
+
+class WebVTTtoMicroDVDTestCase(unittest.TestCase, MicroDVDTestingMixIn):
+
+    def test_webvtt_to_microdvd_conversion(self):
+        caption_set = WebVTTReader().read(SAMPLE_WEBVTT)
+        results = MicroDVDWriter().write(caption_set)
+        self.assertTrue(isinstance(results, six.text_type))
+        self.assertMicroDVDEquals(SAMPLE_MICRODVD, results)
