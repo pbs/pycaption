@@ -162,6 +162,7 @@ class Caption(object):
     A single caption, including the time and styling information
     for its display.
     """
+
     def __init__(self, start, end, nodes, style={}, layout_info=None):
         """
         Initialize the Caption object
@@ -222,30 +223,34 @@ class Caption(object):
         """
         Get the text of the caption.
         """
+
         def get_text_for_node(node):
             if node.type_ == CaptionNode.TEXT:
                 return node.content
             if node.type_ == CaptionNode.BREAK:
                 return '\n'
             return ''
+
         text_nodes = [get_text_for_node(node) for node in self.nodes]
         return ''.join(text_nodes).strip()
 
-    def _format_timestamp(self, value, msec_separator=None):
-        datetime_value = timedelta(milliseconds=(int(value / 1000)))
-
-        str_value = text_type(datetime_value)[:11]
-        if not datetime_value.microseconds:
-            str_value += '.000'
-
-        if msec_separator is not None:
-            str_value = str_value.replace(".", msec_separator)
-
-        return '0' + str_value
+    def _format_timestamp(self, microseconds, msec_separator=None):
+        duration = timedelta(microseconds=microseconds)
+        hours, rem = divmod(duration.seconds, 3600)
+        minutes, seconds = divmod(rem, 60)
+        milliseconds = "{:03d}".format(duration.microseconds//1000)
+        timestamp = "{hours:02d}:{minutes:02d}:{seconds:02d}" \
+                    "{msec_separator}{milliseconds:.3s}"\
+            .format(hours=hours, minutes=minutes, seconds=seconds,
+                    msec_separator=msec_separator or ".",
+                    milliseconds=milliseconds
+                    )
+        return timestamp
 
 
 class CaptionList(list):
     """ A list of captions with a layout object attached to it """
+
     def __init__(self, iterable=None, layout_info=None):
         """
         :param iterable: An iterator used to populate the caption list
@@ -267,9 +272,9 @@ class CaptionList(list):
 
     def __add__(self, other):
         add_is_safe = (
-            not hasattr(other, 'layout_info') or
-            not other.layout_info or
-            self.layout_info == other.layout_info
+                not hasattr(other, 'layout_info') or
+                not other.layout_info or
+                self.layout_info == other.layout_info
         )
         if add_is_safe:
             return CaptionList(
@@ -293,6 +298,7 @@ class CaptionSet(object):
     The .layout_info attribute, keeps information that should be inherited
     by all the children.
     """
+
     def __init__(self, captions, styles={}, layout_info=None):
         """
         :param captions: A dictionary of the format {'language': CaptionList}
