@@ -1,6 +1,18 @@
 import unittest
 
-from pycaption.base import CaptionList
+from pycaption.base import CaptionList, Caption
+
+
+class CaptionTestCase(unittest.TestCase):
+
+    def setUp(self):
+        self.caption = Caption(0, 999999999999, ['test'])
+
+    def test_format_start(self):
+        self.assertEqual(self.caption.format_start(), '00:00:00.000')
+
+    def test_format_end(self):
+        self.assertEqual(self.caption.format_end(), '13:46:39.999')
 
 
 class CaptionListTestCase(unittest.TestCase):
