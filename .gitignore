@@ -37,3 +37,6 @@ docs/_build
 # Environments
 env/
 venv/
+
+# Pyenv files
+.python-version
