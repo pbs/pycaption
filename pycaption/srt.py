@@ -1,3 +1,4 @@
+import os
 from copy import deepcopy
 
 from .base import (
@@ -5,6 +6,7 @@ from .base import (
 from .exceptions import CaptionReadNoCaptions, InvalidInputError
 
 import re
+from PIL import Image, ImageFont, ImageDraw
 
 
 class SRTReader(BaseReader):
@@ -104,32 +106,35 @@ class SRTReader(BaseReader):
 
 
 class SRTWriter(BaseWriter):
-    def write(self, caption_set):
+    VALID_POSITION = ['top', 'bottom']
+
+    def write(self, caption_set, position='bottom'):
+        position = position.lower().strip()
+        if position not in SRTWriter.VALID_POSITION:
+            raise ValueError('Unknown position. Supported: {}'.format(','.join(SRTWriter.VALID_POSITION)))
+
         caption_set = deepcopy(caption_set)
 
         srt_captions = []
 
         for lang in caption_set.get_languages():
             srt_captions.append(
-                self._recreate_lang(caption_set.get_captions(lang))
+                self._recreate_lang(caption_set.get_captions(lang), position)
             )
 
         caption_content = 'MULTI-LANGUAGE SRT\n'.join(srt_captions)
         return caption_content
 
-    def _recreate_lang(self, captions):
+    def _recreate_lang(self, captions, position='bottom'):
         srt = ''
         count = 1
 
+        fnt = ImageFont.truetype(os.path.dirname(__file__) + '/NotoSansDisplay-Regular.ttf', 30)
+        img = Image.new('RGB', (self.video_width, self.video_height), (0, 255, 0))
+        draw = ImageDraw.Draw(img)
+
         for caption in captions:
-            srt += '%s\n' % count
-
-            start = caption.format_start(msec_separator=',')
-            end = caption.format_end(msec_separator=',')
-            timestamp = '%s --> %s\n' % (start[:12], end[:12])
-
-            srt += timestamp.replace('.', ',')
-
+            # Generate the text
             new_content = ''
             for node in caption.nodes:
                 new_content = self._recreate_line(new_content, node)
@@ -139,6 +144,27 @@ class SRTWriter(BaseWriter):
             while '\n\n' in new_content:
                 new_content = new_content.replace('\n\n', '\n')
 
+            srt += '%s\n' % count
+
+            start = caption.format_start(msec_separator=',')
+            end = caption.format_end(msec_separator=',')
+            if position == 'bottom':
+                # "bottom" is standard (no position info).
+                # Use the old behavior, output just the timestamp, no coordinates.
+                timestamp = '%s --> %s\n' % (start[:12], end[:12])
+            elif position == 'top':
+                padding_top = 10
+                l, t, r, b = draw.textbbox((0, 0), new_content, font=fnt)
+                l, t, r, b = draw.textbbox((self.video_width / 2 - r / 2, padding_top), new_content, font=fnt)
+                x1 = str(round(l)).zfill(3)
+                x2 = str(round(r)).zfill(3)
+                y1 = str(round(t)).zfill(3)
+                y2 = str(round(b)).zfill(3)
+                timestamp = '%s --> %s X1:%s X2:%s Y1:%s Y2:%s\n' % (start[:12], end[:12], x1, x2, y1, y2)
+            else:
+                raise ValueError('Unsupported position: %s' % position)
+
+            srt += timestamp.replace('.', ',')
             srt += "%s%s" % (new_content, '\n\n')
             count += 1
 
