@@ -57,6 +57,8 @@ def _zippy(base_path, path, archive):
 
 
 class ScenaristDVDWriter(BaseWriter):
+    VALID_POSITION = ['top', 'bottom']
+
     paColor = (255, 255, 255)  # letter body
     e1Color = (190, 190, 190)  # antialiasing color
     e2Color = (0, 0, 0)  # border color
@@ -73,7 +75,11 @@ class ScenaristDVDWriter(BaseWriter):
         self.tape_type = tape_type
         self.frame_rate = frame_rate
 
-    def write(self, caption_set: CaptionSet):
+    def write(self, caption_set: CaptionSet, position='bottom'):
+        position = position.lower().strip()
+        if position not in ScenaristDVDWriter.VALID_POSITION:
+            raise ValueError('Unknown position. Supported: {}'.format(','.join(ScenaristDVDWriter.VALID_POSITION)))
+
         lang = caption_set.get_languages().pop()
         caps = caption_set.get_captions(lang)
 
@@ -102,7 +108,7 @@ class ScenaristDVDWriter(BaseWriter):
 
                     img = Image.new('RGB', (self.video_width, self.video_height), self.bgColor)
                     draw = ImageDraw.Draw(img)
-                    self.printLine(draw, cap, fnt)
+                    self.printLine(draw, cap, fnt, position)
 
                     # quantize the image to our palette
                     img_quant = img.quantize(palette=self.palette_image, dither=0)
@@ -123,12 +129,16 @@ class ScenaristDVDWriter(BaseWriter):
         str_value = str_value + ':%02d' % (int((int(value / 1000) % 1000) / int(1000 / self.frame_rate)))
         return str_value
 
-    def printLine(self, draw: ImageDraw, caption: Caption, fnt: ImageFont):
+    def printLine(self, draw: ImageDraw, caption: Caption, fnt: ImageFont, position: str = 'bottom'):
         text = caption.get_text()
-
-        txtWidth, txtHeight = draw.textsize(text, font=fnt)
-        x = self.video_width / 2 - txtWidth / 2
-        y = self.video_height - txtHeight - 10  # padding for readability
+        l, t, r, b = draw.textbbox((0, 0), text, font=fnt)
+        x = self.video_width / 2 - r / 2
+        if position == 'bottom':
+            y = self.video_height - b - 10  # padding for readability
+        elif position == 'top':
+            y = 10
+        else:
+            raise ValueError('Unknown "position": {}'.format(position))
 
         borderColor = self.e2Color
         fontColor = self.paColor
