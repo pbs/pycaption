@@ -424,9 +424,9 @@ class SCCReader(BaseReader):
             # the proper buffer (self.buffer) is used.
             # Most likely using `self.buffer` instead of the paint buffer
             # is the right thing to do, but this needs some further attention.
-            if not self.buffer_dict['paint'].is_empty():
+            if not self.buffer.is_empty():
                 self.caption_stash.create_and_store(
-                    self.buffer_dict['paint'], self.time)
+                    self.buffer, self.time)
                 self.buffer = self.node_creator_factory.new_creator()
 
             # attempt to add proper end time to last caption(s)
