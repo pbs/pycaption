@@ -13,17 +13,22 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: [3.5, 3.6, 3.7, 3.8]
+        python-version: [3.5, 3.6, 3.7, 3.8, 3.9]
 
     steps:
       - uses: actions/checkout@v2
+
       - name: Setup python ${{ matrix.python-version }}
         uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Run test
+
+      - name: Install Tox
+        run: pip install tox
+      - name: Run Tox
         id: tests
-        run: python setup.py test
+        # Run tox using the version of Python in `PATH`
+        run: tox -e py
         continue-on-error: true
 
       - name: Notify if test FAILED
