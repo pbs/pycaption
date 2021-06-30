@@ -14,6 +14,16 @@ For details, see the `documentation <http://pycaption.readthedocs.org>`__.
 
 Changelog
 ---------
+1.0.6
+^^^^^
+- Added MicroDVD format
+- Fix for missing end times when reading multiple SAMI paragraphs inside a SYNC
+- Fix for wrong order when multiple SRT captions have the same timestamp
+- Fix for DFXP timestamps adding leading zeros to 2-digit hours
+- Added support for BeautifulSoup 4.9
+- Added tests for SCC to DFXP conversion when the source contains ampersands
+- Added support for Python 3.9
+
 1.0.5
 ^^^^^
 - Added language parameter to WebVTTWriter
