@@ -115,16 +115,16 @@ class CaptionNode(object):
     STYLE = 2
     BREAK = 3
 
-    def __init__(self, type_, layout_info=None):
+    def __init__(self, type_, layout_info=None, content=None, start=None):
         """
         :type type_: int
         :type layout_info: Layout
         """
         self.type_ = type_
-        self.content = None
+        self.content = content
 
         # Boolean. Marks the beginning/ end of a Style node.
-        self.start = None
+        self.start = start
         self.layout_info = layout_info
 
     def __repr__(self):
@@ -141,16 +141,14 @@ class CaptionNode(object):
 
     @staticmethod
     def create_text(text, layout_info=None):
-        data = CaptionNode(CaptionNode.TEXT, layout_info=layout_info)
-        data.content = text
-        return data
+        return CaptionNode(
+            CaptionNode.TEXT, layout_info=layout_info, content=text)
 
     @staticmethod
     def create_style(start, content, layout_info=None):
-        data = CaptionNode(CaptionNode.STYLE, layout_info=layout_info)
-        data.content = content
-        data.start = start
-        return data
+        return CaptionNode(
+            CaptionNode.STYLE, layout_info=layout_info, content=content,
+            start=start)
 
     @staticmethod
     def create_break(layout_info=None):
