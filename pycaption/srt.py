@@ -105,14 +105,15 @@ class SRTWriter(BaseWriter):
 
         for caption in captions[1:]:
             # Merge if the timestamp is the same as last caption
-            if (caption.start, caption.end) == (merged_captions[-1].start, merged_captions[-1].end):
-                merged_captions[-1] = Caption(
-                    start=caption.start,
-                    end=caption.end,
-                    nodes=merged_captions[-1].nodes + caption.nodes)
-            else:
-                # Different timestamp, end of merging, append new caption
-                merged_captions.append(caption)
+            if caption != None:
+                if (caption.start, caption.end) == (merged_captions[-1].start, merged_captions[-1].end):
+                    merged_captions[-1] = Caption(
+                        start=caption.start,
+                        end=caption.end,
+                        nodes=merged_captions[-1].nodes + caption.nodes)
+                else:
+                    # Different timestamp, end of merging, append new caption
+                    merged_captions.append(caption)
         captions = merged_captions
 
         srt = ''
