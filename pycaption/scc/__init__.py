@@ -415,25 +415,12 @@ class SCCReader(BaseReader):
             if not self.buffer.is_empty():
                 self._roll_up()
 
-        # clear screen
+        # 942c - Erase Displayed Memory - Clear the current screen of any
+        # displayed captions or text.
         elif word == '942c':
-            self.roll_rows = []
-
-            # XXX - The 942c command has nothing to do with paint-ons
-            # This however is legacy code, and will break lots of tests if
-            # the proper buffer (self.buffer) is used.
-            # Most likely using `self.buffer` instead of the paint buffer
-            # is the right thing to do, but this needs some further attention.
-            if not self.buffer.is_empty():
-                self.caption_stash.create_and_store(
-                    self.buffer, self.time)
-                self.buffer = self.node_creator_factory.new_creator()
-
-            # attempt to add proper end time to last caption(s)
             self.caption_stash.correct_last_timing(
                 self.time_translator.get_time())
-
-        # if command not one of the aforementioned, add to buffer
+        # If command is not one of the aforementioned, add it to buffer
         else:
             self.buffer.interpret_command(word)
 
