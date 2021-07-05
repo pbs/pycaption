@@ -133,8 +133,12 @@ class SRTWriter(BaseWriter):
         count = 1
 
         fnt = ImageFont.truetype(os.path.dirname(__file__) + '/NotoSansDisplay-Regular.ttf', 30)
-        img = Image.new('RGB', (self.video_width, self.video_height), (0, 255, 0))
-        draw = ImageDraw.Draw(img)
+
+        img = None
+        draw = None
+        if position == 'top':
+            img = Image.new('RGB', (self.video_width, self.video_height), (0, 255, 0))
+            draw = ImageDraw.Draw(img)
 
         for caption in captions:
             # Generate the text
