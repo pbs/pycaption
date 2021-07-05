@@ -5,7 +5,7 @@ from pycaption.geometry import UnitEnum, HorizontalAlignmentEnum, VerticalAlignm
 from pycaption.scc.specialized_collections import (InstructionNodeCreator,
                                                    TimingCorrectingCaptionList)
 
-from pycaption import SCCReader, CaptionReadNoCaptions
+from pycaption import SCCReader, CaptionReadNoCaptions, CaptionNode
 from pycaption.scc.state_machines import DefaultProvidingPositionTracker
 
 from tests.samples.scc import (
@@ -14,7 +14,7 @@ from tests.samples.scc import (
     SAMPLE_SCC_WITH_ITALICS, SAMPLE_SCC_EMPTY, SAMPLE_SCC_ROLL_UP_RU2,
     SAMPLE_SCC_PRODUCES_BAD_LAST_END_TIME, SAMPLE_NO_POSITIONING_AT_ALL_SCC,
     SAMPLE_SCC_NO_EXPLICIT_END_TO_LAST_CAPTION, SAMPLE_SCC_EOC_FIRST_COMMAND,
-    SAMPLE_SCC_WITH_EXTENDED_CHARACTERS
+    SAMPLE_SCC_WITH_EXTENDED_CHARACTERS, SAMPLE_SCC_MULTIPLE_FORMATS
 )
 
 TOLERANCE_MICROSECONDS = 500 * 1000
@@ -202,6 +202,33 @@ class CoverageOnlyTestCase(unittest.TestCase):
                           'And wildlife.',
                           '>> Bike Iowa, your source for']
         self.assertEqual(expected_texts, actual_texts)
+
+    def test_multiple_formats(self):
+        # Test for captions that contain both pop on and paint on formats to
+        # ensure the paint on lines are not repeated
+        captions = SCCReader().read(SAMPLE_SCC_MULTIPLE_FORMATS)\
+            .get_captions('en-US')
+        text_lines = [node.content
+                      for caption in captions
+                      for node in caption.nodes
+                      if node.type_ == CaptionNode.TEXT]
+        expected_text_lines = [
+            "(Client's Voice)",
+            'Remember that degree',
+            'you got in taxation?',
+            '(Danny)',
+            "Of course you don't",
+            "because you didn't!",
+            "Your job isn't doing hard",
+            'work...',
+            "...it's making them do hard",
+            'work...',
+            '...and getting paid for it.',
+            '(VO)',
+            'Snap and sort your expenses to',
+            'save over $4,600 at tax time.',
+            'QUICKBOOKS. BACKING YOU.']
+        self.assertEqual(expected_text_lines, text_lines)
 
     def test_freeze_semicolon_spec_time(self):
         scc1 = SCCReader().read(SAMPLE_SCC_ROLL_UP_RU2)
