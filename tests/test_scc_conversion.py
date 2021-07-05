@@ -4,13 +4,14 @@ from pycaption import (
     SCCReader, SCCWriter, SRTReader, SRTWriter, DFXPWriter, WebVTTWriter)
 
 from tests.samples.dfxp import (
-    SAMPLE_DFXP_FROM_SCC_OUTPUT, SAMPLE_DFXP_WITH_PROPERLY_CLOSING_SPANS_OUTPUT
+    SAMPLE_DFXP_FROM_SCC_OUTPUT, SAMPLE_DFXP_WITH_PROPERLY_CLOSING_SPANS_OUTPUT, SAMPLE_DFXP_WITH_AMPERSAND_CHARACTER
 )
 from tests.samples.scc import (
     SAMPLE_SCC_CREATED_DFXP_WITH_WRONGLY_CLOSING_SPANS,
     SCC_THAT_GENERATES_WEBVTT_WITH_PROPER_NEWLINES,
     SAMPLE_SCC_MULTIPLE_POSITIONING,
     SAMPLE_SCC_FLASHING_CAPTIONS,
+    SAMPLE_SCC_WITH_AMPERSAND_CHARACTER
 )
 from tests.samples.srt import SAMPLE_SRT_ASCII
 from tests.samples.webvtt import (
@@ -55,6 +56,12 @@ class SCCtoDFXPTestCase(unittest.TestCase):
 
         dfxp = DFXPWriter().write(caption_set)
         self.assertEqual(dfxp, SAMPLE_DFXP_WITH_PROPERLY_CLOSING_SPANS_OUTPUT)
+
+    def test_dfxp_is_valid_xml_when_scc_source_has_ampersand_character(self):
+        caption_set = SCCReader().read(SAMPLE_SCC_WITH_AMPERSAND_CHARACTER)
+
+        dfxp = DFXPWriter().write(caption_set)
+        self.assertEqual(dfxp, SAMPLE_DFXP_WITH_AMPERSAND_CHARACTER)
 
 
 class SCCToWebVTTTestCase(unittest.TestCase):

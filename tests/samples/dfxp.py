@@ -1222,3 +1222,25 @@ SAMPLE_DFXP_MULTIPLE_CAPTIONS_WITH_THE_SAME_TIMING = """\
   </div>
  </body>
 </tt>"""
+
+SAMPLE_DFXP_WITH_AMPERSAND_CHARACTER = """\
+<?xml version="1.0" encoding="utf-8"?>
+<tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling">
+ <head>
+  <styling>
+   <style tts:color="white" tts:fontFamily="monospace" tts:fontSize="1c" xml:id="default"/>
+  </styling>
+  <layout>
+   <region tts:displayAlign="after" tts:textAlign="center" xml:id="bottom"/>
+   <region tts:displayAlign="before" tts:extent="87.5% 100%" tts:origin="12.5% 0%" tts:textAlign="left" xml:id="r0"/>
+  </layout>
+ </head>
+ <body>
+  <div region="bottom" xml:lang="en-US">
+   <p begin="00:00:00.000" end="00:04:36.800" region="r0" style="default">
+    MAJOR FUNDING PROVIDED BY &amp;
+   </p>
+  </div>
+ </body>
+</tt>"""
+

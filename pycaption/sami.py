@@ -743,9 +743,9 @@ class SAMIParser(HTMLParser):
         try:
             # prevent BS4 error with huge SAMI files with unclosed tags
             index = data.lower().find("</head>")
-
-            self.styles = self._css_parse(
-                BeautifulSoup(data[:index], "lxml").find('style').get_text())
+            style = BeautifulSoup(data[:index], "lxml").find('style')
+            if style and style.contents:
+                self.styles = self._css_parse(' '.join(style.contents))
         except AttributeError:
             self.styles = {}
 
