@@ -285,6 +285,8 @@ class SCCReader(BaseReader):
             if not self.buffer_dict['paint'].is_empty():
                 self.caption_stash.create_and_store(
                     self.buffer_dict['paint'], self.time)
+                self.buffer_dict['paint'] = \
+                    self.node_creator_factory.new_creator()
 
     def _translate_line(self, line):
         # ignore blank lines
@@ -418,6 +420,16 @@ class SCCReader(BaseReader):
         # 942c - Erase Displayed Memory - Clear the current screen of any
         # displayed captions or text.
         elif word == '942c':
+            # XXX - The 942c command has nothing to do with paint-ons
+            # This however is legacy code, and will break lots of tests if
+            # the proper buffer (self.buffer) is used.
+            # Most likely using `self.buffer` instead of the paint buffer
+            # is the right thing to do, but this needs some further attention.
+            if not self.buffer_dict['paint'].is_empty():
+                self.caption_stash.create_and_store(
+                    self.buffer_dict['paint'], self.time)
+                self.buffer_dict['paint'] = \
+                    self.node_creator_factory.new_creator()
             self.caption_stash.correct_last_timing(
                 self.time_translator.get_time())
         # If command is not one of the aforementioned, add it to buffer
