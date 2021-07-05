@@ -113,6 +113,9 @@ class SRTWriter(BaseWriter):
         if position not in SRTWriter.VALID_POSITION:
             raise ValueError('Unknown position. Supported: {}'.format(','.join(SRTWriter.VALID_POSITION)))
 
+        if position == 'top' and not all([self.video_width, self.video_height]):
+            raise ValueError('Top position requires video width and height.')
+
         caption_set = deepcopy(caption_set)
 
         srt_captions = []
