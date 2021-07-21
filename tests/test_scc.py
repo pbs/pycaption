@@ -5,7 +5,7 @@ from pycaption.geometry import UnitEnum, HorizontalAlignmentEnum, VerticalAlignm
 from pycaption.scc.specialized_collections import (InstructionNodeCreator,
                                                    TimingCorrectingCaptionList)
 
-from pycaption import SCCReader, CaptionReadNoCaptions
+from pycaption import SCCReader, CaptionReadNoCaptions, CaptionNode
 from pycaption.scc.state_machines import DefaultProvidingPositionTracker
 
 from tests.samples.scc import (
@@ -14,7 +14,7 @@ from tests.samples.scc import (
     SAMPLE_SCC_WITH_ITALICS, SAMPLE_SCC_EMPTY, SAMPLE_SCC_ROLL_UP_RU2,
     SAMPLE_SCC_PRODUCES_BAD_LAST_END_TIME, SAMPLE_NO_POSITIONING_AT_ALL_SCC,
     SAMPLE_SCC_NO_EXPLICIT_END_TO_LAST_CAPTION, SAMPLE_SCC_EOC_FIRST_COMMAND,
-    SAMPLE_SCC_WITH_EXTENDED_CHARACTERS
+    SAMPLE_SCC_WITH_EXTENDED_CHARACTERS, SAMPLE_SCC_REPEATED_TAB_OFFSET
 )
 
 TOLERANCE_MICROSECONDS = 500 * 1000
@@ -161,6 +161,20 @@ class SCCReaderTestCase(unittest.TestCase):
 
         self.assertEqual(nodes[0].content, 'MÄRTHA:')
 
+    def test_ignore_repeated_tab_offset(self):
+        caption_set = SCCReader().read(SAMPLE_SCC_REPEATED_TAB_OFFSET)
+        actual_lines = [node.content
+                        for cap_ in caption_set.get_captions('en-US')
+                        for node in cap_.nodes
+                        if node.type_ == CaptionNode.TEXT]
+        expected_lines = [
+            '[Radio reporter]',
+            'The I-10 Santa Monica Freeway',
+            'westbound is jammed,',
+            'due to a three-car accident',
+            'blocking lanes 1 and 2']
+        self.assertEqual(expected_lines, actual_lines)
+
 
 class CoverageOnlyTestCase(unittest.TestCase):
     """In order to refactor safely, we need coverage of 95% or more.
@@ -177,23 +191,15 @@ class CoverageOnlyTestCase(unittest.TestCase):
         scc1 = SCCReader().read(SAMPLE_SCC_ROLL_UP_RU2)
         captions = scc1.get_captions('en-US')
         actual_texts = [cap_.nodes[0].content for cap_ in captions]
-        expected_texts = ['>>> HI',
+        expected_texts = ['>>> HI.',
                           "I'M KEVIN CUNNING AND AT",
-                          # Notice the missing 'N' at the end. This is because
-                          # the input is not OK (should only use 4 byte "words"
-                          # (filling in with '80' where only 2 bytes are
-                          # meaningful)
-                          "INVESTOR'S BANK WE BELIEVE I",
-                          'HELPING THE LOCAL NEIGHBORHOOD',
+                          "INVESTOR'S BANK WE BELIEVE IN",
+                          'HELPING THE LOCAL NEIGHBORHOODS',
                           'AND IMPROVING THE LIVES OF ALL',
-                          'WE SERVE',
-                          # special chars. Last one should be printer 2 times
-                          # XXX this is a bug.
-                          '®°½',
-                          # special/ extended chars delete last 0-4 chars.
-                          # XXX - this is a bug.
+                          'WE SERVE.',
+                          '®°½½',
                           'ABû',
-                          'ÁÉÓ¡',
+                          'ÁÁÉÓ¡',
                           "WHERE YOU'RE STANDING NOW,",
                           "LOOKING OUT THERE, THAT'S AL",
                           'THE CROWD.',
@@ -417,8 +423,10 @@ class TimingCorrectingCaptionListTestCase(unittest.TestCase):
         )
 
     def test_eoc_first_command(self):
+        # TODO First caption should be ignored because it doesn't start with
+        #  a pop/roll/paint on command
         caption_set = SCCReader().read(SAMPLE_SCC_EOC_FIRST_COMMAND)
 
         # just one caption, first EOC disappears
         num_captions = len(caption_set.get_captions('en-US'))
-        self.assertEqual(num_captions, 1)
+        self.assertEqual(num_captions, 2)
