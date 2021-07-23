@@ -31,12 +31,17 @@ jobs:
         run: tox -e py
         continue-on-error: true
 
+      - name: Extract branch name
+        shell: bash
+        run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
+        id: extract_branch
+
       - name: Notify if test FAILED
         uses: archive/github-actions-slack@v2.0.0
         with:
           slack-bot-user-oauth-access-token: ${{ secrets.SLACK_BOT_TOKEN }}
           slack-channel: ${{ secrets.SLACK_CHANNEL_ID }}
-          slack-text: ":boom: Pycaption tests failed for Python ${{ matrix.python-version }}"
+          slack-text: ":boom: Pycaption tests failed for Python ${{ matrix.python-version }} on branch ${{ steps.extract_branch.outputs.branch }}"
         if: steps.tests.outcome == 'failure'
 
       - name: Mark test failure
@@ -48,5 +53,5 @@ jobs:
         with:
           slack-bot-user-oauth-access-token: ${{ secrets.SLACK_BOT_TOKEN }}
           slack-channel: ${{ secrets.SLACK_CHANNEL_ID }}
-          slack-text: ":rocket: Pycaption tests passed for Python ${{ matrix.python-version }}"
+          slack-text: ":rocket: Pycaption tests passed for Python ${{ matrix.python-version }} on branch ${{ steps.extract_branch.outputs.branch }}"
         if: steps.tests.outcome == 'success'
