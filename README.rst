@@ -17,6 +17,7 @@ Changelog
 1.0.7
 ^^^^^
 - Fixed issue with SCC paint-on buffer not being cleared after storing
+- Removed null DFXPReader captions from the resulting caption list
 
 1.0.6
 ^^^^^

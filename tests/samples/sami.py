@@ -466,3 +466,24 @@ SAMPLE_SAMI_WITH_MULTIPLE_P = """
 </BODY>
 </SAMI>
 """
+
+SAMPLE_SAMI_EMPTY_CUE_OUTPUT = """
+<sami>
+ <head>
+  <style type="text/css">
+   <!--
+    .en-US {
+     lang: en-US;
+    }
+   -->
+  </style>
+ </head>
+ <body>
+  <sync start="1209">
+   <p class="en-US">
+    abc
+   </p>
+  </sync>
+ </body>
+</sami>
+"""
