@@ -206,12 +206,6 @@ class CoverageOnlyTestCase(unittest.TestCase):
     def test_multiple_formats(self):
         # Test for captions that contain both pop on and paint on formats to
         # ensure the paint on lines are not repeated
-        captions = SCCReader().read(SAMPLE_SCC_MULTIPLE_FORMATS)\
-            .get_captions('en-US')
-        text_lines = [node.content
-                      for caption in captions
-                      for node in caption.nodes
-                      if node.type_ == CaptionNode.TEXT]
         expected_text_lines = [
             "(Client's Voice)",
             'Remember that degree',
@@ -228,6 +222,14 @@ class CoverageOnlyTestCase(unittest.TestCase):
             'Snap and sort your expenses to',
             'save over $4,600 at tax time.',
             'QUICKBOOKS. BACKING YOU.']
+
+        captions = SCCReader().read(SAMPLE_SCC_MULTIPLE_FORMATS)\
+            .get_captions('en-US')
+        text_lines = [node.content
+                      for caption in captions
+                      for node in caption.nodes
+                      if node.type_ == CaptionNode.TEXT]
+
         self.assertEqual(expected_text_lines, text_lines)
 
     def test_freeze_semicolon_spec_time(self):
