@@ -926,6 +926,8 @@ PAC_BYTES_TO_POSITIONING_MAP = {
     }
 }
 
+PAC_TAB_OFFSET_COMMANDS = ['97a1', '97a2', '9723']
+
 
 def _create_position_to_bytes_map(bytes_to_pos):
     result = {}

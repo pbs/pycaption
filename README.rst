@@ -18,6 +18,7 @@ Changelog
 ^^^^^
 - Fixed issue with SCC paint-on buffer not being cleared after storing
 - Removed null DFXPReader captions from the resulting caption list
+- Updated SCCReader double command handling to include the positioning and tab offset case
 
 1.0.6
 ^^^^^

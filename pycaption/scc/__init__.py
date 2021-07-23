@@ -92,7 +92,7 @@ from .constants import (
     HEADER, COMMANDS, SPECIAL_CHARS, EXTENDED_CHARS, CHARACTERS,
     MICROSECONDS_PER_CODEWORD, CHARACTER_TO_CODE,
     SPECIAL_OR_EXTENDED_CHAR_TO_CODE, PAC_BYTES_TO_POSITIONING_MAP,
-    PAC_HIGH_BYTE_BY_ROW, PAC_LOW_BYTE_BY_ROW_RESTRICTED,
+    PAC_HIGH_BYTE_BY_ROW, PAC_LOW_BYTE_BY_ROW_RESTRICTED, PAC_TAB_OFFSET_COMMANDS,
 )
 from .specialized_collections import (
     TimingCorrectingCaptionList, NotifyingDict, CaptionCreator,
@@ -313,6 +313,8 @@ class SCCReader(BaseReader):
         # count frames for timing
         self.time_translator.increment_frames()
 
+        if self._handle_double_command(word):
+            return
         # first check if word is a command
         # TODO - check that all the positioning commands are here, or use
         # some other strategy to determine if the word is a command.
@@ -331,37 +333,33 @@ class SCCReader(BaseReader):
             self._translate_characters(word)
 
     def _handle_double_command(self, word):
-        # ensure we don't accidentally use the same command twice
-        if word == self.last_command:
-            self.last_command = ''
-            return True
-        else:
-            self.last_command = word
-            return False
+        # If the caption is to be broadcast, each of the commands are doubled
+        # up for redundancy in case the signal is garbled in transmission.
+        # The decoder is programmed to ignore a second command when it is the
+        # same as the first.
+        if word in COMMANDS or _is_pac_command(word):
+            if word == self.last_command:
+                self.last_command = ''
+                return True
+            # Fix for the <position> <tab offset> <position> <tab offset>
+            # repetition
+            if _is_pac_command(word) and \
+                    self.last_command in PAC_TAB_OFFSET_COMMANDS:
+                return True
+
+        self.last_command = word
+        return False
 
     def _translate_special_char(self, word):
-        # XXX - this looks highly buggy. Why should special chars be ignored
-        # when printed 2 times one after another?
-        if self._handle_double_command(word):
-            return
-
         self.buffer.add_chars(SPECIAL_CHARS[word])
 
     def _translate_extended_char(self, word):
-        # XXX - this looks highly buggy. Why would a special char be ignored
-        # if it's printed 2 times one after another?
-        if self._handle_double_command(word):
-            return
-
         self.buffer.remove_ascii_duplicate(EXTENDED_CHARS[word])
 
         # add to buffer
         self.buffer.add_chars(EXTENDED_CHARS[word])
 
     def _translate_command(self, word):
-        if self._handle_double_command(word):
-            return
-
         # if command is pop_up
         if word == '9420':
             self.buffer_dict.set_active('pop')
