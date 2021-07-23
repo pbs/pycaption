@@ -144,4 +144,4 @@ class DFXPReaderTestCase(unittest.TestCase):
         caption_set = DFXPReader().read(
             SAMPLE_DFXP_EMPTY_CUE)
         caps = caption_set.get_captions('en-US')
-        self.assertEquals(caps[1], [])
+        self.assertEquals(len(caps), 1)

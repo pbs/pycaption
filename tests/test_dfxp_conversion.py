@@ -28,17 +28,20 @@ from .samples.dfxp import (
     SAMPLE_DFXP_OUTPUT, SAMPLE_DFXP_STYLE_TAG_WITH_NO_XML_ID_INPUT,
     SAMPLE_DFXP_STYLE_TAG_WITH_NO_XML_ID_OUTPUT,
     SAMPLE_DFXP_LONG_CUE_FIT_TO_SCREEN, SAMPLE_DFXP_FOR_LEGACY_WRITER_INPUT,
-    SAMPLE_DFXP_FOR_LEGACY_WRITER_OUTPUT, SAMPLE_DFXP_WITH_ESCAPED_APOSTROPHE
+    SAMPLE_DFXP_FOR_LEGACY_WRITER_OUTPUT, SAMPLE_DFXP_WITH_ESCAPED_APOSTROPHE,
+    SAMPLE_DFXP_EMPTY_CUE, SAMPLE_DFXP_EMPTY_CUE_OUTPUT
 )
-from .samples.sami import SAMPLE_SAMI
-from .samples.srt import SAMPLE_SRT
+from .samples.sami import SAMPLE_SAMI, SAMPLE_SAMI_EMPTY_CUE_OUTPUT
+from .samples.srt import SAMPLE_SRT, SAMPLE_SRT_EMPTY_CUE_OUTPUT
 from .samples.webvtt import (
     SAMPLE_WEBVTT_FROM_DFXP, SAMPLE_WEBVTT_FROM_DFXP_WITH_STYLE,
     SAMPLE_WEBVTT_FROM_DFXP_WITH_POSITIONING_AND_STYLE,
-    SAMPLE_WEBVTT_OUTPUT_LONG_CUE, WEBVTT_FROM_DFXP_WITH_CONFLICTING_ALIGN
+    SAMPLE_WEBVTT_OUTPUT_LONG_CUE, WEBVTT_FROM_DFXP_WITH_CONFLICTING_ALIGN,
+    SAMPLE_WEBVTT_EMPTY_CUE_OUTPUT
 )
 
-from .samples.microdvd import SAMPLE_MICRODVD_2
+from .samples.microdvd import SAMPLE_MICRODVD_2, \
+    SAMPLE_MICRODVD_EMPTY_CUE_OUTPUT
 
 from .mixins import (
     SRTTestingMixIn, SAMITestingMixIn, DFXPTestingMixIn, WebVTTTestingMixIn, MicroDVDTestingMixIn)
@@ -55,6 +58,11 @@ class DFXPtoDFXPTestCase(unittest.TestCase, DFXPTestingMixIn):
         results = DFXPWriter().write(caption_set)
         self.assertTrue(isinstance(results, text_type))
         self.assertDFXPEquals(SAMPLE_DFXP_OUTPUT, results)
+
+    def test_dfxp_empty_cue_to_dfxp(self):
+        caption_set = DFXPReader().read(SAMPLE_DFXP_EMPTY_CUE)
+        results = DFXPWriter().write(caption_set)
+        self.assertDFXPEquals(SAMPLE_DFXP_EMPTY_CUE_OUTPUT, results)
 
     def test_default_styling_tag(self):
         caption_set = DFXPReader().read(
@@ -180,6 +188,11 @@ class DFXPtoSRTTestCase(unittest.TestCase, SRTTestingMixIn):
         self.assertTrue(isinstance(results, text_type))
         self.assertSRTEquals(SAMPLE_SRT, results)
 
+    def test_dfxp_empty_cue_to_srt(self):
+        caption_set = DFXPReader().read(SAMPLE_DFXP_EMPTY_CUE)
+        results = SRTWriter().write(caption_set)
+        self.assertSRTEquals(SAMPLE_SRT_EMPTY_CUE_OUTPUT, results)
+
 
 class DFXPtoSAMITestCase(unittest.TestCase, SAMITestingMixIn):
 
@@ -199,6 +212,11 @@ class DFXPtoSAMITestCase(unittest.TestCase, SAMITestingMixIn):
                    "margin-left: 6.04%;"]
         for margin in margins:
             self.assertIn(margin, results)
+
+    def test_dfxp_empty_cue_to_sami(self):
+        caption_set = DFXPReader().read(SAMPLE_DFXP_EMPTY_CUE)
+        results = SAMIWriter().write(caption_set)
+        self.assertSAMIEquals(SAMPLE_SAMI_EMPTY_CUE_OUTPUT, results)
 
 
 class DFXPtoWebVTTTestCase(unittest.TestCase, WebVTTTestingMixIn):
@@ -252,6 +270,11 @@ class DFXPtoWebVTTTestCase(unittest.TestCase, WebVTTTestingMixIn):
         self.assertEqual(
             WEBVTT_FROM_DFXP_WITH_CONFLICTING_ALIGN, results)
 
+    def test_dfxp_empty_cue_to_webvtt(self):
+        caption_set = DFXPReader().read(SAMPLE_DFXP_EMPTY_CUE)
+        results = WebVTTWriter().write(caption_set)
+        self.assertWebVTTEquals(SAMPLE_WEBVTT_EMPTY_CUE_OUTPUT, results)
+
 
 class DFXPtoMicroDVDTestCase(unittest.TestCase, MicroDVDTestingMixIn):
 
@@ -260,6 +283,11 @@ class DFXPtoMicroDVDTestCase(unittest.TestCase, MicroDVDTestingMixIn):
         results = MicroDVDWriter().write(caption_set)
         self.assertTrue(isinstance(results, six.text_type))
         self.assertMicroDVDEquals(SAMPLE_MICRODVD_2, results)
+
+    def test_dfxp_empty_cue_to_microdvd(self):
+        caption_set = DFXPReader().read(SAMPLE_DFXP_EMPTY_CUE)
+        results = MicroDVDWriter().write(caption_set)
+        self.assertMicroDVDEquals(SAMPLE_MICRODVD_EMPTY_CUE_OUTPUT, results)
 
 
 class LegacyDFXPTestCase(unittest.TestCase):

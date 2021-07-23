@@ -266,3 +266,9 @@ SAMPLE_WEBVTT_MULTI_LANG_DE = """WEBVTT
 00:14.848 --> 00:18.848
 Schmetterling.
 """
+
+SAMPLE_WEBVTT_EMPTY_CUE_OUTPUT = """WEBVTT
+
+00:01.209 --> 00:02.312 position:10%,start line:10% size:90%
+abc
+"""
