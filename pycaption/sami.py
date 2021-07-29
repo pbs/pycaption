@@ -36,11 +36,9 @@ OBS:
 
 """
 import re
-import six
 from logging import FATAL
 from collections import deque
 from copy import deepcopy
-from future.backports.html.parser import HTMLParseError
 
 from html.parser import HTMLParser
 from html.entities import name2codepoint
@@ -85,7 +83,7 @@ class SAMIReader(BaseReader):
             return False
 
     def read(self, content):
-        if type(content) != six.text_type:
+        if not isinstance(content,  str):
             raise InvalidInputError('The content is not a unicode string.')
 
         content, doc_styles, doc_langs = (
@@ -194,7 +192,7 @@ class SAMIReader(BaseReader):
         captions = CaptionList(layout_info=parent_layout)
         milliseconds = 0
 
-        for p in sami_soup.select('p[lang|=%s]' % language):
+        for p in sami_soup.select(f'p[lang|={language}]'):
             milliseconds = int(float(p.parent['start']))
             start = milliseconds * 1000
             end = 0
@@ -433,19 +431,19 @@ class SAMIWriter(BaseWriter):
 
         :type caption: Caption
         :type sami: BeautifulSoup
-        :type lang: unicode
-        :type primary: unicode
+        :type lang: str
+        :type primary: str
         :type captions: CaptionSet
 
         :rtype: BeautifulSoup
         """
-        time = caption.start / 1000
+        time = caption.start // 1000
 
         if self.last_time and time != self.last_time:
             sami = self._recreate_blank_tag(
                 sami, caption, lang, primary, captions)
 
-        self.last_time = caption.end / 1000
+        self.last_time = caption.end // 1000
 
         sami, sync = self._recreate_sync(sami, lang, primary, time)
 
@@ -453,7 +451,7 @@ class SAMIWriter(BaseWriter):
 
         p_style = ''
         for attr, value in list(self._recreate_style(caption.style).items()):
-            p_style += '%s:%s;' % (attr, value)
+            p_style += f'{attr}:{value};'
         if p_style:
             p['p_style'] = p_style
 
@@ -468,36 +466,34 @@ class SAMIWriter(BaseWriter):
         """
         Creates a sync tag for a given language and timing (if it doesn't
         already exist), attach it to the sami body and return the sami
-        BeautifulSoupobject.
+        BeautifulSoup object.
 
         :type sami: BeautifulSoup
-        :type lang: unicode
-        :type primary: unicode
+        :type lang: str
+        :type primary: str
         :type time: int
 
         :rtype: BeautifulSoup
         """
         if lang == primary:
-            sync = sami.new_tag("sync", start="%d" % time)
+            sync = sami.new_tag("sync", start=time)
             sami.body.append(sync)
         else:
-            sync = sami.find("sync", start="%d" % time)
+            sync = sami.find("sync", start=time)
             if sync is None:
                 sami, sync = self._find_closest_sync(sami, time)
 
         return sami, sync
 
     def _find_closest_sync(self, sami, time):
-        sync = sami.new_tag("sync", start="%d" % time)
+        sync = sami.new_tag("sync", start=time)
 
         earlier = sami.find_all("sync", start=lambda x: int(x) < time)
         if earlier:
             last_sync = earlier[-1]
             last_sync.insert_after(sync)
         else:
-            def later_syncs(start):
-                return int(start) > time
-            later = sami.find_all("sync", start=later_syncs)
+            later = sami.find_all("sync", start=lambda x: int(x) > time)
             if later:
                 last_sync = later[0]
                 last_sync.insert_before(sync)
@@ -531,7 +527,7 @@ class SAMIWriter(BaseWriter):
                     attr, value, caption_set.layout_info)
 
         for lang in caption_set.get_languages():
-            lang_string = 'lang: {}'.format(lang)
+            lang_string = f'lang: {lang}'
             if lang_string not in stylesheet:
                 stylesheet += self._recreate_style_block(
                     lang, {'lang': lang}, caption_set.get_layout_info(lang))
@@ -549,22 +545,22 @@ class SAMIWriter(BaseWriter):
         """
         if target not in ['p', 'sync', 'span']:
             # If it's not a valid SAMI element, then it's a custom class name
-            selector = '.{}'.format(target)
+            selector = f'.{target}'
         else:
             selector = target
 
-        sami_style = '\n    {} {{\n    '.format(selector)
+        sami_style = f'\n    {selector} {{\n    '
 
         if layout_info and layout_info.padding:
             rules.update({
-                'margin-top': six.text_type(layout_info.padding.before),
-                'margin-right': six.text_type(layout_info.padding.end),
-                'margin-bottom': six.text_type(layout_info.padding.after),
-                'margin-left': six.text_type(layout_info.padding.start),
+                'margin-top': str(layout_info.padding.before),
+                'margin-right': str(layout_info.padding.end),
+                'margin-bottom': str(layout_info.padding.after),
+                'margin-left': str(layout_info.padding.start),
             })
 
         for attr, value in sorted(self._recreate_style(rules).items()):
-            sami_style += ' {}: {};\n    '.format(attr, value)
+            sami_style += f' {attr}: {value};\n    '
 
         return sami_style + '}\n'
 
@@ -597,15 +593,15 @@ class SAMIWriter(BaseWriter):
         style = ''
         klass = ''
         if 'class' in content:
-            klass += ' class="%s"' % content['class']
+            klass += f' class="{content["class"]}"'
 
         for attr, value in list(self._recreate_style(content).items()):
-            style += '%s:%s;' % (attr, value)
+            style += f'{attr}:{value};'
 
         if style or klass:
             if style:
-                style = ' style="%s"' % style
-            line += '<span%s%s>' % (klass, style)
+                style = f' style="{style}"'
+            line += f'<span{klass}{style}>'
             self.open_span = True
 
         return line
@@ -633,7 +629,7 @@ class SAMIWriter(BaseWriter):
         """
         Encodes plain unicode string to proper SAMI file escaping special
         characters in case they appear in the string.
-        :type s: unicode
+        :type s: str
         """
         return escape(s)
 
@@ -655,7 +651,7 @@ class SAMIParser(HTMLParser):
         """
         Override the parser's handling of starttags
         :param tag: unicode string indicating the tag type (e.g. "head" or "p")
-        :param tag: list of attribute tuples of type (u'name', u'value')
+        :param tag: list of attribute tuples of type ('name', 'value')
         """
         self.last_element = tag
 
@@ -680,13 +676,13 @@ class SAMIParser(HTMLParser):
             # if already in queue, first close tags off in LIFO order
             while tag in self.queue:
                 closer = self.queue.pop()
-                self.sami += "</%s>" % closer
+                self.sami += f"</{closer}>"
             # open new tag in queue
             self.queue.append(tag)
             # add tag with attributes
             for attr, value in attrs:
-                tag += ' %s="%s"' % (attr.lower(), value)
-            self.sami += "<%s>" % tag
+                tag += f' {attr.lower()}="{value}"'
+            self.sami += f"<{tag}>"
 
     # override the parser's handling of endtags
     def handle_endtag(self, tag):
@@ -701,16 +697,16 @@ class SAMIParser(HTMLParser):
         # close off tags in LIFO order, if matching starting tag in queue
         while tag in self.queue:
             closing_tag = self.queue.pop()
-            self.sami += "</%s>" % closing_tag
+            self.sami += f"</{closing_tag}>"
 
     def handle_entityref(self, name):
         if name in ['gt', 'lt']:
-            self.sami += '&%s;' % name
+            self.sami += f'&{name};'
         else:
             try:
                 self.sami += chr(self.name2codepoint[name])
             except (KeyError, ValueError):
-                self.sami += '&%s' % name
+                self.sami += f'&{name}'
 
         self.last_element = ''
 
@@ -729,7 +725,7 @@ class SAMIParser(HTMLParser):
     def feed(self, data):
         """
         :param data: Raw SAMI unicode string
-        :returns: tuple (unicode, dict, set)
+        :returns: tuple (str, dict, set)
         """
         no_cc = 'no closed captioning available'
 
@@ -737,7 +733,7 @@ class SAMIParser(HTMLParser):
             raise CaptionReadSyntaxError(
                 'SAMI File seems to be an HTML file.')
         elif no_cc in data.lower():
-            raise CaptionReadSyntaxError('SAMI File contains "%s"' % no_cc)
+            raise CaptionReadSyntaxError(f'SAMI File contains "{no_cc}"')
 
         # try to find style tag in SAMI
         try:
@@ -754,15 +750,12 @@ class SAMIParser(HTMLParser):
 
         # fix awkward tags found in some SAMIs
         data = data.replace(';>', '>')
-        try:
-            HTMLParser.feed(self, data)
-        except HTMLParseError as e:
-            raise CaptionReadSyntaxError(e)
+        HTMLParser.feed(self, data)
 
         # close any tags that remain in the queue
         while self.queue != deque([]):
             closing_tag = self.queue.pop()
-            self.sami += "</%s>" % closing_tag
+            self.sami += f"</{closing_tag}>"
 
         return self.sami, self.styles, self.langs
 
@@ -786,8 +779,8 @@ class SAMIParser(HTMLParser):
                     cv = cssutils_css.ColorValue(prop.value)
                     # Code for RGB to hex conversion comes from
                     # http://bit.ly/1kwfBnQ
-                    new_style['color'] = "#%02x%02x%02x" % (
-                        cv.red, cv.green, cv.blue)
+                    new_style['color'] = f'#{cv.red:02x}{cv.green:02x}' \
+                                         f'{cv.blue:02x}'
                 else:
                     new_style[prop.name] = prop.value
             if new_style:

@@ -59,7 +59,7 @@ class DFXPReader(BaseReader):
             return False
 
     def read(self, content):
-        if type(content) != str:
+        if not isinstance(content,  str):
             raise InvalidInputError('The content is not a unicode string.')
 
         dfxp_document = self._get_dfxp_parser_class()(
@@ -139,7 +139,7 @@ class DFXPReader(BaseReader):
                     'hour:minute:seconds.milliseconds or '
                     'hour:minute:seconds:frames format. '
                     'Milliseconds and frames are optional.'
-                    'Please correct the following time {}'.format(stamp))
+                    f'Please correct the following time {stamp}')
 
             if '.' not in timesplit[2]:
                 timesplit[2] += '.000'
@@ -283,7 +283,7 @@ class DFXPWriter(BaseWriter):
         :type caption_set: pycaption.base.CaptionSet
         :param force: only use this language, if available in the caption_set
 
-        :rtype: unicode
+        :rtype: str
         """
         dfxp = BeautifulSoup(DFXP_BASE_MARKUP, 'lxml-xml')
         dfxp.find('tt')['xml:lang'] = "en"
@@ -291,9 +291,9 @@ class DFXPWriter(BaseWriter):
         langs = caption_set.get_languages()
         if force in langs:
             langs = [force]
-            dfxp.find('tt')[u'xml:lang'] = six.text_type(force)
+            dfxp.find('tt')['xml:lang'] = force
         else:
-            dfxp.find('tt')[u'xml:lang'] = "en"
+            dfxp.find('tt')['xml:lang'] = "en"
 
         caption_set = deepcopy(caption_set)
 
@@ -322,7 +322,7 @@ class DFXPWriter(BaseWriter):
 
         for lang in langs:
             div = dfxp.new_tag('div')
-            div['xml:lang'] = str(lang)
+            div['xml:lang'] = lang
             self._assign_positioning_data(div, lang, caption_set)
 
             for caption in caption_set.get_captions(lang):
@@ -352,7 +352,7 @@ class DFXPWriter(BaseWriter):
         """Modifies the current tag, assigning it the 'region' attribute.
 
         :param tag: the BeautifulSoup tag to be modified
-        :type lang: unicode
+        :type lang: str
         :param lang: the caption language
         :type caption_set: CaptionSet
         :param caption_set: The CaptionSet parent
@@ -426,18 +426,17 @@ class DFXPWriter(BaseWriter):
 
             content_with_style = _recreate_style(node.content, dfxp)
             for style, value in list(content_with_style.items()):
-                styles += ' %s="%s"' % (style, value)
+                styles += f' {style}="{value}"'
             if node.layout_info:
                 region_id, region_attribs = (
                     self.region_creator.get_positioning_info(
                         lang, caption_set, caption, node
                     ))
-                styles += ' region="{region_id}"'.format(
-                    region_id=region_id)
+                styles += f' region="{region_id}"'
                 if self.write_inline_positioning:
                     styles += ' ' + ' '.join(
                         [
-                            '{key}="{val}"'.format(key=k_, val=v_)
+                            f'{k_}="{v_}"'
                             for k_, v_ in list(region_attribs.items())
                         ]
                     )
@@ -445,7 +444,7 @@ class DFXPWriter(BaseWriter):
             if styles:
                 if self.open_span:
                     line = line.rstrip() + '</span> '
-                line += '<span%s>' % styles
+                line += f'<span{styles}>'
                 self.open_span = True
 
         elif self.open_span:
@@ -459,7 +458,7 @@ class DFXPWriter(BaseWriter):
         Escapes XML 1.0 illegal or discouraged characters
         For details see:
             - http://www.w3.org/TR/2008/REC-xml-20081126/#dt-chardata
-        :type s: unicode
+        :type s: str
         :param s: The content of a text node
         """
         return escape(s)
@@ -622,7 +621,7 @@ class LayoutAwareDFXPParser(BeautifulSoup):
 
         :param region_id: the id of the region to which the element is
             associated
-        :type region_id: unicode
+        :type region_id: str
         :param element: BeautifulSoup Tag or NavigableString; this only comes
             into action (at the moment) if the
         :rtype: Layout
@@ -764,8 +763,7 @@ class LayoutInfoScraper(object):
             elif len(referenced_styles) > 1:
                 raise CaptionReadSyntaxError(
                     "Invalid caption file. "
-                    "More than 1 style with 'xml:id': {id}"
-                    .format(id=reference)
+                    f"More than 1 style with 'xml:id': {reference}"
                 )
 
         return result
@@ -836,7 +834,7 @@ class LayoutInfoScraper(object):
         """Look up the given attribute on the element, and all the styles
         referenced by it.
 
-        :type attribute_name: unicode
+        :type attribute_name: str
         :param element: BeautifulSoup Tag or NavigableString
         :param factory: a function, to apply to the xml attribute
         :param ignore: a list of values to ignore
@@ -866,16 +864,16 @@ class LayoutInfoScraper(object):
         parents and all their styles (and referenced styles).
 
         :param element: BeautifulSoup Tag or NavigableString
-        :type attribute_name: unicode
+        :type attribute_name: str
         :param attribute_name: the name of the attribute to resolve
-        :type attribute_name: unicode
+        :type attribute_name: str
         :param factory: callable to transform the xml attribute into something
         :param ignore: iterable of values to ignore (will return None if the
             xml attribute is in that list)
         :param ignorecase: if True, the attribute will be searched in lowercase
             too
         :type ignorecase: bool
-        :rtype: unicode
+        :rtype: str
         :raises CaptionSyntaxError:
         """
         value = None
@@ -1051,9 +1049,9 @@ class RegionCreator(object):
     def _get_new_id(self, prefix='r'):
         """Return new, unique ids (use an internal counter).
 
-        :type prefix: unicode
+        :type prefix: str
         """
-        new_id = str((prefix or '') + str(self._id_seed))
+        new_id = f'{prefix}{self._id_seed}'
         self._id_seed += 1
         return new_id
 
@@ -1072,13 +1070,13 @@ class RegionCreator(object):
         <div> tags mean the caption is None and caption_node is None.
         <p> tags mean the caption_node is None
 
-        :type lang: unicode
+        :type lang: str
         :param lang: the language of the current caption element
         :type caption_set: CaptionSet
         :type caption: Caption
         :type caption_node: CaptionNode
         :rtype: tuple
-        :return: (unicode, dict)
+        :return: (str, dict)
         """
         # More intelligent people would have used an elem.parent.parent..parent
         # pattern, but pycaption is not yet structured for this. 3 params
@@ -1163,8 +1161,8 @@ def _create_internal_alignment(text_align, display_align):
         "before", "center" and "after",
     with the default of "before". These refer to top/bottom positioning.
 
-    :type text_align: unicode
-    :type display_align: unicode
+    :type text_align: str
+    :type display_align: str
     :rtype: Alignment
     """
     if not (text_align or display_align):
@@ -1178,8 +1176,8 @@ def _create_external_horizontal_alignment(horizontal_component):
     """From an internal horizontal alignment value, create a value to be used
     in the dfxp output file.
 
-    :type horizontal_component: unicode
-    :rtype: unicode
+    :type horizontal_component: str
+    :rtype: str
     """
     result = None
 
@@ -1201,8 +1199,8 @@ def _create_external_vertical_alignment(vertical_component):
     """Given an alignment value used in the internal representation of the
     caption, return a value usable in the actual dfxp output file.
 
-    :type vertical_component: unicode
-    :rtype: unicode
+    :type vertical_component: str
+    :rtype: str
     """
     result = None
 

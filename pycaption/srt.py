@@ -1,5 +1,4 @@
 from copy import deepcopy
-import six
 
 from .base import (
     BaseReader, BaseWriter, CaptionSet, CaptionList, Caption, CaptionNode)
@@ -15,7 +14,7 @@ class SRTReader(BaseReader):
             return False
 
     def read(self, content, lang='en-US'):
-        if type(content) != six.text_type:
+        if not isinstance(content,  str):
             raise InvalidInputError('The content is not a unicode string.')
 
         lines = content.splitlines()
@@ -119,11 +118,11 @@ class SRTWriter(BaseWriter):
         count = 1
 
         for caption in captions:
-            srt += '%s\n' % count
+            srt += f'{count}\n'
 
             start = caption.format_start(msec_separator=',')
             end = caption.format_end(msec_separator=',')
-            timestamp = '%s --> %s\n' % (start[:12], end[:12])
+            timestamp = f'{start[:12]} --> {end[:12]}\n'
 
             srt += timestamp.replace('.', ',')
 
@@ -136,14 +135,14 @@ class SRTWriter(BaseWriter):
             while '\n\n' in new_content:
                 new_content = new_content.replace('\n\n', '\n')
 
-            srt += "%s%s" % (new_content, '\n\n')
+            srt += f"{new_content}\n\n"
             count += 1
 
         return srt[:-1]  # remove unwanted newline at end of file
 
     def _recreate_line(self, srt, line):
         if line.type_ == CaptionNode.TEXT:
-            return srt + '%s ' % line.content
+            return srt + f'{line.content} '
         elif line.type_ == CaptionNode.BREAK:
             return srt + '\n'
         else:

@@ -1,6 +1,5 @@
 from datetime import timedelta
 from numbers import Number
-from six import text_type
 import os
 
 from .exceptions import CaptionReadError, CaptionReadTimingError
@@ -135,9 +134,9 @@ class CaptionNode(object):
         elif t == CaptionNode.BREAK:
             return repr('BREAK')
         elif t == CaptionNode.STYLE:
-            return repr('STYLE: %s %s' % (self.start, self.content))
+            return repr(f'STYLE: {self.start} {self.content}')
         else:
-            raise RuntimeError('Unknown node type: ' + str(t))
+            raise RuntimeError(f'Unknown node type: {t}')
 
     @staticmethod
     def create_text(text, layout_info=None):
@@ -210,11 +209,7 @@ class Caption(object):
 
     def __repr__(self):
         return repr(
-            '{start} --> {end}\n{text}'.format(
-                start=self.format_start(),
-                end=self.format_end(),
-                text=self.get_text()
-            )
+            f'{self.format_start()} --> {self.format_end()}\n{self.get_text()}'
         )
 
     def get_text(self):
@@ -236,13 +231,9 @@ class Caption(object):
         duration = timedelta(microseconds=microseconds)
         hours, rem = divmod(duration.seconds, 3600)
         minutes, seconds = divmod(rem, 60)
-        milliseconds = "{:03d}".format(duration.microseconds//1000)
-        timestamp = "{hours:02d}:{minutes:02d}:{seconds:02d}" \
-                    "{msec_separator}{milliseconds:.3s}"\
-            .format(hours=hours, minutes=minutes, seconds=seconds,
-                    msec_separator=msec_separator or ".",
-                    milliseconds=milliseconds
-                    )
+        milliseconds = f"{duration.microseconds // 1000:03d}"
+        timestamp = f"{hours:02d}:{minutes:02d}:{seconds:02d}" \
+                    f"{msec_separator or '.'}{milliseconds:.3s}"
         return timestamp
 
 

@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 from itertools import product
-from future.utils import viewitems
 
 COMMANDS = {
     '9420': '',
@@ -779,7 +778,7 @@ PAC_LOW_BYTE_BY_ROW_RESTRICTED = [
 # Any of the values in that list, coupled with the high order byte will
 # map to the (row, column) tuple.
 # This particular dictionary will get transformed to a more suitable form for
-# usage like PAC_BYTES_TO_POSITIONING_MAP[u'91'][u'd6'] = (1, 12)
+# usage like PAC_BYTES_TO_POSITIONING_MAP['91']['d6'] = (1, 12)
 PAC_BYTES_TO_POSITIONING_MAP = {
     '91': {
         ('40', 'c1', 'd0', '51', 'c2', '43', 'c4', '45', '46', 'c7', 'c8', '49', '4a', 'cb', '4c', 'cd', 'ce', '4f'): (1, 0),  # noqa
@@ -946,7 +945,7 @@ def _create_position_to_bytes_map(bytes_to_pos):
     return result
 
 # (Almost) the reverse of PAC_BYTES_TO_POSITIONING_MAP. Call with arguments
-# like for example [15][4] to get the tuple ((u'94', u'f2'), (u'94', u'73'))
+# like for example [15][4] to get the tuple (('94', 'f2'), ('94', '73'))
 POSITIONING_TO_PAC_MAP = _create_position_to_bytes_map(
     PAC_BYTES_TO_POSITIONING_MAP
 )
@@ -961,7 +960,7 @@ def _restructure_bytes_to_position_map(byte_to_pos_map):
         for k_, v_ in list(byte_to_pos_map.items())
     }
 
-# Now use the dict with arguments like [u'91'][u'75'] directly.
+# Now use the dict with arguments like ['91']['75'] directly.
 PAC_BYTES_TO_POSITIONING_MAP = _restructure_bytes_to_position_map(
     PAC_BYTES_TO_POSITIONING_MAP)
 
@@ -969,14 +968,14 @@ PAC_BYTES_TO_POSITIONING_MAP = _restructure_bytes_to_position_map(
 # Inverted character lookup
 CHARACTER_TO_CODE = {
     character: code
-    for code, character in viewitems(CHARACTERS)
+    for code, character in CHARACTERS.items()
 }
 
 SPECIAL_OR_EXTENDED_CHAR_TO_CODE = {
-    character: code for code, character in viewitems(EXTENDED_CHARS)
+    character: code for code, character in EXTENDED_CHARS.items()
 }
 SPECIAL_OR_EXTENDED_CHAR_TO_CODE.update(
-    {character: code for code, character in viewitems(SPECIAL_CHARS)}
+    {character: code for code, character in SPECIAL_CHARS.items()}
 )
 
 # Time to transmit a single codeword = 1 second / 29.97

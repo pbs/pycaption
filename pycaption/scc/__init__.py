@@ -82,8 +82,6 @@ import math
 import textwrap
 from copy import deepcopy
 
-import six
-
 from pycaption.base import (
     BaseReader, BaseWriter, CaptionSet, CaptionNode,
 )
@@ -180,7 +178,7 @@ class SCCReader(BaseReader):
     def detect(self, content):
         """Checks whether the given content is a proper SCC file
 
-        :type content: unicode
+        :type content: str
 
         :rtype: bool
         """
@@ -193,10 +191,10 @@ class SCCReader(BaseReader):
     def read(self, content, lang='en-US', simulate_roll_up=False, offset=0):
         """Converts the unicode string into a CaptionSet
 
-        :type content: six.text_type
+        :type content: str
         :param content: The SCC content to be converted to a CaptionSet
 
-        :type lang: six.text_type
+        :type lang: str
         :param lang: The language of the caption
 
         :type simulate_roll_up: bool
@@ -209,7 +207,7 @@ class SCCReader(BaseReader):
 
         :rtype: CaptionSet
         """
-        if type(content) != six.text_type:
+        if not isinstance(content,  str):
             raise InvalidInputError('The content is not a unicode string.')
 
         self.simulate_roll_up = simulate_roll_up
@@ -231,7 +229,8 @@ class SCCReader(BaseReader):
             # less than .05s kill it (this is likely caused by a standalone
             # EOC marker in the SCC file)
             if 0 < cap.end - cap.start < 50000:
-                raise ValueError('unsupported length found in SCC input file: ' + str(cap))
+                raise ValueError('unsupported length found in SCC '
+                                 f'input file: {cap}')
 
         if captions.is_empty():
             raise CaptionReadNoCaptions("empty caption file")
@@ -523,12 +522,12 @@ class SCCWriter(BaseWriter):
         # PASS 3:
         # Write captions.
         for (code, start, end) in codes:
-            output += ('%s\t' % self._format_timestamp(start))
+            output += f'{self._format_timestamp(start)}\t'
             output += '94ae 94ae 9420 9420 '
             output += code
             output += '942c 942c 942f 942f\n\n'
             if end is not None:
-                output += '%s\t942c 942c\n\n' % self._format_timestamp(end)
+                output += f'{self._format_timestamp(end)}\t942c 942c\n\n'
 
         return output
 
@@ -537,7 +536,7 @@ class SCCWriter(BaseWriter):
     def _layout_line(caption):
         def caption_node_to_text(caption_node):
             if caption_node.type_ == CaptionNode.TEXT:
-                return six.text_type(caption_node.content)
+                return caption_node.content
             elif caption_node.type_ == CaptionNode.BREAK:
                 return '\n'
         caption_text = ''.join(
@@ -583,8 +582,8 @@ class SCCWriter(BaseWriter):
             row += 16 - len(lines)
             # Move cursor to column 0 of the destination row
             for _ in range(2):
-                code += ('%s%s ' % (PAC_HIGH_BYTE_BY_ROW[row],
-                                    PAC_LOW_BYTE_BY_ROW_RESTRICTED[row]))
+                code += (PAC_HIGH_BYTE_BY_ROW[row] +
+                         f'{PAC_LOW_BYTE_BY_ROW_RESTRICTED[row]} ')
             # Print the line using the SCC encoding
             for char in line:
                 code = self._print_character(code, char)
@@ -597,14 +596,14 @@ class SCCWriter(BaseWriter):
         seconds_float = microseconds / 1000.0 / 1000.0
         # Convert to non-drop-frame timecode
         seconds_float *= 1000.0 / 1001.0
-        hours = seconds_float // 3600
+        hours = math.floor(seconds_float / 3600)
         seconds_float -= hours * 3600
-        minutes = seconds_float // 60
+        minutes = math.floor(seconds_float / 60)
         seconds_float -= minutes * 60
         seconds = math.floor(seconds_float)
         seconds_float -= seconds
         frames = math.floor(seconds_float * 30)
-        return '%02d:%02d:%02d:%02d' % (hours, minutes, seconds, frames)
+        return f'{hours:02}:{minutes:02}:{seconds:02}:{frames:02}'
 
 
 class _SccTimeTranslator(object):
@@ -624,7 +623,7 @@ class _SccTimeTranslator(object):
         :rtype: int
         """
         return self._translate_time(
-            self._time[:-2] + six.text_type(int(self._time[-2:]) + self._frames),
+            self._time[:-2] + str(int(self._time[-2:]) + self._frames),
             self.offset
         )
 
@@ -663,7 +662,7 @@ class _SccTimeTranslator(object):
     def start_at(self, timespec):
         """Reset the counter to the given time
 
-        :type timespec: unicode
+        :type timespec: str
         """
         self._time = timespec
         self._frames = 0
@@ -677,7 +676,7 @@ class _SccTimeTranslator(object):
 def _is_pac_command(word):
     """Checks whether the given word is a Preamble Address Code [PAC] command
 
-    :type word: unicode
+    :type word: str
     :param word: 4 letter unicode command
 
     :rtype: bool

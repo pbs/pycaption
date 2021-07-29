@@ -1,5 +1,4 @@
 import re
-import six
 import sys
 import datetime
 from copy import deepcopy
@@ -60,7 +59,7 @@ class WebVTTReader(BaseReader):
         return 'WEBVTT' in content
 
     def read(self, content, lang='en-US'):
-        if type(content) != six.text_type:
+        if not isinstance(content,  str):
             raise InvalidInputError('The content is not a unicode string.')
 
         caption_set = CaptionSet({lang: self._parse(content.splitlines())})
@@ -88,8 +87,9 @@ class WebVTTReader(BaseReader):
                     start, end, layout_info = self._parse_timing_line(
                         line, last_start_time)
                 except CaptionReadError as e:
-                    new_message = '%s (line %d)' % (e.args[0], timing_line)
-                    six.reraise(type(e), type(e)(new_message), sys.exc_info()[2])
+                    new_msg = f'{e.args[0]} (line {timing_line})'
+                    tb = sys.exc_info()[2]
+                    raise type(e)(new_msg).with_traceback(tb) from None
 
             elif '' == line:
                 if found_timing and nodes:
@@ -177,7 +177,7 @@ class WebVTTReader(BaseReader):
     def _decode(self, s):
         """
         Convert cue text from WebVTT XML-like format to plain unicode.
-        :type s: unicode
+        :type s: str
         """
         s = s.strip()
         # Covert voice span
@@ -232,9 +232,9 @@ class WebVTTWriter(BaseWriter):
         td = datetime.timedelta(microseconds=ts)
         mm, ss = divmod(td.seconds, 60)
         hh, mm = divmod(mm, 60)
-        s = "%02d:%02d.%03d" % (mm, ss, td.microseconds/1000)
+        s = f"{mm:02}:{ss:02}.{td.microseconds // 1000:03}"
         if hh:
-            s = "%d:%s" % (hh, s)
+            s = f"{hh}:{s}"
         return s
 
     def _tags_for_style(self, style):
@@ -273,7 +273,7 @@ class WebVTTWriter(BaseWriter):
 
         start = self._timestamp(caption.start)
         end = self._timestamp(caption.end)
-        timespan = "{} --> {}".format(start, end)
+        timespan = f'{start} --> {end}'
 
         output = ''
 
@@ -300,7 +300,7 @@ class WebVTTWriter(BaseWriter):
         """
         Return WebVTT cue settings string based on layout info
         :type layout: Layout
-        :rtype: unicode
+        :rtype: str
         """
         if not layout:
             return ''
@@ -308,7 +308,7 @@ class WebVTTWriter(BaseWriter):
         # If it's converting from WebVTT to WebVTT, keep positioning info
         # unchanged
         if layout.webvtt_positioning:
-            return ' {}'.format(layout.webvtt_positioning)
+            return f' {layout.webvtt_positioning}'
 
         left_offset = None
         top_offset = None
@@ -375,13 +375,13 @@ class WebVTTWriter(BaseWriter):
         cue_settings = ''
 
         if alignment and alignment != 'middle':
-            cue_settings += " align:" + alignment
+            cue_settings += f" align:{alignment}"
         if left_offset:
-            cue_settings += " position:{},start".format(six.text_type(left_offset))
+            cue_settings += f" position:{left_offset},start"
         if top_offset:
-            cue_settings += " line:" + six.text_type(top_offset)
+            cue_settings += f" line:{top_offset}"
         if cue_width:
-            cue_settings += " size:" + six.text_type(cue_width)
+            cue_settings += f" size:{cue_width}"
 
         return cue_settings
 
@@ -446,7 +446,7 @@ class WebVTTWriter(BaseWriter):
         Convert cue text from plain unicode to WebVTT XML-like format
         escaping illegal characters. For a list of illegal characters see:
             - http://dev.w3.org/html5/webvtt/#dfn-webvtt-cue-text-span
-        :type s: unicode
+        :type s: str
         """
         s = s.replace('&', '&amp;')
         s = s.replace('<', '&lt;')
@@ -459,8 +459,8 @@ class WebVTTWriter(BaseWriter):
         # they're not illegal, so for now I'll leave this commented out so that
         # we stay as close as possible to the specification and avoid doing
         # extra stuff "just to be safe".
-        # s = s.replace(u'>', u'&gt;')
-        # s = s.replace(u'\u200e', u'&lrm;')
-        # s = s.replace(u'\u200f', u'&rlm;')
-        # s = s.replace(u'\u00a0', u'&nbsp;')
+        # s = s.replace('>', '&gt;')
+        # s = s.replace('\u200e', '&lrm;')
+        # s = s.replace('\u200f', '&rlm;')
+        # s = s.replace('\u00a0', '&nbsp;')
         return s

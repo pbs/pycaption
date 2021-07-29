@@ -10,14 +10,14 @@ from pycaption.base import BaseWriter, CaptionNode
 
 class TranscriptWriter(BaseWriter):
     def __init__(self, *args, **kw):
-        self.nltk = nltk.data.load('file:%s/english.pickle' %
-                                   os.path.dirname(__file__))
+        self.nltk = nltk.data.load(f'file:{os.path.dirname(__file__)}'
+                                   '/english.pickle')
 
     def write(self, captions):
         transcripts = []
 
         for lang in captions.get_languages():
-            lang_transcript = '* %s Transcript *\n' % lang.upper()
+            lang_transcript = f'* {lang.upper()} Transcript *\n'
 
             for caption in captions.get_captions(lang):
                 lang_transcript = self._strip_text(caption.nodes,
@@ -29,5 +29,5 @@ class TranscriptWriter(BaseWriter):
         return '\n'.join(transcripts)
 
     def _strip_text(self, elements, lang_transcript):
-        return u' '.join([lang_transcript] + [el.content for el in elements if
-                                              el.type_ == CaptionNode.TEXT])
+        return ' '.join([lang_transcript] + [el.content for el in elements if
+                                             el.type_ == CaptionNode.TEXT])

@@ -289,7 +289,7 @@ class InstructionNodeCreator(object):
     def add_chars(self, *chars):
         """Adds characters to a text node (last text node, or a new one)
 
-        :param chars: tuple containing text (unicode)
+        :param chars: tuple containing text (Unicode string)
         """
         if not chars:
             return
@@ -333,7 +333,7 @@ class InstructionNodeCreator(object):
 
         This is mostly used to convert from the legacy-style commands
 
-        :type command: unicode
+        :type command: str
         """
         self._update_positioning(command)
 
@@ -356,7 +356,7 @@ class InstructionNodeCreator(object):
     def _update_positioning(self, command):
         """Sets the positioning information to use for the next nodes
 
-        :type command: unicode
+        :type command: str
         """
         if len(command) != 4:
             return
@@ -412,7 +412,7 @@ class InstructionNodeCreator(object):
         This is used to remove the substitute character in order to avoid
         displaying both.
 
-        :type accented_character: unicode
+        :type accented_character: str
         """
         if self._collection and self._collection[-1].is_text_node() and \
                 self._collection[-1].text:
@@ -460,7 +460,7 @@ class _InstructionNode(object):
 
     def __init__(self, text=None, position=None, type_=0):
         """
-        :type text: unicode
+        :type text: str
         :param position: a tuple of ints (row, column)
         :param type_: self.TEXT | self.BREAK | self.ITALICS
         :type type_: int
@@ -472,7 +472,7 @@ class _InstructionNode(object):
     def add_chars(self, *args):
         """This being a text node, add characters to it.
         :param args:
-        :type args: tuple[unicode]
+        :type args: tuple[str]
         :return:
         """
         if self.text is None:
@@ -549,7 +549,7 @@ class _InstructionNode(object):
         :type position: tuple[int]
         :param position: a tuple (row, col) to mark the positioning
 
-        :type chars: tuple[unicode]
+        :type chars: tuple[str]
         :param chars: characters to add to the text
 
         :rtype: _InstructionNode
@@ -586,7 +586,7 @@ class _InstructionNode(object):
         if self._type == self.BREAK:
             extra = 'BR'
         elif self._type == self.TEXT:
-            extra = '"{}"'.format(self.text)
+            extra = f'"{self.text}"'
         elif self._type in (self.ITALICS_ON, self.ITALICS_OFF):
             extra = 'italics {}'.format(
                 'on' if self._type == self.ITALICS_ON else 'off'
@@ -594,7 +594,7 @@ class _InstructionNode(object):
         else:
             extra = 'change position'
 
-        return '<INode: {extra} >'.format(extra=extra)
+        return f'<INode: {extra} >'
 
 
 def _format_italics(collection):

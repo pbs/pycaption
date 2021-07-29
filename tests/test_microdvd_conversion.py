@@ -1,5 +1,4 @@
 import unittest
-import six
 
 from pycaption import MicroDVDReader, MicroDVDWriter
 
@@ -13,5 +12,5 @@ class MicroDVDtoMicroDVDTestCase(unittest.TestCase, MicroDVDTestingMixIn):
     def test_microdvd_to_microdvd_conversion(self):
         caption_set = MicroDVDReader().read(SAMPLE_MICRODVD)
         results = MicroDVDWriter().write(caption_set)
-        self.assertTrue(isinstance(results, six.text_type))
+        self.assertTrue(isinstance(results, str))
         self.assertMicroDVDEquals(SAMPLE_MICRODVD, results)
