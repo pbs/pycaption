@@ -6,7 +6,7 @@ Readers to read content into a CaptionSet object,
 and then use one of the Writers to output the CaptionSet into
 captions of your desired format.
 
-Requires Python 3.6.
+Requires Python 3.6+ (up to Python 3.9).
 
 Turn a caption into multiple caption outputs:
 

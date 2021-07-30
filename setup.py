@@ -20,7 +20,7 @@ setup(
     author='Joe Norton',
     author_email='joey@nortoncrew.com',
     url='https://github.com/pbs/pycaption',
-    python_requires='>=3.6',
+    python_requires='>=3.6,<3.10',
     install_requires=dependencies,
     packages=find_packages(),
     include_package_data=True,
