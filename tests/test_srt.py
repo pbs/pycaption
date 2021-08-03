@@ -47,4 +47,3 @@ class SRTReaderTestCase(unittest.TestCase):
         sentences = (re.split(r"\d{2}:\d{2}:\d{2},\d{3} -->", results))
         sentences.pop(0)
         self.assertEqual(3, len(sentences))
-

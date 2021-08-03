@@ -1264,4 +1264,3 @@ SAMPLE_DFXP_WITH_AMPERSAND_CHARACTER = """\
   </div>
  </body>
 </tt>"""
-

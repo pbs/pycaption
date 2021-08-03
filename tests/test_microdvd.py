@@ -43,4 +43,3 @@ class MicroDVDReaderTestCase(unittest.TestCase):
         self.assertRaises(
             CaptionReadTimingError,
             MicroDVDReader().read, MISSING_FPS_SAMPLE_MICRODVD)
-

@@ -38,4 +38,3 @@ class RelativizationError(Exception):
 class InvalidInputError(RuntimeError):
     """ Error raised when the input is invalid (i.e. a unicode string)
     """
-

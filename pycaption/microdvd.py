@@ -79,7 +79,7 @@ class MicroDVDWriter(BaseWriter):
 
     def _recreate_lang(self, captions):
         sub = ''
-  
+
         for caption in captions:
             start = self._microtoframes(caption.start)
             end = self._microtoframes(caption.end)
