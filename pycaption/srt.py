@@ -1,7 +1,8 @@
 from copy import deepcopy
 
 from .base import (
-    BaseReader, BaseWriter, CaptionSet, CaptionList, Caption, CaptionNode)
+    BaseReader, BaseWriter, CaptionSet, CaptionList, Caption, CaptionNode,
+)
 from .exceptions import CaptionReadNoCaptions, InvalidInputError
 
 
@@ -14,7 +15,7 @@ class SRTReader(BaseReader):
             return False
 
     def read(self, content, lang='en-US'):
-        if not isinstance(content,  str):
+        if not isinstance(content, str):
             raise InvalidInputError('The content is not a unicode string.')
 
         lines = content.splitlines()
@@ -59,10 +60,10 @@ class SRTReader(BaseReader):
         if ',' not in timesplit[2]:
             timesplit[2] += ',000'
         secsplit = timesplit[2].split(',')
-        microseconds = (int(timesplit[0]) * 3600000000 +
-                        int(timesplit[1]) * 60000000 +
-                        int(secsplit[0]) * 1000000 +
-                        int(secsplit[1]) * 1000)
+        microseconds = (int(timesplit[0]) * 3600000000
+                        + int(timesplit[1]) * 60000000
+                        + int(secsplit[0]) * 1000000
+                        + int(secsplit[1]) * 1000)
 
         return microseconds
 
@@ -104,7 +105,8 @@ class SRTWriter(BaseWriter):
 
         for caption in captions[1:]:
             # Merge if the timestamp is the same as last caption
-            if (caption.start, caption.end) == (merged_captions[-1].start, merged_captions[-1].end):
+            if (caption.start, caption.end) == (
+                    merged_captions[-1].start, merged_captions[-1].end):
                 merged_captions[-1] = Caption(
                     start=caption.start,
                     end=caption.end,

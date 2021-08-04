@@ -4,12 +4,13 @@ from setuptools import setup, find_packages
 
 README_PATH = os.path.join(
     os.path.abspath(os.path.dirname(__file__)),
-    'README.rst')
+    'README.rst',
+)
 
 dependencies = [
     'beautifulsoup4>=4.8.1,<4.10',
     'lxml>=4.6.3,<4.7',
-    'cssutils>=2.0.0,<2.4'
+    'cssutils>=2.0.0,<2.4',
 ]
 
 setup(

@@ -1,9 +1,14 @@
+import re
 from copy import deepcopy
 
 from .base import (
-    BaseReader, BaseWriter, CaptionSet, CaptionList, Caption, CaptionNode, DEFAULT_LANGUAGE_CODE)
-from .exceptions import CaptionReadNoCaptions, CaptionReadSyntaxError, CaptionReadTimingError
-import re
+    BaseReader, BaseWriter, CaptionSet, CaptionList, Caption, CaptionNode,
+    DEFAULT_LANGUAGE_CODE,
+)
+from .exceptions import (
+    CaptionReadNoCaptions, CaptionReadSyntaxError, CaptionReadTimingError,
+    InvalidInputError,
+)
 
 
 class MicroDVDReader(BaseReader):
@@ -11,17 +16,20 @@ class MicroDVDReader(BaseReader):
         return re.match(r"{\d+}{\d+}", content) is not None
 
     def read(self, content, lang=DEFAULT_LANGUAGE_CODE):
-        if not isinstance(content,  str):
+        if not isinstance(content, str):
             raise InvalidInputError('The content is not a unicode string.')
 
         lines = content.splitlines()
         captions = CaptionList()
         fps = 25.0
         for line in lines:
-            if not line: continue
+            if not line:
+                continue
 
             m = re.match(r"{(\d+)}{(\d+)}(.*)", line)
-            if not m: raise CaptionReadSyntaxError("Line does not match expected format")
+            if not m:
+                raise CaptionReadSyntaxError(
+                    "Line does not match expected format")
 
             start, end, txt = m.groups()
 
@@ -30,7 +38,8 @@ class MicroDVDReader(BaseReader):
                     fps = float(txt)
                     continue
                 except ValueError:
-                    raise CaptionReadTimingError('FPS information is not provided')
+                    raise CaptionReadTimingError(
+                        'FPS information is not provided')
 
             caption_start = self._framestomicro(int(start), fps)
             caption_end = self._framestomicro(int(end), fps)
@@ -75,7 +84,7 @@ class MicroDVDWriter(BaseWriter):
         return ''.join(captions)
 
     def _microtoframes(self, micro, fps=25.0):
-        return int(micro * fps / (10**6))
+        return int(micro * fps / (10 ** 6))
 
     def _recreate_lang(self, captions):
         sub = ''

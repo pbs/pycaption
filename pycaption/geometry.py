@@ -42,8 +42,7 @@ class VerticalAlignmentEnum(Enum):
 
 
 class HorizontalAlignmentEnum(Enum):
-    """Enumeration object specifying the horizontal alignment preferences
-    """
+    """Enumeration object specifying the horizontal alignment preferences"""
     LEFT = 'left'
     CENTER = 'center'
     RIGHT = 'right'
@@ -64,25 +63,24 @@ class Alignment:
 
     def __hash__(self):
         return hash(
-            hash(self.horizontal) * 83 +
-            hash(self.vertical) * 89 +
-            97
+            hash(self.horizontal) * 83
+            + hash(self.vertical) * 89
+            + 97
         )
 
     def __eq__(self, other):
         return (
-                other and
-                type(self) == type(other) and
-                self.horizontal == other.horizontal and
-                self.vertical == other.vertical
+            other
+            and type(self) == type(other)
+            and self.horizontal == other.horizontal
+            and self.vertical == other.vertical
         )
 
     def __repr__(self):
         return f"<Alignment ({self.horizontal} {self.vertical})>"
 
     def serialized(self):
-        """Returns a tuple of the useful information regarding this object
-        """
+        """Returns a tuple of the useful information regarding this object"""
         return self.horizontal, self.vertical
 
     @classmethod
@@ -115,8 +113,7 @@ class Alignment:
 
 
 class TwoDimensionalObject:
-    """Adds a couple useful methods to its subclasses, nothing fancy.
-    """
+    """Adds a couple useful methods to its subclasses, nothing fancy."""
 
     @classmethod
     # TODO - highly cachable. Should use WeakValueDictionary here to return
@@ -160,8 +157,8 @@ class Stretch(TwoDimensionalObject):
         :return: True/False
         """
         return (
-                self.horizontal.unit == measure_unit and
-                self.vertical.unit == measure_unit
+            self.horizontal.unit == measure_unit
+            and self.vertical.unit == measure_unit
         )
 
     def __repr__(self):
@@ -176,25 +173,24 @@ class Stretch(TwoDimensionalObject):
 
     def __eq__(self, other):
         return (
-                other and
-                type(self) == type(other) and
-                self.horizontal == other.horizontal and
-                self.vertical == other.vertical
+            other
+            and type(self) == type(other)
+            and self.horizontal == other.horizontal
+            and self.vertical == other.vertical
         )
 
     def __hash__(self):
         return hash(
-            hash(self.horizontal) * 59 +
-            hash(self.vertical) * 61 +
-            67
+            hash(self.horizontal) * 59
+            + hash(self.vertical) * 61
+            + 67
         )
 
     def __bool__(self):
         return True if self.horizontal or self.vertical else False
 
     def to_xml_attribute(self, **kwargs):
-        """Returns a string representation of this object as an xml attribute
-        """
+        """Returns a string representation of this object as an xml attribute"""
         return '{horizontal} {vertical}'.format(
             horizontal=self.horizontal.to_xml_attribute(),
             vertical=self.vertical.to_xml_attribute()
@@ -258,8 +254,7 @@ class Region:
 
     @property
     def extent(self):
-        """How wide this rectangle stretches (horizontally and vertically)
-        """
+        """How wide this rectangle stretches (horizontally and vertically)"""
         if hasattr(self, '_extent'):
             return self._extent
         else:
@@ -267,8 +262,7 @@ class Region:
 
     @property
     def origin(self):
-        """Out of its 4 points, returns the one closest to the origin
-        """
+        """Out of its 4 points, returns the one closest to the origin"""
         if hasattr(self, '_origin'):
             return self._origin
         else:
@@ -278,8 +272,7 @@ class Region:
 
     @property
     def lower_right_point(self):
-        """The point furthest from the origin from the rectangle's 4 points
-        """
+        """The point furthest from the origin from the rectangle's 4 points"""
         if hasattr(self, '_p2'):
             return Point.align_from_origin(self._p1, self._p2)[1]
         else:
@@ -287,23 +280,22 @@ class Region:
 
     def __eq__(self, other):
         return (
-                other and
-                type(self) == type(other) and
-                self.extent == other.extent and
-                self.origin == other.origin
+            other
+            and type(self) == type(other)
+            and self.extent == other.extent
+            and self.origin == other.origin
         )
 
     def __hash__(self):
         return hash(
-            hash(self.origin) * 71 +
-            hash(self.extent) * 73 +
-            79
+            hash(self.origin) * 71
+            + hash(self.extent) * 73
+            + 79
         )
 
 
 class Point(TwoDimensionalObject):
-    """Represent a point in 2d space.
-    """
+    """Represent a point in 2d space."""
 
     def __init__(self, x, y):
         """
@@ -324,7 +316,7 @@ class Point(TwoDimensionalObject):
 
     def add_stretch(self, stretch):
         """Returns another Point instance, whose coordinates are the sum of the
-         current Point's, and the Stretch instance's.
+        current Point's, and the Stretch instance's.
         """
         return Point(self.x + stretch.horizontal, self.y + stretch.vertical)
 
@@ -369,8 +361,7 @@ class Point(TwoDimensionalObject):
         return f'<Point ({self.x}, {self.y})>'
 
     def serialized(self):
-        """Returns the "useful" values of this object.
-        """
+        """Returns the "useful" values of this object."""
         return (
             None if not self.x else self.x.serialized(),
             None if not self.y else self.y.serialized()
@@ -378,25 +369,24 @@ class Point(TwoDimensionalObject):
 
     def __eq__(self, other):
         return (
-                other and
-                type(self) == type(other) and
-                self.x == other.x and
-                self.y == other.y
+            other
+            and type(self) == type(other)
+            and self.x == other.x
+            and self.y == other.y
         )
 
     def __hash__(self):
         return hash(
-            hash(self.x) * 51 +
-            hash(self.y) * 53 +
-            57
+            hash(self.x) * 51
+            + hash(self.y) * 53
+            + 57
         )
 
     def __bool__(self):
         return True if self.x or self.y else False
 
     def to_xml_attribute(self, **kwargs):
-        """Returns a string representation of this object as an xml attribute
-        """
+        """Returns a string representation of this object as an xml attribute"""
         return f'{self.x.to_xml_attribute()} {self.y.to_xml_attribute()}'
 
 
@@ -565,17 +555,17 @@ class Size:
 
     def __eq__(self, other):
         return (
-                other and
-                type(self) == type(other) and
-                self.value == other.value and
-                self.unit == other.unit
+            other
+            and type(self) == type(other)
+            and self.value == other.value
+            and self.unit == other.unit
         )
 
     def __hash__(self):
         return hash(
-            hash(self.value) * 41 +
-            hash(self.unit) * 43 +
-            47
+            hash(self.value) * 41
+            + hash(self.unit) * 43
+            + 47
         )
 
     def __bool__(self):
@@ -652,8 +642,7 @@ class Padding:
         )
 
     def serialized(self):
-        """Returns a tuple containing the useful values of this object
-        """
+        """Returns a tuple containing the useful values of this object"""
         return (
             None if not self.before else self.before.serialized(),
             None if not self.after else self.after.serialized(),
@@ -663,21 +652,21 @@ class Padding:
 
     def __eq__(self, other):
         return (
-                other and
-                type(self) == type(other) and
-                self.before == other.before and
-                self.after == other.after and
-                self.start == other.start and
-                self.end == other.end
+            other
+            and type(self) == type(other)
+            and self.before == other.before
+            and self.after == other.after
+            and self.start == other.start
+            and self.end == other.end
         )
 
     def __hash__(self):
         return hash(
-            hash(self.before) * 19 +
-            hash(self.after) * 23 +
-            hash(self.start) * 29 +
-            hash(self.end) * 31 +
-            37
+            hash(self.before) * 19
+            + hash(self.after) * 23
+            + hash(self.start) * 29
+            + hash(self.end) * 31
+            + 37
         )
 
     def to_xml_attribute(
@@ -788,8 +777,7 @@ class Layout:
         )
 
     def serialized(self):
-        """Returns nested tuple containing the "useful" values of this object
-        """
+        """Returns nested tuple containing the "useful" values of this object"""
         return (
             None if not self.origin else self.origin.serialized(),
             None if not self.extent else self.extent.serialized(),
@@ -799,11 +787,11 @@ class Layout:
 
     def __eq__(self, other):
         return (
-                type(self) == type(other) and
-                self.origin == other.origin and
-                self.extent == other.extent and
-                self.padding == other.padding and
-                self.alignment == other.alignment
+            type(self) == type(other)
+            and self.origin == other.origin
+            and self.extent == other.extent
+            and self.padding == other.padding
+            and self.alignment == other.alignment
         )
 
     def __ne__(self, other):

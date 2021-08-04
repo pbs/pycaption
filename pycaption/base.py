@@ -1,6 +1,6 @@
+import os
 from datetime import timedelta
 from numbers import Number
-import os
 
 from .exceptions import CaptionReadError, CaptionReadTimingError
 
@@ -232,13 +232,13 @@ class Caption:
         hours, rem = divmod(duration.seconds, 3600)
         minutes, seconds = divmod(rem, 60)
         milliseconds = f"{duration.microseconds // 1000:03d}"
-        timestamp = f"{hours:02d}:{minutes:02d}:{seconds:02d}" \
-                    f"{msec_separator or '.'}{milliseconds:.3s}"
+        timestamp = (f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+                     f"{msec_separator or '.'}{milliseconds:.3s}")
         return timestamp
 
 
 class CaptionList(list):
-    """ A list of captions with a layout object attached to it """
+    """A list of captions with a layout object attached to it"""
 
     def __init__(self, iterable=None, layout_info=None):
         """
@@ -261,9 +261,9 @@ class CaptionList(list):
 
     def __add__(self, other):
         add_is_safe = (
-                not hasattr(other, 'layout_info') or
-                not other.layout_info or
-                self.layout_info == other.layout_info
+            not hasattr(other, 'layout_info')
+            or not other.layout_info
+            or self.layout_info == other.layout_info
         )
         if add_is_safe:
             return CaptionList(

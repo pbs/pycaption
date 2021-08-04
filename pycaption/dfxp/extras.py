@@ -2,12 +2,12 @@
 # in a lot of cases, but since the transformations on them could be quite
 # complex, the deepcopy method is good enough sometimes.
 from copy import deepcopy
+from xml.sax.saxutils import escape
+
+from bs4 import BeautifulSoup
 
 from .base import DFXPWriter, DFXP_DEFAULT_REGION
 from ..base import BaseWriter, CaptionNode, merge_concurrent_captions
-
-from xml.sax.saxutils import escape
-from bs4 import BeautifulSoup
 
 LEGACY_DFXP_BASE_MARKUP = '''
 <tt xmlns="http://www.w3.org/ns/ttml"
@@ -36,7 +36,8 @@ LEGACY_DFXP_DEFAULT_REGION = {
 
 
 class SinglePositioningDFXPWriter(DFXPWriter):
-    """A dfxp writer, that ignores all positioning, using a single provided value
+    """
+    A dfxp writer, that ignores all positioning, using a single provided value
     """
     def __init__(self, default_positioning=DFXP_DEFAULT_REGION,
                  *args, **kwargs):
@@ -128,7 +129,8 @@ class LegacyDFXPWriter(BaseWriter):
             for caption in caption_set.get_captions(lang):
                 if caption.style:
                     caption_style = caption.style
-                    caption_style.update({'region': LEGACY_DFXP_DEFAULT_REGION_ID})
+                    caption_style.update(
+                        {'region': LEGACY_DFXP_DEFAULT_REGION_ID})
                 else:
                     caption_style = {'class': LEGACY_DFXP_DEFAULT_STYLE_ID,
                                      'region': LEGACY_DFXP_DEFAULT_REGION_ID}

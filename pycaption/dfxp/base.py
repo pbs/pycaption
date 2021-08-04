@@ -1,16 +1,20 @@
 import re
 from copy import deepcopy
 from xml.sax.saxutils import escape
+
 from bs4 import BeautifulSoup, NavigableString
 
 from ..base import (
     BaseReader, BaseWriter, CaptionSet, CaptionList, Caption, CaptionNode,
-    DEFAULT_LANGUAGE_CODE)
+    DEFAULT_LANGUAGE_CODE,
+)
 from ..exceptions import (
-    CaptionReadNoCaptions, CaptionReadSyntaxError, InvalidInputError)
+    CaptionReadNoCaptions, CaptionReadSyntaxError, InvalidInputError,
+)
 from ..geometry import (
     Point, Stretch, UnitEnum, Padding, VerticalAlignmentEnum,
-    HorizontalAlignmentEnum, Alignment, Layout)
+    HorizontalAlignmentEnum, Alignment, Layout,
+)
 from ..utils import is_leaf
 
 __all__ = [
@@ -45,7 +49,6 @@ DFXP_DEFAULT_REGION_ID = 'bottom'
 
 
 class DFXPReader(BaseReader):
-
     def __init__(self, *args, **kw):
         super().__init__(*args, **kw)
         self.read_invalid_positioning = (
@@ -59,7 +62,7 @@ class DFXPReader(BaseReader):
             return False
 
     def read(self, content):
-        if not isinstance(content,  str):
+        if not isinstance(content, str):
             raise InvalidInputError('The content is not a unicode string.')
 
         dfxp_document = self._get_dfxp_parser_class()(
@@ -68,7 +71,8 @@ class DFXPReader(BaseReader):
         caption_dict = {}
         style_dict = {}
 
-        default_language = dfxp_document.tt.attrs.get('xml:lang', DEFAULT_LANGUAGE_CODE)
+        default_language = dfxp_document.tt.attrs.get('xml:lang',
+                                                      DEFAULT_LANGUAGE_CODE)
 
         # Each div represents all the captions for a single language.
         for div in dfxp_document.find_all('div'):
@@ -82,8 +86,7 @@ class DFXPReader(BaseReader):
                 # Don't create document styles for those styles that are
                 # descendants of <region> tags. See link:
                 # http://www.w3.org/TR/ttaf1-dfxp/#styling-vocabulary-style
-                if 'region' not in [
-                        parent_.name for parent_ in style.parents]:
+                if 'region' not in [parent_.name for parent_ in style.parents]:
                     style_dict[id_] = self._translate_style(style)
 
         caption_set = CaptionSet(caption_dict, styles=style_dict)
@@ -95,8 +98,7 @@ class DFXPReader(BaseReader):
 
     @staticmethod
     def _get_dfxp_parser_class():
-        """Hook method for providing a custom DFXP parser
-        """
+        """Hook method for providing a custom DFXP parser"""
         return LayoutAwareDFXPParser
 
     def _translate_div(self, div):
@@ -149,11 +151,11 @@ class DFXPReader(BaseReader):
                 secsplit.append(float(timesplit[3]) / 30 * 1000000)
             while len(secsplit[1]) < 3:
                 secsplit[1] += '0'
-            microseconds = (int(timesplit[0]) * 3600000000 +
-                            int(timesplit[1]) * 60000000 +
-                            int(secsplit[0]) * 1000000 +
-                            int(secsplit[1]) * 1000)
-            if (len(secsplit) > 2):
+            microseconds = (int(timesplit[0]) * 3600000000
+                            + int(timesplit[1]) * 60000000
+                            + int(secsplit[0]) * 1000000
+                            + int(secsplit[1]) * 1000)
+            if len(secsplit) > 2:
                 microseconds += int(secsplit[2])
 
             return microseconds
@@ -171,7 +173,8 @@ class DFXPReader(BaseReader):
             elif metric == "ms":
                 microseconds = value * 1000
             else:
-                raise InvalidInputError("Unsupported offset-time metric " + metric)
+                raise InvalidInputError("Unsupported offset-time metric "
+                                        + metric)
 
             return int(microseconds)
 
@@ -255,7 +258,8 @@ class DFXPReader(BaseReader):
                 attrs['italics'] = True
             elif arg.lower() == "tts:fontweight" and dfxp_attrs[arg] == "bold":
                 attrs['bold'] = True
-            elif arg.lower() == "tts:textdecoration" and "underline" in dfxp_attrs[arg].strip().split(" "):
+            elif (arg.lower() == "tts:textdecoration"
+                  and "underline" in dfxp_attrs[arg].strip().split(" ")):
                 attrs['underline'] = True
             elif arg.lower() == "tts:textalign":
                 attrs['text-align'] = dfxp_attrs[arg]
@@ -315,7 +319,8 @@ class DFXPWriter(BaseWriter):
             dfxp = self._recreate_styling_tag(
                 DFXP_DEFAULT_STYLE_ID, DFXP_DEFAULT_STYLE, dfxp)
 
-        self.region_creator = self._get_region_creator_class()(dfxp, caption_set)
+        self.region_creator = self._get_region_creator_class()(
+            dfxp, caption_set)
         self.region_creator.create_document_regions()
 
         body = dfxp.find('body')
@@ -343,8 +348,7 @@ class DFXPWriter(BaseWriter):
 
     @staticmethod
     def _get_region_creator_class():
-        """Hook method for providing a custom RegionCreator
-        """
+        """Hook method for providing a custom RegionCreator"""
         return RegionCreator
 
     def _assign_positioning_data(self, tag, lang, caption_set=None,
@@ -552,8 +556,7 @@ class LayoutAwareDFXPParser(BeautifulSoup):
 
     @staticmethod
     def _get_region_from_ancestors(element):
-        """Try to get the region ID from the nearest ancestor that has it
-        """
+        """Try to get the region ID from the nearest ancestor that has it"""
         region_id = None
         parent = element.parent
         while parent:
@@ -631,8 +634,7 @@ class LayoutAwareDFXPParser(BeautifulSoup):
         if region_id is not None:
             region_tag = self.find('region', {'xml:id': region_id})
 
-        region_scraper = (
-            self._get_layout_info_scraper_class()(self, region_tag))
+        region_scraper = self._get_layout_info_scraper_class()(self, region_tag)
 
         layout_info = region_scraper.scrape_positioning_info(
             element, self.read_invalid_positioning
@@ -647,14 +649,12 @@ class LayoutAwareDFXPParser(BeautifulSoup):
 
     @staticmethod
     def _get_layout_info_scraper_class():
-        """Hook method for getting an implementation of a LayoutInfoScraper.
-        """
+        """Hook method for getting an implementation of a LayoutInfoScraper."""
         return LayoutInfoScraper
 
     @staticmethod
     def _get_layout_class():
-        """Hook method for providing the Layout class to use
-        """
+        """Hook method for providing the Layout class to use"""
         return Layout
 
 
@@ -724,9 +724,8 @@ class LayoutInfoScraper:
                 'style', {'xml:id': referenced_style_id}
             )
 
-            referenced_styles = (
-                cls._get_style_reference_chain(
-                    referenced_style, styling_section)
+            referenced_styles = cls._get_style_reference_chain(
+                referenced_style, styling_section
             )
         return nested_styles + referenced_styles
 
@@ -1013,8 +1012,8 @@ class RegionCreator:
 
         for region_spec in unique_layouts:
             if (
-                    region_spec.origin or region_spec.extent or
-                    region_spec.padding or region_spec.alignment):
+                    region_spec.origin or region_spec.extent
+                    or region_spec.padding or region_spec.alignment):
 
                 new_region = dfxp.new_tag('region')
                 new_id = id_factory()
@@ -1109,8 +1108,7 @@ class RegionCreator:
         return region_id, positioning_attributes
 
     def cleanup_regions(self):
-        """Remove the unused regions from the output file
-        """
+        """Remove the unused regions from the output file"""
         layout_tag = self._dfxp.find('layout')
         if not layout_tag:
             return

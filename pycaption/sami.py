@@ -36,23 +36,23 @@ OBS:
 
 """
 import re
-from logging import FATAL
 from collections import deque
 from copy import deepcopy
-
-from html.parser import HTMLParser
 from html.entities import name2codepoint
+from html.parser import HTMLParser
+from logging import FATAL
 from xml.sax.saxutils import escape
-
 
 from bs4 import BeautifulSoup, NavigableString
 from cssutils import parseString, log, css as cssutils_css
 
 from .base import (
     BaseReader, BaseWriter, CaptionSet, CaptionList, Caption, CaptionNode,
-    DEFAULT_LANGUAGE_CODE)
+    DEFAULT_LANGUAGE_CODE,
+)
 from .exceptions import (
-    CaptionReadNoCaptions, CaptionReadSyntaxError, InvalidInputError)
+    CaptionReadNoCaptions, CaptionReadSyntaxError, InvalidInputError,
+)
 from .geometry import Layout, Alignment, Padding, Size
 
 
@@ -70,7 +70,6 @@ SAMI_BASE_MARKUP = '''
 
 
 class SAMIReader(BaseReader):
-
     def __init__(self, *args, **kw):
         super().__init__(*args, **kw)
         self.line = []
@@ -83,7 +82,7 @@ class SAMIReader(BaseReader):
             return False
 
     def read(self, content):
-        if not isinstance(content,  str):
+        if not isinstance(content, str):
             raise InvalidInputError('The content is not a unicode string.')
 
         content, doc_styles, doc_langs = (
@@ -197,8 +196,8 @@ class SAMIReader(BaseReader):
             start = milliseconds * 1000
             end = 0
 
-            # Setting current start time as end time for previous elements with 0 as ending
-            # ( when we have more p elements inside a SYNC element )
+            # Setting current start time as end time for previous elements with
+            # 0 as ending ( when we have more p elements inside a SYNC element )
             for i in reversed(range(len(captions))):
                 if captions[i].end != 0:
                     break
@@ -614,11 +613,11 @@ class SAMIWriter(BaseWriter):
 
         for key, value in list(rules.items()):
             # Recreate original CSS rules from internal style
-            if key == 'italics' and value == True:
+            if key == 'italics' and value is True:
                 sami_style['font-style'] = 'italic'
-            elif key == 'bold' and value == True:
+            elif key == 'bold' and value is True:
                 sami_style['font-weight'] = 'bold'
-            elif key == 'underline' and value == True:
+            elif key == 'underline' and value is True:
                 sami_style['text-decoration'] = 'underline'
             else:
                 sami_style[key] = value
@@ -779,8 +778,8 @@ class SAMIParser(HTMLParser):
                     cv = cssutils_css.ColorValue(prop.value)
                     # Code for RGB to hex conversion comes from
                     # http://bit.ly/1kwfBnQ
-                    new_style['color'] = f'#{cv.red:02x}{cv.green:02x}' \
-                                         f'{cv.blue:02x}'
+                    new_style['color'] = (f'#{cv.red:02x}{cv.green:02x}'
+                                          f'{cv.blue:02x}')
                 else:
                     new_style[prop.name] = prop.value
             if new_style:

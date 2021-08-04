@@ -1,11 +1,12 @@
+import collections
 import unicodedata
 
 from ..base import CaptionList, Caption, CaptionNode
-from ..geometry import (UnitEnum, Size, Layout, Point, Alignment,
-                        VerticalAlignmentEnum, HorizontalAlignmentEnum)
-
+from ..geometry import (
+    UnitEnum, Size, Layout, Point, Alignment,
+    VerticalAlignmentEnum, HorizontalAlignmentEnum
+)
 from .constants import PAC_BYTES_TO_POSITIONING_MAP, COMMANDS
-import collections
 
 
 class PreCaption:
@@ -126,8 +127,7 @@ class NotifyingDict(dict):
         self.active_key = key
 
     def get_active(self):
-        """Returns the value corresponding to the active key
-        """
+        """Returns the value corresponding to the active key"""
         if self.active_key is self._guard:
             raise KeyError('No active key set')
 
@@ -149,8 +149,7 @@ class NotifyingDict(dict):
 
 
 class CaptionCreator:
-    """Creates and maintains a collection of Captions
-    """
+    """Creates and maintains a collection of Captions"""
     def __init__(self):
         self._collection = TimingCorrectingCaptionList()
 
@@ -282,8 +281,7 @@ class InstructionNodeCreator:
         self._position_tracer = position_tracker
 
     def is_empty(self):
-        """Whether any text was added to the buffer
-        """
+        """Whether any text was added to the buffer"""
         return not any(element.text for element in self._collection)
 
     def add_chars(self, *chars):
@@ -527,8 +525,7 @@ class _InstructionNode:
         return self._type == self.CHANGE_POSITION
 
     def get_text(self):
-        """A little legacy code.
-        """
+        """A little legacy code."""
         return ' '.join(self.text.split())
 
     @classmethod
