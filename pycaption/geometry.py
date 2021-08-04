@@ -51,7 +51,7 @@ class HorizontalAlignmentEnum(Enum):
     END = 'end'
 
 
-class Alignment(object):
+class Alignment:
     def __init__(self, horizontal, vertical):
         """
         :type horizontal: HorizontalAlignmentEnum
@@ -114,7 +114,7 @@ class Alignment(object):
         return cls(horizontal_obj, vertical_obj)
 
 
-class TwoDimensionalObject(object):
+class TwoDimensionalObject:
     """Adds a couple useful methods to its subclasses, nothing fancy.
     """
 
@@ -222,7 +222,7 @@ class Stretch(TwoDimensionalObject):
         )
 
 
-class Region(object):
+class Region:
     """Represents the spatial coordinates of a rectangle
 
     Don't instantiate by hand. use Region.from_points or Region.from_extent
@@ -400,7 +400,7 @@ class Point(TwoDimensionalObject):
         return f'{self.x.to_xml_attribute()} {self.y.to_xml_attribute()}'
 
 
-class Size(object):
+class Size:
     """Ties together a number with a unit, to represent a size.
 
     Use as value objects! (don't change after creation)
@@ -582,7 +582,7 @@ class Size(object):
         return self.unit in UnitEnum and self.value is not None
 
 
-class Padding(object):
+class Padding:
     """Represents padding information. Consists of 4 Size objects, representing
     padding from (in this order): before (up), after (down), start (left) and
     end (right).
@@ -727,7 +727,7 @@ class Padding(object):
         return is_relative
 
 
-class Layout(object):
+class Layout:
     """Should encapsulate all the information needed to determine (as correctly
     as possible) the layout (positioning) of elements on the screen.
 

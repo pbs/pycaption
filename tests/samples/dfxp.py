@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 SAMPLE_DFXP = """\
 <?xml version="1.0" encoding="utf-8"?>
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml"
@@ -1144,7 +1142,7 @@ SAMPLE_DFXP_INCORRECT_TIME_FORMAT = """
 </tt>
 """
 
-SAMPLE_DFXP_WITH_FRAME_TIMING = u"""\
+SAMPLE_DFXP_WITH_FRAME_TIMING = """\
 <?xml version="1.0" encoding="utf-8"?>
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling">
  <head>

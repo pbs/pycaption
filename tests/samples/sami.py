@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 SAMPLE_SAMI = """
 <SAMI><HEAD><TITLE>NOVA3213</TITLE><STYLE TYPE="text/css">
 <!--

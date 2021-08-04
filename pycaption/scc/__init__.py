@@ -1,5 +1,4 @@
 #!/usr/bin/python
-# -*- coding: utf-8 -*-
 """
 3 types of SCC captions:
     Roll-Up
@@ -98,7 +97,7 @@ from .specialized_collections import (
 from .state_machines import DefaultProvidingPositionTracker
 
 
-class NodeCreatorFactory(object):
+class NodeCreatorFactory:
     """Will return instances of the given node_creator.
 
     This is used as a means of creating new InstructionNodeCreator instances,
@@ -487,7 +486,7 @@ class SCCReader(BaseReader):
 class SCCWriter(BaseWriter):
 
     def __init__(self, *args, **kw):
-        super(SCCWriter, self).__init__(*args, **kw)
+        super().__init__(*args, **kw)
 
     def write(self, caption_set):
         output = HEADER + '\n\n'
@@ -606,7 +605,7 @@ class SCCWriter(BaseWriter):
         return f'{hours:02}:{minutes:02}:{seconds:02}:{frames:02}'
 
 
-class _SccTimeTranslator(object):
+class _SccTimeTranslator:
     """Converts SCC time to microseconds, keeping track of frames passed
     """
     def __init__(self):

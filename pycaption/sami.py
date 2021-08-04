@@ -72,7 +72,7 @@ SAMI_BASE_MARKUP = '''
 class SAMIReader(BaseReader):
 
     def __init__(self, *args, **kw):
-        super(SAMIReader, self).__init__(*args, **kw)
+        super().__init__(*args, **kw)
         self.line = []
         self.first_alignment = None
 
@@ -254,7 +254,7 @@ class SAMIReader(BaseReader):
             # (e.g. &amp;) automatically. The following variable, therefore,
             # should contain a plain unicode string.
             # strips indentation whitespace only
-            pattern = re.compile("^(?:[\n\r]+\s*)?(.+)")
+            pattern = re.compile("^(?:[\n\r]+\\s*)?(.+)")
             result = pattern.search(tag)
             if not result:
                 return
@@ -382,7 +382,7 @@ class SAMIReader(BaseReader):
 
 class SAMIWriter(BaseWriter):
     def __init__(self, *args, **kwargs):
-        super(SAMIWriter, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.open_span = False
         self.last_time = None
 

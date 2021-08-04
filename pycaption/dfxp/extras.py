@@ -40,7 +40,7 @@ class SinglePositioningDFXPWriter(DFXPWriter):
     """
     def __init__(self, default_positioning=DFXP_DEFAULT_REGION,
                  *args, **kwargs):
-        super(SinglePositioningDFXPWriter, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.default_positioning = default_positioning
 
     def write(self, captions_set, force=''):
@@ -53,7 +53,7 @@ class SinglePositioningDFXPWriter(DFXPWriter):
         captions_set = self._create_single_positioning_caption_set(
             captions_set, self.default_positioning)
 
-        return super(SinglePositioningDFXPWriter, self).write(captions_set, force)  # noqa
+        return super().write(captions_set, force)  # noqa
 
     @staticmethod
     def _create_single_positioning_caption_set(caption_set, positioning):

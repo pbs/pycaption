@@ -2,7 +2,7 @@ from bs4 import BeautifulSoup
 import re
 
 
-class WebVTTTestingMixIn(object):
+class WebVTTTestingMixIn:
     """
     Provide specialized test case capabilities for asserting on WebVTT content.
     """
@@ -19,7 +19,7 @@ class WebVTTTestingMixIn(object):
         self.assertEqual(first_items, second_items)
 
 
-class SRTTestingMixIn(object):
+class SRTTestingMixIn:
     """
     Provide specialized test case capabilities for asserting on SRT content.
     """
@@ -36,7 +36,7 @@ class SRTTestingMixIn(object):
         self.assertEqual(first_items, second_items)
 
 
-class CaptionSetTestingMixIn(object):
+class CaptionSetTestingMixIn:
 
     def assertCaptionSetAlmostEquals(self, first, second,
                                      tolerance_microseconds):
@@ -50,7 +50,7 @@ class CaptionSetTestingMixIn(object):
 
         def get_text_for_caption(caption):
             text = caption.get_text()
-            text = re.sub('\s+', ' ', text)
+            text = re.sub(r'\s+', ' ', text)
 
             return text
 
@@ -77,7 +77,7 @@ class CaptionSetTestingMixIn(object):
         self.assertEqual(end_differences, [])
 
 
-class DFXPTestingMixIn(object):
+class DFXPTestingMixIn:
     """
     Provide specialized test case capabilities for asserting on DFXP content.
     """
@@ -118,7 +118,7 @@ class DFXPTestingMixIn(object):
         self.assertEqual(first_soup, second_soup)
 
 
-class SAMITestingMixIn(object):
+class SAMITestingMixIn:
     """
     Provide specialized test case capabilities for asserting on SAMI content.
     """
@@ -137,7 +137,7 @@ class SAMITestingMixIn(object):
         self.assertEqual(first_items, second_items)
 
 
-class MicroDVDTestingMixIn(object):
+class MicroDVDTestingMixIn:
     """
     Provide specialized test case capabilities for asserting on MicroDVD content.
     """

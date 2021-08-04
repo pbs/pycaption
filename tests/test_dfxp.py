@@ -59,8 +59,8 @@ class DFXPReaderTestCase(unittest.TestCase):
 
     def test_caption_error_for_invalid_positioning_values(self):
         invalid_value_dfxp = (
-            SAMPLE_DFXP_INVALID_POSITIONING_VALUE_TEMPLATE
-                .format(origin="px 5px")
+            SAMPLE_DFXP_INVALID_POSITIONING_VALUE_TEMPLATE.
+            format(origin="px 5px")
         )
         self.assertRaises(
             CaptionReadSyntaxError, DFXPReader().read,
@@ -70,7 +70,7 @@ class DFXPReaderTestCase(unittest.TestCase):
     def test_caption_error_for_invalid_or_unsupported_positioning_units(self):
         invalid_dfxp = (
             SAMPLE_DFXP_INVALID_POSITIONING_VALUE_TEMPLATE
-                .format(origin="6foo 7bar")
+            .format(origin="6foo 7bar")
         )
         self.assertRaises(
             CaptionReadSyntaxError, DFXPReader().read,

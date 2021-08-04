@@ -8,7 +8,7 @@ from .constants import PAC_BYTES_TO_POSITIONING_MAP, COMMANDS
 import collections
 
 
-class PreCaption(object):
+class PreCaption:
     """
     The Caption class has been refactored and now its instances must be used as
     immutable objects. Some of the code in this module, however, relied on the
@@ -40,7 +40,7 @@ class TimingCorrectingCaptionList(list):
     Also, doesn't allow Nones or empty captions
     """
     def __init__(self, *args, **kwargs):
-        super(TimingCorrectingCaptionList, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self._last_batch = ()
 
     def append(self, p_object):
@@ -56,7 +56,7 @@ class TimingCorrectingCaptionList(list):
 
         self._last_batch = (p_object,)
 
-        super(TimingCorrectingCaptionList, self).append(p_object)
+        super().append(p_object)
 
     def extend(self, iterable):
         """Adds the elements in the iterable to the list, regarding the first
@@ -70,7 +70,7 @@ class TimingCorrectingCaptionList(list):
 
         self._last_batch = tuple(appendable_items)
 
-        super(TimingCorrectingCaptionList, self).extend(appendable_items)
+        super().extend(appendable_items)
 
     @staticmethod
     def _update_last_batch(batch, *new_captions):
@@ -106,7 +106,7 @@ class NotifyingDict(dict):
     _guard = {}
 
     def __init__(self, *args, **kwargs):
-        super(NotifyingDict, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.active_key = self._guard
         self.observers = []
 
@@ -148,7 +148,7 @@ class NotifyingDict(dict):
         self.observers.append(observer)
 
 
-class CaptionCreator(object):
+class CaptionCreator:
     """Creates and maintains a collection of Captions
     """
     def __init__(self):
@@ -263,7 +263,7 @@ class CaptionCreator(object):
         return caption_list
 
 
-class InstructionNodeCreator(object):
+class InstructionNodeCreator:
     """Creates _InstructionNode instances from characters and commands, storing
     them internally
     """
@@ -445,7 +445,7 @@ def _get_layout_from_tuple(position_tuple):
                   )
 
 
-class _InstructionNode(object):
+class _InstructionNode:
     """Value object, that can contain text information, or interpretable
     commands (such as explicit line breaks or turning italics on/off).
 

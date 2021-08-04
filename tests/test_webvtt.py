@@ -108,21 +108,21 @@ class WebVTTReaderTestCase(unittest.TestCase):
 
         try:
             WebVTTReader().read(
-                ("\n"
-                 "00:00:20.000 --> 00:00:10.000\n"
-                 "Start time is greater than end time.\n")
+                "\n"
+                "00:00:20.000 --> 00:00:10.000\n"
+                "Start time is greater than end time.\n"
             )
         except CaptionReadError:
             self.fail("Shouldn't raise CaptionReadError")
 
         try:
             WebVTTReader().read(
-                ("\n"
-                 "00:00:20.000 --> 00:00:30.000\n"
-                 "Start times should be consecutive.\n"
-                 "\n"
-                 "00:00:10.000 --> 00:00:20.000\n"
-                 "This cue starts before the previous one.\n")
+                "\n"
+                "00:00:20.000 --> 00:00:30.000\n"
+                "Start times should be consecutive.\n"
+                "\n"
+                "00:00:10.000 --> 00:00:20.000\n"
+                "This cue starts before the previous one.\n"
 
             )
         except CaptionReadError:

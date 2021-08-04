@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # pycaption documentation build configuration file, created by
 # sphinx-quickstart on Thu Feb 12 12:18:37 2015.

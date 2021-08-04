@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 
 SAMPLE_SCC_CREATED_DFXP_WITH_WRONGLY_CLOSING_SPANS = """\

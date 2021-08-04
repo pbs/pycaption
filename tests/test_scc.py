@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import unittest
 from pycaption.geometry import UnitEnum, HorizontalAlignmentEnum, VerticalAlignmentEnum
 from pycaption.scc.specialized_collections import (InstructionNodeCreator,
@@ -358,7 +357,7 @@ class InterpretableNodeCreatorTestCase(unittest.TestCase):
         self.assertTrue(result[16].sets_italics_off())
 
 
-class CaptionDummy(object):
+class CaptionDummy:
     """Mock for pycaption.base.Caption
     """
     def __init__(self, start=0, end=0, nodes=(1, 2)):

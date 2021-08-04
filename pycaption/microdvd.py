@@ -8,7 +8,7 @@ import re
 
 class MicroDVDReader(BaseReader):
     def detect(self, content):
-        return re.match("{\d+}{\d+}", content) is not None
+        return re.match(r"{\d+}{\d+}", content) is not None
 
     def read(self, content, lang=DEFAULT_LANGUAGE_CODE):
         if not isinstance(content,  str):

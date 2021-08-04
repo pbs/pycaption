@@ -1,5 +1,3 @@
-
-
 class CaptionReadError(Exception):
     """
     Generic error raised when the reading of the caption file failed.

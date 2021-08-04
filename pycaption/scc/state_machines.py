@@ -1,7 +1,7 @@
 from ..exceptions import CaptionReadSyntaxError
 
 
-class _PositioningTracker(object):
+class _PositioningTracker:
     """Helps determine the positioning of a node, having kept track of
     positioning-related commands.
     """
@@ -95,7 +95,7 @@ class DefaultProvidingPositionTracker(_PositioningTracker):
         :type default: tuple[int]
         :param default: a tuple of ints (row, column) to use as fallback
         """
-        super(DefaultProvidingPositionTracker, self).__init__(positioning)
+        super().__init__(positioning)
 
         if default:
             self.default = default
@@ -108,7 +108,7 @@ class DefaultProvidingPositionTracker(_PositioningTracker):
         """
         try:
             return (
-                super(DefaultProvidingPositionTracker, self).
+                super().
                 get_current_position()
             )
         except CaptionReadSyntaxError:
@@ -124,5 +124,5 @@ class DefaultProvidingPositionTracker(_PositioningTracker):
         if positioning:
             self.default = positioning
 
-        super(DefaultProvidingPositionTracker, self).update_positioning(
+        super().update_positioning(
             positioning)

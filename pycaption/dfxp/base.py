@@ -47,7 +47,7 @@ DFXP_DEFAULT_REGION_ID = 'bottom'
 class DFXPReader(BaseReader):
 
     def __init__(self, *args, **kw):
-        super(DFXPReader, self).__init__(*args, **kw)
+        super().__init__(*args, **kw)
         self.read_invalid_positioning = (
             kw.get('read_invalid_positioning', False))
         self.nodes = []
@@ -146,7 +146,7 @@ class DFXPReader(BaseReader):
 
             secsplit = timesplit[2].split('.')
             if len(timesplit) > 3:
-                secsplit.append((float(timesplit[3]) / 30 * 1000000))
+                secsplit.append(float(timesplit[3]) / 30 * 1000000)
             while len(secsplit[1]) < 3:
                 secsplit[1] += '0'
             microseconds = (int(timesplit[0]) * 3600000000 +
@@ -179,7 +179,7 @@ class DFXPReader(BaseReader):
         # convert text
         if isinstance(tag, NavigableString):
             # strips indentation whitespace only
-            pattern = re.compile("^(?:[\n\r]+\s*)?(.+)")
+            pattern = re.compile("^(?:[\n\r]+\\s*)?(.+)")
             result = pattern.search(tag)
             if result:
                 # Escaping/unescaping xml entities is the responsibility of the
@@ -275,7 +275,7 @@ class DFXPWriter(BaseWriter):
         self.p_style = False
         self.open_span = False
         self.region_creator = None
-        super(DFXPWriter, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     def write(self, caption_set, force=''):
         """Converts a CaptionSet into an equivalent corresponding DFXP file
@@ -517,7 +517,7 @@ class LayoutAwareDFXPParser(BeautifulSoup):
         # Work around for lack of '&apos;' support in html.parser
         markup = markup.replace("&apos;", "'")
 
-        super(LayoutAwareDFXPParser, self).__init__(
+        super().__init__(
             markup, features, builder, parse_only, from_encoding, **kwargs)
 
         self.read_invalid_positioning = read_invalid_positioning
@@ -658,7 +658,7 @@ class LayoutAwareDFXPParser(BeautifulSoup):
         return Layout
 
 
-class LayoutInfoScraper(object):
+class LayoutInfoScraper:
     """Encapsulates the methods for determining the layout information about
     an element (with the element's region playing an important role).
     """
@@ -929,7 +929,7 @@ class LayoutInfoScraper(object):
         return extent
 
 
-class RegionCreator(object):
+class RegionCreator:
     """Creates the DFXP regions, and knows how retrieve them, for assigning
     region IDs to every element
 
@@ -1316,8 +1316,8 @@ class _OrderedSet(list):
     """
     def add(self, p_object):
         if p_object not in self:
-            super(_OrderedSet, self).append(p_object)
+            super().append(p_object)
 
     def discard(self, value):
         if value in self:
-            super(_OrderedSet, self).remove(value)
+            super().remove(value)

@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 SAMPLE_WEBVTT = """WEBVTT
 
 00:09.209 --> 00:12.312
