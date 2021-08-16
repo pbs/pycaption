@@ -48,7 +48,7 @@ class SinglePositioningDFXPWriter(DFXPWriter):
 
         :type captions_set: pycaption.base.CaptionSet
         :param force: only write this language, if available in the CaptionSet
-        :rtype: unicode
+        :rtype: str
         """
         captions_set = self._create_single_positioning_caption_set(
             captions_set, self.default_positioning)
@@ -123,7 +123,7 @@ class LegacyDFXPWriter(BaseWriter):
 
         for lang in langs:
             div = dfxp.new_tag('div')
-            div['xml:lang'] = '%s' % lang
+            div['xml:lang'] = lang
 
             for caption in caption_set.get_captions(lang):
                 if caption.style:
@@ -209,12 +209,12 @@ class LegacyDFXPWriter(BaseWriter):
 
             content_with_style = self._recreate_style(node.content, dfxp)
             for style, value in list(content_with_style.items()):
-                styles += ' %s="%s"' % (style, value)
+                styles += f' {style}="{value}"'
 
             if styles:
                 if self.open_span:
                     line = line.rstrip() + '</span> '
-                line += '<span%s>' % styles
+                line += f'<span{styles}>'
                 self.open_span = True
 
         elif self.open_span:

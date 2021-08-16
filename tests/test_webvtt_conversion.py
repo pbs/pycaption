@@ -1,8 +1,5 @@
 import unittest
 
-from builtins import str
-import six
-
 from pycaption import (
     WebVTTReader, WebVTTWriter, SRTWriter, SAMIWriter, DFXPWriter, MicroDVDWriter)
 
@@ -24,7 +21,7 @@ class WebVTTtoWebVTTTestCase(unittest.TestCase, WebVTTTestingMixIn):
     def test_webvtt_to_webvtt_conversion(self):
         caption_set = WebVTTReader().read(SAMPLE_WEBVTT)
         results = WebVTTWriter().write(caption_set)
-        self.assertTrue(isinstance(results, six.text_type))
+        self.assertTrue(isinstance(results, str))
         self.assertWebVTTEquals(SAMPLE_WEBVTT_FROM_WEBVTT, results)
 
     def test_cue_settings_are_kept(self):
@@ -50,7 +47,7 @@ class WebVTTtoSAMITestCase(unittest.TestCase, SAMITestingMixIn):
     def test_webvtt_to_sami_conversion(self):
         caption_set = WebVTTReader().read(SAMPLE_WEBVTT)
         results = SAMIWriter().write(caption_set)
-        self.assertTrue(isinstance(results, six.text_type))
+        self.assertTrue(isinstance(results, str))
         self.assertSAMIEquals(SAMPLE_SAMI, results)
 
 
@@ -59,7 +56,7 @@ class WebVTTtoDFXPTestCase(unittest.TestCase, DFXPTestingMixIn):
     def test_webvtt_to_dfxp_conversion(self):
         caption_set = WebVTTReader().read(SAMPLE_WEBVTT)
         results = DFXPWriter().write(caption_set)
-        self.assertTrue(isinstance(results, six.text_type))
+        self.assertTrue(isinstance(results, str))
         self.assertDFXPEquals(
             SAMPLE_DFXP, results, ignore_styling=True, ignore_spans=True
         )
@@ -70,7 +67,7 @@ class WebVTTtoSRTTestCase(unittest.TestCase, SRTTestingMixIn):
     def test_webvtt_to_srt_conversion(self):
         caption_set = WebVTTReader().read(SAMPLE_WEBVTT)
         results = SRTWriter().write(caption_set)
-        self.assertTrue(isinstance(results, six.text_type))
+        self.assertTrue(isinstance(results, str))
         self.assertSRTEquals(SAMPLE_SRT, results)
 
 
@@ -79,5 +76,5 @@ class WebVTTtoMicroDVDTestCase(unittest.TestCase, MicroDVDTestingMixIn):
     def test_webvtt_to_microdvd_conversion(self):
         caption_set = WebVTTReader().read(SAMPLE_WEBVTT)
         results = MicroDVDWriter().write(caption_set)
-        self.assertTrue(isinstance(results, six.text_type))
+        self.assertTrue(isinstance(results, str))
         self.assertMicroDVDEquals(SAMPLE_MICRODVD, results)

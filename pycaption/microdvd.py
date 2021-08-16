@@ -11,7 +11,7 @@ class MicroDVDReader(BaseReader):
         return re.match("{\d+}{\d+}", content) is not None
 
     def read(self, content, lang=DEFAULT_LANGUAGE_CODE):
-        if type(content) != str:
+        if not isinstance(content,  str):
             raise InvalidInputError('The content is not a unicode string.')
 
         lines = content.splitlines()
@@ -83,7 +83,7 @@ class MicroDVDWriter(BaseWriter):
         for caption in captions:
             start = self._microtoframes(caption.start)
             end = self._microtoframes(caption.end)
-            sub += '{%s}{%s}' % (start, end)
+            sub += f'{{{start}}}{{{end}}}'
 
             new_content = ''
             for node in caption.nodes:
@@ -103,7 +103,7 @@ class MicroDVDWriter(BaseWriter):
 
     def _recreate_line(self, sub, line):
         if line.type_ == CaptionNode.TEXT:
-            return sub + '%s' % line.content
+            return sub + line.content
         elif line.type_ == CaptionNode.BREAK:
             return sub + '|'
         else:

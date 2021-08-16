@@ -6,7 +6,7 @@ Readers to read content into a CaptionSet object,
 and then use one of the Writers to output the CaptionSet into
 captions of your desired format.
 
-Requires Python 2.7.
+Requires Python 3.6+ (up to Python 3.9).
 
 Turn a caption into multiple caption outputs:
 
@@ -66,7 +66,7 @@ Example: Convert from SAMI to DFXP
 
     from pycaption import SAMIReader, DFXPWriter
 
-    sami = u'''<SAMI><HEAD><TITLE>NOVA3213</TITLE><STYLE TYPE="text/css">
+    sami = '''<SAMI><HEAD><TITLE>NOVA3213</TITLE><STYLE TYPE="text/css">
     <!--
     P { margin-left:  1pt;
         margin-right: 1pt;

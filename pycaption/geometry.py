@@ -9,8 +9,6 @@ CONVENTIONS:
 """
 from enum import Enum
 
-import six
-
 from .exceptions import RelativizationError
 
 
@@ -80,9 +78,7 @@ class Alignment(object):
         )
 
     def __repr__(self):
-        return "<Alignment ({horizontal} {vertical})>".format(
-            horizontal=self.horizontal, vertical=self.vertical
-        )
+        return f"<Alignment ({self.horizontal} {self.vertical})>"
 
     def serialized(self):
         """Returns a tuple of the useful information regarding this object
@@ -129,9 +125,9 @@ class TwoDimensionalObject(object):
         """Instantiate the class from a value of the type "4px" or "5%"
         or any number concatenated with a measuring unit (member of UnitEnum)
 
-        :type attribute: unicode
+        :type attribute: str
         """
-        horizontal, vertical = six.text_type(attribute).split(' ')
+        horizontal, vertical = attribute.split(' ')
         horizontal = Size.from_string(horizontal)
         vertical = Size.from_string(vertical)
 
@@ -169,9 +165,7 @@ class Stretch(TwoDimensionalObject):
         )
 
     def __repr__(self):
-        return '<Stretch ({horizontal}, {vertical})>'.format(
-            horizontal=self.horizontal, vertical=self.vertical
-        )
+        return f'<Stretch ({self.horizontal}, {self.vertical})>'
 
     def serialized(self):
         """Returns a tuple of the useful attributes of this object"""
@@ -199,7 +193,7 @@ class Stretch(TwoDimensionalObject):
         return True if self.horizontal or self.vertical else False
 
     def to_xml_attribute(self, **kwargs):
-        """Returns a unicode representation of this object as an xml attribute
+        """Returns a string representation of this object as an xml attribute
         """
         return '{horizontal} {vertical}'.format(
             horizontal=self.horizontal.to_xml_attribute(),
@@ -372,9 +366,7 @@ class Point(TwoDimensionalObject):
                     Point(max(p1.x, p2.x), max(p1.y, p2.y)))
 
     def __repr__(self):
-        return '<Point ({x}, {y})>'.format(
-            x=self.x, y=self.y
-        )
+        return f'<Point ({self.x}, {self.y})>'
 
     def serialized(self):
         """Returns the "useful" values of this object.
@@ -403,13 +395,11 @@ class Point(TwoDimensionalObject):
         return True if self.x or self.y else False
 
     def to_xml_attribute(self, **kwargs):
-        """Returns a unicode representation of this object as an xml attribute
+        """Returns a string representation of this object as an xml attribute
         """
-        return '{x} {y}'.format(
-            x=self.x.to_xml_attribute(), y=self.y.to_xml_attribute())
+        return f'{self.x.to_xml_attribute()} {self.y.to_xml_attribute()}'
 
 
-@six.python_2_unicode_compatible
 class Size(object):
     """Ties together a number with a unit, to represent a size.
 
@@ -518,7 +508,7 @@ class Size(object):
         size object
 
         :param string: a number concatenated to any of the UnitEnum members.
-        :type string: unicode
+        :type string: str
         :rtype: Size
         """
 
@@ -541,36 +531,33 @@ class Size(object):
             if value is None:
                 raise ValueError(
                     """Couldn't recognize the value "{value}" as a number"""
-                        .format(value=raw_number)
+                    .format(value=raw_number)
                 )
             instance = cls(value, unit)
             return instance
         else:
             raise ValueError(
                 "The specified value is not valid because its unit "
-                "is not recognized: {value}. "
-                "The only supported units are: {supported}"
-                    .format(value=raw_number,
-                            supported=', '.join(UnitEnum._member_map_))
+                f"is not recognized: {raw_number}. "
+                "The only supported units are: "
+                f"{', '.join(UnitEnum._member_map_)}"
             )
 
     def __repr__(self):
-        return '<Size ({value} {unit})>'.format(
-            value=self.value, unit=self.unit.value
-        )
+        return f'<Size ({self.value} {self.unit.value})>'
 
     def __str__(self):
         value = round(self.value, 2)
         if value.is_integer():
-            s = "{}".format(int(value))
+            s = f"{int(value)}"
         else:
-            s = "{:.2f}".format(value).rstrip('0').rstrip('.')
-        return "{}{}".format(s, self.unit.value)
+            s = f"{value:.2f}".rstrip('0').rstrip('.')
+        return f"{s}{self.unit.value}"
 
     def to_xml_attribute(self, **kwargs):
-        """Returns a unicode representation of this object, as an xml attribute
+        """Returns a string representation of this object, as an xml attribute
         """
-        return six.text_type(self)
+        return str(self)
 
     def serialized(self):
         """Returns the "useful" values of this object"""
@@ -637,7 +624,7 @@ class Padding(object):
         :param attribute: a string like object, representing a dfxp attr. value
         :return: a Padding object
         """
-        values_list = six.text_type(attribute).split(' ')
+        values_list = attribute.split(' ')
         sizes = []
 
         for value in values_list:
@@ -652,19 +639,16 @@ class Padding(object):
         elif len(sizes) == 4:
             return cls(sizes[0], sizes[2], sizes[3], sizes[1])
         else:
-            raise ValueError('The provided value "{value}" could not be '
+            raise ValueError(f'The provided value "{attribute}" could not be '
                              "parsed into the a padding. Check out "
                              "http://www.w3.org/TR/ttaf1-dfxp/"
                              "#style-attribute-padding for the definition "
-                             "and examples".format(value=attribute))
+                             "and examples")
 
     def __repr__(self):
         return (
-            "<Padding (before: {before}, after: {after}, start: {start}, "
-            "end: {end})>".format(
-                before=self.before, after=self.after, start=self.start,
-                end=self.end
-            )
+            f"<Padding (before: {self.before}, after: {self.after}, "
+            f"start: {self.start}, end: {self.end})>"
         )
 
     def serialized(self):
@@ -699,7 +683,7 @@ class Padding(object):
     def to_xml_attribute(
             self, attribute_order=('before', 'end', 'after', 'start'),
             **kwargs):
-        """Returns a unicode representation of this object as an xml attribute
+        """Returns a string representation of this object as an xml attribute
 
         TODO - should extend the attribute_order tuple to contain 4 tuples,
         so we can reduce the output length to 3, 2 or 1 element.
@@ -768,7 +752,7 @@ class Layout(object):
 
         :type alignment: Alignment
 
-        :type webvtt_positioning: unicode
+        :type webvtt_positioning: str
         :param webvtt_positioning: A string with the raw WebVTT cue settings.
             This is used so that WebVTT positioning isn't lost on conversion
             from WebVTT to WebVTT. It is needed only because pycaption
@@ -799,11 +783,8 @@ class Layout(object):
 
     def __repr__(self):
         return (
-            "<Layout (origin: {origin}, extent: {extent}, "
-            "padding: {padding}, alignment: {alignment})>".format(
-                origin=self.origin, extent=self.extent, padding=self.padding,
-                alignment=self.alignment
-            )
+            f"<Layout (origin: {self.origin}, extent: {self.extent}, "
+            f"padding: {self.padding}, alignment: {self.alignment})>"
         )
 
     def serialized(self):
