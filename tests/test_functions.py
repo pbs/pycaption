@@ -1,17 +1,13 @@
-import unittest
-
 from pycaption import DFXPReader
 from pycaption.base import merge_concurrent_captions
-from tests.samples.dfxp import DFXP_WITH_CONCURRENT_CAPTIONS
 
 
-class FunctionsTestCase(unittest.TestCase):
-
-    def test_merge_concurrent_captions(self):
-        caption_set = DFXPReader().read(DFXP_WITH_CONCURRENT_CAPTIONS)
+class TestFunctions:
+    def test_merge_concurrent_captions(self, dfxp_with_concurrent_captions):
+        initial_caption_set = DFXPReader().read(dfxp_with_concurrent_captions)
+        initial_captions = initial_caption_set.get_captions('en-US')
+        caption_set = merge_concurrent_captions(initial_caption_set)
         captions = caption_set.get_captions('en-US')
-        self.assertEqual(len(captions), 5)
 
-        caption_set = merge_concurrent_captions(caption_set)
-        captions = caption_set.get_captions('en-US')
-        self.assertEqual(len(captions), 3)
+        assert len(initial_captions) == 5
+        assert len(captions) == 3

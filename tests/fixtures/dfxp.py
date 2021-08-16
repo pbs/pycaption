@@ -1,4 +1,9 @@
-SAMPLE_DFXP = """\
+import pytest
+
+
+@pytest.fixture(scope="session")
+def sample_dfxp():
+    return """\
 <?xml version="1.0" encoding="utf-8"?>
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml"
     xmlns:tts="http://www.w3.org/ns/ttml#styling">
@@ -45,7 +50,10 @@ SAMPLE_DFXP = """\
  </body>
 </tt>"""
 
-SAMPLE_DFXP_WITH_INLINE_STYLE = """
+
+@pytest.fixture(scope="session")
+def sample_dfxp_with_inline_style():
+    return """
 <?xml version="1.0" encoding="utf-8"?>
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml"
     xmlns:tts="http://www.w3.org/ns/ttml#styling">
@@ -72,7 +80,10 @@ SAMPLE_DFXP_WITH_INLINE_STYLE = """
 </tt>
 """
 
-SAMPLE_DFXP_WITH_DEFINED_STYLE = """
+
+@pytest.fixture(scope="session")
+def sample_dfxp_with_defined_style():
+    return """
 <?xml version="1.0" encoding="utf-8"?>
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml"
     xmlns:tts="http://www.w3.org/ns/ttml#styling">
@@ -100,7 +111,10 @@ SAMPLE_DFXP_WITH_DEFINED_STYLE = """
 </tt>
 """
 
-SAMPLE_DFXP_WITH_INHERITED_STYLE = """
+
+@pytest.fixture(scope="session")
+def sample_dfxp_with_inherited_style():
+    return """
 <?xml version="1.0" encoding="utf-8"?>
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml"
     xmlns:tts="http://www.w3.org/ns/ttml#styling">
@@ -133,7 +147,10 @@ SAMPLE_DFXP_WITH_INHERITED_STYLE = """
 </tt>
 """
 
-SAMPLE_DFXP_WITHOUT_REGION_AND_STYLE = """
+
+@pytest.fixture(scope="session")
+def sample_dfxp_without_region_and_style():
+    return """
 <?xml version="1.0" encoding="utf-8"?>
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml"
     xmlns:tts="http://www.w3.org/ns/ttml#styling">
@@ -173,7 +190,10 @@ SAMPLE_DFXP_WITHOUT_REGION_AND_STYLE = """
  </body>
 </tt>"""
 
-SAMPLE_DFXP_WITH_POSITIONING = """<?xml version="1.0" encoding="utf-8"?>
+
+@pytest.fixture(scope="session")
+def sample_dfxp_with_positioning():
+    return """<?xml version="1.0" encoding="utf-8"?>
 <tt xml:lang="en-US"
     xmlns="http://www.w3.org/ns/ttml"
     xmlns:tts='http://www.w3.org/ns/ttml#styling'
@@ -208,7 +228,10 @@ SAMPLE_DFXP_WITH_POSITIONING = """<?xml version="1.0" encoding="utf-8"?>
 </body>
 </tt>"""
 
-SAMPLE_DFXP_WITH_RELATIVIZED_POSITIONING = """<?xml version="1.0" encoding="utf-8"?>
+
+@pytest.fixture(scope="session")
+def sample_dfxp_with_relativized_positioning():
+    return """<?xml version="1.0" encoding="utf-8"?>
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling">
  <head>
   <styling/>
@@ -239,7 +262,10 @@ SAMPLE_DFXP_WITH_RELATIVIZED_POSITIONING = """<?xml version="1.0" encoding="utf-
  </body>
 </tt>"""
 
-SAMPLE_DFXP_EMPTY = """
+
+@pytest.fixture(scope="session")
+def sample_dfxp_empty():
+    return """
 <?xml version="1.0" encoding="utf-8"?>
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml"
     xmlns:tts="http://www.w3.org/ns/ttml#styling">
@@ -258,7 +284,10 @@ SAMPLE_DFXP_EMPTY = """
 </tt>
 """
 
-SAMPLE_DFXP_SYNTAX_ERROR = """
+
+@pytest.fixture(scope="session")
+def sample_dfxp_syntax_error():
+    return """
 <?xml version="1.0" encoding="UTF-16"?>
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml">
 <body>
@@ -270,7 +299,10 @@ SAMPLE_DFXP_SYNTAX_ERROR = """
 </tt>
 """
 
-SAMPLE_DFXP_FROM_SAMI_WITH_POSITIONING = """\
+
+@pytest.fixture(scope="session")
+def sample_dfxp_from_sami_with_positioning():
+    return """\
 <?xml version="1.0" encoding="utf-8"?>
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml"
     xmlns:tts="http://www.w3.org/ns/ttml#styling">
@@ -318,7 +350,10 @@ SAMPLE_DFXP_FROM_SAMI_WITH_POSITIONING = """\
  </body>
 </tt>"""
 
-SAMPLE_DFXP_LONG_CUE = """<?xml version="1.0" encoding="utf-8"?>
+
+@pytest.fixture(scope="session")
+def sample_dfxp_long_cue():
+    return """<?xml version="1.0" encoding="utf-8"?>
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling">
  <head>
   <styling>
@@ -345,7 +380,10 @@ SAMPLE_DFXP_LONG_CUE = """<?xml version="1.0" encoding="utf-8"?>
 </tt>
 """
 
-SAMPLE_DFXP_LONG_CUE_FIT_TO_SCREEN = """<?xml version="1.0" encoding="utf-8"?>
+
+@pytest.fixture(scope="session")
+def sample_dfxp_long_cue_fit_to_screen():
+    return """<?xml version="1.0" encoding="utf-8"?>
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling">
  <head>
   <styling>
@@ -371,7 +409,10 @@ SAMPLE_DFXP_LONG_CUE_FIT_TO_SCREEN = """<?xml version="1.0" encoding="utf-8"?>
  </body>
 </tt>"""
 
-SAMPLE_DFXP_FROM_SAMI_WITH_MARGINS = """<?xml version="1.0" encoding="utf-8"?>
+
+@pytest.fixture(scope="session")
+def sample_dfxp_from_sami_with_margins():
+    return """<?xml version="1.0" encoding="utf-8"?>
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling">
  <head>
   <styling>
@@ -391,7 +432,10 @@ SAMPLE_DFXP_FROM_SAMI_WITH_MARGINS = """<?xml version="1.0" encoding="utf-8"?>
  </body>
 </tt>"""
 
-SAMPLE_DFXP_FROM_SAMI_WITH_LANG_MARGINS = """<?xml version="1.0" encoding="utf-8"?>
+
+@pytest.fixture(scope="session")
+def sample_dfxp_from_sami_with_lang_margins():
+    return """<?xml version="1.0" encoding="utf-8"?>
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling">
  <head>
   <styling>
@@ -411,7 +455,10 @@ SAMPLE_DFXP_FROM_SAMI_WITH_LANG_MARGINS = """<?xml version="1.0" encoding="utf-8
  </body>
 </tt>"""
 
-SAMPLE_DFXP_FROM_SAMI_WITH_SPAN = """<?xml version="1.0" encoding="utf-8"?>
+
+@pytest.fixture(scope="session")
+def sample_dfxp_from_sami_with_span():
+    return """<?xml version="1.0" encoding="utf-8"?>
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling">
  <head>
   <styling>
@@ -430,7 +477,10 @@ SAMPLE_DFXP_FROM_SAMI_WITH_SPAN = """<?xml version="1.0" encoding="utf-8"?>
  </body>
 </tt>"""
 
-SAMPLE_DFXP_FROM_SAMI_WITH_BAD_SPAN_ALIGN = """<?xml version="1.0" encoding="utf-8"?>
+
+@pytest.fixture(scope="session")
+def sample_dfxp_from_sami_with_bad_span_align():
+    return """<?xml version="1.0" encoding="utf-8"?>
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling">
  <head>
   <styling>
@@ -450,7 +500,10 @@ SAMPLE_DFXP_FROM_SAMI_WITH_BAD_SPAN_ALIGN = """<?xml version="1.0" encoding="utf
  </body>
 </tt>"""
 
-DFXP_STYLE_REGION_ALIGN_CONFLICT = """<?xml version="1.0" encoding="utf-8"?>
+
+@pytest.fixture(scope="session")
+def dfxp_style_region_align_conflict():
+    return """<?xml version="1.0" encoding="utf-8"?>
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling">
  <head>
   <styling>
@@ -474,7 +527,10 @@ DFXP_STYLE_REGION_ALIGN_CONFLICT = """<?xml version="1.0" encoding="utf-8"?>
 </tt>
 """
 
-SAMPLE_DFXP_INVALID_BUT_SUPPORTED_POSITIONING_INPUT = """\
+
+@pytest.fixture(scope="session")
+def sample_dfxp_invalid_but_supported_positioning_input():
+    return """\
 <?xml version="1.0" encoding="utf-8"?>
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml"
     xmlns:tts="http://www.w3.org/ns/ttml#styling">
@@ -504,7 +560,10 @@ SAMPLE_DFXP_INVALID_BUT_SUPPORTED_POSITIONING_INPUT = """\
  </body>
 </tt>"""
 
-SAMPLE_DFXP_INVALID_BUT_SUPPORTED_POSITIONING_OUTPUT = """\
+
+@pytest.fixture(scope="session")
+def sample_dfxp_invalid_but_supported_positioning_output():
+    return """\
 <?xml version="1.0" encoding="utf-8"?>
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling">
  <head>
@@ -539,7 +598,10 @@ SAMPLE_DFXP_INVALID_BUT_SUPPORTED_POSITIONING_OUTPUT = """\
  </body>
 </tt>"""
 
-SAMPLE_DFXP_MULTIPLE_REGIONS_INPUT = """
+
+@pytest.fixture(scope="session")
+def sample_dfxp_multiple_regions_input():
+    return """
 <?xml version="1.0" encoding="utf-8"?>
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml"
     xmlns:tts="http://www.w3.org/ns/ttml#styling">
@@ -585,7 +647,10 @@ SAMPLE_DFXP_MULTIPLE_REGIONS_INPUT = """
 </tt>
 """
 
-SAMPLE_DFXP_MULTIPLE_REGIONS_OUTPUT = """\
+
+@pytest.fixture(scope="session")
+def sample_dfxp_multiple_regions_output():
+    return """\
 <?xml version="1.0" encoding="utf-8"?>
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling">
  <head>
@@ -622,7 +687,10 @@ SAMPLE_DFXP_MULTIPLE_REGIONS_OUTPUT = """\
  </body>
 </tt>"""
 
-SAMPLE_DFXP_TO_RENDER_WITH_ONLY_DEFAULT_POSITIONING_INPUT = """\
+
+@pytest.fixture(scope="session")
+def sample_dfxp_to_render_with_only_default_positioning_input():
+    return """\
 <?xml version="1.0" encoding="utf-8"?>
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling">
  <head>
@@ -658,8 +726,11 @@ SAMPLE_DFXP_TO_RENDER_WITH_ONLY_DEFAULT_POSITIONING_INPUT = """\
 # tags. It's a feature that should affect only only those players that don't
 # conform to the specs.
 
+
 # UNUSED SAMPLE
-SAMPLE_DFXP_TO_DFXP_OUTPUT = """\
+@pytest.fixture(scope="session")
+def sample_dfxp_to_dfxp_output():
+    return """\
 <?xml version="1.0" encoding="utf-8"?>
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling">
  <head>
@@ -708,7 +779,10 @@ SAMPLE_DFXP_TO_DFXP_OUTPUT = """\
  </body>
 </tt>"""
 
-SAMPLE_DFXP_OUTPUT = """\
+
+@pytest.fixture(scope="session")
+def sample_dfxp_output():
+    return """\
 <?xml version="1.0" encoding="utf-8"?>
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling">
  <head>
@@ -754,7 +828,10 @@ SAMPLE_DFXP_OUTPUT = """\
  </body>
 </tt>"""
 
-SAMPLE_DFXP_STYLE_TAG_WITH_NO_XML_ID_INPUT = """\
+
+@pytest.fixture(scope="session")
+def sample_dfxp_style_tag_with_no_xml_id_input():
+    return """\
 <?xml version="1.0" encoding="utf-8"?>
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling">
  <head>
@@ -783,7 +860,10 @@ SAMPLE_DFXP_STYLE_TAG_WITH_NO_XML_ID_INPUT = """\
 </tt>
 """
 
-SAMPLE_DFXP_STYLE_TAG_WITH_NO_XML_ID_OUTPUT = """\
+
+@pytest.fixture(scope="session")
+def sample_dfxp_style_tag_with_no_xml_id_output():
+    return """\
 <?xml version="1.0" encoding="utf-8"?>
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling">
  <head>
@@ -809,7 +889,10 @@ SAMPLE_DFXP_STYLE_TAG_WITH_NO_XML_ID_OUTPUT = """\
  </body>
 </tt>"""
 
-SAMPLE_DFXP_FROM_SCC_OUTPUT = """<?xml version="1.0" encoding="utf-8"?>
+
+@pytest.fixture(scope="session")
+def sample_dfxp_from_scc_output():
+    return """<?xml version="1.0" encoding="utf-8"?>
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling">
  <head>
   <styling>
@@ -879,7 +962,10 @@ SAMPLE_DFXP_FROM_SCC_OUTPUT = """<?xml version="1.0" encoding="utf-8"?>
  </body>
 </tt>"""
 
-SAMPLE_DFXP_WITH_PROPERLY_CLOSING_SPANS_OUTPUT = """\
+
+@pytest.fixture(scope="session")
+def sample_dfxp_with_properly_closing_spans_output():
+    return """\
 <?xml version="1.0" encoding="utf-8"?>
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling">
  <head>
@@ -928,7 +1014,10 @@ SAMPLE_DFXP_WITH_PROPERLY_CLOSING_SPANS_OUTPUT = """\
  </body>
 </tt>"""
 
-SAMPLE_DFXP_FOR_LEGACY_WRITER_INPUT = """
+
+@pytest.fixture(scope="session")
+def sample_dfxp_for_legacy_writer_input():
+    return """
 <?xml version="1.0" encoding="utf-8"?>
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml"
     xmlns:tts="http://www.w3.org/ns/ttml#styling">
@@ -975,7 +1064,10 @@ SAMPLE_DFXP_FOR_LEGACY_WRITER_INPUT = """
  </body>
 </tt>"""
 
-SAMPLE_DFXP_FOR_LEGACY_WRITER_OUTPUT = """\
+
+@pytest.fixture(scope="session")
+def sample_dfxp_for_legacy_writer_output():
+    return """\
 <?xml version="1.0" encoding="utf-8"?>
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling">
  <head>
@@ -1022,7 +1114,10 @@ SAMPLE_DFXP_FOR_LEGACY_WRITER_OUTPUT = """\
  </body>
 </tt>"""
 
-DFXP_WITH_CONCURRENT_CAPTIONS = """\
+
+@pytest.fixture(scope="session")
+def dfxp_with_concurrent_captions():
+    return """\
 <tt xml:lang="en-US"
     xmlns="http://www.w3.org/ns/ttml"
     xmlns:tts='http://www.w3.org/ns/ttml#styling'
@@ -1054,8 +1149,11 @@ DFXP_WITH_CONCURRENT_CAPTIONS = """\
 </body>
 </tt>"""
 
+
 # 'style_name' is the template parameter to use in str.format
-SAMPLE_DFXP_WITH_TEMPLATED_STYLE = """\
+@pytest.fixture(scope="session")
+def sample_dfxp_with_templated_style():
+    return """\
 <tt xml:lang="en-US"
     xmlns="http://www.w3.org/ns/ttml"
     xmlns:tts='http://www.w3.org/ns/ttml#styling'
@@ -1078,7 +1176,10 @@ SAMPLE_DFXP_WITH_TEMPLATED_STYLE = """\
 </tt>
 """
 
-SAMPLE_DFXP_WITH_ESCAPED_APOSTROPHE = """\
+
+@pytest.fixture(scope="session")
+def sample_dfxp_with_escaped_apostrophe():
+    return """\
 <tt xml:lang="en-US"
     xmlns="http://www.w3.org/ns/ttml"
     xmlns:tts='http://www.w3.org/ns/ttml#styling'
@@ -1097,7 +1198,10 @@ SAMPLE_DFXP_WITH_ESCAPED_APOSTROPHE = """\
 </body>
 </tt>"""
 
-SAMPLE_DFXP_WITH_ALTERNATIVE_TIMING_FORMATS = """\
+
+@pytest.fixture(scope="session")
+def sample_dfxp_with_alternative_timing_formats():
+    return """\
 <tt xml:lang="en-US"
     xmlns="http://www.w3.org/ns/ttml"
     xmlns:tts='http://www.w3.org/ns/ttml#styling'
@@ -1119,7 +1223,10 @@ SAMPLE_DFXP_WITH_ALTERNATIVE_TIMING_FORMATS = """\
 </body>
 </tt>"""
 
-SAMPLE_DFXP_EMPTY_PARAGRAPH = """
+
+@pytest.fixture(scope="session")
+def sample_dfxp_empty_paragraph():
+    return """
 <?xml version="1.0" encoding="UTF-16"?>
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml">
 <body>
@@ -1131,7 +1238,10 @@ SAMPLE_DFXP_EMPTY_PARAGRAPH = """
 </tt>
 """
 
-SAMPLE_DFXP_INCORRECT_TIME_FORMAT = """
+
+@pytest.fixture(scope="session")
+def sample_dfxp_incorrect_time_format():
+    return """
 <?xml version="1.0" encoding="UTF-8"?>
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml">
 <body>
@@ -1142,7 +1252,10 @@ SAMPLE_DFXP_INCORRECT_TIME_FORMAT = """
 </tt>
 """
 
-SAMPLE_DFXP_WITH_FRAME_TIMING = """\
+
+@pytest.fixture(scope="session")
+def sample_dfxp_with_frame_timing():
+    return """\
 <?xml version="1.0" encoding="utf-8"?>
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling">
  <head>
@@ -1161,7 +1274,10 @@ SAMPLE_DFXP_WITH_FRAME_TIMING = """\
  </body>
 </tt>"""
 
-SAMPLE_DFXP_EMPTY_CUE = """\
+
+@pytest.fixture(scope="session")
+def sample_dfxp_empty_cue():
+    return """\
 <?xml version="1.0" encoding="utf-8"?>
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling">
  <head>
@@ -1177,7 +1293,10 @@ SAMPLE_DFXP_EMPTY_CUE = """\
  </body>
 </tt>"""
 
-SAMPLE_DFXP_EMPTY_CUE_OUTPUT = """\
+
+@pytest.fixture(scope="session")
+def sample_dfxp_empty_cue_output():
+    return """\
 <?xml version="1.0" encoding="utf-8"?>
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling">
  <head>
@@ -1198,7 +1317,10 @@ SAMPLE_DFXP_EMPTY_CUE_OUTPUT = """\
  </body>
 </tt>"""
 
-SAMPLE_DFXP_INVALID_POSITIONING_VALUE_TEMPLATE = """\
+
+@pytest.fixture(scope="session")
+def sample_dfxp_invalid_positioning_value_template():
+    return """\
 <?xml version="1.0" encoding="utf-8"?>
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling">
  <head>
@@ -1215,9 +1337,12 @@ SAMPLE_DFXP_INVALID_POSITIONING_VALUE_TEMPLATE = """\
  </body>
 </tt>"""
 
+
 # TODO - notice that there's no "bottom" region specified in the <layout>
 # region, but it's referenced by the <div>. Decide if this is ok enough
-SAMPLE_DFXP_MULTIPLE_CAPTIONS_WITH_THE_SAME_TIMING = """\
+@pytest.fixture(scope="session")
+def sample_dfxp_multiple_captions_with_the_same_timing():
+    return """\
 <?xml version="1.0" encoding="utf-8"?>
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling">
  <head>
@@ -1242,7 +1367,10 @@ SAMPLE_DFXP_MULTIPLE_CAPTIONS_WITH_THE_SAME_TIMING = """\
  </body>
 </tt>"""
 
-SAMPLE_DFXP_WITH_AMPERSAND_CHARACTER = """\
+
+@pytest.fixture(scope="session")
+def sample_dfxp_with_ampersand_character():
+    return """\
 <?xml version="1.0" encoding="utf-8"?>
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling">
  <head>

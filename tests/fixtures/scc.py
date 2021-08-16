@@ -1,6 +1,9 @@
-#
+import pytest
 
-SAMPLE_SCC_CREATED_DFXP_WITH_WRONGLY_CLOSING_SPANS = """\
+
+@pytest.fixture(scope="session")
+def sample_scc_created_dfxp_with_wrongly_closing_spans():
+    return """\
 Scenarist_SCC V1.0
 
 00:01:28;09 9420 942f 94ae 9420 9452 97a2 e3e3 e3e3 e3e3 9470 9723 e3a1 e3a1
@@ -20,13 +23,19 @@ Scenarist_SCC V1.0
 00:01:59;14 9420 942f 94ae 9420 94f4 6464 6464
 """
 
-SCC_THAT_GENERATES_WEBVTT_WITH_PROPER_NEWLINES = """\
+
+@pytest.fixture(scope="session")
+def scc_that_generates_webvtt_with_proper_newlines():
+    return """\
 Scenarist_SCC V1.0
 
 00:21:29;23    9420 9452 6161 94f4 97a2 6262 942c 942f
 """
 
-SAMPLE_SCC_PRODUCES_CAPTIONS_WITH_START_AND_END_TIME_THE_SAME = """\
+
+@pytest.fixture(scope="session")
+def sample_scc_produces_captions_with_start_and_end_time_the_same():
+    return """\
 Scenarist_SCC V1.0
 
 00:01:31;18 9420 9454 6162 9758 97a1 91ae 6261 9170 97a1 e362
@@ -36,7 +45,10 @@ Scenarist_SCC V1.0
 00:01:40;25 942c
 """
 
-SAMPLE_SCC_POP_ON = """Scenarist_SCC V1.0
+
+@pytest.fixture(scope="session")
+def sample_scc_pop_on():
+    return """Scenarist_SCC V1.0
 
 00:00:09:05 94ae 94ae 9420 9420 9470 9470 a820 e3ec efe3 6b20 f4e9 e36b e96e 6720 2980 942c 942c 942f 942f
 
@@ -58,6 +70,7 @@ SAMPLE_SCC_POP_ON = """Scenarist_SCC V1.0
 
 """
 
+
 # 6 captions
 #   2 Pop-On captions.
 #       The first has 3 random positions, and thus 3 captions
@@ -65,7 +78,9 @@ SAMPLE_SCC_POP_ON = """Scenarist_SCC V1.0
 #   2 Roll-Up captions - same comment
 #   2 Paint-on captions - same comment
 #       - the TAB OVER commands are not interpreted (97A1, 97A2, 9723)
-SAMPLE_SCC_MULTIPLE_POSITIONING = """Scenarist_SCC V1.0
+@pytest.fixture(scope="session")
+def sample_scc_multiple_positioning():
+    return """Scenarist_SCC V1.0
 
 00:00:00:16 94ae 94ae 9420 9420 1370 1370 6162 6162 91d6 91d6 e364 e364 927c 927c e5e6 e5e6 942c 942c 942f 942f
 
@@ -83,23 +98,34 @@ SAMPLE_SCC_MULTIPLE_POSITIONING = """Scenarist_SCC V1.0
 
 """
 
+
 # UNUSED SAMPLE
-SAMPLE_SCC_WITH_ITALICS_BKUP = """\
+@pytest.fixture(scope="session")
+def sample_scc_with_italics_bkup():
+    return """\
 Scenarist_SCC V1.0
 
 00:00:00:01 9420 10d0 97a2 91ae 6162 6162 6162 6162 942c 8080 8080 942f
 """
 
-SAMPLE_SCC_WITH_ITALICS = """\
+
+@pytest.fixture(scope="session")
+def sample_scc_with_italics():
+    return """\
 
 00:00:00:01 9420 10d0 97a2 91ae 6162 6162 6162 6162 942c 8080 8080 942f
 """
 
 
-SAMPLE_SCC_EMPTY = """Scenarist_SCC V1.0
+@pytest.fixture(scope="session")
+def sample_scc_empty():
+    return """Scenarist_SCC V1.0
 """
 
-SAMPLE_SCC_ROLL_UP_RU2 = """\
+
+@pytest.fixture(scope="session")
+def sample_scc_roll_up_ru2():
+    return """\
 Scenarist_SCC V1.0
 00:00:00;22    9425 9425 94ad 94ad 9470 9470 3e3e 3e20 c849 ae80
 
@@ -135,7 +161,9 @@ Scenarist_SCC V1.0
 """
 
 
-SAMPLE_SCC_PRODUCES_BAD_LAST_END_TIME = """\
+@pytest.fixture(scope="session")
+def sample_scc_produces_bad_last_end_time():
+    return """\
 Scenarist_SCC V1.0
 
 00:23:28;01    9420 94ae 9154 5245 91f4 c1c2 942c
@@ -147,7 +175,10 @@ Scenarist_SCC V1.0
 00:54:29;21    942f
 """
 
-SAMPLE_NO_POSITIONING_AT_ALL_SCC = """\
+
+@pytest.fixture(scope="session")
+def sample_no_positioning_at_all_scc():
+    return """\
 Scenarist_SCC V1.0
 
 00:23:28;01    9420 94ae 5245 c1c2 942c
@@ -159,8 +190,11 @@ Scenarist_SCC V1.0
 00:54:29;21    942f
 """
 
+
 # UNUSED SAMPLE
-SAMPLE_SCC_NOT_EXPLICITLY_SWITCHING_ITALICS_OFF = """\
+@pytest.fixture(scope="session")
+def sample_scc_not_explicitly_switching_italics_off():
+    return """\
 Scenarist_SCC V1.0
 
 00:01:28;09    9420 942f 94ae 9420 9452 97a2 b031 6161 9470 9723 b031 6262
@@ -214,7 +248,10 @@ Scenarist_SCC V1.0
 00:53:03;15    9420 94f4 97a1 94f4 97a1 91ae 31b6 6464
 """
 
-SAMPLE_SCC_NO_EXPLICIT_END_TO_LAST_CAPTION = """\
+
+@pytest.fixture(scope="session")
+def sample_scc_no_explicit_end_to_last_caption():
+    return """\
 Scenarist_SCC V1.0
 
 00:00:00;00    73e9 e329 942f
@@ -224,7 +261,10 @@ Scenarist_SCC V1.0
 00:24:55;14    9420 94ae 9470 97a2 a875 7062 e561 f420 f2ef e36b 206d 7573 e9e3 2980 942f
 """
 
-SAMPLE_SCC_FLASHING_CAPTIONS = """\
+
+@pytest.fixture(scope="session")
+def sample_scc_flashing_captions():
+    return """\
 Scenarist_SCC V1.0
 
 00:00:00;20 9420 9420 942c 942c 942f 942f 9420 9420 9152 9152 4fd5 5220 cec1 5449 4fce c14c 20d0 c152 cbd3 91f2 91f2 c245 4c4f cec7 2054 4f20 c14c 4c20 4f46 20d5 d3ae
@@ -267,7 +307,9 @@ Scenarist_SCC V1.0
 """
 
 
-SAMPLE_SCC_EOC_FIRST_COMMAND = """\
+@pytest.fixture(scope="session")
+def sample_scc_eoc_first_command():
+    return """\
 Scenarist_SCC V1.0
 
 00:00:00;84    942f
@@ -281,19 +323,28 @@ Scenarist_SCC V1.0
 00:25:00;00    942c
 """
 
-SAMPLE_SCC_WITH_EXTENDED_CHARACTERS = """\
+
+@pytest.fixture(scope="session")
+def sample_scc_with_extended_characters():
+    return """\
 Scenarist_SCC V1.0
 
 00:04:36;06	9420 942c 942f 9420 91d6 cdc1 13b0 5254 c8c1 ba80
 """
 
-SAMPLE_SCC_WITH_AMPERSAND_CHARACTER = """\
+
+@pytest.fixture(scope="session")
+def sample_scc_with_ampersand_character():
+    return """\
 Scenarist_SCC V1.0
 
 00:04:36;06	 9420 9420 9152 9152 cdc1 4a4f 5220 46d5 cec4 49ce c720 d052 4fd6 49c4 45c4 20c2 d980 2026
 """
 
-SAMPLE_SCC_MULTIPLE_FORMATS = """\
+
+@pytest.fixture(scope="session")
+def sample_scc_multiple_formats():
+    return """\
 Scenarist_SCC V1.0
 
 00:00:00;00	942c 1c2c
@@ -314,7 +365,10 @@ Scenarist_SCC V1.0
 
 """
 
-SAMPLE_SCC_REPEATED_TAB_OFFSET = """\
+
+@pytest.fixture(scope="session")
+def sample_scc_repeated_tab_offset():
+    return """\
 Scenarist_SCC V1.0
 
 00:00:29:04 9420 1370 97a1 1370 97a1 91ae 5b52 6164 e9ef 20f2 e570 eff2 f4e5 f25d 94d0 97a1 94d0 97a1 91ae 5468 e520 49ad 31b0 20d3 616e f461 20cd ef6e e9e3 6120 46f2 e5e5 f761 7980 9470 97a1 9470 97a1 91ae f7e5 73f4 62ef 756e 6420 e973 20ea 616d 6de5 642c 9420 942c 942f 9420 94d0 97a2 94d0 97a2 91ae 6475 e520 f4ef 2061 20f4 68f2 e5e5 ade3 61f2 2061 e3e3 e964 e56e f480 9470 97a2 9470 97a2 91ae 62ec efe3 6be9 6e67 20ec 616e e573 2031 2061 6e64 2032

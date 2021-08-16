@@ -1,4 +1,9 @@
-SAMPLE_MICRODVD = """{230}{307}( clock ticking )
+import pytest
+
+
+@pytest.fixture(scope="session")
+def sample_microdvd():
+    return """{230}{307}( clock ticking )
 {371}{425}MAN:|When we think|\u266a ...say bow, wow, \u266a
 {425}{468}we have this vision of Einstein
 {468}{522}as an old, wrinkly man|with white hair.
@@ -7,7 +12,10 @@ SAMPLE_MICRODVD = """{230}{307}( clock ticking )
 {805}{905}<LAUGHING & WHOOPS!>
 """
 
-SAMPLE_MICRODVD_2 = """{230}{307}( clock ticking )
+
+@pytest.fixture(scope="session")
+def sample_microdvd_2():
+    return """{230}{307}( clock ticking )
 {371}{425}MAN:|When we think|\u266a ...say bow, wow, \u266a
 {425}{468}we have this vision of Einstein
 {468}{522}|as an old, wrinkly man|with white hair.
@@ -16,16 +24,28 @@ SAMPLE_MICRODVD_2 = """{230}{307}( clock ticking )
 {805}{905}<LAUGHING & WHOOPS!>
 """
 
-SAMPLE_MICRODVD_INVALID_FORMAT = """{230}{307}( clock ticking )
+
+@pytest.fixture(scope="session")
+def sample_microdvd_invalid_format():
+    return """{230}{307}( clock ticking )
 {}{425}{567} MAN:|When we think|\u266a ...say bow, wow, \u266a
 {425}{468}we have this vision of Einstein
 """
 
-MISSING_FPS_SAMPLE_MICRODVD = """{301}{307}( clock ticking )
+
+@pytest.fixture(scope="session")
+def missing_fps_sample_microdvd():
+    return """{301}{307}( clock ticking )
 {0}{0} MAN:|When we think|\u266a ...say bow, wow, \u266a
 """
 
-SAMPLE_MICRODVD_EMPTY = """
+
+@pytest.fixture(scope="session")
+def sample_microdvd_empty():
+    return """
 """
 
-SAMPLE_MICRODVD_EMPTY_CUE_OUTPUT = """{30}{57}abc"""
+
+@pytest.fixture(scope="session")
+def sample_microdvd_empty_cue_output():
+    return """{30}{57}abc"""

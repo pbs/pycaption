@@ -1,0 +1,17 @@
+repos:
+-   repo: git://github.com/pre-commit/pre-commit-hooks
+    rev: v4.0.1
+    hooks:
+    -   id: end-of-file-fixer
+    -   id: trailing-whitespace
+    -   id: debug-statements
+
+-   repo: git://github.com/PyCQA/flake8
+    rev: 3.9.2
+    hooks:
+    -   id: flake8
+        args: [
+                '--exclude=tests/fixtures*',
+                '--ignore=W503,C901',
+                '--max-line-length=80',
+        ]
