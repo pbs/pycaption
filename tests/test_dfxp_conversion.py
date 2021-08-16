@@ -99,8 +99,9 @@ class TestDFXPtoDFXP(DFXPTestingMixIn):
             sample_dfxp_invalid_but_supported_positioning_input
         )
         result = DFXPWriter(
-            relativize=False, fit_to_screen=False, write_inline_positioning=True
-        ).write(caption_set)
+            relativize=False,
+            fit_to_screen=False,
+            write_inline_positioning=True).write(caption_set)
 
         self.assert_dfxp_equals(
             result, sample_dfxp_invalid_but_supported_positioning_output
