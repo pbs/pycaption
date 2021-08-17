@@ -371,17 +371,18 @@ def merge_concurrent_captions(caption_set):
         concurrent_captions = CaptionList()
         merged_captions = CaptionList()
         for caption in captions:
-            if last_caption:
-                last_timespan = last_caption.start, last_caption.end
-                current_timespan = caption.start, caption.end
-                if current_timespan == last_timespan:
-                    concurrent_captions.append(caption)
-                    last_caption = caption
-                    continue
-                else:
-                    merged_captions.append(merge(concurrent_captions))
-            concurrent_captions = [caption]
-            last_caption = caption
+            if caption != None:
+                if last_caption:
+                    last_timespan = last_caption.start, last_caption.end
+                    current_timespan = caption.start, caption.end
+                    if current_timespan == last_timespan:
+                        concurrent_captions.append(caption)
+                        last_caption = caption
+                        continue
+                    else:
+                        merged_captions.append(merge(concurrent_captions))
+                concurrent_captions = [caption]
+                last_caption = caption
 
         if concurrent_captions:
             merged_captions.append(merge(concurrent_captions))
