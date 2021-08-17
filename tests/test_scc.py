@@ -1,52 +1,42 @@
-# -*- coding: utf-8 -*-
-import unittest
-from pycaption.geometry import UnitEnum, HorizontalAlignmentEnum, VerticalAlignmentEnum
-from pycaption.scc.specialized_collections import (InstructionNodeCreator,
-                                                   TimingCorrectingCaptionList)
+import pytest
 
+from pycaption.geometry import (
+    UnitEnum, HorizontalAlignmentEnum, VerticalAlignmentEnum,
+)
+from pycaption.scc.specialized_collections import (
+    InstructionNodeCreator, TimingCorrectingCaptionList,
+)
 from pycaption import SCCReader, CaptionReadNoCaptions, CaptionNode
 from pycaption.scc.state_machines import DefaultProvidingPositionTracker
-
-from tests.samples.scc import (
-    SAMPLE_SCC_PRODUCES_CAPTIONS_WITH_START_AND_END_TIME_THE_SAME,
-    SAMPLE_SCC_POP_ON, SAMPLE_SCC_MULTIPLE_POSITIONING,
-    SAMPLE_SCC_WITH_ITALICS, SAMPLE_SCC_EMPTY, SAMPLE_SCC_ROLL_UP_RU2,
-    SAMPLE_SCC_PRODUCES_BAD_LAST_END_TIME, SAMPLE_NO_POSITIONING_AT_ALL_SCC,
-    SAMPLE_SCC_NO_EXPLICIT_END_TO_LAST_CAPTION, SAMPLE_SCC_EOC_FIRST_COMMAND,
-    SAMPLE_SCC_WITH_EXTENDED_CHARACTERS, SAMPLE_SCC_MULTIPLE_FORMATS,
-    SAMPLE_SCC_REPEATED_TAB_OFFSET
-)
 
 TOLERANCE_MICROSECONDS = 500 * 1000
 
 
-class SCCReaderTestCase(unittest.TestCase):
+class TestSCCReader:
+    def test_detection(self, sample_scc_pop_on):
+        assert SCCReader().detect(sample_scc_pop_on) is True
 
-    def test_detection(self):
-        self.assertTrue(SCCReader().detect(SAMPLE_SCC_POP_ON))
+    def test_caption_length(self, sample_scc_pop_on):
+        captions = SCCReader().read(sample_scc_pop_on)
 
-    def test_caption_length(self):
-        captions = SCCReader().read(SAMPLE_SCC_POP_ON)
+        assert 7 == len(captions.get_captions("en-US"))
 
-        self.assertEqual(7, len(captions.get_captions("en-US")))
-
-    def test_proper_timestamps(self):
-        captions = SCCReader().read(SAMPLE_SCC_POP_ON)
+    def test_proper_timestamps(self, sample_scc_pop_on):
+        captions = SCCReader().read(sample_scc_pop_on)
         paragraph = captions.get_captions("en-US")[2]
 
         delta_start = abs(paragraph.start - 17000000)
         delta_end = abs(paragraph.end - 18752000)
 
-        self.assertTrue(delta_start < TOLERANCE_MICROSECONDS)
-        self.assertTrue(delta_end < TOLERANCE_MICROSECONDS)
+        assert delta_start < TOLERANCE_MICROSECONDS
+        assert delta_end < TOLERANCE_MICROSECONDS
 
-    def test_empty_file(self):
-        self.assertRaises(
-            CaptionReadNoCaptions,
-            SCCReader().read, SAMPLE_SCC_EMPTY)
+    def test_empty_file(self, sample_scc_empty):
+        with pytest.raises(CaptionReadNoCaptions):
+            SCCReader().read(sample_scc_empty)
 
-    def test_scc_positioning_is_read(self):
-        captions = SCCReader().read(SAMPLE_SCC_MULTIPLE_POSITIONING)
+    def test_scc_positioning_is_read(self, sample_scc_multiple_positioning):
+        captions = SCCReader().read(sample_scc_multiple_positioning)
 
         # SCC generates only origin, and we always expect it.
         expected_positioning = [
@@ -61,29 +51,33 @@ class SCCReaderTestCase(unittest.TestCase):
             ((12.5, UnitEnum.PERCENT), (86.66666666666667, UnitEnum.PERCENT)),
             ((75.0, UnitEnum.PERCENT), (6.666666666666667, UnitEnum.PERCENT)),
             ((37.5, UnitEnum.PERCENT), (40.0, UnitEnum.PERCENT)),
-            ((12.5, UnitEnum.PERCENT), (73.33333333333333, UnitEnum.PERCENT))
+            ((12.5, UnitEnum.PERCENT), (73.33333333333333, UnitEnum.PERCENT)),
         ]
         actual_positioning = [
-            caption_.layout_info.origin.serialized() for caption_ in
-            captions.get_captions('en-US')
+            caption_.layout_info.origin.serialized()
+            for caption_ in captions.get_captions('en-US')
         ]
 
-        self.assertEqual(expected_positioning, actual_positioning)
+        assert expected_positioning == actual_positioning
 
-    def test_correct_last_bad_timing(self):
+    def test_correct_last_bad_timing(self,
+                                     sample_scc_produces_bad_last_end_time):
         # This fix was implemented with a hack. The commands for the Pop-on
         # captions will have to be reviewed, but until then this is good enough
-        caption_set = SCCReader().read(SAMPLE_SCC_PRODUCES_BAD_LAST_END_TIME)
+        caption_set = SCCReader().read(sample_scc_produces_bad_last_end_time)
 
-        expected_timings = [(1408266666.6666667, 1469700000.0),
-                            (3208266666.666667, 3269700000.0)]
+        expected_timings = [
+            (1408266666.6666667, 1469700000.0),
+            (3208266666.666667, 3269700000.0),
+        ]
 
         actual_timings = [
             (c_.start, c_.end) for c_ in caption_set.get_captions('en-US')
         ]
-        self.assertEqual(expected_timings, actual_timings)
 
-    def test_italics_are_properly_read(self):
+        assert expected_timings == actual_timings
+
+    def test_italics_are_properly_read(self, sample_scc_with_italics):
         def switches_italics(node):
             """Determine if the current node switches italics on or off, or
             raise ValueError is it's not a style node
@@ -99,18 +93,19 @@ class SCCReaderTestCase(unittest.TestCase):
 
             return node.start
 
-        caption_set = SCCReader().read(SAMPLE_SCC_WITH_ITALICS)
+        caption_set = SCCReader().read(sample_scc_with_italics)
         nodes = caption_set.get_captions('en-US')[0].nodes
 
         # We assert that the text is specified in italics.
         # If Style nodes are replaced, the way these 3 assertions are made
         # will most likely change
-        self.assertEqual(switches_italics(nodes[0]), True)
-        self.assertEqual(switches_italics(nodes[2]), False)
-        self.assertEqual(nodes[1].content, 'abababab')
+        assert switches_italics(nodes[0]) is True
+        assert switches_italics(nodes[2]) is False
+        assert nodes[1].content == 'abababab'
 
-    def test_default_positioning_when_no_positioning_is_specified(self):
-        caption_set = SCCReader().read(SAMPLE_NO_POSITIONING_AT_ALL_SCC)
+    def test_default_positioning_when_no_positioning_is_specified(
+            self, sample_no_positioning_at_all_scc):
+        caption_set = SCCReader().read(sample_no_positioning_at_all_scc)
 
         actual_caption_layouts = [
             caption.layout_info.serialized()
@@ -118,9 +113,11 @@ class SCCReaderTestCase(unittest.TestCase):
         ]
 
         expected_caption_layouts = [
-            (((0.0, UnitEnum.PERCENT), (86.66666666666667, UnitEnum.PERCENT)), None, None,
+            (((0.0, UnitEnum.PERCENT), (86.66666666666667, UnitEnum.PERCENT)),
+             None, None,
              (HorizontalAlignmentEnum.LEFT, VerticalAlignmentEnum.TOP)),
-            (((0.0, UnitEnum.PERCENT), (86.66666666666667, UnitEnum.PERCENT)), None, None,
+            (((0.0, UnitEnum.PERCENT), (86.66666666666667, UnitEnum.PERCENT)),
+             None, None,
              (HorizontalAlignmentEnum.LEFT, VerticalAlignmentEnum.TOP))]
 
         actual_node_layout_infos = [
@@ -129,56 +126,68 @@ class SCCReaderTestCase(unittest.TestCase):
         ]
 
         expected_node_layout_infos = [
-            {0: [(((0.0, UnitEnum.PERCENT), (86.66666666666667, UnitEnum.PERCENT)),
+            {0: [(((0.0, UnitEnum.PERCENT),
+                   (86.66666666666667, UnitEnum.PERCENT)),
                   None,
                   None,
                   (HorizontalAlignmentEnum.LEFT, VerticalAlignmentEnum.TOP))]},
-            {1: [(((0.0, UnitEnum.PERCENT), (86.66666666666667, UnitEnum.PERCENT)),
+            {1: [(((0.0, UnitEnum.PERCENT),
+                   (86.66666666666667, UnitEnum.PERCENT)),
                   None,
                   None,
                   (HorizontalAlignmentEnum.LEFT, VerticalAlignmentEnum.TOP))]}
         ]
 
-        self.assertEqual(expected_node_layout_infos, actual_node_layout_infos)
-        self.assertEqual(expected_caption_layouts, actual_caption_layouts)
+        assert expected_node_layout_infos == actual_node_layout_infos
+        assert expected_caption_layouts == actual_caption_layouts
 
-    def test_timing_is_properly_set_on_split_captions(self):
+    def test_timing_is_properly_set_on_split_captions(
+            self, sample_scc_produces_captions_with_start_and_end_time_the_same
+    ):
         caption_set = SCCReader().read(
-            SAMPLE_SCC_PRODUCES_CAPTIONS_WITH_START_AND_END_TIME_THE_SAME
+            sample_scc_produces_captions_with_start_and_end_time_the_same
         )
-        expected_timings = [('00:01:35.666', '00:01:40.866'),
-                            ('00:01:35.666', '00:01:40.866'),
-                            ('00:01:35.666', '00:01:40.866')]
+        expected_timings = [
+            ('00:01:35.666', '00:01:40.866'),
+            ('00:01:35.666', '00:01:40.866'),
+            ('00:01:35.666', '00:01:40.866'),
+        ]
 
-        actual_timings = [(c_.format_start(), c_.format_end()) for c_ in
-                          caption_set.get_captions('en-US')]
+        actual_timings = [
+            (c_.format_start(), c_.format_end())
+            for c_ in caption_set.get_captions('en-US')
+        ]
 
-        self.assertEqual(expected_timings, actual_timings)
+        assert expected_timings == actual_timings
 
-    def test_removed_extended_characters_ascii_duplicate(self):
-        caption_set = SCCReader().read(SAMPLE_SCC_WITH_EXTENDED_CHARACTERS)
+    def test_removed_extended_characters_ascii_duplicate(
+            self, sample_scc_with_extended_characters):
+        caption_set = SCCReader().read(sample_scc_with_extended_characters)
         nodes = caption_set.get_captions('en-US')[0].nodes
 
-        self.assertEqual(nodes[0].content, 'MÄRTHA:')
+        assert nodes[0].content == 'MÄRTHA:'
 
-    def test_ignore_repeated_tab_offset(self):
+    def test_ignore_repeated_tab_offset(self, sample_scc_repeated_tab_offset):
         expected_lines = [
             '[Radio reporter]',
             'The I-10 Santa Monica Freeway',
             'westbound is jammed,',
             'due to a three-car accident',
-            'blocking lanes 1 and 2']
+            'blocking lanes 1 and 2',
+        ]
 
-        caption_set = SCCReader().read(SAMPLE_SCC_REPEATED_TAB_OFFSET)
-        actual_lines = [node.content
-                        for cap_ in caption_set.get_captions('en-US')
-                        for node in cap_.nodes
-                        if node.type_ == CaptionNode.TEXT]
+        caption_set = SCCReader().read(sample_scc_repeated_tab_offset)
+        actual_lines = [
+            node.content
+            for cap_ in caption_set.get_captions('en-US')
+            for node in cap_.nodes
+            if node.type_ == CaptionNode.TEXT
+        ]
 
-        self.assertEqual(expected_lines, actual_lines)
+        assert expected_lines == actual_lines
 
 
-class CoverageOnlyTestCase(unittest.TestCase):
+class TestCoverageOnly:
     """In order to refactor safely, we need coverage of 95% or more.
      This class includes tests that ensure that at the very least, we don't
      break anything that was working, OR fix anything whose faulty behavior
@@ -187,31 +196,34 @@ class CoverageOnlyTestCase(unittest.TestCase):
       All the tests in this suite should only be useful for refactoring. They
       DO NOT ensure functionality. They only ensure nothing changes.
     """
-    def test_freeze_rollup_captions_contents(self):
+    def test_freeze_rollup_captions_contents(self, sample_scc_roll_up_ru2):
         # There were no tests for ROLL-UP captions, but the library processed
         # Roll-Up captions. Make sure nothing changes during the refactoring
-        scc1 = SCCReader().read(SAMPLE_SCC_ROLL_UP_RU2)
+        scc1 = SCCReader().read(sample_scc_roll_up_ru2)
         captions = scc1.get_captions('en-US')
         actual_texts = [cap_.nodes[0].content for cap_ in captions]
-        expected_texts = ['>>> HI.',
-                          "I'M KEVIN CUNNING AND AT",
-                          "INVESTOR'S BANK WE BELIEVE IN",
-                          'HELPING THE LOCAL NEIGHBORHOODS',
-                          'AND IMPROVING THE LIVES OF ALL',
-                          'WE SERVE.',
-                          '®°½½',
-                          'ABû',
-                          'ÁÁÉÓ¡',
-                          "WHERE YOU'RE STANDING NOW,",
-                          "LOOKING OUT THERE, THAT'S AL",
-                          'THE CROWD.',
-                          '>> IT WAS GOOD TO BE IN TH',
-                          "And restore Iowa's land, water",
-                          'And wildlife.',
-                          '>> Bike Iowa, your source for']
-        self.assertEqual(expected_texts, actual_texts)
+        expected_texts = [
+            '>>> HI.',
+            "I'M KEVIN CUNNING AND AT",
+            "INVESTOR'S BANK WE BELIEVE IN",
+            'HELPING THE LOCAL NEIGHBORHOODS',
+            'AND IMPROVING THE LIVES OF ALL',
+            'WE SERVE.',
+            '®°½½',
+            'ABû',
+            'ÁÁÉÓ¡',
+            "WHERE YOU'RE STANDING NOW,",
+            "LOOKING OUT THERE, THAT'S AL",
+            'THE CROWD.',
+            '>> IT WAS GOOD TO BE IN TH',
+            "And restore Iowa's land, water",
+            'And wildlife.',
+            '>> Bike Iowa, your source for',
+        ]
 
-    def test_multiple_formats(self):
+        assert expected_texts == actual_texts
+
+    def test_multiple_formats(self, sample_scc_multiple_formats):
         # Test for captions that contain both pop on and paint on formats to
         # ensure the paint on lines are not repeated
         expected_text_lines = [
@@ -229,62 +241,72 @@ class CoverageOnlyTestCase(unittest.TestCase):
             '(VO)',
             'Snap and sort your expenses to',
             'save over $4,600 at tax time.',
-            'QUICKBOOKS. BACKING YOU.']
+            'QUICKBOOKS. BACKING YOU.',
+        ]
 
-        captions = SCCReader().read(SAMPLE_SCC_MULTIPLE_FORMATS)\
+        captions = SCCReader().read(sample_scc_multiple_formats)\
             .get_captions('en-US')
-        text_lines = [node.content
-                      for caption in captions
-                      for node in caption.nodes
-                      if node.type_ == CaptionNode.TEXT]
+        text_lines = [
+            node.content
+            for caption in captions
+            for node in caption.nodes
+            if node.type_ == CaptionNode.TEXT
+        ]
 
-        self.assertEqual(expected_text_lines, text_lines)
+        assert expected_text_lines == text_lines
 
-    def test_freeze_semicolon_spec_time(self):
-        scc1 = SCCReader().read(SAMPLE_SCC_ROLL_UP_RU2)
+    def test_freeze_semicolon_spec_time(self, sample_scc_roll_up_ru2):
+        scc1 = SCCReader().read(sample_scc_roll_up_ru2)
         captions = scc1.get_captions('en-US')
-        expected_timings = [(766666.6666666667, 2800000.0),
-                            (2800000.0, 4600000.0),
-                            (4600000.0, 6166666.666666667),
-                            (6166666.666666667, 9733333.333333332),
-                            (9733333.333333332, 11266666.666666668),
-                            (11266666.666666668, 12266666.666666668),
-                            (12266666.666666668, 13266666.666666668),
-                            (13266666.666666668, 14266666.666666668),
-                            (14266666.666666668, 17066666.666666668),
-                            (17066666.666666668, 18666666.666666668),
-                            (18666666.666666668, 20233333.333333336),
-                            (20233333.333333336, 21833333.333333332),
-                            (21833333.333333332, 34933333.33333333),
-                            (34933333.33333333, 36433333.33333333),
-                            (36433333.33333333, 44300000.0),
-                            (44300000.0, 44866666.666666664)]
+        expected_timings = [
+            (766666.6666666667, 2800000.0),
+            (2800000.0, 4600000.0),
+            (4600000.0, 6166666.666666667),
+            (6166666.666666667, 9733333.333333332),
+            (9733333.333333332, 11266666.666666668),
+            (11266666.666666668, 12266666.666666668),
+            (12266666.666666668, 13266666.666666668),
+            (13266666.666666668, 14266666.666666668),
+            (14266666.666666668, 17066666.666666668),
+            (17066666.666666668, 18666666.666666668),
+            (18666666.666666668, 20233333.333333336),
+            (20233333.333333336, 21833333.333333332),
+            (21833333.333333332, 34933333.33333333),
+            (34933333.33333333, 36433333.33333333),
+            (36433333.33333333, 44300000.0),
+            (44300000.0, 44866666.666666664),
+        ]
 
         actual_timings = [(c_.start, c_.end) for c_ in captions]
-        self.assertEqual(expected_timings, actual_timings)
 
-    def test_freeze_colon_spec_time(self):
+        assert expected_timings == actual_timings
+
+    def test_freeze_colon_spec_time(self, sample_scc_pop_on):
         # Coverage doesn't mean we test that functionality, so assert that
         # all the timing specs that previously had coverage, will actually
         # remain unchanged.
-        scc1 = SCCReader().read(SAMPLE_SCC_POP_ON)
-        expected_timings = [(9776433.333333332, 12312300.0),
-                            (14781433.33333333, 16883533.333333332),
-                            (16950266.666666664, 18618600.000000004),
-                            (18685333.333333332, 20754066.666666664),
-                            (20820800.0, 26626600.0),
-                            (26693333.333333332, 32098733.333333332),
-                            (32165466.66666666, 36202833.33333332)]
+        scc1 = SCCReader().read(sample_scc_pop_on)
+        expected_timings = [
+            (9776433.333333332, 12312300.0),
+            (14781433.33333333, 16883533.333333332),
+            (16950266.666666664, 18618600.000000004),
+            (18685333.333333332, 20754066.666666664),
+            (20820800.0, 26626600.0),
+            (26693333.333333332, 32098733.333333332),
+            (32165466.66666666, 36202833.33333332),
+        ]
 
         actual_timings = [
             (c_.start, c_.end) for c_ in scc1.get_captions('en-US')]
-        self.assertEqual(expected_timings, actual_timings)
+
+        assert expected_timings == actual_timings
 
 
-class InterpretableNodeCreatorTestCase(unittest.TestCase):
+class TestInterpretableNodeCreator:
     def test_italics_commands_are_formatted_properly(self):
         node_creator = InstructionNodeCreator(
-            position_tracker=(DefaultProvidingPositionTracker()))
+            position_tracker=(DefaultProvidingPositionTracker())
+        )
 
         # We expect
         # 1. all the initial italics closing nodes to be removed
@@ -329,38 +351,38 @@ class InterpretableNodeCreatorTestCase(unittest.TestCase):
 
         result = list(node_creator)
 
-        self.assertTrue(result[0].is_text_node())
-        self.assertTrue(result[1].requires_repositioning())
-        self.assertTrue(result[2].is_italics_node())
-        self.assertTrue(result[2].sets_italics_on())
+        assert result[0].is_text_node()
+        assert result[1].requires_repositioning()
+        assert result[2].is_italics_node()
+        assert result[2].sets_italics_on()
 
-        self.assertTrue(result[3].is_text_node())
-        self.assertTrue(result[4].is_text_node())
-        self.assertTrue(result[5].is_text_node())
+        assert result[3].is_text_node()
+        assert result[4].is_text_node()
+        assert result[5].is_text_node()
 
-        self.assertTrue(result[6].is_italics_node())
-        self.assertTrue(result[6].sets_italics_off())
+        assert result[6].is_italics_node()
+        assert result[6].sets_italics_off()
 
-        self.assertTrue(result[7].requires_repositioning())
-        self.assertTrue(result[8].is_text_node())
+        assert result[7].requires_repositioning()
+        assert result[8].is_text_node()
 
-        self.assertTrue(result[9].requires_repositioning())
-        self.assertTrue(result[10].is_italics_node())
-        self.assertTrue(result[10].sets_italics_on())
+        assert result[9].requires_repositioning()
+        assert result[10].is_italics_node()
+        assert result[10].sets_italics_on()
 
-        self.assertTrue(result[11].is_text_node())
-        self.assertTrue(result[12].is_explicit_break())
-        self.assertTrue(result[13].is_text_node())
-        self.assertTrue(result[14].is_explicit_break())
-        self.assertTrue(result[15].is_text_node())
+        assert result[11].is_text_node()
+        assert result[12].is_explicit_break()
+        assert result[13].is_text_node()
+        assert result[14].is_explicit_break()
+        assert result[15].is_text_node()
 
-        self.assertTrue(result[16].is_italics_node())
-        self.assertTrue(result[16].sets_italics_off())
+        assert result[16].is_italics_node()
+        assert result[16].sets_italics_off()
 
 
-class CaptionDummy(object):
-    """Mock for pycaption.base.Caption
-    """
+class CaptionDummy:
+    """Mock for pycaption.base.Caption"""
+
     def __init__(self, start=0, end=0, nodes=(1, 2)):
         self.nodes = nodes
         self.start = start
@@ -370,14 +392,14 @@ class CaptionDummy(object):
         return f'{self.start}-->{self.end}'
 
 
-class TimingCorrectingCaptionListTestCase(unittest.TestCase):
+class TestTimingCorrectingCaptionList:
     def test_appending_then_appending(self):
         caption_list = TimingCorrectingCaptionList()
 
         caption_list.append(CaptionDummy(start=3))
         caption_list.append(CaptionDummy(start=6))
 
-        self.assertEqual(caption_list[0].end, 6)
+        assert caption_list[0].end == 6
 
     def test_appending_then_extending(self):
         caption_list = TimingCorrectingCaptionList()
@@ -385,7 +407,7 @@ class TimingCorrectingCaptionListTestCase(unittest.TestCase):
         caption_list.append(CaptionDummy(start=3))
         caption_list.extend([CaptionDummy(start=7), CaptionDummy(start=7)])
 
-        self.assertEqual(caption_list[0].end, 7)
+        assert caption_list[0].end == 7
 
     def test_extending_then_appending(self):
         caption_list = TimingCorrectingCaptionList()
@@ -393,8 +415,8 @@ class TimingCorrectingCaptionListTestCase(unittest.TestCase):
         caption_list.extend([CaptionDummy(start=4), CaptionDummy(start=4)])
         caption_list.append(CaptionDummy(start=9))
 
-        self.assertEqual(caption_list[0].end, 9)
-        self.assertEqual(caption_list[1].end, 9)
+        assert caption_list[0].end == 9
+        assert caption_list[1].end == 9
 
     def test_extending_then_extending(self):
         caption_list = TimingCorrectingCaptionList()
@@ -402,8 +424,8 @@ class TimingCorrectingCaptionListTestCase(unittest.TestCase):
         caption_list.extend([CaptionDummy(start=4), CaptionDummy(start=4)])
         caption_list.extend([CaptionDummy(start=7), CaptionDummy(start=7)])
 
-        self.assertEqual(caption_list[0].end, 7)
-        self.assertEqual(caption_list[1].end, 7)
+        assert caption_list[0].end == 7
+        assert caption_list[1].end == 7
 
     def test_not_appending_none_or_empty_captions(self):
         caption_list = TimingCorrectingCaptionList()
@@ -411,14 +433,14 @@ class TimingCorrectingCaptionListTestCase(unittest.TestCase):
         caption_list.append(None)
         caption_list.extend([CaptionDummy(nodes=[])])
 
-        self.assertEqual(len(caption_list), 0)
+        assert len(caption_list) == 0
 
     def test_not_extending_list_with_nones_or_empty_captions(self):
         caption_list = TimingCorrectingCaptionList()
 
         caption_list.extend([None, CaptionDummy(nodes=[])])
 
-        self.assertEqual(len(caption_list), 0)
+        assert len(caption_list) == 0
 
     def test_not_overwriting_end_time(self):
         # Test here all the 4 cases:
@@ -428,36 +450,39 @@ class TimingCorrectingCaptionListTestCase(unittest.TestCase):
         caption_list.append(CaptionDummy(start=5, end=6))
 
         # Append then append
-        self.assertEqual(caption_list[-2].end, 3)
+        assert caption_list[-2].end == 3
 
         caption_list.extend([CaptionDummy(start=7, end=8)])
 
         # Append then extend
-        self.assertEqual(caption_list[-2].end, 6)
+        assert caption_list[-2].end == 6
 
         caption_list.extend([CaptionDummy(start=9, end=10)])
 
         # extend then extend
-        self.assertEqual(caption_list[-2].end, 8)
+        assert caption_list[-2].end == 8
 
         caption_list.append(CaptionDummy(start=11, end=12))
 
         # extend then append
-        self.assertEqual(caption_list[-2].end, 10)
+        assert caption_list[-2].end == 10
 
-    def test_last_caption_zero_end_time_is_corrected(self):
-        caption_set = SCCReader().read(SAMPLE_SCC_NO_EXPLICIT_END_TO_LAST_CAPTION)  # noqa
-
-        last_caption = caption_set.get_captions('en-US')[-1]
-        self.assertEqual(
-            last_caption.end, last_caption.start + 4 * 1000 * 1000
+    def test_last_caption_zero_end_time_is_corrected(
+            self, sample_scc_no_explicit_end_to_last_caption):
+        caption_set = SCCReader().read(
+            sample_scc_no_explicit_end_to_last_caption
         )
 
-    def test_eoc_first_command(self):
+        last_caption = caption_set.get_captions('en-US')[-1]
+
+        assert last_caption.end == last_caption.start + 4 * 1000 * 1000
+
+    def test_eoc_first_command(self, sample_scc_eoc_first_command):
         # TODO First caption should be ignored because it doesn't start with
         #  a pop/roll/paint on command
-        caption_set = SCCReader().read(SAMPLE_SCC_EOC_FIRST_COMMAND)
+        caption_set = SCCReader().read(sample_scc_eoc_first_command)
 
         # just one caption, first EOC disappears
         num_captions = len(caption_set.get_captions('en-US'))
-        self.assertEqual(num_captions, 2)
+
+        assert num_captions == 2

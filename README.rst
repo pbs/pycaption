@@ -1,7 +1,7 @@
 py-caption
 ==========
 
-|Build Status|
+|Build Status| |Pre-Commit|
 
 ``pycaption`` is a caption reading/writing module. Use one of the given Readers
 to read content into a CaptionSet object, and then use one of the Writers to
@@ -17,6 +17,8 @@ Changelog
 2.0.0
 ^^^^^
 - Dropped support for Python 3.5
+- Updated tests to run using pytest
+- Added pre-commit config
 
 1.0.7
 ^^^^^
@@ -78,3 +80,7 @@ License, Version 2.0 <http://www.apache.org/licenses/LICENSE-2.0>`__.
 
 .. |Build Status| image:: https://travis-ci.org/pbs/pycaption.png?branch=master
    :target: https://travis-ci.org/pbs/pycaption
+
+.. |Pre-Commit| image:: https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white
+   :target: https://github.com/pre-commit/pre-commit
+   :alt: pre-commit

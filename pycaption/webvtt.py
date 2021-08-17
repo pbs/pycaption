@@ -1,32 +1,25 @@
+import datetime
 import re
 import sys
-import datetime
 from copy import deepcopy
 
-
 from .base import (
-    BaseReader, BaseWriter, CaptionSet, CaptionList, Caption, CaptionNode
+    BaseReader, BaseWriter, CaptionSet, CaptionList, Caption, CaptionNode,
 )
-
-from .geometry import Layout
-
 from .exceptions import (
     CaptionReadError, CaptionReadSyntaxError, CaptionReadNoCaptions,
-    InvalidInputError
+    InvalidInputError,
 )
+from .geometry import HorizontalAlignmentEnum, Layout
 
 # A WebVTT timing line has both start/end times and layout related settings
 # (referred to as 'cue settings' in the documentation)
 # The following pattern captures [start], [end] and [cue settings] if existent
-from pycaption.geometry import HorizontalAlignmentEnum
-
-TIMING_LINE_PATTERN = re.compile('^(\S+)\s+-->\s+(\S+)(?:\s+(.*?))?\s*$')
-TIMESTAMP_PATTERN = re.compile('^(\d+):(\d{2})(:\d{2})?\.(\d{3})')
+TIMING_LINE_PATTERN = re.compile(r'^(\S+)\s+-->\s+(\S+)(?:\s+(.*?))?\s*$')
+TIMESTAMP_PATTERN = re.compile(r'^(\d+):(\d{2})(:\d{2})?\.(\d{3})')
 VOICE_SPAN_PATTERN = re.compile('<v(\\.\\w+)* ([^>]*)>')
-OTHER_SPAN_PATTERN = (
-    re.compile(
-        '</?([cibuv]|ruby|rt|lang|(\d+):(\d{2})(:\d{2})?\.(\d{3})).*?>'
-    )
+OTHER_SPAN_PATTERN = re.compile(
+    r'</?([cibuv]|ruby|rt|lang|(\d+):(\d{2})(:\d{2})?\.(\d{3})).*?>'
 )  # These WebVTT tags are stripped off the cues on conversion
 
 WEBVTT_VERSION_OF = {
@@ -59,7 +52,7 @@ class WebVTTReader(BaseReader):
         return 'WEBVTT' in content
 
     def read(self, content, lang='en-US'):
-        if not isinstance(content,  str):
+        if not isinstance(content, str):
             raise InvalidInputError('The content is not a unicode string.')
 
         caption_set = CaptionSet({lang: self._parse(content.splitlines())})
@@ -121,8 +114,7 @@ class WebVTTReader(BaseReader):
 
     def _validate_timings(self, start, end, last_start_time):
         if start is None:
-            raise CaptionReadSyntaxError(
-                'Invalid cue start timestamp.')
+            raise CaptionReadSyntaxError('Invalid cue start timestamp.')
         if end is None:
             raise CaptionReadSyntaxError('Invalid cue end timestamp.')
         if start > end:
@@ -139,8 +131,7 @@ class WebVTTReader(BaseReader):
         """
         m = TIMING_LINE_PATTERN.search(line)
         if not m:
-            raise CaptionReadSyntaxError(
-                'Invalid timing format.')
+            raise CaptionReadSyntaxError('Invalid timing format.')
 
         start = self._parse_timestamp(m.group(1))
         end = self._parse_timestamp(m.group(2))
@@ -162,16 +153,15 @@ class WebVTTReader(BaseReader):
         """
         m = TIMESTAMP_PATTERN.search(timestamp)
         if not m:
-            raise CaptionReadSyntaxError(
-                'Invalid timing format.')
+            raise CaptionReadSyntaxError('Invalid timing format.')
 
         m = m.groups()
 
         if m[2]:
-            # Timestamp takes the form of [hours]:[minutes]:[seconds].[milliseconds]
+            # Timestamp of the form [hours]:[minutes]:[seconds].[milliseconds]
             return microseconds(m[0], m[1], m[2].replace(":", ""), m[3])
         else:
-            # Timestamp takes the form of [minutes]:[seconds].[milliseconds]
+            # Timestamp of the form [minutes]:[seconds].[milliseconds]
             return microseconds(0, m[0], m[1], m[3])
 
     def _decode(self, s):
@@ -259,7 +249,9 @@ class WebVTTWriter(BaseWriter):
         for style_class in style_classes:
             sub_style = caption_set.get_style(style_class).copy()
             # Recursively resolve class attributes and calculate style
-            resulting_style.update(self._calculate_resulting_style(sub_style, caption_set))
+            resulting_style.update(
+                self._calculate_resulting_style(sub_style, caption_set)
+            )
 
         resulting_style.update(style)
 
@@ -414,7 +406,9 @@ class WebVTTWriter(BaseWriter):
                 s += self._encode(node.content) or '&nbsp;'
                 current_layout = node.layout_info
             elif node.type_ == CaptionNode.STYLE:
-                resulting_style = self._calculate_resulting_style(node.content, caption_set)
+                resulting_style = self._calculate_resulting_style(
+                    node.content, caption_set
+                )
 
                 styles = ['italics', 'underline', 'bold']
                 if not node.start:

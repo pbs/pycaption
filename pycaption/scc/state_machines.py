@@ -1,7 +1,7 @@
 from ..exceptions import CaptionReadSyntaxError
 
 
-class _PositioningTracker(object):
+class _PositioningTracker:
     """Helps determine the positioning of a node, having kept track of
     positioning-related commands.
     """
@@ -65,8 +65,7 @@ class _PositioningTracker(object):
         return self._repositioning_required
 
     def acknowledge_position_changed(self):
-        """Acknowledge the position tracer that the position was changed
-        """
+        """Acknowledge the position tracer that the position was changed"""
         self._repositioning_required = False
 
     def is_linebreak_required(self):
@@ -76,8 +75,7 @@ class _PositioningTracker(object):
         return self._break_required
 
     def acknowledge_linebreak_consumed(self):
-        """Call to acknowledge that the line required was consumed
-        """
+        """Call to acknowledge that the line required was consumed"""
         self._break_required = False
 
 
@@ -95,7 +93,7 @@ class DefaultProvidingPositionTracker(_PositioningTracker):
         :type default: tuple[int]
         :param default: a tuple of ints (row, column) to use as fallback
         """
-        super(DefaultProvidingPositionTracker, self).__init__(positioning)
+        super().__init__(positioning)
 
         if default:
             self.default = default
@@ -107,10 +105,7 @@ class DefaultProvidingPositionTracker(_PositioningTracker):
         :rtype: tuple[int]
         """
         try:
-            return (
-                super(DefaultProvidingPositionTracker, self).
-                get_current_position()
-            )
+            return super().get_current_position()
         except CaptionReadSyntaxError:
             return self.default
 
@@ -124,5 +119,4 @@ class DefaultProvidingPositionTracker(_PositioningTracker):
         if positioning:
             self.default = positioning
 
-        super(DefaultProvidingPositionTracker, self).update_positioning(
-            positioning)
+        super().update_positioning(positioning)

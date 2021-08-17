@@ -1,5 +1,3 @@
-
-
 class CaptionReadError(Exception):
     """
     Generic error raised when the reading of the caption file failed.
@@ -36,6 +34,4 @@ class RelativizationError(Exception):
 
 
 class InvalidInputError(RuntimeError):
-    """ Error raised when the input is invalid (i.e. a unicode string)
-    """
-
+    """Error raised when the input is invalid (i.e. a unicode string)"""

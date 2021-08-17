@@ -1,6 +1,6 @@
+import os
 from datetime import timedelta
 from numbers import Number
-import os
 
 from .exceptions import CaptionReadError, CaptionReadTimingError
 
@@ -17,7 +17,7 @@ def force_byte_string(content):
         return content
 
 
-class CaptionConverter(object):
+class CaptionConverter:
     def __init__(self, captions=None):
         self.captions = captions if captions else []
 
@@ -35,7 +35,7 @@ class CaptionConverter(object):
             raise Exception(e)
 
 
-class BaseReader(object):
+class BaseReader:
     def __init__(self, *args, **kwargs):
         pass
 
@@ -49,7 +49,7 @@ class BaseReader(object):
         return CaptionSet({DEFAULT_LANGUAGE_CODE: []})
 
 
-class BaseWriter(object):
+class BaseWriter:
     def __init__(self, relativize=True, video_width=None, video_height=None,
                  fit_to_screen=True):
         """
@@ -91,12 +91,12 @@ class BaseWriter(object):
         return content
 
 
-class Style(object):
+class Style:
     def __init__(self):
         pass
 
 
-class CaptionNode(object):
+class CaptionNode:
     """
     A single node within a caption, representing either
     text, a style, or a linebreak.
@@ -154,7 +154,7 @@ class CaptionNode(object):
         return CaptionNode(CaptionNode.BREAK, layout_info=layout_info)
 
 
-class Caption(object):
+class Caption:
     """
     A single caption, including the time and styling information
     for its display.
@@ -232,13 +232,13 @@ class Caption(object):
         hours, rem = divmod(duration.seconds, 3600)
         minutes, seconds = divmod(rem, 60)
         milliseconds = f"{duration.microseconds // 1000:03d}"
-        timestamp = f"{hours:02d}:{minutes:02d}:{seconds:02d}" \
-                    f"{msec_separator or '.'}{milliseconds:.3s}"
+        timestamp = (f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+                     f"{msec_separator or '.'}{milliseconds:.3s}")
         return timestamp
 
 
 class CaptionList(list):
-    """ A list of captions with a layout object attached to it """
+    """A list of captions with a layout object attached to it"""
 
     def __init__(self, iterable=None, layout_info=None):
         """
@@ -247,7 +247,7 @@ class CaptionList(list):
         """
         self.layout_info = layout_info
         args = [iterable] if iterable else []
-        super(CaptionList, self).__init__(*args)
+        super().__init__(*args)
 
     def __getslice__(self, i, j):
         return CaptionList(
@@ -261,9 +261,9 @@ class CaptionList(list):
 
     def __add__(self, other):
         add_is_safe = (
-                not hasattr(other, 'layout_info') or
-                not other.layout_info or
-                self.layout_info == other.layout_info
+            not hasattr(other, 'layout_info')
+            or not other.layout_info
+            or self.layout_info == other.layout_info
         )
         if add_is_safe:
             return CaptionList(
@@ -279,7 +279,7 @@ class CaptionList(list):
     __rmul__ = __mul__
 
 
-class CaptionSet(object):
+class CaptionSet:
     """
     A set of captions in potentially multiple languages,
     all representing the same underlying content.

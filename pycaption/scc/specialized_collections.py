@@ -1,14 +1,15 @@
+import collections
 import unicodedata
 
 from ..base import CaptionList, Caption, CaptionNode
-from ..geometry import (UnitEnum, Size, Layout, Point, Alignment,
-                        VerticalAlignmentEnum, HorizontalAlignmentEnum)
-
+from ..geometry import (
+    UnitEnum, Size, Layout, Point, Alignment,
+    VerticalAlignmentEnum, HorizontalAlignmentEnum
+)
 from .constants import PAC_BYTES_TO_POSITIONING_MAP, COMMANDS
-import collections
 
 
-class PreCaption(object):
+class PreCaption:
     """
     The Caption class has been refactored and now its instances must be used as
     immutable objects. Some of the code in this module, however, relied on the
@@ -40,7 +41,7 @@ class TimingCorrectingCaptionList(list):
     Also, doesn't allow Nones or empty captions
     """
     def __init__(self, *args, **kwargs):
-        super(TimingCorrectingCaptionList, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self._last_batch = ()
 
     def append(self, p_object):
@@ -56,7 +57,7 @@ class TimingCorrectingCaptionList(list):
 
         self._last_batch = (p_object,)
 
-        super(TimingCorrectingCaptionList, self).append(p_object)
+        super().append(p_object)
 
     def extend(self, iterable):
         """Adds the elements in the iterable to the list, regarding the first
@@ -70,7 +71,7 @@ class TimingCorrectingCaptionList(list):
 
         self._last_batch = tuple(appendable_items)
 
-        super(TimingCorrectingCaptionList, self).extend(appendable_items)
+        super().extend(appendable_items)
 
     @staticmethod
     def _update_last_batch(batch, *new_captions):
@@ -106,7 +107,7 @@ class NotifyingDict(dict):
     _guard = {}
 
     def __init__(self, *args, **kwargs):
-        super(NotifyingDict, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.active_key = self._guard
         self.observers = []
 
@@ -126,8 +127,7 @@ class NotifyingDict(dict):
         self.active_key = key
 
     def get_active(self):
-        """Returns the value corresponding to the active key
-        """
+        """Returns the value corresponding to the active key"""
         if self.active_key is self._guard:
             raise KeyError('No active key set')
 
@@ -148,9 +148,8 @@ class NotifyingDict(dict):
         self.observers.append(observer)
 
 
-class CaptionCreator(object):
-    """Creates and maintains a collection of Captions
-    """
+class CaptionCreator:
+    """Creates and maintains a collection of Captions"""
     def __init__(self):
         self._collection = TimingCorrectingCaptionList()
 
@@ -263,7 +262,7 @@ class CaptionCreator(object):
         return caption_list
 
 
-class InstructionNodeCreator(object):
+class InstructionNodeCreator:
     """Creates _InstructionNode instances from characters and commands, storing
     them internally
     """
@@ -282,8 +281,7 @@ class InstructionNodeCreator(object):
         self._position_tracer = position_tracker
 
     def is_empty(self):
-        """Whether any text was added to the buffer
-        """
+        """Whether any text was added to the buffer"""
         return not any(element.text for element in self._collection)
 
     def add_chars(self, *chars):
@@ -445,7 +443,7 @@ def _get_layout_from_tuple(position_tuple):
                   )
 
 
-class _InstructionNode(object):
+class _InstructionNode:
     """Value object, that can contain text information, or interpretable
     commands (such as explicit line breaks or turning italics on/off).
 
@@ -527,8 +525,7 @@ class _InstructionNode(object):
         return self._type == self.CHANGE_POSITION
 
     def get_text(self):
-        """A little legacy code.
-        """
+        """A little legacy code."""
         return ' '.join(self.text.split())
 
     @classmethod

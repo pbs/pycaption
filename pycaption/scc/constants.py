@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 from itertools import product
 
 COMMANDS = {
@@ -940,9 +938,9 @@ def _create_position_to_bytes_map(bytes_to_pos):
             if row not in result:
                 result[row] = {}
 
-            result[row][column] = (
-                tuple(product([high_byte], low_byte_list)))
+            result[row][column] = tuple(product([high_byte], low_byte_list))
     return result
+
 
 # (Almost) the reverse of PAC_BYTES_TO_POSITIONING_MAP. Call with arguments
 # like for example [15][4] to get the tuple (('94', 'f2'), ('94', '73'))
@@ -955,10 +953,12 @@ def _restructure_bytes_to_position_map(byte_to_pos_map):
     return {
         k_: {
             low_byte: byte_to_pos_map[k_][low_byte_list]
-            for low_byte_list in list(v_.keys()) for low_byte in low_byte_list
+            for low_byte_list in list(v_.keys())
+            for low_byte in low_byte_list
         }
         for k_, v_ in list(byte_to_pos_map.items())
     }
+
 
 # Now use the dict with arguments like ['91']['75'] directly.
 PAC_BYTES_TO_POSITIONING_MAP = _restructure_bytes_to_position_map(

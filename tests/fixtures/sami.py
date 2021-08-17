@@ -1,6 +1,9 @@
-# -*- coding: utf-8 -*-
+import pytest
 
-SAMPLE_SAMI = """
+
+@pytest.fixture(scope="session")
+def sample_sami():
+    return """
 <SAMI><HEAD><TITLE>NOVA3213</TITLE><STYLE TYPE="text/css">
 <!--
 P { margin-left:  1pt;
@@ -49,7 +52,10 @@ P { margin-left:  1pt;
 </BODY></SAMI>
 """
 
-SAMPLE_SAMI_WITH_STYLE_TAGS = """
+
+@pytest.fixture(scope="session")
+def sample_sami_with_style_tags():
+    return """
 <SAMI><HEAD><TITLE>NOVA3213</TITLE><STYLE TYPE="text/css">
 <!--
 P { margin-left:  1pt;
@@ -74,7 +80,10 @@ P { margin-left:  1pt;
 </BODY></SAMI>
 """
 
-SAMPLE_SAMI_WITH_CSS_INLINE_STYLE = """
+
+@pytest.fixture(scope="session")
+def sample_sami_with_css_inline_style():
+    return """
 <SAMI><HEAD><TITLE>NOVA3213</TITLE><STYLE TYPE="text/css">
 <!--
 P { margin-left:  1pt;
@@ -99,7 +108,10 @@ P { margin-left:  1pt;
 </BODY></SAMI>
 """
 
-SAMPLE_SAMI_WITH_CSS_ID_STYLE = """
+
+@pytest.fixture(scope="session")
+def sample_sami_with_css_id_style():
+    return """
 <SAMI><HEAD><TITLE>NOVA3213</TITLE><STYLE TYPE="text/css">
 <!--
 P { margin-left:  1pt;
@@ -139,7 +151,10 @@ P { margin-left:  1pt;
 </BODY></SAMI>
 """
 
-SAMPLE_SAMI_EMPTY = """
+
+@pytest.fixture(scope="session")
+def sample_sami_empty():
+    return """
 <SAMI><HEAD><TITLE>NOVA3213</TITLE><STYLE TYPE="text/css">
 <!--
 P { margin-left:  1pt;
@@ -160,7 +175,9 @@ P { margin-left:  1pt;
 """
 
 
-SAMPLE_SAMI_SYNTAX_ERROR = """
+@pytest.fixture(scope="session")
+def sample_sami_syntax_error():
+    return """
 <SAMI>
 <Head>
 <title>ir2014_111</title>
@@ -199,7 +216,10 @@ SAMPLE_SAMI_SYNTAX_ERROR = """
 </SAMI>
 """
 
-SAMPLE_SAMI_DOUBLE_BR = """
+
+@pytest.fixture(scope="session")
+def sample_sami_double_br():
+    return """
 <SAMI><HEAD><TITLE>NOVA3213</TITLE>
 </HEAD><BODY>
 <SYNC start="14848"><P class="ENCC">
@@ -209,7 +229,10 @@ SAMPLE_SAMI_DOUBLE_BR = """
 </BODY></SAMI>
 """
 
-SAMPLE_SAMI_PARTIAL_MARGINS = """
+
+@pytest.fixture(scope="session")
+def sample_sami_partial_margins():
+    return """
 <SAMI>
 <HEAD>
    <STYLE TYPE="Text/css">
@@ -226,7 +249,10 @@ SAMPLE_SAMI_PARTIAL_MARGINS = """
 </SAMI>
 """
 
-SAMPLE_SAMI_PARTIAL_MARGINS_RELATIVIZED = """<sami>
+
+@pytest.fixture(scope="session")
+def sample_sami_partial_margins_relativized():
+    return """<sami>
  <head>
   <style type="text/css">
    <!--
@@ -265,7 +291,10 @@ SAMPLE_SAMI_PARTIAL_MARGINS_RELATIVIZED = """<sami>
  </body>
 </sami>"""
 
-SAMPLE_SAMI_LANG_MARGIN = """
+
+@pytest.fixture(scope="session")
+def sample_sami_lang_margin():
+    return """
 <SAMI>
 <HEAD>
    <STYLE TYPE="Text/css">
@@ -282,7 +311,10 @@ SAMPLE_SAMI_LANG_MARGIN = """
 </SAMI>
 """
 
-SAMPLE_SAMI_WITH_SPAN = """
+
+@pytest.fixture(scope="session")
+def sample_sami_with_span():
+    return """
 <SAMI>
 <HEAD>
     <STYLE TYPE="Text/css">
@@ -302,7 +334,10 @@ SAMPLE_SAMI_WITH_SPAN = """
 </SAMI>
 """
 
-SAMPLE_SAMI_WITH_BAD_SPAN_ALIGN = """
+
+@pytest.fixture(scope="session")
+def sample_sami_with_bad_span_align():
+    return """
 <SAMI>
 <HEAD>
     <STYLE TYPE="Text/css">
@@ -322,7 +357,10 @@ SAMPLE_SAMI_WITH_BAD_SPAN_ALIGN = """
 </SAMI>
 """
 
-SAMPLE_SAMI_WITH_BAD_DIV_ALIGN = """
+
+@pytest.fixture(scope="session")
+def sample_sami_with_bad_div_align():
+    return """
 <SAMI>
 <HEAD>
     <STYLE TYPE="Text/css">
@@ -342,7 +380,10 @@ SAMPLE_SAMI_WITH_BAD_DIV_ALIGN = """
 </SAMI>
 """
 
-SAMPLE_SAMI_WITH_P_ALIGN = """
+
+@pytest.fixture(scope="session")
+def sample_sami_with_p_align():
+    return """
 <SAMI>
 <HEAD>
     <STYLE TYPE="Text/css">
@@ -362,7 +403,10 @@ SAMPLE_SAMI_WITH_P_ALIGN = """
 </SAMI>
 """
 
-SAMPLE_SAMI_WITH_P_AND_SPAN_ALIGN = """
+
+@pytest.fixture(scope="session")
+def sample_sami_with_p_and_span_align():
+    return """
 <SAMI>
 <HEAD>
     <STYLE TYPE="Text/css">
@@ -382,7 +426,10 @@ SAMPLE_SAMI_WITH_P_AND_SPAN_ALIGN = """
 </SAMI>
 """
 
-SAMPLE_SAMI_WITH_MULTIPLE_SPAN_ALIGNS = """
+
+@pytest.fixture(scope="session")
+def sample_sami_with_multiple_span_aligns():
+    return """
 <SAMI>
 <HEAD>
     <STYLE TYPE="Text/css">
@@ -404,7 +451,10 @@ SAMPLE_SAMI_WITH_MULTIPLE_SPAN_ALIGNS = """
 </SAMI>
 """
 
-SAMPLE_SAMI_NO_LANG = """
+
+@pytest.fixture(scope="session")
+def sample_sami_no_lang():
+    return """
 <SAMI>
 <Head><STYLE TYPE="text/css"></Style></Head>
 <BODY>
@@ -414,7 +464,10 @@ SAMPLE_SAMI_NO_LANG = """
 </SAMI>
 """
 
-SAMPLE_SAMI_WITH_LANG = """
+
+@pytest.fixture(scope="session")
+def sample_sami_with_lang():
+    return """
 <sami>
 <head>
 <style type="text/css"><!--.en-US {lang: en-US;}--></style>
@@ -425,7 +478,10 @@ SAMPLE_SAMI_WITH_LANG = """
 </sami>
 """
 
-SAMPLE_SAMI_WITH_MULTI_LANG = """
+
+@pytest.fixture(scope="session")
+def sample_sami_with_multi_lang():
+    return """
 <sami>
 <head>
 <style type="text/css"><!--.en-US {lang: en-US;} .de-DE {lang: de-DE;}--></style>
@@ -439,7 +495,10 @@ SAMPLE_SAMI_WITH_MULTI_LANG = """
 </sami>
 """
 
-SAMPLE_SAMI_WITH_MULTIPLE_P = """
+
+@pytest.fixture(scope="session")
+def sample_sami_with_multiple_p():
+    return """
 <SAMI>
 <HEAD>
     <STYLE TYPE="Text/css">
@@ -467,7 +526,10 @@ SAMPLE_SAMI_WITH_MULTIPLE_P = """
 </SAMI>
 """
 
-SAMPLE_SAMI_EMPTY_CUE_OUTPUT = """
+
+@pytest.fixture(scope="session")
+def sample_sami_empty_cue_output():
+    return """
 <sami>
  <head>
   <style type="text/css">

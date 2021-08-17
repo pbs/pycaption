@@ -1,5 +1,6 @@
 from .base import (
-    CaptionConverter, CaptionNode, Caption, CaptionList, CaptionSet)
+    CaptionConverter, CaptionNode, Caption, CaptionList, CaptionSet,
+)
 from .dfxp import DFXPWriter, DFXPReader
 from .microdvd import MicroDVDReader, MicroDVDWriter
 from .sami import SAMIReader, SAMIWriter
@@ -7,19 +8,21 @@ from .srt import SRTReader, SRTWriter
 from .scc import SCCReader, SCCWriter
 from .webvtt import WebVTTReader, WebVTTWriter
 from .exceptions import (
-    CaptionReadError, CaptionReadNoCaptions, CaptionReadSyntaxError)
+    CaptionReadError, CaptionReadNoCaptions, CaptionReadSyntaxError,
+)
 
 
 __all__ = [
-    'CaptionConverter', 'DFXPReader', 'DFXPWriter',
-    'SAMIReader', 'SAMIWriter', 'SRTReader', 'SRTWriter',
+    'CaptionConverter', 'DFXPReader', 'DFXPWriter', 'MicroDVDReader',
+    'MicroDVDWriter', 'SAMIReader', 'SAMIWriter', 'SRTReader', 'SRTWriter',
     'SCCReader', 'SCCWriter', 'WebVTTReader', 'WebVTTWriter',
     'CaptionReadError', 'CaptionReadNoCaptions', 'CaptionReadSyntaxError',
     'detect_format', 'CaptionNode', 'Caption', 'CaptionList', 'CaptionSet'
 ]
 
 SUPPORTED_READERS = (
-    DFXPReader, MicroDVDReader, WebVTTReader, SAMIReader, SRTReader, SCCReader)
+    DFXPReader, MicroDVDReader, WebVTTReader, SAMIReader, SRTReader, SCCReader,
+)
 
 
 def detect_format(caps):

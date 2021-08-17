@@ -1,16 +1,12 @@
-import unittest
-
 from pycaption import MicroDVDReader, MicroDVDWriter
-
-from tests.samples.microdvd import SAMPLE_MICRODVD
 
 from tests.mixins import MicroDVDTestingMixIn
 
 
-class MicroDVDtoMicroDVDTestCase(unittest.TestCase, MicroDVDTestingMixIn):
-
-    def test_microdvd_to_microdvd_conversion(self):
-        caption_set = MicroDVDReader().read(SAMPLE_MICRODVD)
+class TestMicroDVDtoMicroDVD(MicroDVDTestingMixIn):
+    def test_microdvd_to_microdvd_conversion(self, sample_microdvd):
+        caption_set = MicroDVDReader().read(sample_microdvd)
         results = MicroDVDWriter().write(caption_set)
-        self.assertTrue(isinstance(results, str))
-        self.assertMicroDVDEquals(SAMPLE_MICRODVD, results)
+
+        assert isinstance(results, str)
+        self.assert_microdvd_equals(sample_microdvd, results)

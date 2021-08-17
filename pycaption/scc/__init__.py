@@ -1,5 +1,4 @@
 #!/usr/bin/python
-# -*- coding: utf-8 -*-
 """
 3 types of SCC captions:
     Roll-Up
@@ -40,11 +39,14 @@ Pop-On:
     the the commands don't have to necessarily be on the same row.
 
     1. 94ae [ENM] (erase non displayed memory)
-    2. 9420 [RCL] (resume caption loading => this command here means we're using Pop-On captions)
+    2. 9420 [RCL] (resume caption loading => this command here means we're using
+     Pop-On captions)
     2.1? [ENM] - if step 0 was skipped?
-    3. [PAC] Positioning/ styling command (can position on columns divisible by 4)
+    3. [PAC] Positioning/ styling command
+     (can position on columns divisible by 4)
         The control chars is called Preamble Address Code [PAC].
-    4. If positioning needs to be on columns not divisible by 4, use a [TO] command
+    4. If positioning needs to be on columns not divisible by 4, use a [TO]
+     command
     5. text
     6. 942c [EDM] - optionally, erase the currently displayed caption
     7. 942f [EOC] display the caption
@@ -77,8 +79,8 @@ http://www.theneitherworld.com/mcpoodle/SCC_TOOLS/DOCS/SCC_FORMAT.HTML
  just carried over when implementing positioning.
 """
 
-import re
 import math
+import re
 import textwrap
 from copy import deepcopy
 
@@ -90,15 +92,17 @@ from .constants import (
     HEADER, COMMANDS, SPECIAL_CHARS, EXTENDED_CHARS, CHARACTERS,
     MICROSECONDS_PER_CODEWORD, CHARACTER_TO_CODE,
     SPECIAL_OR_EXTENDED_CHAR_TO_CODE, PAC_BYTES_TO_POSITIONING_MAP,
-    PAC_HIGH_BYTE_BY_ROW, PAC_LOW_BYTE_BY_ROW_RESTRICTED, PAC_TAB_OFFSET_COMMANDS,
+    PAC_HIGH_BYTE_BY_ROW, PAC_LOW_BYTE_BY_ROW_RESTRICTED,
+    PAC_TAB_OFFSET_COMMANDS,
 )
-from .specialized_collections import (
+from .specialized_collections import (  # noqa: F401
     TimingCorrectingCaptionList, NotifyingDict, CaptionCreator,
-    InstructionNodeCreator)
+    InstructionNodeCreator,
+)
 from .state_machines import DefaultProvidingPositionTracker
 
 
-class NodeCreatorFactory(object):
+class NodeCreatorFactory:
     """Will return instances of the given node_creator.
 
     This is used as a means of creating new InstructionNodeCreator instances,
@@ -207,7 +211,7 @@ class SCCReader(BaseReader):
 
         :rtype: CaptionSet
         """
-        if not isinstance(content,  str):
+        if not isinstance(content, str):
             raise InvalidInputError('The content is not a unicode string.')
 
         self.simulate_roll_up = simulate_roll_up
@@ -446,8 +450,7 @@ class SCCReader(BaseReader):
 
     @property
     def buffer(self):
-        """Returns the currently active buffer
-        """
+        """Returns the currently active buffer"""
         return self.buffer_dict.get_active()
 
     @buffer.setter
@@ -485,9 +488,8 @@ class SCCReader(BaseReader):
 
 
 class SCCWriter(BaseWriter):
-
     def __init__(self, *args, **kw):
-        super(SCCWriter, self).__init__(*args, **kw)
+        super().__init__(*args, **kw)
 
     def write(self, caption_set):
         output = HEADER + '\n\n'
@@ -514,9 +516,9 @@ class SCCWriter(BaseWriter):
             code_start = start - code_time_microseconds
             if index == 0:
                 continue
-            previous_code, previous_start, previous_end = codes[index-1]
+            previous_code, previous_start, previous_end = codes[index - 1]
             if previous_end + 3 * MICROSECONDS_PER_CODEWORD >= code_start:
-                codes[index-1] = (previous_code, previous_start, None)
+                codes[index - 1] = (previous_code, previous_start, None)
             codes[index] = (code, code_start, end)
 
         # PASS 3:
@@ -582,8 +584,8 @@ class SCCWriter(BaseWriter):
             row += 16 - len(lines)
             # Move cursor to column 0 of the destination row
             for _ in range(2):
-                code += (PAC_HIGH_BYTE_BY_ROW[row] +
-                         f'{PAC_LOW_BYTE_BY_ROW_RESTRICTED[row]} ')
+                code += (PAC_HIGH_BYTE_BY_ROW[row]
+                         + f'{PAC_LOW_BYTE_BY_ROW_RESTRICTED[row]} ')
             # Print the line using the SCC encoding
             for char in line:
                 code = self._print_character(code, char)
@@ -606,9 +608,9 @@ class SCCWriter(BaseWriter):
         return f'{hours:02}:{minutes:02}:{seconds:02}:{frames:02}'
 
 
-class _SccTimeTranslator(object):
-    """Converts SCC time to microseconds, keeping track of frames passed
-    """
+class _SccTimeTranslator:
+    """Converts SCC time to microseconds, keeping track of frames passed"""
+
     def __init__(self):
         self._time = '00:00:00;00'
 
@@ -646,10 +648,10 @@ class _SccTimeTranslator(object):
 
         time_split = stamp.replace(';', ':').split(':')
 
-        timestamp_seconds = (int(time_split[0]) * 3600 +
-                             int(time_split[1]) * 60 +
-                             int(time_split[2]) +
-                             int(time_split[3]) / 30.0)
+        timestamp_seconds = (int(time_split[0]) * 3600
+                             + int(time_split[1]) * 60
+                             + int(time_split[2])
+                             + int(time_split[3]) / 30.0)
 
         seconds = timestamp_seconds * seconds_per_timestamp_second
         microseconds = seconds * 1000 * 1000 - offset
@@ -668,8 +670,7 @@ class _SccTimeTranslator(object):
         self._frames = 0
 
     def increment_frames(self):
-        """After a command was processed, we'd increment the number of frames
-        """
+        """After a command was processed, we'd increment the number of frames"""
         self._frames += 1
 
 

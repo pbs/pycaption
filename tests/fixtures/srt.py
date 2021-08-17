@@ -1,6 +1,9 @@
-# -*- coding: utf-8 -*-
+import pytest
 
-SAMPLE_SRT = """1
+
+@pytest.fixture(scope="session")
+def sample_srt():
+    return """1
 00:00:09,209 --> 00:00:12,312
 ( clock ticking )
 
@@ -35,7 +38,10 @@ It's all about an eternal Einstein.
 <LAUGHING & WHOOPS!>
 """
 
-SAMPLE_SRT_ASCII = """1
+
+@pytest.fixture(scope="session")
+def sample_srt_ascii():
+    return """1
 00:00:09,209 --> 00:00:12,312
 ( clock ticking )
 
@@ -74,7 +80,10 @@ It's all about an eternal Einstein.
 some more text
 """
 
-SAMPLE_SRT_NUMERIC = """35
+
+@pytest.fixture(scope="session")
+def sample_srt_numeric():
+    return """35
 00:00:32,290 --> 00:00:32,890
 TO  FIND  HIM.            IF
 
@@ -104,10 +113,15 @@ STD  OUT
 """
 
 
-SAMPLE_SRT_EMPTY = """
+@pytest.fixture(scope="session")
+def sample_srt_empty():
+    return """
 """
 
-SAMPLE_SRT_BLANK_LINES = """35
+
+@pytest.fixture(scope="session")
+def sample_srt_blank_lines():
+    return """35
 00:00:32,290 --> 00:00:32,890
 
 
@@ -117,7 +131,10 @@ YOU  HAVE  ANY  INFORMATION
 
 """
 
-SAMPLE_SRT_TRAILING_BLANKS = """35
+
+@pytest.fixture(scope="session")
+def sample_srt_trailing_blanks():
+    return """35
 00:00:32,290 --> 00:00:32,890
 HELP  I  SAY
 
@@ -130,9 +147,12 @@ YOU  HAVE  ANY  INFORMATION
 
 """
 
-SAMPLES_SRT_SAME_TIME = """1
+
+@pytest.fixture(scope="session")
+def samples_srt_same_time():
+    return """1
 00:00:05,213 --> 00:00:10,552
-SO NO ONE TOLD YOU 
+SO NO ONE TOLD YOU
 
 2
 00:00:05,213 --> 00:00:10,552
@@ -144,14 +164,17 @@ YOUR JOB IS A JOKE, YOUR ARE BROKE
 
 4
 00:00:10,594 --> 00:00:10,600
-IT IS LIKE YOU ARE ALWAYS STUCK 
+IT IS LIKE YOU ARE ALWAYS STUCK
 
 5
 00:00:10,594 --> 00:00:10,600
 IN A SECOND GEAR
 """
 
-SAMPLE_SRT_EMPTY_CUE_OUTPUT = """\
+
+@pytest.fixture(scope="session")
+def sample_srt_empty_cue_output():
+    return """\
 1
 00:00:01,209 --> 00:00:02,312
 abc

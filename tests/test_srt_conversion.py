@@ -1,62 +1,56 @@
-import unittest
-
 from pycaption import (
-    SRTReader, SRTWriter, SAMIWriter, DFXPWriter, WebVTTWriter, MicroDVDWriter)
-
-from tests.samples.dfxp import SAMPLE_DFXP
-from tests.samples.srt import SAMPLE_SRT
-from tests.samples.sami import SAMPLE_SAMI
-from tests.samples.webvtt import SAMPLE_WEBVTT_FROM_SRT
+    SRTReader, SRTWriter, SAMIWriter, DFXPWriter, WebVTTWriter, MicroDVDWriter,
+)
 
 from tests.mixins import (
-    SRTTestingMixIn, DFXPTestingMixIn, SAMITestingMixIn, WebVTTTestingMixIn, MicroDVDTestingMixIn)
+    SRTTestingMixIn, DFXPTestingMixIn, SAMITestingMixIn, WebVTTTestingMixIn,
+    MicroDVDTestingMixIn,
+)
 
-from .samples.microdvd import SAMPLE_MICRODVD
 
-
-class SRTtoSRTTestCase(unittest.TestCase, SRTTestingMixIn):
-
-    def test_srt_to_srt_conversion(self):
-        caption_set = SRTReader().read(SAMPLE_SRT)
+class TestSRTtoSRT(SRTTestingMixIn):
+    def test_srt_to_srt_conversion(self, sample_srt):
+        caption_set = SRTReader().read(sample_srt)
         results = SRTWriter().write(caption_set)
-        self.assertTrue(isinstance(results, str))
-        self.assertSRTEquals(SAMPLE_SRT, results)
+
+        assert isinstance(results, str)
+        self.assert_srt_equals(sample_srt, results)
 
 
-class SRTtoSAMITestCase(unittest.TestCase, SAMITestingMixIn):
-
-    def test_srt_to_sami_conversion(self):
-        caption_set = SRTReader().read(SAMPLE_SRT)
+class TestSRTtoSAMI(SAMITestingMixIn):
+    def test_srt_to_sami_conversion(self, sample_sami, sample_srt):
+        caption_set = SRTReader().read(sample_srt)
         results = SAMIWriter().write(caption_set)
-        self.assertTrue(isinstance(results, str))
-        self.assertSAMIEquals(SAMPLE_SAMI, results)
+
+        assert isinstance(results, str)
+        self.assert_sami_equals(sample_sami, results)
 
 
-class SRTtoDFXPTestCase(unittest.TestCase, DFXPTestingMixIn):
-
-    def test_srt_to_dfxp_conversion(self):
-        caption_set = SRTReader().read(SAMPLE_SRT)
+class TestSRTtoDFXP(DFXPTestingMixIn):
+    def test_srt_to_dfxp_conversion(self, sample_dfxp, sample_srt):
+        caption_set = SRTReader().read(sample_srt)
         results = DFXPWriter().write(caption_set)
-        self.assertTrue(isinstance(results, str))
-        self.assertDFXPEquals(
-            SAMPLE_DFXP, results,
+
+        assert isinstance(results, str)
+        self.assert_dfxp_equals(
+            sample_dfxp, results,
             ignore_styling=True, ignore_spans=True
         )
 
 
-class SRTtoWebVTTTestCase(unittest.TestCase, WebVTTTestingMixIn):
-
-    def test_srt_to_webvtt_conversion(self):
-        caption_set = SRTReader().read(SAMPLE_SRT)
+class TestSRTtoWebVTT(WebVTTTestingMixIn):
+    def test_srt_to_webvtt_conversion(self, sample_webvtt_from_srt, sample_srt):
+        caption_set = SRTReader().read(sample_srt)
         results = WebVTTWriter().write(caption_set)
-        self.assertTrue(isinstance(results, str))
-        self.assertWebVTTEquals(SAMPLE_WEBVTT_FROM_SRT, results)
+
+        assert isinstance(results, str)
+        self.assert_webvtt_equals(sample_webvtt_from_srt, results)
 
 
-class SRTtoMicroDVDTestCase(unittest.TestCase, MicroDVDTestingMixIn):
-
-    def test_srt_to_microdvd_conversion(self):
-        caption_set = SRTReader().read(SAMPLE_SRT)
+class TestSRTtoMicroDVD(MicroDVDTestingMixIn):
+    def test_srt_to_microdvd_conversion(self, sample_microdvd, sample_srt):
+        caption_set = SRTReader().read(sample_srt)
         results = MicroDVDWriter().write(caption_set)
-        self.assertTrue(isinstance(results, str))
-        self.assertMicroDVDEquals(SAMPLE_MICRODVD, results)
+
+        assert isinstance(results, str)
+        self.assert_microdvd_equals(sample_microdvd, results)
