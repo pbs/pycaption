@@ -1,7 +1,7 @@
 from bs4 import BeautifulSoup
 
 from pycaption import (
-    DFXPReader, DFXPWriter, SRTWriter, SAMIWriter, WebVTTWriter, MicroDVDWriter
+    DFXPReader, SRTReader, DFXPWriter, SAMIWriter, WebVTTWriter, MicroDVDWriter,
 )
 from pycaption.dfxp.extras import LegacyDFXPWriter
 from pycaption.dfxp.base import (
@@ -10,7 +10,7 @@ from pycaption.dfxp.base import (
 )
 
 from .mixins import (
-    SRTTestingMixIn, SAMITestingMixIn, DFXPTestingMixIn, WebVTTTestingMixIn,
+    SAMITestingMixIn, DFXPTestingMixIn, WebVTTTestingMixIn,
     MicroDVDTestingMixIn,
 )
 
@@ -152,22 +152,6 @@ class TestDFXPtoDFXP(DFXPTestingMixIn):
         assert "&lt;&lt; \"Andy's Café &amp; Restaurant\" this way" in result
 
 
-class TestDFXPtoSRT(SRTTestingMixIn):
-    def test_dfxp_to_srt_conversion(self, sample_srt, sample_dfxp):
-        caption_set = DFXPReader().read(sample_dfxp)
-        results = SRTWriter().write(caption_set)
-
-        assert isinstance(results, str)
-        self.assert_srt_equals(sample_srt, results)
-
-    def test_dfxp_empty_cue_to_srt(self, sample_srt_empty_cue_output,
-                                   sample_dfxp_empty_cue):
-        caption_set = DFXPReader().read(sample_dfxp_empty_cue)
-        results = SRTWriter().write(caption_set)
-
-        self.assert_srt_equals(sample_srt_empty_cue_output, results)
-
-
 class TestDFXPtoSAMI(SAMITestingMixIn):
     def test_dfxp_to_sami_conversion(self, sample_sami, sample_dfxp):
         caption_set = DFXPReader().read(sample_dfxp)
@@ -299,3 +283,15 @@ class TestLegacyDFXP:
         result = LegacyDFXPWriter().write(caption_set)
 
         assert result == sample_dfxp_for_legacy_writer_output
+
+
+class TestSRTtoDFXP(DFXPTestingMixIn):
+    def test_srt_to_dfxp_conversion(self, sample_dfxp, sample_srt):
+        caption_set = SRTReader().read(sample_srt)
+        results = DFXPWriter().write(caption_set)
+
+        assert isinstance(results, str)
+        self.assert_dfxp_equals(
+            sample_dfxp, results,
+            ignore_styling=True, ignore_spans=True
+        )

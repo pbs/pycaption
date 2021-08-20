@@ -179,3 +179,20 @@ def sample_srt_empty_cue_output():
 00:00:01,209 --> 00:00:02,312
 abc
 """
+
+
+@pytest.fixture(scope="session")
+def sample_srt_timestamps_without_microseconds():
+    return """\
+1
+00:00:13 --> 00:00:16
+Guard this envelope.
+If anything happens
+to me
+
+2
+00:00:16 --> 00:00:18
+see that it reaches
+the hands of Mr
+Sherlock Holmes
+"""
