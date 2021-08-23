@@ -4,11 +4,25 @@ import pytest
 
 from pycaption import SAMIReader, CaptionReadNoCaptions
 from pycaption.geometry import HorizontalAlignmentEnum, Size, UnitEnum  # noqa
+from tests.mixins import ReaderTestingMixIn
 
 
-class TestSAMIReader:
-    def test_detection(self, sample_sami):
-        assert SAMIReader().detect(sample_sami) is True
+class TestSAMIReader(ReaderTestingMixIn):
+    def setup_method(self):
+        self.reader = SAMIReader()
+
+    def test_positive_answer_for_detection(self, sample_sami):
+        super().assert_positive_answer_for_detection(sample_sami)
+
+    @pytest.mark.parametrize('different_sample', [
+        pytest.lazy_fixture('sample_dfxp'),
+        pytest.lazy_fixture('sample_microdvd'),
+        pytest.lazy_fixture('sample_scc_pop_on'),
+        pytest.lazy_fixture('sample_srt'),
+        pytest.lazy_fixture('sample_webvtt')
+    ])
+    def test_negative_answer_for_detection(self, different_sample):
+        super().assert_negative_answer_for_detection(different_sample)
 
     def test_caption_length(self, sample_sami):
         captions = SAMIReader().read(sample_sami)
