@@ -14,6 +14,10 @@ For details, see the `documentation <http://pycaption.readthedocs.org>`__.
 
 Changelog
 ---------
+Unreleased
+^^^^^^^^^^
+- Added zero padding to 1-digit hours outputted by WebVTTWriter
+
 2.0.0
 ^^^^^
 - Dropped support for Python 3.5
