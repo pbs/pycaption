@@ -338,3 +338,14 @@ def sample_webvtt_empty_cue_output():
 00:01.209 --> 00:02.312 position:10%,start line:10% size:90%
 abc
 """
+
+
+@pytest.fixture(scope="session")
+def sample_webvtt_timestamps():
+    return """WEBVTT
+    
+01:01.001 --> 10:10.100
+Test zero padded and two digit timestamps without hours
+
+01:01:01.001 --> 10:10:10.100
+Test zero padded and two digit timestamps without hours"""

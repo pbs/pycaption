@@ -1,3 +1,5 @@
+import re
+
 from pycaption import (
     WebVTTReader, WebVTTWriter, SRTWriter, SAMIWriter, DFXPWriter,
     MicroDVDWriter,
@@ -32,6 +34,17 @@ class TestWebVTTtoWebVTT(WebVTTTestingMixIn):
         results = WebVTTWriter().write(caption_set)
 
         assert sample_webvtt_from_dfxp_with_positioning == results
+
+    def test_output_timestamps(self, sample_webvtt_timestamps):
+        expected_timestamp_line_pattern = re.compile(
+            r'^(\d{2,}):(\d{2})(:\d{2})?\.(\d{3}) '
+            r'--> (\d{2,}):(\d{2})(:\d{2})?\.(\d{3})')
+
+        caption_set = WebVTTReader().read(sample_webvtt_timestamps)
+        results = WebVTTWriter().write(caption_set).splitlines()
+
+        assert re.match(expected_timestamp_line_pattern, results[2])
+        assert re.match(expected_timestamp_line_pattern, results[5])
 
 #     # TODO: Write a test that includes a WebVTT file with style tags
 #     # That will fail because the styles used in the cues are not tracked.
