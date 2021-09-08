@@ -1,15 +1,24 @@
 from pycaption import (
-    SAMIReader, SAMIWriter, SRTWriter, DFXPWriter, WebVTTWriter, MicroDVDWriter,
+    SAMIReader, SRTReader, SAMIWriter, DFXPWriter, WebVTTWriter, MicroDVDWriter,
 )
 
 from .mixins import (
-    SRTTestingMixIn, DFXPTestingMixIn, SAMITestingMixIn, WebVTTTestingMixIn,
+    DFXPTestingMixIn, SAMITestingMixIn, WebVTTTestingMixIn,
     MicroDVDTestingMixIn,
 )
 
 # Arbitrary values used to test relativization
 VIDEO_WIDTH = 640
 VIDEO_HEIGHT = 360
+
+
+class TestSRTtoSAMI(SAMITestingMixIn):
+    def test_srt_to_sami_conversion(self, sample_sami, sample_srt):
+        caption_set = SRTReader().read(sample_srt)
+        results = SAMIWriter().write(caption_set)
+
+        assert isinstance(results, str)
+        self.assert_sami_equals(sample_sami, results)
 
 
 class TestSAMItoSAMI(SAMITestingMixIn):
@@ -30,15 +39,6 @@ class TestSAMItoSAMI(SAMITestingMixIn):
         ).write(caption_set)
 
         self.assert_sami_equals(result, sample_sami_partial_margins_relativized)
-
-
-class TestSAMItoSRT(SRTTestingMixIn):
-    def test_sami_to_srt_conversion(self, sample_srt, sample_sami):
-        caption_set = SAMIReader().read(sample_sami)
-        results = SRTWriter().write(caption_set)
-
-        assert isinstance(results, str)
-        self.assert_srt_equals(sample_srt, results)
 
 
 class TestSAMItoDFXP(DFXPTestingMixIn):

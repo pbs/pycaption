@@ -3,11 +3,25 @@ import pytest
 from pycaption import MicroDVDReader, CaptionReadNoCaptions
 from pycaption.exceptions import CaptionReadSyntaxError, CaptionReadTimingError
 from pycaption.base import DEFAULT_LANGUAGE_CODE
+from tests.mixins import ReaderTestingMixIn
 
 
-class TestMicroDVDReader:
-    def test_detection(self, sample_microdvd):
-        assert MicroDVDReader().detect(sample_microdvd) is True
+class TestMicroDVDReader(ReaderTestingMixIn):
+    def setup_class(self):
+        self.reader = MicroDVDReader()
+
+    def test_positive_answer_for_detection(self, sample_microdvd):
+        super().assert_positive_answer_for_detection(sample_microdvd)
+
+    @pytest.mark.parametrize('different_sample', [
+        pytest.lazy_fixture('sample_dfxp'),
+        pytest.lazy_fixture('sample_sami'),
+        pytest.lazy_fixture('sample_scc_pop_on'),
+        pytest.lazy_fixture('sample_srt'),
+        pytest.lazy_fixture('sample_webvtt')
+    ])
+    def test_negative_answer_for_detection(self, different_sample):
+        super().assert_negative_answer_for_detection(different_sample)
 
     def test_caption_length(self, sample_microdvd):
         captions = MicroDVDReader().read(sample_microdvd)

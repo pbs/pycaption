@@ -4,17 +4,25 @@ from pycaption import (
     WebVTTReader, WebVTTWriter, SAMIReader, DFXPReader,
     CaptionReadNoCaptions, CaptionReadError, CaptionReadSyntaxError,
 )
+from tests.mixins import ReaderTestingMixIn
 
 
-class TestWebVTTReader:
+class TestWebVTTReader(ReaderTestingMixIn):
     def setup_method(self):
         self.reader = WebVTTReader()
 
     def test_positive_answer_for_detection(self, sample_webvtt):
-        assert self.reader.detect(sample_webvtt) is True
+        super().assert_positive_answer_for_detection(sample_webvtt)
 
-    def test_negative_answer_for_detection(self, sample_srt):
-        assert self.reader.detect(sample_srt) is False
+    @pytest.mark.parametrize('different_sample', [
+        pytest.lazy_fixture('sample_dfxp'),
+        pytest.lazy_fixture('sample_microdvd'),
+        pytest.lazy_fixture('sample_sami'),
+        pytest.lazy_fixture('sample_scc_pop_on'),
+        pytest.lazy_fixture('sample_srt')
+    ])
+    def test_negative_answer_for_detection(self, different_sample):
+        super().assert_negative_answer_for_detection(different_sample)
 
     def test_caption_length(self, sample_webvtt_2):
         captions = self.reader.read(sample_webvtt_2)

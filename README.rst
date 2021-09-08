@@ -14,6 +14,10 @@ For details, see the `documentation <http://pycaption.readthedocs.org>`__.
 
 Changelog
 ---------
+2.0.1
+^^^^^
+- Update tests for SRT format
+
 2.0.0
 ^^^^^
 - Dropped support for Python 3.5

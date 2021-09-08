@@ -57,6 +57,7 @@ from tests.fixtures.srt import (  # noqa: F401
     sample_srt, sample_srt_ascii, sample_srt_numeric, sample_srt_empty,
     sample_srt_blank_lines, sample_srt_trailing_blanks,
     samples_srt_same_time, sample_srt_empty_cue_output,
+    sample_srt_timestamps_without_microseconds,
 )
 from tests.fixtures.webvtt import (  # noqa: F401
     sample_webvtt, sample_webvtt_from_dfxp, sample_webvtt_from_sami,

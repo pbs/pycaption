@@ -7,11 +7,25 @@ from pycaption.exceptions import (
 from pycaption.geometry import (
     UnitEnum, HorizontalAlignmentEnum, VerticalAlignmentEnum,
 )
+from tests.mixins import ReaderTestingMixIn
 
 
-class TestDFXPReader:
-    def test_detection(self, sample_dfxp):
-        assert DFXPReader().detect(sample_dfxp) is True
+class TestDFXPReader(ReaderTestingMixIn):
+    def setup_class(self):
+        self.reader = DFXPReader()
+
+    def test_positive_answer_for_detection(self, sample_dfxp):
+        super().assert_positive_answer_for_detection(sample_dfxp)
+
+    @pytest.mark.parametrize('different_sample', [
+        pytest.lazy_fixture('sample_microdvd'),
+        pytest.lazy_fixture('sample_sami'),
+        pytest.lazy_fixture('sample_scc_pop_on'),
+        pytest.lazy_fixture('sample_srt'),
+        pytest.lazy_fixture('sample_webvtt')
+    ])
+    def test_negative_answer_for_detection(self, different_sample):
+        super().assert_negative_answer_for_detection(different_sample)
 
     def test_caption_length(self, sample_dfxp):
         captions = DFXPReader().read(sample_dfxp)

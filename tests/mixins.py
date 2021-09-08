@@ -1,5 +1,26 @@
-from bs4 import BeautifulSoup
 import re
+
+import pytest
+from bs4 import BeautifulSoup
+
+from pycaption.exceptions import InvalidInputError
+
+
+class ReaderTestingMixIn:
+    """
+    Provide test case capabilities for asserting common Reader functionalities.
+    """
+
+    def assert_positive_answer_for_detection(self, matching_sample):
+        assert self.reader.detect(matching_sample) is True
+
+    def assert_negative_answer_for_detection(self, different_sample):
+        assert self.reader.detect(different_sample) is False
+
+    def test_reader_only_supports_unicode_input(self):
+        with pytest.raises(InvalidInputError) as exc_info:
+            self.reader.read(b'')
+        assert exc_info.value.args[0] == 'The content is not a unicode string.'
 
 
 class WebVTTTestingMixIn:

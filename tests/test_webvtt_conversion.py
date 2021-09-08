@@ -1,12 +1,21 @@
 from pycaption import (
-    WebVTTReader, WebVTTWriter, SRTWriter, SAMIWriter, DFXPWriter,
+    SRTReader, WebVTTReader, WebVTTWriter, SAMIWriter, DFXPWriter,
     MicroDVDWriter,
 )
 
 from tests.mixins import (
-    WebVTTTestingMixIn, DFXPTestingMixIn, SAMITestingMixIn, SRTTestingMixIn,
+    WebVTTTestingMixIn, DFXPTestingMixIn, SAMITestingMixIn,
     MicroDVDTestingMixIn,
 )
+
+
+class TestSRTtoWebVTT(WebVTTTestingMixIn):
+    def test_srt_to_webvtt_conversion(self, sample_webvtt_from_srt, sample_srt):
+        caption_set = SRTReader().read(sample_srt)
+        results = WebVTTWriter().write(caption_set)
+
+        assert isinstance(results, str)
+        self.assert_webvtt_equals(sample_webvtt_from_srt, results)
 
 
 class TestWebVTTtoWebVTT(WebVTTTestingMixIn):
@@ -55,15 +64,6 @@ class TestWebVTTtoDFXP(DFXPTestingMixIn):
         self.assert_dfxp_equals(
             sample_dfxp, results, ignore_styling=True, ignore_spans=True
         )
-
-
-class TestWebVTTtoSRT(SRTTestingMixIn):
-    def test_webvtt_to_srt_conversion(self, sample_srt, sample_webvtt):
-        caption_set = WebVTTReader().read(sample_webvtt)
-        results = SRTWriter().write(caption_set)
-
-        assert isinstance(results, str)
-        self.assert_srt_equals(sample_srt, results)
 
 
 class TestWebVTTtoMicroDVD(MicroDVDTestingMixIn):
