@@ -16,6 +16,7 @@ Changelog
 ---------
 2.0.1
 ^^^^^
+- Update tests for SAMI format
 - Update tests for SRT format
 
 2.0.0
