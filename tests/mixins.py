@@ -151,7 +151,7 @@ class SAMITestingMixIn:
             for caption in soup.select('sync')
         )
 
-    def assert_sami_equals(self, first, second):
+    def assert_sami_captions_equal(self, first, second):
         first_soup = BeautifulSoup(first, 'lxml')
         second_soup = BeautifulSoup(second, 'lxml')
 

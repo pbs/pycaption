@@ -1,7 +1,7 @@
 from bs4 import BeautifulSoup
 
 from pycaption import (
-    DFXPReader, SRTReader, DFXPWriter, SAMIWriter, WebVTTWriter, MicroDVDWriter,
+    DFXPReader, SAMIReader, SRTReader, DFXPWriter, WebVTTWriter, MicroDVDWriter,
 )
 from pycaption.dfxp.extras import LegacyDFXPWriter
 from pycaption.dfxp.base import (
@@ -9,10 +9,7 @@ from pycaption.dfxp.base import (
     DFXP_DEFAULT_REGION_ID, _recreate_style, _convert_layout_to_attributes
 )
 
-from .mixins import (
-    SAMITestingMixIn, DFXPTestingMixIn, WebVTTTestingMixIn,
-    MicroDVDTestingMixIn,
-)
+from .mixins import DFXPTestingMixIn, WebVTTTestingMixIn, MicroDVDTestingMixIn
 
 # Arbitrary values used to test relativization
 VIDEO_WIDTH = 640
@@ -152,35 +149,6 @@ class TestDFXPtoDFXP(DFXPTestingMixIn):
         assert "&lt;&lt; \"Andy's Café &amp; Restaurant\" this way" in result
 
 
-class TestDFXPtoSAMI(SAMITestingMixIn):
-    def test_dfxp_to_sami_conversion(self, sample_sami, sample_dfxp):
-        caption_set = DFXPReader().read(sample_dfxp)
-        results = SAMIWriter().write(caption_set)
-
-        assert isinstance(results, str)
-        self.assert_sami_equals(sample_sami, results)
-
-    def test_dfxp_to_sami_with_margins(
-            self, sample_dfxp_from_sami_with_margins):
-        caption_set = DFXPReader().read(sample_dfxp_from_sami_with_margins)
-        results = SAMIWriter(video_width=VIDEO_WIDTH,
-                             video_height=VIDEO_HEIGHT).write(caption_set)
-        margins = ["margin-right: 6.04%;",
-                   "margin-bottom: 0%;",
-                   "margin-top: 0%;",
-                   "margin-left: 6.04%;"]
-
-        for margin in margins:
-            assert margin in results
-
-    def test_dfxp_empty_cue_to_sami(self, sample_sami_empty_cue_output,
-                                    sample_dfxp_empty_cue):
-        caption_set = DFXPReader().read(sample_dfxp_empty_cue)
-        results = SAMIWriter().write(caption_set)
-
-        self.assert_sami_equals(sample_sami_empty_cue_output, results)
-
-
 class TestDFXPtoWebVTT(WebVTTTestingMixIn):
     def test_dfxp_to_webvtt_conversion(self, sample_webvtt_from_dfxp,
                                        sample_dfxp):
@@ -283,6 +251,78 @@ class TestLegacyDFXP:
         result = LegacyDFXPWriter().write(caption_set)
 
         assert result == sample_dfxp_for_legacy_writer_output
+
+
+class TestSAMItoDFXP(DFXPTestingMixIn):
+    def test_sami_to_dfxp_conversion(
+            self, sample_dfxp_from_sami_with_positioning, sample_sami):
+        caption_set = SAMIReader().read(sample_sami)
+        results = DFXPWriter(relativize=False,
+                             fit_to_screen=False).write(caption_set)
+
+        assert isinstance(results, str)
+        self.assert_dfxp_equals(sample_dfxp_from_sami_with_positioning, results)
+
+    def test_sami_to_dfxp_with_margin(self, sample_dfxp_from_sami_with_margins,
+                                      sample_sami_partial_margins):
+        caption_set = SAMIReader().read(sample_sami_partial_margins)
+        results = DFXPWriter(
+            relativize=False, fit_to_screen=False).write(caption_set)
+
+        self.assert_dfxp_equals(sample_dfxp_from_sami_with_margins, results)
+
+    def test_sami_to_dfxp_with_margin_for_language(
+            self, sample_dfxp_from_sami_with_lang_margins,
+            sample_sami_lang_margin):
+        caption_set = SAMIReader().read(sample_sami_lang_margin)
+        results = DFXPWriter(
+            relativize=False, fit_to_screen=False).write(caption_set)
+
+        self.assert_dfxp_equals(
+            sample_dfxp_from_sami_with_lang_margins,
+            results
+        )
+
+    def test_sami_to_dfxp_with_span(self, sample_dfxp_from_sami_with_span,
+                                    sample_sami_with_span):
+        caption_set = SAMIReader().read(sample_sami_with_span)
+        results = DFXPWriter(
+            relativize=False, fit_to_screen=False).write(caption_set)
+
+        self.assert_dfxp_equals(sample_dfxp_from_sami_with_span, results)
+
+    def test_sami_to_dfxp_with_bad_span_align(
+            self, sample_dfxp_from_sami_with_bad_span_align,
+            sample_sami_with_bad_span_align):
+        caption_set = SAMIReader().read(sample_sami_with_bad_span_align)
+        results = DFXPWriter(
+            relativize=False, fit_to_screen=False).write(caption_set)
+
+        self.assert_dfxp_equals(
+            sample_dfxp_from_sami_with_bad_span_align,
+            results
+        )
+
+    def test_sami_to_dfxp_ignores_multiple_span_aligns(
+            self, sample_dfxp_from_sami_with_bad_span_align,
+            sample_sami_with_multiple_span_aligns):
+        caption_set = SAMIReader().read(sample_sami_with_multiple_span_aligns)
+        results = DFXPWriter(
+            relativize=False, fit_to_screen=False).write(caption_set)
+
+        self.assert_dfxp_equals(
+            sample_dfxp_from_sami_with_bad_span_align,
+            results
+        )
+
+    def test_sami_to_dfxp_xml_output(self, sample_sami_syntax_error):
+        captions = SAMIReader().read(sample_sami_syntax_error)
+        results = DFXPWriter(relativize=False,
+                             fit_to_screen=False).write(captions)
+
+        assert isinstance(results, str)
+        assert 'xmlns="http://www.w3.org/ns/ttml"' in results
+        assert 'xmlns:tts="http://www.w3.org/ns/ttml#styling"' in results
 
 
 class TestSRTtoDFXP(DFXPTestingMixIn):
