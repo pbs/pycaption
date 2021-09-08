@@ -110,7 +110,9 @@ class SRTWriter(BaseWriter):
                 merged_captions[-1] = Caption(
                     start=caption.start,
                     end=caption.end,
-                    nodes=merged_captions[-1].nodes + [CaptionNode.create_break()] + caption.nodes)
+                    nodes=(merged_captions[-1].nodes
+                           + [CaptionNode.create_break()]
+                           + caption.nodes))
             else:
                 # Different timestamp, end of merging, append new caption
                 merged_captions.append(caption)
