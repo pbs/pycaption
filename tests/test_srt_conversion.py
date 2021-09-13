@@ -54,6 +54,7 @@ class TestSRTtoSRT(SRTTestingMixIn):
         sentences = re.split(r"\n\d\n", results)
 
         assert 3 == len(sentences)
+        assert 4 == len(sentences[0].splitlines())
 
 
 class TestWebVTTtoSRT(SRTTestingMixIn):

@@ -239,8 +239,6 @@ class SAMIReader(BaseReader):
             return 'bold'
         elif tag == 'u':
             return 'underline'
-        else:
-            raise RuntimeError("Unknown style tag")
 
     def _translate_tag(self, tag, inherit_from=None):
         """
@@ -735,13 +733,12 @@ class SAMIParser(HTMLParser):
             raise CaptionReadSyntaxError(f'SAMI File contains "{no_cc}"')
 
         # try to find style tag in SAMI
-        try:
-            # prevent BS4 error with huge SAMI files with unclosed tags
-            index = data.lower().find("</head>")
-            style = BeautifulSoup(data[:index], "lxml").find('style')
-            if style and style.contents:
-                self.styles = self._css_parse(' '.join(style.contents))
-        except AttributeError:
+        # prevent BS4 error with huge SAMI files with unclosed tags
+        index = data.lower().find("</head>")
+        style = BeautifulSoup(data[:index], "lxml").find('style')
+        if style and style.contents:
+            self.styles = self._css_parse(' '.join(style.contents))
+        else:
             self.styles = {}
 
         # fix erroneous italics tags

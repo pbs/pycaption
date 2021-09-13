@@ -16,7 +16,9 @@ Changelog
 ---------
 2.0.1
 ^^^^^
-- Update tests for SRT format
+- Added newline between merged SRT captions with overlapping timestamps
+- Updated tests for SAMI format
+- Updated tests for SRT format
 
 2.0.0
 ^^^^^
