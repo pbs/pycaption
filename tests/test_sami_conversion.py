@@ -63,6 +63,7 @@ class TestSRTtoSAMI(SAMITestingMixIn):
 class TestSAMItoSAMI(SAMITestingMixIn):
     def setup_method(self):
         self.reader = SAMIReader()
+        self.writer = SAMIWriter()
 
     def test_sami_to_sami_conversion(self, sample_sami):
         caption_set = self.reader.read(sample_sami)
@@ -74,7 +75,7 @@ class TestSAMItoSAMI(SAMITestingMixIn):
 
     def test_sami_with_multi_lang(self, sample_sami_with_separate_multi_lang):
         caption_set = self.reader.read(sample_sami_with_separate_multi_lang)
-        result = SAMIWriter().write(caption_set)
+        result = self.writer.write(caption_set)
 
         assert isinstance(result, str)
         self.assert_sami_captions_equal(sample_sami_with_separate_multi_lang,
@@ -91,12 +92,10 @@ class TestSAMItoSAMI(SAMITestingMixIn):
         self.assert_sami_captions_equal(sample_sami_partial_margins_relativized,
                                         result)
 
-
-class TestSAMIWithMissingLanguage(SAMITestingMixIn):
-    def test_sami_to_sami_conversion(self, sample_sami_with_lang,
-                                     sample_sami_no_lang):
-        caption_set = SAMIReader().read(sample_sami_no_lang)
-        result = SAMIWriter().write(caption_set)
+    def test_missing_language_conversion(self, sample_sami_with_lang,
+                                         sample_sami_no_lang):
+        caption_set = self.reader.read(sample_sami_no_lang)
+        result = self.writer.write(caption_set)
 
         assert isinstance(result, str)
         self.assert_sami_captions_equal(sample_sami_with_lang, result)
