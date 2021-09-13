@@ -21,7 +21,7 @@ from tests.fixtures.dfxp import (  # noqa: F401
     sample_dfxp_empty_cue, sample_dfxp_empty_cue_output,
     sample_dfxp_invalid_positioning_value_template,
     sample_dfxp_multiple_captions_with_the_same_timing,
-    sample_dfxp_with_ampersand_character,
+    sample_dfxp_with_ampersand_character, sample_dfxp_with_nested_spans,
     dfxp_style_region_align_conflict, dfxp_with_concurrent_captions,
 )
 from tests.fixtures.microdvd import (  # noqa: F401
@@ -40,6 +40,12 @@ from tests.fixtures.sami import (  # noqa: F401
     sample_sami_with_p_and_span_align, sample_sami_with_multiple_span_aligns,
     sample_sami_no_lang, sample_sami_with_lang, sample_sami_with_multi_lang,
     sample_sami_with_multiple_p, sample_sami_empty_cue_output,
+    sample_sami_with_invalid_inline_style,
+    sample_sami_including_hexadecimal_charref,
+    sample_sami_including_decimal_charref,
+    sample_sami_including_html5_entityref, sample_sami_with_unclosed_tag,
+    sample_sami_with_inline_lang, sample_sami_from_dfxp_with_nested_spans,
+    sample_sami_with_separate_multi_lang,
 )
 from tests.fixtures.scc import (  # noqa: F401
     sample_scc_created_dfxp_with_wrongly_closing_spans,
@@ -57,6 +63,7 @@ from tests.fixtures.srt import (  # noqa: F401
     sample_srt, sample_srt_ascii, sample_srt_numeric, sample_srt_empty,
     sample_srt_blank_lines, sample_srt_trailing_blanks,
     samples_srt_same_time, sample_srt_empty_cue_output,
+    sample_srt_timestamps_without_microseconds,
 )
 from tests.fixtures.webvtt import (  # noqa: F401
     sample_webvtt, sample_webvtt_from_dfxp, sample_webvtt_from_sami,

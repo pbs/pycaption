@@ -110,7 +110,9 @@ class SRTWriter(BaseWriter):
                 merged_captions[-1] = Caption(
                     start=caption.start,
                     end=caption.end,
-                    nodes=merged_captions[-1].nodes + caption.nodes)
+                    nodes=(merged_captions[-1].nodes
+                           + [CaptionNode.create_break()]
+                           + caption.nodes))
             else:
                 # Different timestamp, end of merging, append new caption
                 merged_captions.append(caption)
@@ -124,9 +126,8 @@ class SRTWriter(BaseWriter):
 
             start = caption.format_start(msec_separator=',')
             end = caption.format_end(msec_separator=',')
-            timestamp = f'{start[:12]} --> {end[:12]}\n'
 
-            srt += timestamp.replace('.', ',')
+            srt += f'{start[:12]} --> {end[:12]}\n'
 
             new_content = ''
             for node in caption.nodes:
@@ -134,8 +135,6 @@ class SRTWriter(BaseWriter):
 
             # Eliminate excessive line breaks
             new_content = new_content.strip()
-            while '\n\n' in new_content:
-                new_content = new_content.replace('\n\n', '\n')
 
             srt += f"{new_content}\n\n"
             count += 1

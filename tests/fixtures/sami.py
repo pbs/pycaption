@@ -549,3 +549,147 @@ def sample_sami_empty_cue_output():
  </body>
 </sami>
 """
+
+
+@pytest.fixture(scope="session")
+def sample_sami_with_invalid_inline_style():
+    return """
+<SAMI><HEAD>
+    <STYLE TYPE="text/css">
+    <!--
+        .ENCC {Name: 'Subtitles'; Lang: en-US; SAMIType: CC; margin-top: 20px; margin-right: 20px; margin-bottom: 20px; margin-left: 20px;}
+    -->
+    </STYLE></HEAD>
+<BODY>
+    <SYNC start="133">
+        <P class="ENCC" Style="text-align:right:font-style:italic">
+            Some say we have this vision of Einstein as an old, wrinkly man
+        </P>
+    </SYNC>
+</BODY></SAMI>
+"""
+
+
+@pytest.fixture(scope="session")
+def sample_sami_including_hexadecimal_charref():
+    return """
+<SAMI><HEAD><STYLE TYPE="text/css">
+<!--
+.ENCC {Name: English; lang: en-US; SAMI_Type: CC;}
+--></STYLE></HEAD><BODY>
+<SYNC start="101"><P class="ENCC">&#x3E; &#x3E;</P></SYNC>
+</BODY></SAMI>
+"""
+
+
+@pytest.fixture(scope="session")
+def sample_sami_including_decimal_charref():
+    return """
+<SAMI><HEAD><STYLE TYPE="text/css">
+<!--
+.ENCC {Name: English; lang: en-US; SAMI_Type: CC;}
+--></STYLE></HEAD><BODY>
+<SYNC start="101"><P class="ENCC">&#62; &#62;</P></SYNC>
+</BODY></SAMI>
+"""
+
+
+@pytest.fixture(scope="session")
+def sample_sami_including_html5_entityref():
+    return """
+<SAMI><HEAD><STYLE TYPE="text/css">
+<!--
+.ENCC {Name: English; lang: en-US; SAMI_Type: CC;}
+--></STYLE></HEAD><BODY>
+<SYNC start="1301"><P class="ENCC">&starf;_&starf;</P></SYNC>
+</BODY></SAMI>
+"""
+
+
+@pytest.fixture(scope="session")
+def sample_sami_with_unclosed_tag():
+    return """
+<SAMI><HEAD><STYLE TYPE="text/css">
+<!--
+.ENCC {Name: English; lang: en-US; SAMI_Type: CC;}
+--></STYLE></HEAD><BODY>
+<SYNC start="1101"><P class="ENCC">.</P></SYNC>
+</BODY>
+"""
+
+
+@pytest.fixture(scope="session")
+def sample_sami_with_inline_lang():
+    return """
+<SAMI><HEAD></HEAD><BODY>
+<SYNC start="1201"><P lang="en-US">Inlined.</P></SYNC>
+</BODY></SAMI>
+"""
+
+
+# we do not seem to support nested spans, update this if fixed.
+@pytest.fixture(scope="session")
+def sample_sami_from_dfxp_with_nested_spans():
+    return """<sami>
+ <head>
+  <style type="text/css">
+   <!--
+    .s1 {
+     font-style: italic;
+    }
+    .s2 {
+     font-weight: bold;
+    }
+    .s3 {
+     text-decoration: underline;
+    }
+    .en-US {
+     lang: en-US;
+    }
+   -->
+  </style>
+ </head>
+ <body>
+  <sync start="3209">
+   <p class="en-US">
+    That is  <span class="s3" style="classes:['s3'];class:s3;"></span> <span class="s2" style="classes:['s2'];class:s2;"></span> <span class="s1" style="classes:['s1'];class:s1;">nested</span> .
+   </p>
+  </sync>
+ </body>
+</sami>"""
+
+
+@pytest.fixture(scope="session")
+def sample_sami_with_separate_multi_lang():
+    return """<sami>
+ <head>
+  <style type="text/css">
+   <!--
+    .en-UK {
+     lang: en-UK;
+    }
+    .en-US {
+     lang: en-US;
+    }
+   -->
+  </style>
+ </head>
+ <body>
+  <sync start="1209">
+   <p class="en-UK">
+    British text.
+   </p>
+  </sync>
+  <sync start="3209">
+   <p class="en-US">
+    English text.
+   </p>
+  </sync>
+  <sync start="7209">
+   <p class="en-UK">
+    OTHER British text.
+   </p>
+  </sync>
+ </body>
+</sami>
+"""

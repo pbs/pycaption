@@ -8,13 +8,27 @@ from pycaption.scc.specialized_collections import (
 )
 from pycaption import SCCReader, CaptionReadNoCaptions, CaptionNode
 from pycaption.scc.state_machines import DefaultProvidingPositionTracker
+from tests.mixins import ReaderTestingMixIn
 
 TOLERANCE_MICROSECONDS = 500 * 1000
 
 
-class TestSCCReader:
-    def test_detection(self, sample_scc_pop_on):
-        assert SCCReader().detect(sample_scc_pop_on) is True
+class TestSCCReader(ReaderTestingMixIn):
+    def setup_method(self):
+        self.reader = SCCReader()
+
+    def test_positive_answer_for_detection(self, sample_scc_pop_on):
+        super().assert_positive_answer_for_detection(sample_scc_pop_on)
+
+    @pytest.mark.parametrize('different_sample', [
+        pytest.lazy_fixture('sample_dfxp'),
+        pytest.lazy_fixture('sample_microdvd'),
+        pytest.lazy_fixture('sample_sami'),
+        pytest.lazy_fixture('sample_srt'),
+        pytest.lazy_fixture('sample_webvtt')
+    ])
+    def test_negative_answer_for_detection(self, different_sample):
+        super().assert_negative_answer_for_detection(different_sample)
 
     def test_caption_length(self, sample_scc_pop_on):
         captions = SCCReader().read(sample_scc_pop_on)

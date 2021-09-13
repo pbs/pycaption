@@ -1390,3 +1390,29 @@ def sample_dfxp_with_ampersand_character():
   </div>
  </body>
 </tt>"""
+
+
+@pytest.fixture(scope="session")
+def sample_dfxp_with_nested_spans():
+    return """\
+<?xml version="1.0" encoding="utf-8"?>
+<tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml"
+    xmlns:tts="http://www.w3.org/ns/ttml#styling">
+ <head>
+  <styling>
+   <style xml:id="s1" tts:fontstyle="italic"/>
+   <style xml:id="s2" tts:fontweight="bold" />
+   <style xml:id="s3" tts:textdecoration="underline" />
+  </styling>
+  <layout>
+  <region xml:id="bottom" tts:displayAlign="after" tts:textAlign="center"></region>
+  </layout>
+ </head>
+ <body>
+  <div xml:lang="en-US" region="bottom">
+   <p begin="00:00:03.209" end="00:00:8.312" region="bottom">
+    That is <span style="s3"><span style="s2"><span style="s1">nested</span></span></span>.
+   </p>
+  </div>
+ </body>
+</tt>"""
