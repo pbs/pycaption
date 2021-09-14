@@ -78,5 +78,5 @@ from tests.fixtures.webvtt import (  # noqa: F401
     sample_webvtt_from_scc_properly_writes_newlines_output,
     sample_webvtt_last_cue_zero_start, sample_webvtt_empty_cue,
     sample_webvtt_multi_lang_en, sample_webvtt_multi_lang_de,
-    sample_webvtt_empty_cue_output,
+    sample_webvtt_empty_cue_output, sample_webvtt_timestamps
 )

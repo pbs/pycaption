@@ -224,7 +224,7 @@ class WebVTTWriter(BaseWriter):
         hh, mm = divmod(mm, 60)
         s = f"{mm:02}:{ss:02}.{td.microseconds // 1000:03}"
         if hh:
-            s = f"{hh}:{s}"
+            s = f"{hh:02}:{s}"
         return s
 
     def _tags_for_style(self, style):

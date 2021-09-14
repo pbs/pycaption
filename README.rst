@@ -14,11 +14,13 @@ For details, see the `documentation <http://pycaption.readthedocs.org>`__.
 
 Changelog
 ---------
+
 2.0.1
 ^^^^^
 - Added newline between merged SRT captions with overlapping timestamps
 - Updated tests for SAMI format
 - Updated tests for SRT format
+- Added zero padding to 1-digit hours outputted by WebVTTWriter
 
 2.0.0
 ^^^^^
