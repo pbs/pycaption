@@ -49,7 +49,7 @@ class TestSCCReader(ReaderTestingMixIn):
         with pytest.raises(CaptionReadNoCaptions):
             SCCReader().read(sample_scc_empty)
 
-    def test_scc_positioning_is_read(self, sample_scc_multiple_positioning):
+    def test_positioning(self, sample_scc_multiple_positioning):
         captions = SCCReader().read(sample_scc_multiple_positioning)
 
         # SCC generates only origin, and we always expect it.

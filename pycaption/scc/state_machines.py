@@ -31,7 +31,7 @@ class _PositioningTracker:
             return
 
         row, col = current
-        new_row, _ = positioning
+        new_row, new_col = positioning
 
         # is the new position simply one line below?
         if new_row == row + 1:
@@ -40,7 +40,9 @@ class _PositioningTracker:
         else:
             # reset the "current" position altogether.
             self._positions = [positioning]
-            self._repositioning_required = True
+            # if the new position isn't a tab offset
+            if new_row != row or new_col - col > 3:
+                self._repositioning_required = True
 
     def get_current_position(self):
         """Returns the current usable position
