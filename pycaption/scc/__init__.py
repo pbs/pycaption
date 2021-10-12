@@ -321,8 +321,8 @@ class SCCReader(BaseReader):
         # first check if word is a command
         # TODO - check that all the positioning commands are here, or use
         # some other strategy to determine if the word is a command.
-        if word in COMMANDS or _is_pac_command(word) \
-                or word in PAC_TAB_OFFSET_COMMANDS:
+        if word in (COMMANDS or PAC_TAB_OFFSET_COMMANDS) \
+                or _is_pac_command(word):
             self._translate_command(word)
 
         # second, check if word is a special character
