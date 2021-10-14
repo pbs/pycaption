@@ -435,8 +435,10 @@ def _get_layout_from_tuple(position_tuple):
 
     row, column = position_tuple
 
-    horizontal = Size(100 * column / 32.0, UnitEnum.PERCENT)
-    vertical = Size(100 * (row - 1) / 15.0, UnitEnum.PERCENT)
+    # Horizontal safe area between 10% and 90%
+    horizontal = Size(80 * column / 32.0 + 10, UnitEnum.PERCENT)
+    # Vertical safe area between 5% and 95%
+    vertical = Size(90 * (row - 1) / 15.0 + 5, UnitEnum.PERCENT)
     return Layout(origin=Point(horizontal, vertical),
                   alignment=Alignment(HorizontalAlignmentEnum.LEFT,
                                       VerticalAlignmentEnum.TOP)
