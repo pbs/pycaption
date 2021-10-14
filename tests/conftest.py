@@ -57,7 +57,7 @@ from tests.fixtures.scc import (  # noqa: F401
     sample_scc_no_explicit_end_to_last_caption, sample_scc_flashing_captions,
     sample_scc_eoc_first_command, sample_scc_with_extended_characters,
     sample_scc_with_ampersand_character, sample_scc_multiple_formats,
-    sample_scc_repeated_tab_offset,
+    sample_scc_repeated_tab_offset, sample_scc_tab_offset
 )
 from tests.fixtures.srt import (  # noqa: F401
     sample_srt, sample_srt_ascii, sample_srt_numeric, sample_srt_empty,

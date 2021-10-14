@@ -74,6 +74,27 @@ class TestSCCReader(ReaderTestingMixIn):
 
         assert expected_positioning == actual_positioning
 
+    def test_tab_offset(self, sample_scc_tab_offset):
+        captions = SCCReader().read(sample_scc_tab_offset)
+
+        # SCC generates only origin, and we always expect it.
+        expected_positioning = [
+            ((34.375, UnitEnum.PERCENT), (86.66666666666667, UnitEnum.PERCENT)),
+            ((9.375, UnitEnum.PERCENT), (93.33333333333333, UnitEnum.PERCENT)),
+            ((3.125, UnitEnum.PERCENT), (86.66666666666667, UnitEnum.PERCENT)),
+            ((21.875, UnitEnum.PERCENT), (86.66666666666667, UnitEnum.PERCENT)),
+            ((25.0, UnitEnum.PERCENT), (93.33333333333333, UnitEnum.PERCENT)),
+            ((31.25, UnitEnum.PERCENT), (86.66666666666667, UnitEnum.PERCENT)),
+            ((9.375, UnitEnum.PERCENT), (86.66666666666667, UnitEnum.PERCENT))
+        ]
+
+        actual_positioning = [
+            caption_.layout_info.origin.serialized()
+            for caption_ in captions.get_captions('en-US')
+        ]
+
+        assert expected_positioning == actual_positioning
+
     def test_correct_last_bad_timing(self,
                                      sample_scc_produces_bad_last_end_time):
         # This fix was implemented with a hack. The commands for the Pop-on
