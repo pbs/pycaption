@@ -892,7 +892,8 @@ def sample_dfxp_style_tag_with_no_xml_id_output():
 
 @pytest.fixture(scope="session")
 def sample_dfxp_from_scc_output():
-    return """<?xml version="1.0" encoding="utf-8"?>
+    return """\
+<?xml version="1.0" encoding="utf-8"?>
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling">
  <head>
   <styling>
@@ -900,18 +901,18 @@ def sample_dfxp_from_scc_output():
   </styling>
   <layout>
    <region tts:displayAlign="after" tts:textAlign="center" xml:id="bottom"/>
-   <region tts:displayAlign="before" tts:origin="0% 80%" tts:textAlign="left" xml:id="r0"/>
-   <region tts:displayAlign="before" tts:origin="37.5% 0%" tts:textAlign="left" xml:id="r1"/>
-   <region tts:displayAlign="before" tts:origin="75% 20%" tts:textAlign="left" xml:id="r2"/>
-   <region tts:displayAlign="before" tts:origin="12.5% 46.67%" tts:textAlign="left" xml:id="r3"/>
-   <region tts:displayAlign="before" tts:origin="12.5% 93.33%" tts:textAlign="left" xml:id="r4"/>
-   <region tts:displayAlign="before" tts:origin="37.5% 53.33%" tts:textAlign="left" xml:id="r5"/>
-   <region tts:displayAlign="before" tts:origin="75% 13.33%" tts:textAlign="left" xml:id="r6"/>
-   <region tts:displayAlign="before" tts:origin="12.5% 33.33%" tts:textAlign="left" xml:id="r7"/>
-   <region tts:displayAlign="before" tts:origin="12.5% 86.67%" tts:textAlign="left" xml:id="r8"/>
-   <region tts:displayAlign="before" tts:origin="75% 6.67%" tts:textAlign="left" xml:id="r9"/>
-   <region tts:displayAlign="before" tts:origin="37.5% 40%" tts:textAlign="left" xml:id="r10"/>
-   <region tts:displayAlign="before" tts:origin="12.5% 73.33%" tts:textAlign="left" xml:id="r11"/>
+   <region tts:displayAlign="before" tts:origin="10% 77%" tts:textAlign="left" xml:id="r0"/>
+   <region tts:displayAlign="before" tts:origin="40% 5%" tts:textAlign="left" xml:id="r1"/>
+   <region tts:displayAlign="before" tts:origin="70% 23%" tts:textAlign="left" xml:id="r2"/>
+   <region tts:displayAlign="before" tts:origin="20% 47%" tts:textAlign="left" xml:id="r3"/>
+   <region tts:displayAlign="before" tts:origin="20% 89%" tts:textAlign="left" xml:id="r4"/>
+   <region tts:displayAlign="before" tts:origin="40% 53%" tts:textAlign="left" xml:id="r5"/>
+   <region tts:displayAlign="before" tts:origin="70% 17%" tts:textAlign="left" xml:id="r6"/>
+   <region tts:displayAlign="before" tts:origin="20% 35%" tts:textAlign="left" xml:id="r7"/>
+   <region tts:displayAlign="before" tts:origin="20% 83%" tts:textAlign="left" xml:id="r8"/>
+   <region tts:displayAlign="before" tts:origin="70% 11%" tts:textAlign="left" xml:id="r9"/>
+   <region tts:displayAlign="before" tts:origin="40% 41%" tts:textAlign="left" xml:id="r10"/>
+   <region tts:displayAlign="before" tts:origin="20% 71%" tts:textAlign="left" xml:id="r11"/>
   </layout>
  </head>
  <body>
@@ -974,11 +975,11 @@ def sample_dfxp_with_properly_closing_spans_output():
   </styling>
   <layout>
    <region tts:displayAlign="after" tts:textAlign="center" xml:id="bottom"/>
-   <region tts:displayAlign="before" tts:extent="87.5% 13.33%" tts:origin="12.5% 86.67%" tts:textAlign="left" xml:id="r0"/>
-   <region tts:displayAlign="before" tts:extent="75% 13.33%" tts:origin="25% 86.67%" tts:textAlign="left" xml:id="r1"/>
-   <region tts:displayAlign="before" tts:extent="50% 13.33%" tts:origin="50% 86.67%" tts:textAlign="left" xml:id="r2"/>
-   <region tts:displayAlign="before" tts:extent="37.5% 13.33%" tts:origin="62.5% 86.67%" tts:textAlign="left" xml:id="r3"/>
-   <region tts:displayAlign="before" tts:extent="75% 6.67%" tts:origin="25% 93.33%" tts:textAlign="left" xml:id="r4"/>
+   <region tts:displayAlign="before" tts:extent="80% 17%" tts:origin="20% 83%" tts:textAlign="left" xml:id="r0"/>
+   <region tts:displayAlign="before" tts:extent="70% 17%" tts:origin="30% 83%" tts:textAlign="left" xml:id="r1"/>
+   <region tts:displayAlign="before" tts:extent="50% 17%" tts:origin="50% 83%" tts:textAlign="left" xml:id="r2"/>
+   <region tts:displayAlign="before" tts:extent="40% 17%" tts:origin="60% 83%" tts:textAlign="left" xml:id="r3"/>
+   <region tts:displayAlign="before" tts:extent="70% 11%" tts:origin="30% 89%" tts:textAlign="left" xml:id="r4"/>
   </layout>
  </head>
  <body>
@@ -1379,7 +1380,7 @@ def sample_dfxp_with_ampersand_character():
   </styling>
   <layout>
    <region tts:displayAlign="after" tts:textAlign="center" xml:id="bottom"/>
-   <region tts:displayAlign="before" tts:extent="87.5% 100%" tts:origin="12.5% 0%" tts:textAlign="left" xml:id="r0"/>
+   <region tts:displayAlign="before" tts:extent="80% 95%" tts:origin="20% 5%" tts:textAlign="left" xml:id="r0"/>
   </layout>
  </head>
  <body>

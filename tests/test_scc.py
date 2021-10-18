@@ -1,12 +1,12 @@
 import pytest
 
+from pycaption import SCCReader, CaptionReadNoCaptions, CaptionNode
 from pycaption.geometry import (
     UnitEnum, HorizontalAlignmentEnum, VerticalAlignmentEnum,
 )
 from pycaption.scc.specialized_collections import (
     InstructionNodeCreator, TimingCorrectingCaptionList,
 )
-from pycaption import SCCReader, CaptionReadNoCaptions, CaptionNode
 from pycaption.scc.state_machines import DefaultProvidingPositionTracker
 from tests.mixins import ReaderTestingMixIn
 
@@ -49,24 +49,25 @@ class TestSCCReader(ReaderTestingMixIn):
         with pytest.raises(CaptionReadNoCaptions):
             SCCReader().read(sample_scc_empty)
 
-    def test_scc_positioning_is_read(self, sample_scc_multiple_positioning):
+    def test_positioning(self, sample_scc_multiple_positioning):
         captions = SCCReader().read(sample_scc_multiple_positioning)
 
         # SCC generates only origin, and we always expect it.
         expected_positioning = [
-            ((0.0, UnitEnum.PERCENT), (80.0, UnitEnum.PERCENT)),
-            ((37.5, UnitEnum.PERCENT), (0.0, UnitEnum.PERCENT)),
-            ((75.0, UnitEnum.PERCENT), (20.0, UnitEnum.PERCENT)),
-            ((12.5, UnitEnum.PERCENT), (46.666666666666664, UnitEnum.PERCENT)),
-            ((12.5, UnitEnum.PERCENT), (93.33333333333333, UnitEnum.PERCENT)),
-            ((37.5, UnitEnum.PERCENT), (53.333333333333336, UnitEnum.PERCENT)),
-            ((75.0, UnitEnum.PERCENT), (13.333333333333334, UnitEnum.PERCENT)),
-            ((12.5, UnitEnum.PERCENT), (33.333333333333336, UnitEnum.PERCENT)),
-            ((12.5, UnitEnum.PERCENT), (86.66666666666667, UnitEnum.PERCENT)),
-            ((75.0, UnitEnum.PERCENT), (6.666666666666667, UnitEnum.PERCENT)),
-            ((37.5, UnitEnum.PERCENT), (40.0, UnitEnum.PERCENT)),
-            ((12.5, UnitEnum.PERCENT), (73.33333333333333, UnitEnum.PERCENT)),
+            ((10.0, UnitEnum.PERCENT), (77.0, UnitEnum.PERCENT)),
+            ((40.0, UnitEnum.PERCENT), (5.0, UnitEnum.PERCENT)),
+            ((70.0, UnitEnum.PERCENT), (23.0, UnitEnum.PERCENT)),
+            ((20.0, UnitEnum.PERCENT), (47.0, UnitEnum.PERCENT)),
+            ((20.0, UnitEnum.PERCENT), (89.0, UnitEnum.PERCENT)),
+            ((40.0, UnitEnum.PERCENT), (53.0, UnitEnum.PERCENT)),
+            ((70.0, UnitEnum.PERCENT), (17.0, UnitEnum.PERCENT)),
+            ((20.0, UnitEnum.PERCENT), (35.0, UnitEnum.PERCENT)),
+            ((20.0, UnitEnum.PERCENT), (83.0, UnitEnum.PERCENT)),
+            ((70.0, UnitEnum.PERCENT), (11.0, UnitEnum.PERCENT)),
+            ((40.0, UnitEnum.PERCENT), (41.0, UnitEnum.PERCENT)),
+            ((20.0, UnitEnum.PERCENT), (71.0, UnitEnum.PERCENT))
         ]
+
         actual_positioning = [
             caption_.layout_info.origin.serialized()
             for caption_ in captions.get_captions('en-US')
@@ -127,12 +128,13 @@ class TestSCCReader(ReaderTestingMixIn):
         ]
 
         expected_caption_layouts = [
-            (((0.0, UnitEnum.PERCENT), (86.66666666666667, UnitEnum.PERCENT)),
+            (((10.0, UnitEnum.PERCENT), (83.0, UnitEnum.PERCENT)),
              None, None,
              (HorizontalAlignmentEnum.LEFT, VerticalAlignmentEnum.TOP)),
-            (((0.0, UnitEnum.PERCENT), (86.66666666666667, UnitEnum.PERCENT)),
+            (((10.0, UnitEnum.PERCENT), (83.0, UnitEnum.PERCENT)),
              None, None,
-             (HorizontalAlignmentEnum.LEFT, VerticalAlignmentEnum.TOP))]
+             (HorizontalAlignmentEnum.LEFT, VerticalAlignmentEnum.TOP))
+        ]
 
         actual_node_layout_infos = [
             {idx: [node.layout_info.serialized() for node in caption.nodes]}
@@ -140,17 +142,18 @@ class TestSCCReader(ReaderTestingMixIn):
         ]
 
         expected_node_layout_infos = [
-            {0: [(((0.0, UnitEnum.PERCENT),
-                   (86.66666666666667, UnitEnum.PERCENT)),
-                  None,
-                  None,
-                  (HorizontalAlignmentEnum.LEFT, VerticalAlignmentEnum.TOP))]},
-            {1: [(((0.0, UnitEnum.PERCENT),
-                   (86.66666666666667, UnitEnum.PERCENT)),
-                  None,
-                  None,
-                  (HorizontalAlignmentEnum.LEFT, VerticalAlignmentEnum.TOP))]}
+            {0: [(
+                    ((10.0, UnitEnum.PERCENT), (83.0, UnitEnum.PERCENT)),
+                    None, None,
+                    (HorizontalAlignmentEnum.LEFT, VerticalAlignmentEnum.TOP)
+                )]},
+            {1: [(
+                ((10.0, UnitEnum.PERCENT), (83.0, UnitEnum.PERCENT)),
+                None, None,
+                (HorizontalAlignmentEnum.LEFT, VerticalAlignmentEnum.TOP)
+            )]}
         ]
+
 
         assert expected_node_layout_infos == actual_node_layout_infos
         assert expected_caption_layouts == actual_caption_layouts
