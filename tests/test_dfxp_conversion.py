@@ -24,8 +24,8 @@ class TestDFXPtoDFXP(DFXPTestingMixIn):
         assert isinstance(results, str)
         self.assert_dfxp_equals(sample_dfxp_output, results)
 
-    def test_dfxp_empty_cue_to_dfxp(self, sample_dfxp_empty_cue_output,
-                                    sample_dfxp_empty_cue):
+    def test_empty_cue(self, sample_dfxp_empty_cue_output,
+                       sample_dfxp_empty_cue):
         caption_set = DFXPReader().read(sample_dfxp_empty_cue)
         results = DFXPWriter().write(caption_set)
 
@@ -203,7 +203,6 @@ class TestDFXPtoWebVTT(WebVTTTestingMixIn):
         caption_set = DFXPReader().read(sample_dfxp_long_cue)
         results = WebVTTWriter().write(caption_set)
 
-        assert isinstance(results, str)
         assert sample_webvtt_output_long_cue == results
 
     def test_dfxp_to_webvtt_preserves_proper_alignment(

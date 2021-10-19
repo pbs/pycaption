@@ -231,7 +231,8 @@ def sample_dfxp_with_positioning():
 
 @pytest.fixture(scope="session")
 def sample_dfxp_with_relativized_positioning():
-    return """<?xml version="1.0" encoding="utf-8"?>
+    return """\
+<?xml version="1.0" encoding="utf-8"?>
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling">
  <head>
   <styling/>
@@ -240,7 +241,7 @@ def sample_dfxp_with_relativized_positioning():
    <region tts:displayAlign="after" tts:extent="70% 25%" tts:origin="15% 15%" tts:padding="10% 10% 10% 10%" xml:id="r0"/>
    <region tts:displayAlign="after" tts:extent="50% 10%" tts:origin="25% 25%" tts:textAlign="right" xml:id="r1"/>
    <region tts:displayAlign="after" tts:extent="25% 25%" tts:origin="50% 50%" tts:textAlign="left" xml:id="r2"/>
-   <region tts:displayAlign="after" tts:extent="25% 25%" tts:origin="25% 75%" tts:textAlign="right" xml:id="r3"/>
+   <region tts:displayAlign="after" tts:extent="25% 20%" tts:origin="25% 75%" tts:textAlign="right" xml:id="r3"/>
   </layout>
  </head>
  <body>
@@ -383,7 +384,8 @@ def sample_dfxp_long_cue():
 
 @pytest.fixture(scope="session")
 def sample_dfxp_long_cue_fit_to_screen():
-    return """<?xml version="1.0" encoding="utf-8"?>
+    return """\
+<?xml version="1.0" encoding="utf-8"?>
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling">
  <head>
   <styling>
@@ -391,7 +393,7 @@ def sample_dfxp_long_cue_fit_to_screen():
   </styling>
   <layout>
    <region tts:displayAlign="after" tts:textAlign="center" xml:id="bottom"/>
-   <region tts:displayAlign="after" tts:extent="75% 75%" tts:origin="25% 25%" tts:textAlign="center" xml:id="r0"/>
+   <region tts:displayAlign="after" tts:extent="65% 70%" tts:origin="25% 25%" tts:textAlign="center" xml:id="r0"/>
   </layout>
  </head>
  <body>
@@ -975,11 +977,11 @@ def sample_dfxp_with_properly_closing_spans_output():
   </styling>
   <layout>
    <region tts:displayAlign="after" tts:textAlign="center" xml:id="bottom"/>
-   <region tts:displayAlign="before" tts:extent="80% 17%" tts:origin="20% 83%" tts:textAlign="left" xml:id="r0"/>
-   <region tts:displayAlign="before" tts:extent="70% 17%" tts:origin="30% 83%" tts:textAlign="left" xml:id="r1"/>
-   <region tts:displayAlign="before" tts:extent="50% 17%" tts:origin="50% 83%" tts:textAlign="left" xml:id="r2"/>
-   <region tts:displayAlign="before" tts:extent="40% 17%" tts:origin="60% 83%" tts:textAlign="left" xml:id="r3"/>
-   <region tts:displayAlign="before" tts:extent="70% 11%" tts:origin="30% 89%" tts:textAlign="left" xml:id="r4"/>
+   <region tts:displayAlign="before" tts:extent="70% 12%" tts:origin="20% 83%" tts:textAlign="left" xml:id="r0"/>
+   <region tts:displayAlign="before" tts:extent="60% 12%" tts:origin="30% 83%" tts:textAlign="left" xml:id="r1"/>
+   <region tts:displayAlign="before" tts:extent="40% 12%" tts:origin="50% 83%" tts:textAlign="left" xml:id="r2"/>
+   <region tts:displayAlign="before" tts:extent="30% 12%" tts:origin="60% 83%" tts:textAlign="left" xml:id="r3"/>
+   <region tts:displayAlign="before" tts:extent="60% 6%" tts:origin="30% 89%" tts:textAlign="left" xml:id="r4"/>
   </layout>
  </head>
  <body>
@@ -1306,7 +1308,7 @@ def sample_dfxp_empty_cue_output():
    </styling>
    <layout>
      <region tts:displayAlign="after" tts:origin="10% 10%" tts:textAlign="center" xml:id="r0"/>
-     <region tts:displayAlign="after" tts:extent="90% 90%" tts:origin="10% 10%" tts:textAlign="center" xml:id="r1"/>
+     <region tts:displayAlign="after" tts:extent="80% 85%" tts:origin="10% 10%" tts:textAlign="center" xml:id="r1"/>
    </layout>
  </head>
  <body>
@@ -1380,7 +1382,7 @@ def sample_dfxp_with_ampersand_character():
   </styling>
   <layout>
    <region tts:displayAlign="after" tts:textAlign="center" xml:id="bottom"/>
-   <region tts:displayAlign="before" tts:extent="80% 95%" tts:origin="20% 5%" tts:textAlign="left" xml:id="r0"/>
+   <region tts:displayAlign="before" tts:extent="70% 90%" tts:origin="20% 5%" tts:textAlign="left" xml:id="r0"/>
   </layout>
  </head>
  <body>
