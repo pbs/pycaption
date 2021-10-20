@@ -23,7 +23,6 @@ Commands:
 
     97a1, 97a2, 9723 - [TO] move 1, 2 or 3 columns - Tab Over command
         - this moves the positioning 1, 2, or 3 columns to the right
-        - Nothing regarding this is implemented.
 
     942f - [EOC] - display the buffer on the screen - End Of Caption
     ... - [PAC] - Preamble address code (can set positioning and style)
@@ -308,8 +307,9 @@ class SCCReader(BaseReader):
 
         # loop through each word
         for word in parts[0][2].split(' '):
-            # ignore empty results
-            if word.strip() != '':
+            # ignore empty results or invalid commands
+            word = word.strip()
+            if len(word) == 4:
                 self._translate_word(word)
 
     def _translate_word(self, word):
@@ -346,9 +346,15 @@ class SCCReader(BaseReader):
                 return True
             # Fix for the <position> <tab offset> <position> <tab offset>
             # repetition
-            if _is_pac_command(word) and \
-                    self.last_command in PAC_TAB_OFFSET_COMMANDS:
+            elif _is_pac_command(word) and word in self.last_command:
+                self.last_command = ''
                 return True
+            elif word in PAC_TAB_OFFSET_COMMANDS:
+                if _is_pac_command(self.last_command):
+                    self.last_command += f" {word}"
+                    return False
+                else:
+                    return True
 
         self.last_command = word
         return False
@@ -682,9 +688,6 @@ def _is_pac_command(word):
 
     :rtype: bool
     """
-    if not word or len(word) != 4:
-        return False
-
     byte1, byte2 = word[:2], word[2:]
 
     try:

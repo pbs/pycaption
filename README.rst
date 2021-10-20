@@ -14,6 +14,9 @@ For details, see the `documentation <http://pycaption.readthedocs.org>`__.
 
 Changelog
 ---------
+Unreleased
+^^^^^^^^^^
+- Implemented Tab Offset commands for SCCReader
 
 2.0.1
 ^^^^^

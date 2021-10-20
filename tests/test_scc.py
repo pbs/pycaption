@@ -49,7 +49,7 @@ class TestSCCReader(ReaderTestingMixIn):
         with pytest.raises(CaptionReadNoCaptions):
             SCCReader().read(sample_scc_empty)
 
-    def test_scc_positioning_is_read(self, sample_scc_multiple_positioning):
+    def test_positioning(self, sample_scc_multiple_positioning):
         captions = SCCReader().read(sample_scc_multiple_positioning)
 
         # SCC generates only origin, and we always expect it.
@@ -67,6 +67,27 @@ class TestSCCReader(ReaderTestingMixIn):
             ((37.5, UnitEnum.PERCENT), (40.0, UnitEnum.PERCENT)),
             ((12.5, UnitEnum.PERCENT), (73.33333333333333, UnitEnum.PERCENT)),
         ]
+        actual_positioning = [
+            caption_.layout_info.origin.serialized()
+            for caption_ in captions.get_captions('en-US')
+        ]
+
+        assert expected_positioning == actual_positioning
+
+    def test_tab_offset(self, sample_scc_tab_offset):
+        captions = SCCReader().read(sample_scc_tab_offset)
+
+        # SCC generates only origin, and we always expect it.
+        expected_positioning = [
+            ((34.375, UnitEnum.PERCENT), (86.66666666666667, UnitEnum.PERCENT)),
+            ((9.375, UnitEnum.PERCENT), (93.33333333333333, UnitEnum.PERCENT)),
+            ((3.125, UnitEnum.PERCENT), (86.66666666666667, UnitEnum.PERCENT)),
+            ((21.875, UnitEnum.PERCENT), (86.66666666666667, UnitEnum.PERCENT)),
+            ((25.0, UnitEnum.PERCENT), (93.33333333333333, UnitEnum.PERCENT)),
+            ((31.25, UnitEnum.PERCENT), (86.66666666666667, UnitEnum.PERCENT)),
+            ((9.375, UnitEnum.PERCENT), (86.66666666666667, UnitEnum.PERCENT))
+        ]
+
         actual_positioning = [
             caption_.layout_info.origin.serialized()
             for caption_ in captions.get_captions('en-US')
