@@ -75,6 +75,27 @@ class TestSCCReader(ReaderTestingMixIn):
 
         assert expected_positioning == actual_positioning
 
+    def test_tab_offset(self, sample_scc_tab_offset):
+        captions = SCCReader().read(sample_scc_tab_offset)
+
+        # SCC generates only origin, and we always expect it.
+        expected_positioning = [
+            ((37.5, UnitEnum.PERCENT), (83.0, UnitEnum.PERCENT)),
+            ((17.5, UnitEnum.PERCENT), (89.0, UnitEnum.PERCENT)),
+            ((12.5, UnitEnum.PERCENT), (83.0, UnitEnum.PERCENT)),
+            ((27.5, UnitEnum.PERCENT), (83.0, UnitEnum.PERCENT)),
+            ((30.0, UnitEnum.PERCENT), (89.0, UnitEnum.PERCENT)),
+            ((35.0, UnitEnum.PERCENT), (83.0, UnitEnum.PERCENT)),
+            ((17.5, UnitEnum.PERCENT), (83.0, UnitEnum.PERCENT))
+        ]
+
+        actual_positioning = [
+            caption_.layout_info.origin.serialized()
+            for caption_ in captions.get_captions('en-US')
+        ]
+
+        assert expected_positioning == actual_positioning
+
     def test_correct_last_bad_timing(self,
                                      sample_scc_produces_bad_last_end_time):
         # This fix was implemented with a hack. The commands for the Pop-on
@@ -143,17 +164,16 @@ class TestSCCReader(ReaderTestingMixIn):
 
         expected_node_layout_infos = [
             {0: [(
-                    ((10.0, UnitEnum.PERCENT), (83.0, UnitEnum.PERCENT)),
-                    None, None,
-                    (HorizontalAlignmentEnum.LEFT, VerticalAlignmentEnum.TOP)
-                )]},
+                ((10.0, UnitEnum.PERCENT), (83.0, UnitEnum.PERCENT)),
+                None, None,
+                (HorizontalAlignmentEnum.LEFT, VerticalAlignmentEnum.TOP)
+            )]},
             {1: [(
                 ((10.0, UnitEnum.PERCENT), (83.0, UnitEnum.PERCENT)),
                 None, None,
                 (HorizontalAlignmentEnum.LEFT, VerticalAlignmentEnum.TOP)
             )]}
         ]
-
 
         assert expected_node_layout_infos == actual_node_layout_infos
         assert expected_caption_layouts == actual_caption_layouts
@@ -213,6 +233,7 @@ class TestCoverageOnly:
       All the tests in this suite should only be useful for refactoring. They
       DO NOT ensure functionality. They only ensure nothing changes.
     """
+
     def test_freeze_rollup_captions_contents(self, sample_scc_roll_up_ru2):
         # There were no tests for ROLL-UP captions, but the library processed
         # Roll-Up captions. Make sure nothing changes during the refactoring
@@ -261,7 +282,7 @@ class TestCoverageOnly:
             'QUICKBOOKS. BACKING YOU.',
         ]
 
-        captions = SCCReader().read(sample_scc_multiple_formats)\
+        captions = SCCReader().read(sample_scc_multiple_formats) \
             .get_captions('en-US')
         text_lines = [
             node.content

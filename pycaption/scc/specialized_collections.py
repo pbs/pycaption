@@ -6,7 +6,8 @@ from ..geometry import (
     UnitEnum, Size, Layout, Point, Alignment,
     VerticalAlignmentEnum, HorizontalAlignmentEnum
 )
-from .constants import PAC_BYTES_TO_POSITIONING_MAP, COMMANDS
+from .constants import PAC_BYTES_TO_POSITIONING_MAP, COMMANDS, \
+    PAC_TAB_OFFSET_COMMANDS
 
 
 class PreCaption:
@@ -356,17 +357,19 @@ class InstructionNodeCreator:
 
         :type command: str
         """
-        if len(command) != 4:
-            return
-
-        first, second = command[:2], command[2:]
-
-        try:
-            positioning = PAC_BYTES_TO_POSITIONING_MAP[first][second]
-        except KeyError:
-            pass
+        if command in PAC_TAB_OFFSET_COMMANDS:
+            tab_offset = PAC_TAB_OFFSET_COMMANDS[command]
+            prev_positioning = self._position_tracer.default
+            positioning = (prev_positioning[0],
+                           prev_positioning[1] + tab_offset)
         else:
-            self._position_tracer.update_positioning(positioning)
+            first, second = command[:2], command[2:]
+
+            try:
+                positioning = PAC_BYTES_TO_POSITIONING_MAP[first][second]
+            except KeyError:
+                return
+        self._position_tracer.update_positioning(positioning)
 
     def __iter__(self):
         return iter(_format_italics(self._collection))
