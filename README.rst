@@ -17,6 +17,7 @@ Changelog
 Unreleased
 ^^^^^^^^^^
 - Implemented Tab Offset commands for SCCReader
+- Implemented caption safe area limits (80% horizontally and 90% vertically)
 - Implemented SCC translator
 
 2.0.1

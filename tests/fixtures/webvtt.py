@@ -243,12 +243,13 @@ of "E equals m c-squared",
 
 @pytest.fixture(scope="session")
 def sample_webvtt_output_long_cue():
-    return """WEBVTT
+    return """\
+WEBVTT
 
 00:01.000 --> 00:02.000
 NARRATOR:
 
-00:02.000 --> 00:03.000 position:25%,start line:25% size:75%
+00:02.000 --> 00:03.000 position:25%,start line:25% size:65%
 They built the largest, most incredible, wildest, craziest,
 
 00:03.000 --> 00:04.000
@@ -287,7 +288,7 @@ def sample_webvtt_from_scc_properly_writes_newlines_output():
     return """\
 WEBVTT
 
-21:30.033 --> 21:34.033 align:left position:12.5%,start line:86.67% size:87.5%
+21:30.033 --> 21:34.033 align:left position:20%,start line:83% size:70%
 aa
 bb
 """
@@ -333,9 +334,10 @@ Schmetterling.
 
 @pytest.fixture(scope="session")
 def sample_webvtt_empty_cue_output():
-    return """WEBVTT
+    return """\
+WEBVTT
 
-00:01.209 --> 00:02.312 position:10%,start line:10% size:90%
+00:01.209 --> 00:02.312 position:10%,start line:10% size:80%
 abc
 """
 
