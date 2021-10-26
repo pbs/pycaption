@@ -835,7 +835,7 @@ class Layout:
 
     def fit_to_screen(self):
         """
-        If extent is not set or if origin + extent > 100%, (re)calculate it
+        If extent is not set or if origin + extent > 90%, (re)calculate it
         based on origin. It is a pycaption fix for caption files that are
         technically valid but contain inconsistent settings that may cause
         long captions to be cut out of the screen.
@@ -846,8 +846,8 @@ class Layout:
 
         if self.origin:
             # Calculated values to be used if replacement is needed
-            diff_horizontal = Size(100 - self.origin.x.value, UnitEnum.PERCENT)
-            diff_vertical = Size(100 - self.origin.y.value, UnitEnum.PERCENT)
+            diff_horizontal = Size(90 - self.origin.x.value, UnitEnum.PERCENT)
+            diff_vertical = Size(95 - self.origin.y.value, UnitEnum.PERCENT)
             if not self.extent:
                 # Extent is not set, use the calculated values
                 new_extent = Stretch(diff_horizontal, diff_vertical)
@@ -874,9 +874,9 @@ class Layout:
                 new_vertical = self.extent.vertical
                 # If extent is set but it's inconsistent, replace with
                 # calculated values
-                if bottom_right.x.value > 100:
+                if bottom_right.x.value > 90:
                     new_horizontal = diff_horizontal
-                if bottom_right.y.value > 100:
+                if bottom_right.y.value > 95:
                     new_vertical = diff_vertical
 
                 new_extent = Stretch(new_horizontal, new_vertical)
