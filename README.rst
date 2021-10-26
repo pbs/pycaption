@@ -14,10 +14,11 @@ For details, see the `documentation <http://pycaption.readthedocs.org>`__.
 
 Changelog
 ---------
-Unreleased
-^^^^^^^^^^
+2.0.2
+^^^^^
 - Implemented Tab Offset commands for SCCReader
 - Implemented caption safe area limits (80% horizontally and 90% vertically)
+- Implemented SCC translator
 
 2.0.1
 ^^^^^

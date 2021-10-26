@@ -139,6 +139,15 @@ video:
 The SCC Reader handles both dropframe and non-dropframe captions, and
 will auto-detect which format the captions are in.
 
+For debugging purposes, the SCC captions can be translated into a human readable
+form as following:
+::
+
+    translated_scc = translate_scc(scc_content, brackets="[]")
+
+Square brackets are used by default, but they can be replaced with other
+brackets or None.
+
 Transcript Writer
 -----------------
 
