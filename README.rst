@@ -17,6 +17,7 @@ Changelog
 Unreleased
 ^^^^^^^^^^
 - Implemented Tab Offset commands for SCCReader
+- Implemented SCC translator
 
 2.0.1
 ^^^^^

@@ -396,3 +396,12 @@ Scenarist_SCC V1.0
 00:00:13;06	9420 942c 942f 9420 94d0 9723 f468 61f4 20e3 616e 2064 e9f2 e5e3 f4ec 7920 f2e5 70ec 61e3 e580 94f2 97a1 6875 6d61 6e20 eaef 6273 2061 6e64 20f4 6173 6b73 ae80 
 
 00:00:15;26	9420 942c 942f """
+
+
+@pytest.fixture(scope="session")
+def sample_scc_with_unknown_commands():
+    return """\
+Scenarist_SCC V1.0
+
+00:04:36;06 942x 942x 942x 942x 91d6 cdc1 13b0 525x c8cx ba8x
+"""

@@ -6,6 +6,7 @@ from .microdvd import MicroDVDReader, MicroDVDWriter
 from .sami import SAMIReader, SAMIWriter
 from .srt import SRTReader, SRTWriter
 from .scc import SCCReader, SCCWriter
+from .scc.translator import translate_scc
 from .webvtt import WebVTTReader, WebVTTWriter
 from .exceptions import (
     CaptionReadError, CaptionReadNoCaptions, CaptionReadSyntaxError,
@@ -15,7 +16,7 @@ from .exceptions import (
 __all__ = [
     'CaptionConverter', 'DFXPReader', 'DFXPWriter', 'MicroDVDReader',
     'MicroDVDWriter', 'SAMIReader', 'SAMIWriter', 'SRTReader', 'SRTWriter',
-    'SCCReader', 'SCCWriter', 'WebVTTReader', 'WebVTTWriter',
+    'SCCReader', 'SCCWriter', 'translate_scc', 'WebVTTReader', 'WebVTTWriter',
     'CaptionReadError', 'CaptionReadNoCaptions', 'CaptionReadSyntaxError',
     'detect_format', 'CaptionNode', 'Caption', 'CaptionList', 'CaptionSet'
 ]
