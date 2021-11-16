@@ -15,7 +15,7 @@ For details, see the `documentation <http://pycaption.readthedocs.org>`__.
 Changelog
 ---------
 2.0.dev3
-^^^^^
+^^^^^^^^
 - Temporarily removed SCCReader flashing cues validation
 
 2.0.2
