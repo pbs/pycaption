@@ -14,6 +14,10 @@ For details, see the `documentation <http://pycaption.readthedocs.org>`__.
 
 Changelog
 ---------
+Unreleased
+^^^^^^^^^^
+- Implemented time shift for WebVTTReader
+
 2.0.2
 ^^^^^
 - Implemented Tab Offset commands for SCCReader
