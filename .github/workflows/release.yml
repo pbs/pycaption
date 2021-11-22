@@ -16,6 +16,7 @@ jobs:
 
   build-n-publish:
     name: Build and publish PyCaption to PyPI and TestPyPI
+    needs: call-unit-tests-workflow
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
