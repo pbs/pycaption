@@ -12,7 +12,7 @@ on: workflow_dispatch
 
 jobs:
   call-unit-tests-workflow:
-    uses: pbs/pycaption/.github/workflows/main.yml@main
+    uses: ana-nichifor/pycaption-test/.github/workflows/main.yml@main
 
   build-n-publish:
     name: Build and publish PyCaption to PyPI and TestPyPI
