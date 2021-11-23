@@ -12,6 +12,7 @@ on: workflow_dispatch
 
 jobs:
   call-unit-tests-workflow:
+    name: Run unit tests
     uses: ana-nichifor/pycaption-test/.github/workflows/main.yml@main
 
   build-n-publish:
