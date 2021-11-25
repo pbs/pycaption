@@ -8,12 +8,7 @@
 
 name: Publish PyCaption to TestPyPI
 
-on:
-  workflow_dispatch:
-    inputs:
-      version:
-        description: "Version number"
-        required: true
+on: workflow_dispatch
 
 jobs:
   call-unit-tests-workflow:
@@ -47,3 +42,4 @@ jobs:
         user: __token__
         password: ${{ secrets.TEST_PYPI_TOKEN }}
         repository_url: https://test.pypi.org/legacy/
+        verbose: true
