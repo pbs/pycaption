@@ -6,7 +6,7 @@
 # separate terms of service, privacy policy, and support
 # documentation.
 
-name: Publish PyCaption to PyPI
+name: Publish PyCaption to TestPyPI
 
 on: workflow_dispatch
 
@@ -16,7 +16,7 @@ jobs:
     uses: ana-nichifor/pycaption-test/.github/workflows/main.yml@main
 
   build-n-publish:
-    name: Build and publish PyCaption to PyPI
+    name: Build and publish PyCaption to TestPyPI
     needs: call-unit-tests-workflow
     runs-on: ubuntu-latest
     steps:
@@ -36,9 +36,10 @@ jobs:
       run: python -m build
       timeout-minutes: 10
 
-    - name: Publish package on PyPI
+    - name: Publish package on TestPyPI
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
         user: __token__
-        password: ${{ secrets.PYPI_API_TOKEN }}
+        password: ${{ secrets.TEST_PYPI_API_TOKEN }}
+        repository_url: https://test.pypi.org/legacy/
         verbose: true

@@ -32,6 +32,22 @@ jobs:
         run: tox -e py
         continue-on-error: true
 
+      - name: Notify if test FAILED
+        uses: archive/github-actions-slack@v2.0.0
+        with:
+          slack-bot-user-oauth-access-token: ${{ secrets.SLACK_BOT_TOKEN }}
+          slack-channel: ${{ secrets.SLACK_CHANNEL_ID }}
+          slack-text: ":boom: Pycaption tests failed for Python ${{ matrix.python-version }}"
+        if: steps.tests.outcome == 'failure'
+
       - name: Mark test failure
         run: exit 1
         if: steps.tests.outcome == 'failure'
+
+      - name: Slack notify tests PASSED
+        uses: archive/github-actions-slack@v2.0.0
+        with:
+          slack-bot-user-oauth-access-token: ${{ secrets.SLACK_BOT_TOKEN }}
+          slack-channel: ${{ secrets.SLACK_CHANNEL_ID }}
+          slack-text: ":rocket: Pycaption tests passed for Python ${{ matrix.python-version }}"
+        if: steps.tests.outcome == 'success'
