@@ -92,7 +92,7 @@ from .constants import (
     MICROSECONDS_PER_CODEWORD, CHARACTER_TO_CODE,
     SPECIAL_OR_EXTENDED_CHAR_TO_CODE, PAC_BYTES_TO_POSITIONING_MAP,
     PAC_HIGH_BYTE_BY_ROW, PAC_LOW_BYTE_BY_ROW_RESTRICTED,
-    PAC_TAB_OFFSET_COMMANDS,
+    PAC_TAB_OFFSET_COMMANDS, MICROSECONDS_PER_CODEWORD_fps,
 )
 from .specialized_collections import (  # noqa: F401
     TimingCorrectingCaptionList, NotifyingDict, CaptionCreator,
@@ -191,7 +191,7 @@ class SCCReader(BaseReader):
         else:
             return False
 
-    def read(self, content, lang='en-US', simulate_roll_up=False, offset=0):
+    def read(self, content, lang='en-US', simulate_roll_up=False, offset=0, src_fps=30.0):
         """Converts the unicode string into a CaptionSet
 
         :type content: str
@@ -208,8 +208,12 @@ class SCCReader(BaseReader):
         :type offset: int
         :param offset:
 
+        :type src_fps: float
+        :param src_fps: source frame rate default value 30.0
+
         :rtype: CaptionSet
         """
+        
         if not isinstance(content, str):
             raise InvalidInputError('The content is not a unicode string.')
 
@@ -220,7 +224,7 @@ class SCCReader(BaseReader):
 
         # loop through each line except the first
         for line in lines[1:]:
-            self._translate_line(line)
+            self._translate_line(line, src_fps)
 
         self._flush_implicit_buffers()
 
@@ -243,7 +247,9 @@ class SCCReader(BaseReader):
 
         return captions
 
-    def _fix_last_timing(self, timing):
+
+
+    def _fix_last_timing(self, timing, src_fps=30.0):
         """HACK HACK: Certain Paint-On captions don't specify the 942f [EOC]
         (End Of Caption) command on the same line.
         If this is a 942f line, also simulate a 942c (Erase Displayed Memory)
@@ -259,9 +265,9 @@ class SCCReader(BaseReader):
 
         # But use the current time translator for the start time
         self.caption_stash.create_and_store(
-            self.buffer, self.time_translator.get_time())
+            self.buffer, self.time_translator.get_time(src_fps))
 
-        self.caption_stash.correct_last_timing(time_translator.get_time())
+        self.caption_stash.correct_last_timing(time_translator.get_time(src_fps))
         self.buffer = self.node_creator_factory.node_creator()
 
     def _flush_implicit_buffers(self, old_key=None, *args):
@@ -275,6 +281,7 @@ class SCCReader(BaseReader):
         If they're on the last row however, or if the caption type is changing,
         we make sure to convert the buffers to text, so we don't lose any info.
         """
+       
         if old_key == 'pop':
             return
 
@@ -290,7 +297,7 @@ class SCCReader(BaseReader):
                 self.buffer_dict['paint'] = \
                     self.node_creator_factory.new_creator()
 
-    def _translate_line(self, line):
+    def _translate_line(self, line, src_fps=30.0):
         # ignore blank lines
         if line.strip() == '':
             return
@@ -301,7 +308,7 @@ class SCCReader(BaseReader):
 
         # XXX!!!!!! THESE 2 LINES ARE A HACK
         if parts[0][2].strip() == '942f':
-            self._fix_last_timing(timing=parts[0][0])
+            self._fix_last_timing(timing=parts[0][0], src_fps=src_fps)
 
         self.time_translator.start_at(parts[0][0])
 
@@ -310,9 +317,9 @@ class SCCReader(BaseReader):
             # ignore empty results or invalid commands
             word = word.strip()
             if len(word) == 4:
-                self._translate_word(word)
+                self._translate_word(word, src_fps)
 
-    def _translate_word(self, word):
+    def _translate_word(self, word, src_fps=30.0):
         # count frames for timing
         self.time_translator.increment_frames()
 
@@ -322,7 +329,7 @@ class SCCReader(BaseReader):
         # TODO - check that all the positioning commands are here, or use
         # some other strategy to determine if the word is a command.
         if word in COMMANDS or _is_pac_command(word):
-            self._translate_command(word)
+            self._translate_command(word, src_fps)
 
         # second, check if word is a special character
         elif word in SPECIAL_CHARS:
@@ -368,7 +375,7 @@ class SCCReader(BaseReader):
         # add to buffer
         self.buffer.add_chars(EXTENDED_CHARS[word])
 
-    def _translate_command(self, word):
+    def _translate_command(self, word, src_fps=30.0):
         # if command is pop_up
         if word == '9420':
             self.buffer_dict.set_active('pop')
@@ -384,7 +391,7 @@ class SCCReader(BaseReader):
                 )
                 self.buffer = self.node_creator_factory.new_creator()
 
-            self.time = self.time_translator.get_time()
+            self.time = self.time_translator.get_time(src_fps)
 
         # if command is roll_up 2, 3 or 4 rows
         elif word in ('9425', '9426', '94a7'):
@@ -406,7 +413,7 @@ class SCCReader(BaseReader):
 
             # set rows to empty, configure start time for caption
             self.roll_rows = []
-            self.time = self.time_translator.get_time()
+            self.time = self.time_translator.get_time(src_fps)
 
         # clear pop_on buffer
         elif word == '94ae':
@@ -414,7 +421,7 @@ class SCCReader(BaseReader):
 
         # display pop_on buffer [End Of Caption]
         elif word == '942f':
-            self.time = self.time_translator.get_time()
+            self.time = self.time_translator.get_time(src_fps)
             self.caption_stash.create_and_store(self.buffer, self.time)
             self.buffer = self.node_creator_factory.new_creator()
 
@@ -422,7 +429,7 @@ class SCCReader(BaseReader):
         elif word == '94ad':
             # display roll-up buffer
             if not self.buffer.is_empty():
-                self._roll_up()
+                self._roll_up(src_fps)
 
         # 942c - Erase Displayed Memory - Clear the current screen of any
         # displayed captions or text.
@@ -438,7 +445,7 @@ class SCCReader(BaseReader):
                 self.buffer_dict['paint'] = \
                     self.node_creator_factory.new_creator()
             self.caption_stash.correct_last_timing(
-                self.time_translator.get_time())
+                self.time_translator.get_time(src_fps))
         # If command is not one of the aforementioned, add it to buffer
         else:
             self.buffer.interpret_command(word)
@@ -471,7 +478,7 @@ class SCCReader(BaseReader):
         except TypeError:
             pass
 
-    def _roll_up(self):
+    def _roll_up(self, src_fps=30.0):
         # We expect the active buffer to be the rol buffer
         if self.simulate_roll_up:
             if self.roll_rows_expected > 1:
@@ -487,7 +494,7 @@ class SCCReader(BaseReader):
         self.buffer = self.node_creator_factory.new_creator()
 
         # configure time
-        self.time = self.time_translator.get_time()
+        self.time = self.time_translator.get_time(src_fps)
 
         # try to insert the proper ending time for the previous caption
         self.caption_stash.correct_last_timing(self.time, force=True)
@@ -497,7 +504,7 @@ class SCCWriter(BaseWriter):
     def __init__(self, *args, **kw):
         super().__init__(*args, **kw)
 
-    def write(self, caption_set):
+    def write(self, caption_set, src_fps=30.0):
         output = HEADER + '\n\n'
 
         if caption_set.is_empty():
@@ -518,24 +525,24 @@ class SCCWriter(BaseWriter):
         # buffer; possibly remove the previous clear-screen command
         for index, (code, start, end) in enumerate(codes):
             code_words = len(code) / 5 + 8
-            code_time_microseconds = code_words * MICROSECONDS_PER_CODEWORD
+            code_time_microseconds = code_words * MICROSECONDS_PER_CODEWORD_fps(src_fps)
             code_start = start - code_time_microseconds
             if index == 0:
                 continue
             previous_code, previous_start, previous_end = codes[index - 1]
-            if previous_end + 3 * MICROSECONDS_PER_CODEWORD >= code_start:
+            if previous_end + 3 * MICROSECONDS_PER_CODEWORD_fps(src_fps) >= code_start:
                 codes[index - 1] = (previous_code, previous_start, None)
             codes[index] = (code, code_start, end)
 
         # PASS 3:
         # Write captions.
         for (code, start, end) in codes:
-            output += f'{self._format_timestamp(start)}\t'
+            output += f'{self._format_timestamp(start, src_fps)}\t'
             output += '94ae 94ae 9420 9420 '
             output += code
             output += '942c 942c 942f 942f\n\n'
             if end is not None:
-                output += f'{self._format_timestamp(end)}\t942c 942c\n\n'
+                output += f'{self._format_timestamp(end, src_fps)}\t942c 942c\n\n'
 
         return output
 
@@ -600,7 +607,7 @@ class SCCWriter(BaseWriter):
         return code
 
     @staticmethod
-    def _format_timestamp(microseconds):
+    def _format_timestamp(microseconds, src_fps=30.0):
         seconds_float = microseconds / 1000.0 / 1000.0
         # Convert to non-drop-frame timecode
         seconds_float *= 1000.0 / 1001.0
@@ -610,7 +617,7 @@ class SCCWriter(BaseWriter):
         seconds_float -= minutes * 60
         seconds = math.floor(seconds_float)
         seconds_float -= seconds
-        frames = math.floor(seconds_float * 30)
+        frames = math.floor(seconds_float * src_fps)
         return f'{hours:02}:{minutes:02}:{seconds:02}:{frames:02}'
 
 
@@ -624,7 +631,7 @@ class _SccTimeTranslator:
         self.offset = 0
         self._frames = 0
 
-    def get_time(self):
+    def get_time(self, src_fps=30.0):
         """Returns the time, in microseconds. Takes into account the number of
         frames passed, and the offset
 
@@ -632,11 +639,12 @@ class _SccTimeTranslator:
         """
         return self._translate_time(
             self._time[:-2] + str(int(self._time[-2:]) + self._frames),
-            self.offset
+            self.offset, 
+            src_fps
         )
 
     @staticmethod
-    def _translate_time(stamp, offset):
+    def _translate_time(stamp, offset, src_fps=30.0):
         """
         :param stamp:
         :type offset: int
@@ -657,7 +665,7 @@ class _SccTimeTranslator:
         timestamp_seconds = (int(time_split[0]) * 3600
                              + int(time_split[1]) * 60
                              + int(time_split[2])
-                             + int(time_split[3]) / 30.0)
+                             + int(time_split[3]) / src_fps)
 
         seconds = timestamp_seconds * seconds_per_timestamp_second
         microseconds = seconds * 1000 * 1000 - offset

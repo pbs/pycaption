@@ -50,7 +50,7 @@ class TestSCCReader(ReaderTestingMixIn):
             SCCReader().read(sample_scc_empty)
 
     def test_positioning(self, sample_scc_multiple_positioning):
-        captions = SCCReader().read(sample_scc_multiple_positioning)
+        captions = SCCReader().read(sample_scc_multiple_positioning, src_fps=25.0)
 
         # SCC generates only origin, and we always expect it.
         expected_positioning = [
@@ -72,6 +72,8 @@ class TestSCCReader(ReaderTestingMixIn):
             caption_.layout_info.origin.serialized()
             for caption_ in captions.get_captions('en-US')
         ]
+
+        print(actual_positioning)
 
         assert expected_positioning == actual_positioning
 
@@ -113,6 +115,24 @@ class TestSCCReader(ReaderTestingMixIn):
 
         assert expected_timings == actual_timings
 
+    def test_correct_last_bad_timing_fps(self,
+                                     sample_scc_produces_bad_last_end_time):
+        # This fix was implemented with a hack. The commands for the Pop-on
+        # captions will have to be reviewed, but until then this is good enough
+        caption_set = SCCReader().read(sample_scc_produces_bad_last_end_time, src_fps=25.0)
+
+        expected_timings = [
+            (1408320000.0, 1469840000.0),
+            (3208320000.0, 3269840000.0),
+        ]
+
+        actual_timings = [
+            (c_.start, c_.end) for c_ in caption_set.get_captions('en-US')
+        ]
+
+        assert expected_timings == actual_timings
+
+    
     def test_italics_are_properly_read(self, sample_scc_with_italics):
         def switches_italics(node):
             """Determine if the current node switches italics on or off, or
