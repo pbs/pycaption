@@ -143,14 +143,10 @@ def fix_last_captions_without_ending(caption_list):
     :param caption_list: the entire list of captions
     """
 
-    last_index = len(caption_list) - 1
-    last_caption = caption_list[last_index]
-    while not last_caption.end:
-        last_caption.end = last_caption.start + 4 * 1000 * 1000
-        if last_index == 0:
-            break
-        last_index -= 1
-        last_caption = caption_list[last_index]
+    for caption in reversed(caption_list):
+        if caption.end:
+            return
+        caption.end = caption.start + 4 * 1000 * 1000
 
 
 class SCCReader(BaseReader):
@@ -396,6 +392,7 @@ class SCCReader(BaseReader):
         elif word == '942f':
             self.time = self.time_translator.get_time()
             if self.pop_ons_queue:
+                # there's a pop-on cue not ended by the 942c command
                 self._pop_on(end=self.time)
             if self.buffer.is_empty():
                 return
