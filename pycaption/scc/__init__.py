@@ -81,6 +81,7 @@ http://www.theneitherworld.com/mcpoodle/SCC_TOOLS/DOCS/SCC_FORMAT.HTML
 import math
 import re
 import textwrap
+from collections import deque
 from copy import deepcopy
 
 from pycaption.base import (
@@ -96,7 +97,7 @@ from .constants import (
 )
 from .specialized_collections import (  # noqa: F401
     TimingCorrectingCaptionList, NotifyingDict, CaptionCreator,
-    InstructionNodeCreator,
+    InstructionNodeCreator, PopOnCue,
 )
 from .state_machines import DefaultProvidingPositionTracker
 
@@ -134,17 +135,18 @@ class NodeCreatorFactory:
         )
 
 
-def get_corrected_end_time(caption):
-    """If the last caption was never explicitly ended, set its end time to
+def fix_last_captions_without_ending(caption_list):
+    """
+    If the last captions were never explicitly ended, set their end time to
     start + 4 seconds
 
-    :param Caption caption: the last caption
-    :rtype: int
+    :param caption_list: the entire list of captions
     """
-    if caption.end:
-        return caption.end
 
-    return caption.start + 4 * 1000 * 1000
+    for caption in reversed(caption_list):
+        if caption.end:
+            return
+        caption.end = caption.start + 4 * 1000 * 1000
 
 
 class SCCReader(BaseReader):
@@ -171,6 +173,8 @@ class SCCReader(BaseReader):
         # Call this method when the active key changes
         self.buffer_dict.add_change_observer(self._flush_implicit_buffers)
         self.buffer_dict.set_active('pop')
+
+        self.pop_ons_queue = deque()
 
         self.roll_rows = []
         self.roll_rows_expected = 0
@@ -226,7 +230,7 @@ class SCCReader(BaseReader):
         for line in lines[1:]:
             self._translate_line(line, src_fps)
 
-        self._flush_implicit_buffers()
+        self._flush_implicit_buffers(self.buffer_dict.active_key)
 
         captions = CaptionSet({lang: self.caption_stash.get_all()})
 
@@ -242,12 +246,9 @@ class SCCReader(BaseReader):
         if captions.is_empty():
             raise CaptionReadNoCaptions("empty caption file")
         else:
-            last_caption = captions.get_captions(lang)[-1]
-            last_caption.end = get_corrected_end_time(last_caption)
+            fix_last_captions_without_ending(captions.get_captions(lang))
 
         return captions
-
-
 
     def _fix_last_timing(self, timing, src_fps=30.0):
         """HACK HACK: Certain Paint-On captions don't specify the 942f [EOC]
@@ -270,10 +271,11 @@ class SCCReader(BaseReader):
         self.caption_stash.correct_last_timing(time_translator.get_time(src_fps))
         self.buffer = self.node_creator_factory.node_creator()
 
+
     def _flush_implicit_buffers(self, old_key=None, *args):
         """Convert to Captions those buffers whose behavior is implicit.
 
-        The Paint-On buffer is explicit. New captions are created from it
+        The Pop-On buffer is explicit. New captions are created from it
         with the command 'End Of Caption' [EOC], '942f'
 
         The other 2 buffers, Roll-Up and Paint-On we treat as "more" implicit,
@@ -283,19 +285,17 @@ class SCCReader(BaseReader):
         """
        
         if old_key == 'pop':
-            return
+            if self.pop_ons_queue:
+                self._pop_on()
 
-        elif old_key is None or old_key == 'roll':
+        elif old_key == 'roll':
             if not self.buffer.is_empty():
                 self._roll_up()
 
-        elif old_key is None or old_key == 'paint':
-            # xxx - perhaps the self.buffer property is sufficient
-            if not self.buffer_dict['paint'].is_empty():
-                self.caption_stash.create_and_store(
-                    self.buffer_dict['paint'], self.time)
-                self.buffer_dict['paint'] = \
-                    self.node_creator_factory.new_creator()
+        elif old_key == 'paint':
+            if not self.buffer.is_empty():
+                self.caption_stash.create_and_store(self.buffer, self.time)
+                self.buffer = self.node_creator_factory.new_creator()
 
     def _translate_line(self, line, src_fps=30.0):
         # ignore blank lines
@@ -422,7 +422,14 @@ class SCCReader(BaseReader):
         # display pop_on buffer [End Of Caption]
         elif word == '942f':
             self.time = self.time_translator.get_time(src_fps)
-            self.caption_stash.create_and_store(self.buffer, self.time)
+            if self.pop_ons_queue:
+                # there's a pop-on cue not ended by the 942c command
+                self._pop_on(end=self.time)
+            if self.buffer.is_empty():
+                return
+            cue = PopOnCue(buffer=deepcopy(self.buffer), start=self.time, end=0)
+            self.pop_ons_queue.appendleft(cue)
+
             self.buffer = self.node_creator_factory.new_creator()
 
         # roll up captions [Carriage Return]
@@ -433,19 +440,9 @@ class SCCReader(BaseReader):
 
         # 942c - Erase Displayed Memory - Clear the current screen of any
         # displayed captions or text.
-        elif word == '942c':
-            # XXX - The 942c command has nothing to do with paint-ons
-            # This however is legacy code, and will break lots of tests if
-            # the proper buffer (self.buffer) is used.
-            # Most likely using `self.buffer` instead of the paint buffer
-            # is the right thing to do, but this needs some further attention.
-            if not self.buffer_dict['paint'].is_empty():
-                self.caption_stash.create_and_store(
-                    self.buffer_dict['paint'], self.time)
-                self.buffer_dict['paint'] = \
-                    self.node_creator_factory.new_creator()
-            self.caption_stash.correct_last_timing(
-                self.time_translator.get_time(src_fps))
+        elif word == '942c' and self.pop_ons_queue:
+            self._pop_on(end=self.time_translator.get_time(src_fps))
+
         # If command is not one of the aforementioned, add it to buffer
         else:
             self.buffer.interpret_command(word)
@@ -478,8 +475,9 @@ class SCCReader(BaseReader):
         except TypeError:
             pass
 
+
     def _roll_up(self, src_fps=30.0):
-        # We expect the active buffer to be the rol buffer
+        # We expect the active buffer to be the roll buffer
         if self.simulate_roll_up:
             if self.roll_rows_expected > 1:
                 if len(self.roll_rows) >= self.roll_rows_expected:
@@ -498,6 +496,11 @@ class SCCReader(BaseReader):
 
         # try to insert the proper ending time for the previous caption
         self.caption_stash.correct_last_timing(self.time, force=True)
+
+    def _pop_on(self, end=0):
+        pop_on_cue = self.pop_ons_queue.pop()
+        self.caption_stash.create_and_store(
+            pop_on_cue.buffer, pop_on_cue.start, end)
 
 
 class SCCWriter(BaseWriter):

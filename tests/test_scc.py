@@ -132,7 +132,6 @@ class TestSCCReader(ReaderTestingMixIn):
 
         assert expected_timings == actual_timings
 
-    
     def test_italics_are_properly_read(self, sample_scc_with_italics):
         def switches_italics(node):
             """Determine if the current node switches italics on or off, or
