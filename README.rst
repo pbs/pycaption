@@ -14,6 +14,12 @@ For details, see the `documentation <http://pycaption.readthedocs.org>`__.
 
 Changelog
 ---------
+Unreleased
+^^^^^^^^^^
+- Updated the SCC Pop-On caption timing logic
+- Fixed the correction of end times for multiple last captions
+- Fixed bug when flushing implicit buffers and old key was None
+
 2.0.2
 ^^^^^
 - Implemented Tab Offset commands for SCCReader

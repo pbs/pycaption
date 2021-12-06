@@ -9,6 +9,8 @@ from ..geometry import (
 from .constants import PAC_BYTES_TO_POSITIONING_MAP, COMMANDS, \
     PAC_TAB_OFFSET_COMMANDS
 
+PopOnCue = collections.namedtuple("PopOnCue", "buffer, start, end")
+
 
 class PreCaption:
     """
@@ -184,7 +186,7 @@ class CaptionCreator:
         for caption in captions_to_correct:
             caption.end = end_time
 
-    def create_and_store(self, node_buffer, start):
+    def create_and_store(self, node_buffer, start, end=0):
         """Interpreter method, will convert the buffer into one or more Caption
         objects, storing them internally.
 
@@ -196,13 +198,15 @@ class CaptionCreator:
 
         :type start: float
         :param start: the start time in microseconds
+        :type end: float
+        :param end: the end time in microseconds
         """
         if node_buffer.is_empty():
             return
 
         caption = PreCaption()
         caption.start = start
-        caption.end = 0  # Not yet known; filled in later
+        caption.end = end
         self._still_editing = [caption]
 
         for instruction in node_buffer:
@@ -213,7 +217,7 @@ class CaptionCreator:
             elif instruction.requires_repositioning():
                 caption = PreCaption()
                 caption.start = start
-                caption.end = 0
+                caption.end = end
                 self._still_editing.append(caption)
 
             # handle line breaks
