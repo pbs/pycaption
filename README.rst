@@ -20,10 +20,6 @@ Unreleased
 - Fixed the correction of end times for multiple last captions
 - Fixed bug when flushing implicit buffers and old key was None
 
-2.0.dev3
-^^^^^^^^
-- Temporarily removed SCCReader flashing cues validation
-
 2.0.2
 ^^^^^
 - Implemented Tab Offset commands for SCCReader
