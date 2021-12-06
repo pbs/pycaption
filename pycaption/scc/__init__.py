@@ -306,10 +306,6 @@ class SCCReader(BaseReader):
         r = re.compile(r"([0-9:;]*)([\s\t]*)((.)*)")
         parts = r.findall(line.lower())
 
-        # XXX!!!!!! THESE 2 LINES ARE A HACK
-        if parts[0][2].strip() == '942f':
-            self._fix_last_timing(timing=parts[0][0], src_fps=src_fps)
-
         self.time_translator.start_at(parts[0][0])
 
         # loop through each word
