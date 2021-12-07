@@ -16,6 +16,7 @@ Changelog
 ---------
 Unreleased
 ^^^^^^^^^^
+- Removed WebVTTWriter 'start' position alignment
 - Updated the SCC Pop-On caption timing logic
 - Fixed the correction of end times for multiple last captions
 - Fixed bug when flushing implicit buffers and old key was None
