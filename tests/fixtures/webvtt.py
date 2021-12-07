@@ -114,16 +114,16 @@ This is <i>italic</i>, <b>bold</b>, <u>underline</u>, <i><u><b>everything togeth
 def sample_webvtt_from_dfxp_with_positioning():
     return """WEBVTT
 
-00:01.000 --> 00:03.000 position:25%,start line:25% size:50%
+00:01.000 --> 00:03.000 position:25% line:25% size:50%
 You might not remember us. We are a typical transparent region with centered text that has an outline.
 
-00:03.500 --> 00:05.000 align:right position:25%,start line:25% size:50%
+00:03.500 --> 00:05.000 align:right position:25% line:25% size:50%
 had personality.
 
-00:05.500 --> 00:07.000 align:left position:50%,start line:50% size:25%
+00:05.500 --> 00:07.000 align:left position:50% line:50% size:25%
 Hello there, children! Have you seen any visitors?
 
-00:07.500 --> 00:09.000 align:right position:25%,start line:75% size:25%
+00:07.500 --> 00:09.000 align:right position:25% line:75% size:25%
 This is
 the last cue
 """
@@ -133,16 +133,16 @@ the last cue
 def sample_webvtt_from_dfxp_with_positioning_and_style():
     return """WEBVTT
 
-00:01.000 --> 00:03.000 position:25%,start line:25% size:50%
+00:01.000 --> 00:03.000 position:25% line:25% size:50%
 You might not remember us. We are a typical transparent region with centered text that has an outline.
 
-00:03.500 --> 00:05.000 align:right position:25%,start line:25% size:50%
+00:03.500 --> 00:05.000 align:right position:25% line:25% size:50%
 had <u>personality.</u>
 
-00:05.500 --> 00:07.000 align:left position:50%,start line:50% size:25%
+00:05.500 --> 00:07.000 align:left position:50% line:50% size:25%
 Hello there, children! Have you seen any visitors?
 
-00:07.500 --> 00:09.000 align:right position:25%,start line:75% size:25%
+00:07.500 --> 00:09.000 align:right position:25% line:75% size:25%
 This is
 the last cue
 """
@@ -249,7 +249,7 @@ WEBVTT
 00:01.000 --> 00:02.000
 NARRATOR:
 
-00:02.000 --> 00:03.000 position:25%,start line:25% size:65%
+00:02.000 --> 00:03.000 position:25% line:25% size:65%
 They built the largest, most incredible, wildest, craziest,
 
 00:03.000 --> 00:04.000
@@ -275,7 +275,7 @@ def sample_webvtt_with_cue_settings():
     return """\
 WEBVTT
 
-00:01.000 --> 00:06.000 align:middle position:37%,start line:74%
+00:01.000 --> 00:06.000 align:middle position:37% line:74%
 37% 74% - NARRATOR:
 
 00:01.000 --> 00:06.000 this is invalid, but will also be kept
@@ -288,7 +288,7 @@ def sample_webvtt_from_scc_properly_writes_newlines_output():
     return """\
 WEBVTT
 
-21:30.033 --> 21:34.033 align:left position:20%,start line:83% size:70%
+21:30.033 --> 21:34.033 align:left position:20% line:83% size:70%
 aa
 bb
 """
@@ -337,7 +337,7 @@ def sample_webvtt_empty_cue_output():
     return """\
 WEBVTT
 
-00:01.209 --> 00:02.312 position:10%,start line:10% size:80%
+00:01.209 --> 00:02.312 position:10% line:10% size:80%
 abc
 """
 

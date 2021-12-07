@@ -373,7 +373,7 @@ class WebVTTWriter(BaseWriter):
         if alignment and alignment != 'middle':
             cue_settings += f" align:{alignment}"
         if left_offset:
-            cue_settings += f" position:{left_offset},start"
+            cue_settings += f" position:{left_offset}"
         if top_offset:
             cue_settings += f" line:{top_offset}"
         if cue_width:
