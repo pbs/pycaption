@@ -96,23 +96,6 @@ class TestSCCReader(ReaderTestingMixIn):
 
         assert expected_positioning == actual_positioning
 
-    def test_correct_last_bad_timing(self,
-                                     sample_scc_produces_bad_last_end_time):
-        # This fix was implemented with a hack. The commands for the Pop-on
-        # captions will have to be reviewed, but until then this is good enough
-        caption_set = SCCReader().read(sample_scc_produces_bad_last_end_time)
-
-        expected_timings = [
-            (1408266666.6666667, 1469700000.0),
-            (3208266666.666667, 3269700000.0),
-        ]
-
-        actual_timings = [
-            (c_.start, c_.end) for c_ in caption_set.get_captions('en-US')
-        ]
-
-        assert expected_timings == actual_timings
-
     def test_italics_are_properly_read(self, sample_scc_with_italics):
         def switches_italics(node):
             """Determine if the current node switches italics on or off, or
