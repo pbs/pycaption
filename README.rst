@@ -14,8 +14,9 @@ For details, see the `documentation <http://pycaption.readthedocs.org>`__.
 
 Changelog
 ---------
-Unreleased
-^^^^^^^^^^
+2.0.3
+^^^^^
+- Implemented time shift for WebVTTReader
 - Removed WebVTTWriter 'start' position alignment
 - Updated the SCC Pop-On caption timing logic
 - Fixed the correction of end times for multiple last captions

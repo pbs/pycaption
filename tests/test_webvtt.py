@@ -41,6 +41,20 @@ class TestWebVTTReader(ReaderTestingMixIn):
         assert cue.start == 17000000
         assert cue.end == 18752000
 
+    def test_forward_time_shift(self, sample_webvtt):
+        captions = WebVTTReader(time_shift_milliseconds=15).read(sample_webvtt)
+        cue = captions.get_captions('en-US')[2]
+
+        assert cue.start == 17015000
+        assert cue.end == 18767000
+
+    def test_backward_time_shift(self, sample_webvtt):
+        captions = WebVTTReader(time_shift_milliseconds=-15).read(sample_webvtt)
+        cue = captions.get_captions('en-US')[2]
+
+        assert cue.start == 16985000
+        assert cue.end == 18737000
+
     def test_webvtt_cue_components_removed_from_text(self):
         result = self.reader._remove_styles(
             "<c vIntro><b>Wikipedia</b> is a great adventure. <i>It may have "

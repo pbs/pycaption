@@ -59,6 +59,15 @@ a language using the ``lang`` parameter:
 
     pycaps = WebVTTReader().read(content, lang='fr')
 
+If you need to adjust all timestamps in a WebVTT, you can use the
+``time_shift_milliseconds`` parameter which moves the timestamps
+forward (positive integer) or backward (negative integer) with
+the specified amount:
+
+::
+
+    pycaps = WebVTTReader(time_shift_milliseconds=1154).read(content)
+
 Styling
 ^^^^^^^
 
