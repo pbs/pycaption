@@ -1,7 +1,7 @@
 py-caption
 ==========
 
-|Build Status| |Pre-Commit|
+|Build Status| |Python Versions| |Pre-Commit| |Dependencies|
 
 ``pycaption`` is a caption reading/writing module. Use one of the given Readers
 to read content into a CaptionSet object, and then use one of the Writers to
@@ -106,3 +106,11 @@ License, Version 2.0 <http://www.apache.org/licenses/LICENSE-2.0>`__.
 .. |Pre-Commit| image:: https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white
    :target: https://github.com/pre-commit/pre-commit
    :alt: pre-commit
+
+.. |Dependencies| image:: https://img.shields.io/librariesio/release/pypi/pycaption
+    :target: https://libraries.io/pypi/pycaption
+    :alt: Dependencies
+
+.. |Python Versions| image:: https://img.shields.io/pypi/pyversions/pycaption
+    :target: https://pypi.org/project/pycaption/
+    :alt: Python Versions
