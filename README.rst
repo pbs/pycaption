@@ -99,8 +99,8 @@ License
 This module is Copyright 2012 PBS.org and is available under the `Apache
 License, Version 2.0 <http://www.apache.org/licenses/LICENSE-2.0>`__.
 
-.. |Build Status| image:: https://travis-ci.org/pbs/pycaption.png?branch=master
-   :target: https://travis-ci.org/pbs/pycaption
+.. |Build Status| image:: https://github.com/pbs/pycaption/actions/workflows/main.yml/badge.svg
+    :target: https://github.com/pbs/pycaption/actions/workflows/main.yml
 
 .. |Pre-Commit| image:: https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white
    :target: https://github.com/pre-commit/pre-commit
