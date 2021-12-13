@@ -13,12 +13,11 @@ on: workflow_dispatch
 jobs:
   call-unit-tests-workflow:
     name: Run unit tests
-    uses: ana-nichifor/pycaption-test/.github/workflows/main.yml@main
-#    uses: pbs/pycaption/.github/workflows/main.yml@main
+    uses: pbs/pycaption/.github/workflows/main.yml@main
 
   build-n-publish:
     name: Build and publish PyCaption to PyPI
-#    needs: call-unit-tests-workflow
+    needs: call-unit-tests-workflow
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
@@ -42,4 +41,4 @@ jobs:
       run: python3 -m twine upload --repository testpypi --verbose dist/*
       env:
         TWINE_USERNAME: __token__
-        TWINE_PASSWORD: ${{ secrets.TEST_PYPI_TOKEN }}
+        TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
