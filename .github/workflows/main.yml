@@ -6,6 +6,11 @@ on:
   pull_request:
     branches: [ main ]
   workflow_call:
+    secrets:
+      SLACK_BOT_TOKEN:
+        required: true
+      SLACK_CHANNEL_ID:
+        required: true
 
 jobs:
   build:
