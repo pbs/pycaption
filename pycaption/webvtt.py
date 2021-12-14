@@ -42,11 +42,15 @@ def microseconds(h, m, s, f):
 
 
 class WebVTTReader(BaseReader):
-    def __init__(self, ignore_timing_errors=True, *args, **kwargs):
+    def __init__(self, ignore_timing_errors=True, time_shift_milliseconds=0, *args, **kwargs):
         """
         :param ignore_timing_errors: Whether to ignore timing checks
+        :type ignore_timing_errors: bool
+        :param time_shift_milliseconds: Move all the timestamps forward/backward with this number of milliseconds
+        :type time_shift_milliseconds: int
         """
         self.ignore_timing_errors = ignore_timing_errors
+        self.time_shift_microseconds = time_shift_milliseconds * 1000
 
     def detect(self, content):
         return 'WEBVTT' in content
@@ -133,8 +137,8 @@ class WebVTTReader(BaseReader):
         if not m:
             raise CaptionReadSyntaxError('Invalid timing format.')
 
-        start = self._parse_timestamp(m.group(1))
-        end = self._parse_timestamp(m.group(2))
+        start = self._parse_timestamp(m.group(1)) + self.time_shift_microseconds
+        end = self._parse_timestamp(m.group(2)) + self.time_shift_microseconds
 
         cue_settings = m.group(3)
 
@@ -369,7 +373,7 @@ class WebVTTWriter(BaseWriter):
         if alignment and alignment != 'middle':
             cue_settings += f" align:{alignment}"
         if left_offset:
-            cue_settings += f" position:{left_offset},start"
+            cue_settings += f" position:{left_offset}"
         if top_offset:
             cue_settings += f" line:{top_offset}"
         if cue_width:

@@ -1,7 +1,7 @@
 py-caption
 ==========
 
-|Build Status| |Pre-Commit|
+|Build Status| |Python Versions| |Pre-Commit| |Dependencies|
 
 ``pycaption`` is a caption reading/writing module. Use one of the given Readers
 to read content into a CaptionSet object, and then use one of the Writers to
@@ -14,6 +14,14 @@ For details, see the `documentation <http://pycaption.readthedocs.org>`__.
 
 Changelog
 ---------
+2.0.3
+^^^^^
+- Implemented time shift for WebVTTReader
+- Removed WebVTTWriter 'start' position alignment
+- Updated the SCC Pop-On caption timing logic
+- Fixed the correction of end times for multiple last captions
+- Fixed bug when flushing implicit buffers and old key was None
+
 2.0.2
 ^^^^^
 - Implemented Tab Offset commands for SCCReader
@@ -91,9 +99,18 @@ License
 This module is Copyright 2012 PBS.org and is available under the `Apache
 License, Version 2.0 <http://www.apache.org/licenses/LICENSE-2.0>`__.
 
-.. |Build Status| image:: https://travis-ci.org/pbs/pycaption.png?branch=master
-   :target: https://travis-ci.org/pbs/pycaption
+.. |Build Status| image:: https://github.com/pbs/pycaption/actions/workflows/main.yml/badge.svg
+    :target: https://github.com/pbs/pycaption/actions/workflows/main.yml
+    :alt: Unit Tests
 
 .. |Pre-Commit| image:: https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white
    :target: https://github.com/pre-commit/pre-commit
    :alt: pre-commit
+
+.. |Dependencies| image:: https://img.shields.io/librariesio/release/pypi/pycaption
+    :target: https://libraries.io/pypi/pycaption
+    :alt: Dependencies
+
+.. |Python Versions| image:: https://img.shields.io/pypi/pyversions/pycaption
+    :target: https://pypi.org/project/pycaption/
+    :alt: Python Versions
