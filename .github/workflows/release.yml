@@ -1,0 +1,36 @@
+name: Publish PyCaption to PyPI
+
+on: workflow_dispatch
+
+jobs:
+  call-unit-tests-workflow:
+    name: Run unit tests
+    uses: pbs/pycaption/.github/workflows/main.yml@main
+
+  build-n-publish:
+    name: Build and publish PyCaption to PyPI
+    needs: call-unit-tests-workflow
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.9
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install build
+        python -m pip install --upgrade twine
+
+    - name: Build package
+      run: python -m build
+      timeout-minutes: 10
+
+    - name: Publish package on PyPI
+      run: python -m twine upload --verbose dist/*
+      env:
+        TWINE_USERNAME: __token__
+        TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
