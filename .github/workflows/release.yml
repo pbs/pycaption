@@ -30,7 +30,7 @@ jobs:
       timeout-minutes: 10
 
     - name: Publish package on PyPI
-      run: python -m twine upload --repository testpypi --verbose dist/*
+      run: python -m twine upload --verbose dist/*
       env:
         TWINE_USERNAME: __token__
         TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
