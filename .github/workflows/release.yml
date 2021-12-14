@@ -6,7 +6,7 @@ jobs:
   call-unit-tests-workflow:
     name: Run unit tests
     uses: pbs/pycaption/.github/workflows/main.yml@main
-    with:
+    secrets:
       SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
       SLACK_CHANNEL_ID: ${{ secrets.SLACK_CHANNEL_ID }}
 
