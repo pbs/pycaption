@@ -6,8 +6,10 @@ from ..geometry import (
     UnitEnum, Size, Layout, Point, Alignment,
     VerticalAlignmentEnum, HorizontalAlignmentEnum
 )
-from .constants import PAC_BYTES_TO_POSITIONING_MAP, COMMANDS, \
-    PAC_TAB_OFFSET_COMMANDS
+from .constants import (
+    PAC_BYTES_TO_POSITIONING_MAP, COMMANDS, PAC_TAB_OFFSET_COMMANDS,
+    MICROSECONDS_PER_CODEWORD,
+)
 
 PopOnCue = collections.namedtuple("PopOnCue", "buffer, start, end")
 
@@ -96,7 +98,9 @@ class TimingCorrectingCaptionList(list):
 
         new_caption = new_captions[0]
 
-        if batch and batch[-1].end == 0:
+        if batch and (batch[-1].end == 0
+                      or new_caption.start - batch[-1].end
+                      < 5 * MICROSECONDS_PER_CODEWORD + 1):
             for caption in batch:
                 caption.end = new_caption.start
 

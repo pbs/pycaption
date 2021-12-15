@@ -14,6 +14,11 @@ For details, see the `documentation <http://pycaption.readthedocs.org>`__.
 
 Changelog
 ---------
+2.0.4
+^^^^^
+- Updated the counting of frames to happen after processing SCC commands
+- Made all SCC-sourced captions which have a difference of up to 5 frames between them more fluid
+
 2.0.3
 ^^^^^
 - Implemented time shift for WebVTTReader
