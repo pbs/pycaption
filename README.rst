@@ -1,7 +1,7 @@
 py-caption
 ==========
 
-|Build Status| |Python Versions| |Pre-Commit| |Dependencies|
+|Build Status| |Python Versions| |Pre-Commit| |Dependencies| |License|
 
 ``pycaption`` is a caption reading/writing module. Use one of the given Readers
 to read content into a CaptionSet object, and then use one of the Writers to
@@ -96,7 +96,7 @@ Changelog
 License
 -------
 
-This module is Copyright 2012 PBS.org and is available under the `Apache
+This module is Copyright 2012-2021 PBS.org and is available under the `Apache
 License, Version 2.0 <http://www.apache.org/licenses/LICENSE-2.0>`__.
 
 .. |Build Status| image:: https://github.com/pbs/pycaption/actions/workflows/main.yml/badge.svg
@@ -114,3 +114,7 @@ License, Version 2.0 <http://www.apache.org/licenses/LICENSE-2.0>`__.
 .. |Python Versions| image:: https://img.shields.io/pypi/pyversions/pycaption
     :target: https://pypi.org/project/pycaption/
     :alt: Python Versions
+
+.. |License| image:: https://img.shields.io/github/license/pbs/pycaption
+    :target: https://github.com/pbs/pycaption/blob/main/LICENSE
+    :alt: License
