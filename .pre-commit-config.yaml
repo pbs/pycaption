@@ -15,3 +15,30 @@ repos:
                 '--ignore=W503,C901',
                 '--max-line-length=80',
         ]
+
+#### DO NOT COMMMIT::
+#-   repo: git://github.com/psf/black
+#    rev: 21.7b0
+#    hooks:
+#    -   id: black
+#        args: [--skip-string-normalization]
+
+#-   repo: git://github.com/asottile/add-trailing-comma
+#    rev: v2.1.0
+#    hooks:
+#    -   id: add-trailing-comma
+#        args: [--py36-plus]
+
+#-   repo: git://github.com/asottile/pyupgrade
+#    rev: v2.23.2
+#    hooks:
+#    -   id: pyupgrade
+#        args: [--py36-plus]
+
+
+# pre-commit run --all-files reorder-python-imports
+#-   repo: git://github.com/asottile/reorder_python_imports  # do NOT use;
+#    rev: v2.6.0
+#    hooks:
+#    -   id: reorder-python-imports
+#        args: [--py36-plus]
