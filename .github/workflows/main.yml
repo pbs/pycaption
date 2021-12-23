@@ -40,10 +40,13 @@ jobs:
       - name: Add context info to env from junit.xml and coverage.xml files using xpath
         run: |
           sudo apt-get install -y --no-install-recommends libxml-xpath-perl
-          export COVERAGE=`xpath -q -e "/coverage/@line-rate * 100" coverage.xml`
-          export FAILED_AMOUNT=`xpath -q -e "number(/testsuites/testsuite/@failures)" junit.xml`
+          COVERAGE=`xpath -q -e "/coverage/@line-rate * 100" coverage.xml`
+          FAILED_AMOUNT=`xpath -q -e "number(/testsuites/testsuite/@failures)" junit.xml`
           SKIPPED_AMOUNT=`xpath -q -e "number(/testsuites/testsuite/@skipped)" junit.xml`
-          export PASSED_AMOUNT=`xpath -q -e "/testsuites/testsuite/@tests - $SKIPPED_AMOUNT - $FAILED_AMOUNT" junit.xml`
+          PASSED_AMOUNT=`xpath -q -e "/testsuites/testsuite/@tests - $SKIPPED_AMOUNT - $FAILED_AMOUNT" junit.xml`
+          echo "COVERAGE=$COVERAGE" >> $GITHUB_ENV
+          echo "FAILED_AMOUNT=$FAILED_AMOUNT" >> $GITHUB_ENV
+          echo "PASSED_AMOUNT=$PASSED_AMOUNT" >> $GITHUB_ENV
 
       - name: Notify if test FAILED
         uses: archive/github-actions-slack@v2.0.0
