@@ -51,7 +51,6 @@ jobs:
           slack-bot-user-oauth-access-token: ${{ secrets.SLACK_BOT_TOKEN }}
           slack-channel: ${{ secrets.SLACK_CHANNEL_ID }}
           slack-text: ":boom: ${{ env.FAILED_AMOUNT }} Pycaption tests failed for Python ${{ matrix.python-version }} covering ${{ env.COVERAGE }}% of code on the ${{ github.ref_name }} branch (triggered by ${{ github.actor }})"
-          slack-optional-icon_emoji: ":boom:"
         if: steps.tests.outcome == 'failure'
 
       - name: Mark test failure
@@ -64,6 +63,4 @@ jobs:
           slack-bot-user-oauth-access-token: ${{ secrets.SLACK_BOT_TOKEN }}
           slack-channel: ${{ secrets.SLACK_CHANNEL_ID }}
           slack-text: ":rocket: All (${{ env.PASSED_AMOUNT }}) Pycaption tests passed for Python ${{ matrix.python-version }} covering ${{ env.COVERAGE }}% of code on the ${{ github.ref_name }} branch (triggered by ${{ github.actor }})"
-          slack-optional-icon_emoji: ":rocket:"
-          slack-optional-as_user: false
         if: steps.tests.outcome == 'success'
