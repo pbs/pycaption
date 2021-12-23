@@ -37,17 +37,19 @@ jobs:
         run: tox -e py
         continue-on-error: true
 
-      - name: Add context info to env from junit.xml and coverage.xml files using xpath
+      - name: Add context info to env
         run: |
           sudo apt-get install -y --no-install-recommends libxml-xpath-perl
-          COVERAGE=`xpath -q -e "/coverage/@line-rate * 100" coverage.xml`
+          COVERAGE=`xpath -q -e "floor(/coverage/@line-rate * 100)" coverage.xml`
           FAILED_AMOUNT=`xpath -q -e "number(/testsuites/testsuite/@failures)" junit.xml`
           SKIPPED_AMOUNT=`xpath -q -e "number(/testsuites/testsuite/@skipped)" junit.xml`
           PASSED_AMOUNT=`xpath -q -e "/testsuites/testsuite/@tests - $SKIPPED_AMOUNT - $FAILED_AMOUNT" junit.xml`
           echo "COVERAGE=$COVERAGE" >> $GITHUB_ENV
           echo "FAILED_AMOUNT=$FAILED_AMOUNT" >> $GITHUB_ENV
           echo "PASSED_AMOUNT=$PASSED_AMOUNT" >> $GITHUB_ENV
-          BRANCH=${{ github.head_ref || github.ref || 'refs/heads/main' }}
+          ${{ contains(github.ref, 'tags/') }} \
+            && BRANCH='refs/heads/main' \
+            || BRANCH=${{ github.head_ref || github.ref }}
           echo "BRANCH=${BRANCH#refs/*/}" >> $GITHUB_ENV
 
       - name: Notify if test FAILED
