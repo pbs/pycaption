@@ -47,13 +47,15 @@ jobs:
           echo "COVERAGE=$COVERAGE" >> $GITHUB_ENV
           echo "FAILED_AMOUNT=$FAILED_AMOUNT" >> $GITHUB_ENV
           echo "PASSED_AMOUNT=$PASSED_AMOUNT" >> $GITHUB_ENV
+          BRANCH=${{ github.head_ref || github.ref || 'refs/heads/main' }}
+          echo "BRANCH=${BRANCH#refs/*/}" >> $GITHUB_ENV
 
       - name: Notify if test FAILED
         uses: archive/github-actions-slack@v2.0.0
         with:
           slack-bot-user-oauth-access-token: ${{ secrets.SLACK_BOT_TOKEN }}
           slack-channel: ${{ secrets.SLACK_CHANNEL_ID }}
-          slack-text: ":boom: ${{ env.FAILED_AMOUNT }} Pycaption tests failed for Python ${{ matrix.python-version }} covering ${{ env.COVERAGE }}% of code on the ${{ github.ref_name }} branch (triggered by ${{ github.actor }})"
+          slack-text: ":boom: *${{ env.FAILED_AMOUNT }}* Pycaption test(s) failed for Python *${{ matrix.python-version }}* covering *${{ env.COVERAGE }}%* of code on the *${{ github.ref_name }}* branch (triggered by *${{ github.actor }}*)"
         if: steps.tests.outcome == 'failure'
 
       - name: Mark test failure
@@ -65,5 +67,5 @@ jobs:
         with:
           slack-bot-user-oauth-access-token: ${{ secrets.SLACK_BOT_TOKEN }}
           slack-channel: ${{ secrets.SLACK_CHANNEL_ID }}
-          slack-text: ":rocket: All (${{ env.PASSED_AMOUNT }}) Pycaption tests passed for Python ${{ matrix.python-version }} covering ${{ env.COVERAGE }}% of code on the ${{ github.ref_name }} branch (triggered by ${{ github.actor }})"
+          slack-text: ":rocket: All (*${{ env.PASSED_AMOUNT }}*) Pycaption tests passed for Python *${{ matrix.python-version }}* covering *${{ env.COVERAGE }}%* of code on the *${{ github.ref_name }}* branch (triggered by *${{ github.actor }}*)"
         if: steps.tests.outcome == 'success'
