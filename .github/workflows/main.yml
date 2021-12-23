@@ -37,8 +37,9 @@ jobs:
         run: tox -e py
         continue-on-error: true
 
-      - name: Add context info to env from junit.xml and coverage.xml files
+      - name: Add context info to env from junit.xml and coverage.xml files using xpath
         run: |
+          apt-get install -y --no-install-recommends libxml-xpath-perl
           export COVERAGE=`xpath -q -e "/coverage/@line-rate * 100" coverage.xml`
           export FAILED_AMOUNT=`xpath -q -e "number(/testsuites/testsuite/@failures)" junit.xml`
           SKIPPED_AMOUNT=`xpath -q -e "number(/testsuites/testsuite/@skipped)" junit.xml`
