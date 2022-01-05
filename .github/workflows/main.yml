@@ -37,12 +37,27 @@ jobs:
         run: tox -e py
         continue-on-error: true
 
+      - name: Add context info to env
+        run: |
+          sudo apt-get install -y --no-install-recommends libxml-xpath-perl
+          COVERAGE=`xpath -q -e "floor(/coverage/@line-rate * 100)" coverage.xml`
+          FAILED_AMOUNT=`xpath -q -e "number(/testsuites/testsuite/@failures)" junit.xml`
+          SKIPPED_AMOUNT=`xpath -q -e "number(/testsuites/testsuite/@skipped)" junit.xml`
+          PASSED_AMOUNT=`xpath -q -e "/testsuites/testsuite/@tests - $SKIPPED_AMOUNT - $FAILED_AMOUNT" junit.xml`
+          echo "COVERAGE=$COVERAGE" >> $GITHUB_ENV
+          echo "FAILED_AMOUNT=$FAILED_AMOUNT" >> $GITHUB_ENV
+          echo "PASSED_AMOUNT=$PASSED_AMOUNT" >> $GITHUB_ENV
+          ${{ contains(github.ref, 'tags/') }} \
+            && BRANCH='refs/heads/main' \
+            || BRANCH=${{ github.head_ref || github.ref }}
+          echo "BRANCH=${BRANCH#refs/*/}" >> $GITHUB_ENV
+
       - name: Notify if test FAILED
         uses: archive/github-actions-slack@v2.0.0
         with:
           slack-bot-user-oauth-access-token: ${{ secrets.SLACK_BOT_TOKEN }}
           slack-channel: ${{ secrets.SLACK_CHANNEL_ID }}
-          slack-text: ":boom: Pycaption tests failed for Python ${{ matrix.python-version }}"
+          slack-text: ":boom: *${{ env.FAILED_AMOUNT }}* Pycaption test(s) failed for Python *${{ matrix.python-version }}* on the *${{ env.BRANCH }}* branch (triggered by *${{ github.actor }}*)"
         if: steps.tests.outcome == 'failure' && github.repository_owner == 'pbs'
 
       - name: Mark test failure
@@ -54,5 +69,5 @@ jobs:
         with:
           slack-bot-user-oauth-access-token: ${{ secrets.SLACK_BOT_TOKEN }}
           slack-channel: ${{ secrets.SLACK_CHANNEL_ID }}
-          slack-text: ":rocket: Pycaption tests passed for Python ${{ matrix.python-version }}"
+          slack-text: ":rocket: All (*${{ env.PASSED_AMOUNT }}*) Pycaption tests passed for Python *${{ matrix.python-version }}* covering *${{ env.COVERAGE }}%* of code on the *${{ env.BRANCH }}* branch (triggered by *${{ github.actor }}*)"
         if: steps.tests.outcome == 'success' && github.repository_owner == 'pbs'
