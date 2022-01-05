@@ -7,10 +7,12 @@ class TestCaption:
     def setup_method(self):
         self.caption = Caption(0, 999999999999, ['test'])
 
+    @pytest.mark.xfail(strict=True)
     def test_format_start(self):
         assert self.caption.format_start() == '00:00:00.000'
 
     def test_format_end(self):
+        assert False
         assert self.caption.format_end() == '13:46:39.999'
 
 
