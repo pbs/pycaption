@@ -5,7 +5,7 @@ on: workflow_dispatch
 jobs:
   call-unit-tests-workflow:
     name: Run unit tests
-    uses: pbs/pycaption/.github/workflows/main.yml@OCTO-10311-update_test_notifications_to_be_more_verbose
+    uses: pbs/pycaption/.github/workflows/main.yml@main
     secrets:
       SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
       SLACK_CHANNEL_ID: ${{ secrets.SLACK_CHANNEL_ID }}
