@@ -50,7 +50,7 @@ class TestSCCReader(ReaderTestingMixIn):
             SCCReader().read(sample_scc_empty)
 
     def test_positioning(self, sample_scc_multiple_positioning):
-        captions = SCCReader().read(sample_scc_multiple_positioning)
+        captions = SCCReader().read(sample_scc_multiple_positioning, src_fps=25.0)
 
         # SCC generates only origin, and we always expect it.
         expected_positioning = [

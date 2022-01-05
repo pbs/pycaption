@@ -983,5 +983,7 @@ SPECIAL_OR_EXTENDED_CHAR_TO_CODE.update(
 # Time to transmit a single codeword = 1 second / 29.97
 MICROSECONDS_PER_CODEWORD = 1000.0 * 1000.0 / (30.0 * 1000.0 / 1001.0)
 
+def MICROSECONDS_PER_CODEWORD_fps(src_fps=30.0):
+    return 1000.0 * 1000.0 / (src_fps * 1000.0 / 1001.0)
 
 HEADER = 'Scenarist_SCC V1.0'
