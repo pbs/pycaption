@@ -51,6 +51,8 @@ jobs:
             && BRANCH='refs/heads/main' \
             || BRANCH=${{ github.head_ref || github.ref }}
           echo "BRANCH=${BRANCH#refs/*/}" >> $GITHUB_ENV
+          echo "GITHUB_REPO=$GITHUB_REPOSITORY"
+          echo "GITHUB_REPO_OWNER=$GITHUB_REPOSITORY_OWNER"
 
       - name: Notify if test FAILED
         uses: archive/github-actions-slack@v2.0.0
