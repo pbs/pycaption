@@ -15,7 +15,7 @@ For details, see the `documentation <http://pycaption.readthedocs.org>`__.
 License
 -------
 
-This module is Copyright 2012-2021 PBS.org and is available under the `Apache
+This module is Copyright (c) 2012-2022 PBS.org and is available under the `Apache
 License, Version 2.0 <http://www.apache.org/licenses/LICENSE-2.0>`__.
 
 .. |Build Status| image:: https://github.com/pbs/pycaption/actions/workflows/main.yml/badge.svg
