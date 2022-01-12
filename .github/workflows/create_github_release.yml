@@ -20,7 +20,15 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
+    - name: Extract release notes for current version
+      env:
+        TAG: ${{ github.ref }}
+      run: |
+        sudo apt-get install -y --no-install-recommends pandoc
+        pandoc docs/changelog.rst -f rst -t gfm -o changelog.md
+        sed -n "/## ${TAG#refs/tags/}/,/## /p" changelog.md | sed -e "/## /d" >> notes.md
+
     - name: Create release on GitHub
-      run: gh release create ${{ github.ref }}
+      run: gh release create ${{ github.ref }} --notes-file notes.md
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
