@@ -4,6 +4,7 @@ from pycaption import SCCReader, CaptionReadNoCaptions, CaptionNode
 from pycaption.geometry import (
     UnitEnum, HorizontalAlignmentEnum, VerticalAlignmentEnum,
 )
+from pycaption.scc.constants import MICROSECONDS_PER_CODEWORD
 from pycaption.scc.specialized_collections import (
     InstructionNodeCreator, TimingCorrectingCaptionList,
 )
@@ -168,9 +169,9 @@ class TestSCCReader(ReaderTestingMixIn):
             sample_scc_produces_captions_with_start_and_end_time_the_same
         )
         expected_timings = [
-            ('00:01:35.666', '00:01:40.866'),
-            ('00:01:35.666', '00:01:40.866'),
-            ('00:01:35.666', '00:01:40.866'),
+            ('00:01:35.633', '00:01:40.833'),
+            ('00:01:35.633', '00:01:40.833'),
+            ('00:01:35.633', '00:01:40.833'),
         ]
 
         actual_timings = [
@@ -280,22 +281,22 @@ class TestCoverageOnly:
         scc1 = SCCReader().read(sample_scc_roll_up_ru2)
         captions = scc1.get_captions('en-US')
         expected_timings = [
-            (766666.6666666667, 2800000.0),
-            (2800000.0, 4600000.0),
-            (4600000.0, 6166666.666666667),
-            (6166666.666666667, 9733333.333333332),
-            (9733333.333333332, 11266666.666666668),
-            (11266666.666666668, 12266666.666666668),
-            (12266666.666666668, 13266666.666666668),
-            (13266666.666666668, 14266666.666666668),
-            (14266666.666666668, 17066666.666666668),
-            (17066666.666666668, 18666666.666666668),
-            (18666666.666666668, 20233333.333333336),
-            (20233333.333333336, 21833333.333333332),
-            (21833333.333333332, 34933333.33333333),
-            (34933333.33333333, 36433333.33333333),
-            (36433333.33333333, 44300000.0),
-            (44300000.0, 44866666.666666664),
+            (733333.3333333333, 2766666.6666666665),
+            (2766666.6666666665, 4566666.666666666),
+            (4566666.666666666, 6133333.333333334),
+            (6133333.333333334, 9700000.0),
+            (9700000.0, 11233333.333333332),
+            (11233333.333333332, 12233333.333333332),
+            (12233333.333333332, 13233333.333333332),
+            (13233333.333333332, 14233333.333333332),
+            (14233333.333333332, 17033333.333333336),
+            (17033333.333333336, 18633333.333333332),
+            (18633333.333333332, 20200000.0),
+            (20200000.0, 21800000.0),
+            (21800000.0, 34900000.0),
+            (34900000.0, 36400000.0),
+            (36400000.0, 44266666.666666664),
+            (44266666.666666664, 44866666.666666664),
         ]
 
         actual_timings = [(c_.start, c_.end) for c_ in captions]
@@ -308,13 +309,13 @@ class TestCoverageOnly:
         # remain unchanged.
         scc1 = SCCReader().read(sample_scc_pop_on)
         expected_timings = [
-            (9776433.333333332, 12312300.0),
-            (14781433.33333333, 16883533.333333332),
-            (16950266.666666664, 18618600.000000004),
-            (18685333.333333332, 20754066.666666664),
-            (20820800.0, 26626600.0),
-            (26693333.333333332, 32098733.333333332),
-            (32165466.66666666, 36202833.33333332),
+            (9743066.666666664, 12278933.333333332),
+            (14748066.666666666, 16916899.999999996),
+            (16916899.999999996, 18651966.666666664),
+            (18651966.666666664, 20787433.333333332),
+            (20787433.333333332, 26659966.666666664),
+            (26659966.666666664, 32132100.000000004),
+            (32132100.000000004, 36169466.666666664),
         ]
 
         actual_timings = [
@@ -464,29 +465,61 @@ class TestTimingCorrectingCaptionList:
         assert len(caption_list) == 0
 
     def test_not_overwriting_end_time(self):
+        second = 1000 * 1000  # in microseconds
         # Test here all the 4 cases:
         caption_list = TimingCorrectingCaptionList()
 
-        caption_list.append(CaptionDummy(start=1, end=3))
-        caption_list.append(CaptionDummy(start=5, end=6))
+        caption_list.append(CaptionDummy(start=1 * second, end=3 * second))
+        caption_list.append(CaptionDummy(start=3.167 * second, end=6 * second))
 
         # Append then append
-        assert caption_list[-2].end == 3
+        assert caption_list[-2].end == 3 * second
 
-        caption_list.extend([CaptionDummy(start=7, end=8)])
+        caption_list.extend([CaptionDummy(start=7 * second, end=8 * second)])
 
         # Append then extend
-        assert caption_list[-2].end == 6
+        assert caption_list[-2].end == 6 * second
 
-        caption_list.extend([CaptionDummy(start=9, end=10)])
+        caption_list.extend([CaptionDummy(start=9 * second, end=10 * second)])
 
         # extend then extend
-        assert caption_list[-2].end == 8
+        assert caption_list[-2].end == 8 * second
 
-        caption_list.append(CaptionDummy(start=11, end=12))
+        caption_list.append(CaptionDummy(start=11 * second, end=12 * second))
 
         # extend then append
-        assert caption_list[-2].end == 10
+        assert caption_list[-2].end == 10 * second
+
+    def test_overwriting_end_time_difference_under_5_frames(self):
+        second = 1000 * 1000  # in microseconds
+        # Test here all the 4 cases:
+        caption_list = TimingCorrectingCaptionList()
+        expected_end_1 = 3 * second + 5 * MICROSECONDS_PER_CODEWORD
+
+        caption_list.append(CaptionDummy(start=1 * second, end=3 * second))
+        caption_list.append(CaptionDummy(start=expected_end_1, end=6 * second))
+        # Append then append
+        assert caption_list[-2].end == expected_end_1
+
+        expected_end_2 = 6 * second + 4 * MICROSECONDS_PER_CODEWORD
+
+        caption_list.extend([CaptionDummy(start=expected_end_2,
+                                          end=8 * second)])
+        # Append then extend
+        assert caption_list[-2].end == expected_end_2
+
+        expected_end_3 = 8 * second + 3 * MICROSECONDS_PER_CODEWORD
+
+        caption_list.extend([CaptionDummy(start=expected_end_3,
+                                          end=10 * second)])
+        # Extend then extend
+        assert caption_list[-2].end == expected_end_3
+
+        expected_end_4 = 10 * second + 1 * MICROSECONDS_PER_CODEWORD
+
+        caption_list.append(CaptionDummy(start=expected_end_4, end=12 * second))
+        # Extend then append
+        assert caption_list[-2].end == expected_end_4
 
     def test_last_caption_zero_end_time_is_corrected(
             self, sample_scc_no_explicit_end_to_last_caption):

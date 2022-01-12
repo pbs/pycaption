@@ -288,7 +288,7 @@ def sample_webvtt_from_scc_properly_writes_newlines_output():
     return """\
 WEBVTT
 
-21:30.033 --> 21:34.033 align:left position:20% line:83% size:70%
+21:30.000 --> 21:34.000 align:left position:20% line:83% size:70%
 aa
 bb
 """
@@ -345,7 +345,7 @@ abc
 @pytest.fixture(scope="session")
 def sample_webvtt_timestamps():
     return """WEBVTT
-    
+
 01:01.001 --> 10:10.100
 Test zero padded and two digit timestamps without hours
 
