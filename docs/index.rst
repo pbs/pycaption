@@ -18,3 +18,4 @@ Table of contents
     Introduction </introduction>
     Supported formats </supported_formats>
     Extensibility </extensibility>
+    Changelog </changelog>
