@@ -1254,6 +1254,20 @@ def sample_dfxp_incorrect_time_format():
 
 
 @pytest.fixture(scope="session")
+def sample_dfxp_missing_begin():
+    return """
+<?xml version="1.0" encoding="UTF-8"?>
+<tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml">
+<body>
+  <div>
+    <p region="speaker" tts:textAlign="left">###</p>
+  </div>
+ </body>
+</tt>
+"""
+
+
+@pytest.fixture(scope="session")
 def sample_dfxp_with_frame_timing():
     return """\
 <?xml version="1.0" encoding="utf-8"?>

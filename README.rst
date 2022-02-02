@@ -14,6 +14,10 @@ For details, see the `documentation <http://pycaption.readthedocs.org>`__.
 
 Changelog
 ---------
+Unreleased
+^^^^^^^^^^
+- Handled missing 'begin' on DFXPReader
+
 2.0.3
 ^^^^^
 - Implemented time shift for WebVTTReader

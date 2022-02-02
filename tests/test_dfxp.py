@@ -3,6 +3,7 @@ import pytest
 from pycaption import DFXPReader, CaptionReadNoCaptions
 from pycaption.exceptions import (
     CaptionReadSyntaxError, InvalidInputError, CaptionReadError,
+    CaptionReadTimingError,
 )
 from pycaption.geometry import (
     UnitEnum, HorizontalAlignmentEnum, VerticalAlignmentEnum,
@@ -42,6 +43,11 @@ class TestDFXPReader(ReaderTestingMixIn):
     def test_incorrect_time_format(self, sample_dfxp_incorrect_time_format):
         with pytest.raises(CaptionReadSyntaxError):
             DFXPReader().read(sample_dfxp_incorrect_time_format)
+
+    def test_missing_begin(self, sample_dfxp_missing_begin):
+        with pytest.raises(CaptionReadTimingError) as exc_info:
+            DFXPReader().read(sample_dfxp_missing_begin)
+        assert exc_info.value.args[0].startswith('Missing begin time on line ')
 
     def test_offset_time(self):
         reader = DFXPReader()
