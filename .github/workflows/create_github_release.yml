@@ -1,0 +1,34 @@
+name: Release PyCaption on GitHub
+
+on:
+  push:
+    tags:
+      - "[0-9]+.[0-9]+.[0-9]+"
+
+jobs:
+  call-unit-tests-workflow:
+    name: Run unit tests
+    uses: pbs/pycaption/.github/workflows/main.yml@main
+    secrets:
+      SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+      SLACK_CHANNEL_ID: ${{ secrets.SLACK_CHANNEL_ID }}
+
+  create-release:
+    name: Release PyCaption on GitHub
+    needs: call-unit-tests-workflow
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Extract release notes for current version
+      env:
+        TAG: ${{ github.ref }}
+      run: |
+        sudo apt-get install -y --no-install-recommends pandoc
+        pandoc docs/changelog.rst -f rst -t gfm -o changelog.md
+        sed -n "/## ${TAG#refs/tags/}/,/## /p" changelog.md | sed -e "/## /d" >> notes.md
+
+    - name: Create release on GitHub
+      run: gh release create ${{ github.ref }} --notes-file notes.md
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

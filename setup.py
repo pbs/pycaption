@@ -15,12 +15,17 @@ dependencies = [
 
 setup(
     name='pycaption',
-    version='2.0.dev0',
+    version='2.0.4',
     description='Closed caption converter',
     long_description=open(README_PATH).read(),
     author='Joe Norton',
     author_email='joey@nortoncrew.com',
-    url='https://github.com/pbs/pycaption',
+    project_urls={
+        'Source': 'https://github.com/pbs/pycaption',
+        'Documentation': 'https://pycaption.readthedocs.io/',
+        'Release notes': 'https://pycaption.readthedocs.io'
+                         '/en/stable/changelog.html',
+    },
     python_requires='>=3.6,<4.0',
     install_requires=dependencies,
     packages=find_packages(),

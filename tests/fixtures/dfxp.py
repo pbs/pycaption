@@ -919,44 +919,44 @@ def sample_dfxp_from_scc_output():
  </head>
  <body>
   <div region="bottom" xml:lang="en-US">
-   <p begin="00:00:01.167" end="00:00:03.103" region="r0" style="default">
+   <p begin="00:00:01.134" end="00:00:03.136" region="r0" style="default">
     abab
    </p>
-   <p begin="00:00:01.167" end="00:00:03.103" region="r1" style="default">
+   <p begin="00:00:01.134" end="00:00:03.136" region="r1" style="default">
     cdcd
    </p>
-   <p begin="00:00:01.167" end="00:00:03.103" region="r2" style="default">
+   <p begin="00:00:01.134" end="00:00:03.136" region="r2" style="default">
     efef
    </p>
-   <p begin="00:00:03.169" end="00:00:09.743" region="r3" style="default">
+   <p begin="00:00:03.136" end="00:00:09.709" region="r3" style="default">
     ghgh<br/>
     ijij<br/>
     klkl
    </p>
-   <p begin="00:00:09.743" end="00:00:11.745" region="r4" style="default">
+   <p begin="00:00:09.709" end="00:00:11.711" region="r4" style="default">
     mnmn
    </p>
-   <p begin="00:00:09.743" end="00:00:11.745" region="r5" style="default">
+   <p begin="00:00:09.709" end="00:00:11.711" region="r5" style="default">
     opop
    </p>
-   <p begin="00:00:09.743" end="00:00:11.745" region="r6" style="default">
+   <p begin="00:00:09.709" end="00:00:11.711" region="r6" style="default">
     qrqr
    </p>
-   <p begin="00:00:11.745" end="00:00:20.120" region="r7" style="default">
+   <p begin="00:00:11.711" end="00:00:20.086" region="r7" style="default">
     stst<br/>
     uvuv<br/>
     wxwx
    </p>
-   <p begin="00:00:20.120" end="00:00:22.122" region="r8" style="default">
+   <p begin="00:00:20.086" end="00:00:22.088" region="r8" style="default">
     yzyz
    </p>
-   <p begin="00:00:20.120" end="00:00:22.122" region="r9" style="default">
+   <p begin="00:00:20.086" end="00:00:22.088" region="r9" style="default">
     0101
    </p>
-   <p begin="00:00:20.120" end="00:00:22.122" region="r10" style="default">
+   <p begin="00:00:20.086" end="00:00:22.088" region="r10" style="default">
     2323
    </p>
-   <p begin="00:00:22.122" end="00:00:26.122" region="r11" style="default">
+   <p begin="00:00:22.088" end="00:00:26.088" region="r11" style="default">
     4545<br/>
     6767<br/>
     8989
@@ -986,28 +986,28 @@ def sample_dfxp_with_properly_closing_spans_output():
  </head>
  <body>
   <div region="bottom" xml:lang="en-US">
-   <p begin="00:01:31.400" end="00:01:35.666" region="r0" style="default">
+   <p begin="00:01:31.366" end="00:01:35.633" region="r0" style="default">
     cccccc<br/>
     c!c!
    </p>
-   <p begin="00:01:35.666" end="00:01:40.866" region="r1" style="default">
+   <p begin="00:01:35.633" end="00:01:40.833" region="r1" style="default">
     bbbb
    </p>
-   <p begin="00:01:35.666" end="00:01:40.866" region="r2" style="default">
+   <p begin="00:01:35.633" end="00:01:40.833" region="r2" style="default">
     <span tts:fontStyle="italic" region="r2">cccc<br/>
     bbaa</span>
    </p>
-   <p begin="00:01:55.800" end="00:01:59.533" region="r0" style="default">
+   <p begin="00:01:55.766" end="00:01:59.500" region="r0" style="default">
     aa
    </p>
-   <p begin="00:01:55.800" end="00:01:59.533" region="r3" style="default">
+   <p begin="00:01:55.766" end="00:01:59.500" region="r3" style="default">
     <span tts:fontStyle="italic" region="r3">bb<br/>
     cc</span>
    </p>
-   <p begin="00:01:59.533" end="00:02:03.533" region="r3" style="default">
+   <p begin="00:01:59.500" end="00:02:03.500" region="r3" style="default">
     abcd
    </p>
-   <p begin="00:01:59.533" end="00:02:03.533" region="r4" style="default">
+   <p begin="00:01:59.500" end="00:02:03.500" region="r4" style="default">
     abcd
    </p>
   </div>
@@ -1398,7 +1398,7 @@ def sample_dfxp_with_ampersand_character():
  </head>
  <body>
   <div region="bottom" xml:lang="en-US">
-   <p begin="00:04:36.833" end="00:04:40.833" region="r0" style="default">
+   <p begin="00:04:36.800" end="00:04:40.800" region="r0" style="default">
     MAJOR FUNDING PROVIDED BY &amp;
    </p>
   </div>
