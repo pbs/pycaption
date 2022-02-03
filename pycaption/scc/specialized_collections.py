@@ -1,12 +1,20 @@
-from ..base import CaptionList, Caption, CaptionNode
-from ..geometry import (UnitEnum, Size, Layout, Point, Alignment,
-                        VerticalAlignmentEnum, HorizontalAlignmentEnum)
-
-from .constants import PAC_BYTES_TO_POSITIONING_MAP, COMMANDS
 import collections
+import unicodedata
+
+from ..base import CaptionList, Caption, CaptionNode
+from ..geometry import (
+    UnitEnum, Size, Layout, Point, Alignment,
+    VerticalAlignmentEnum, HorizontalAlignmentEnum
+)
+from .constants import (
+    PAC_BYTES_TO_POSITIONING_MAP, COMMANDS, PAC_TAB_OFFSET_COMMANDS,
+    MICROSECONDS_PER_CODEWORD,
+)
+
+PopOnCue = collections.namedtuple("PopOnCue", "buffer, start, end")
 
 
-class PreCaption(object):
+class PreCaption:
     """
     The Caption class has been refactored and now its instances must be used as
     immutable objects. Some of the code in this module, however, relied on the
@@ -38,7 +46,7 @@ class TimingCorrectingCaptionList(list):
     Also, doesn't allow Nones or empty captions
     """
     def __init__(self, *args, **kwargs):
-        super(TimingCorrectingCaptionList, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self._last_batch = ()
 
     def append(self, p_object):
@@ -54,7 +62,7 @@ class TimingCorrectingCaptionList(list):
 
         self._last_batch = (p_object,)
 
-        super(TimingCorrectingCaptionList, self).append(p_object)
+        super().append(p_object)
 
     def extend(self, iterable):
         """Adds the elements in the iterable to the list, regarding the first
@@ -68,7 +76,7 @@ class TimingCorrectingCaptionList(list):
 
         self._last_batch = tuple(appendable_items)
 
-        super(TimingCorrectingCaptionList, self).extend(appendable_items)
+        super().extend(appendable_items)
 
     @staticmethod
     def _update_last_batch(batch, *new_captions):
@@ -90,7 +98,9 @@ class TimingCorrectingCaptionList(list):
 
         new_caption = new_captions[0]
 
-        if batch and batch[-1].end == 0:
+        if batch and (batch[-1].end == 0
+                      or new_caption.start - batch[-1].end
+                      < 5 * MICROSECONDS_PER_CODEWORD + 1):
             for caption in batch:
                 caption.end = new_caption.start
 
@@ -104,7 +114,7 @@ class NotifyingDict(dict):
     _guard = {}
 
     def __init__(self, *args, **kwargs):
-        super(NotifyingDict, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.active_key = self._guard
         self.observers = []
 
@@ -124,8 +134,7 @@ class NotifyingDict(dict):
         self.active_key = key
 
     def get_active(self):
-        """Returns the value corresponding to the active key
-        """
+        """Returns the value corresponding to the active key"""
         if self.active_key is self._guard:
             raise KeyError('No active key set')
 
@@ -146,9 +155,8 @@ class NotifyingDict(dict):
         self.observers.append(observer)
 
 
-class CaptionCreator(object):
-    """Creates and maintains a collection of Captions
-    """
+class CaptionCreator:
+    """Creates and maintains a collection of Captions"""
     def __init__(self):
         self._collection = TimingCorrectingCaptionList()
 
@@ -182,7 +190,7 @@ class CaptionCreator(object):
         for caption in captions_to_correct:
             caption.end = end_time
 
-    def create_and_store(self, node_buffer, start):
+    def create_and_store(self, node_buffer, start, end=0):
         """Interpreter method, will convert the buffer into one or more Caption
         objects, storing them internally.
 
@@ -194,13 +202,15 @@ class CaptionCreator(object):
 
         :type start: float
         :param start: the start time in microseconds
+        :type end: float
+        :param end: the end time in microseconds
         """
         if node_buffer.is_empty():
             return
 
         caption = PreCaption()
         caption.start = start
-        caption.end = 0  # Not yet known; filled in later
+        caption.end = end
         self._still_editing = [caption]
 
         for instruction in node_buffer:
@@ -211,7 +221,7 @@ class CaptionCreator(object):
             elif instruction.requires_repositioning():
                 caption = PreCaption()
                 caption.start = start
-                caption.end = 0
+                caption.end = end
                 self._still_editing.append(caption)
 
             # handle line breaks
@@ -261,7 +271,7 @@ class CaptionCreator(object):
         return caption_list
 
 
-class InstructionNodeCreator(object):
+class InstructionNodeCreator:
     """Creates _InstructionNode instances from characters and commands, storing
     them internally
     """
@@ -280,14 +290,13 @@ class InstructionNodeCreator(object):
         self._position_tracer = position_tracker
 
     def is_empty(self):
-        """Whether any text was added to the buffer
-        """
+        """Whether any text was added to the buffer"""
         return not any(element.text for element in self._collection)
 
     def add_chars(self, *chars):
         """Adds characters to a text node (last text node, or a new one)
 
-        :param chars: tuple containing text (unicode)
+        :param chars: tuple containing text (Unicode string)
         """
         if not chars:
             return
@@ -326,12 +335,12 @@ class InstructionNodeCreator(object):
         node.add_chars(*chars)
 
     def interpret_command(self, command):
-        """Given a command determines whether tu turn italics on or off,
+        """Given a command determines whether to turn italics on or off,
         or to set the positioning
 
         This is mostly used to convert from the legacy-style commands
 
-        :type command: unicode
+        :type command: str
         """
         self._update_positioning(command)
 
@@ -354,19 +363,21 @@ class InstructionNodeCreator(object):
     def _update_positioning(self, command):
         """Sets the positioning information to use for the next nodes
 
-        :type command: unicode
+        :type command: str
         """
-        if len(command) != 4:
-            return
-
-        first, second = command[:2], command[2:]
-
-        try:
-            positioning = PAC_BYTES_TO_POSITIONING_MAP[first][second]
-        except KeyError:
-            pass
+        if command in PAC_TAB_OFFSET_COMMANDS:
+            tab_offset = PAC_TAB_OFFSET_COMMANDS[command]
+            prev_positioning = self._position_tracer.default
+            positioning = (prev_positioning[0],
+                           prev_positioning[1] + tab_offset)
         else:
-            self._position_tracer.update_positioning(positioning)
+            first, second = command[:2], command[2:]
+
+            try:
+                positioning = PAC_BYTES_TO_POSITIONING_MAP[first][second]
+            except KeyError:
+                return
+        self._position_tracer.update_positioning(positioning)
 
     def __iter__(self):
         return iter(_format_italics(self._collection))
@@ -401,6 +412,24 @@ class InstructionNodeCreator(object):
 
         return instance
 
+    def remove_ascii_duplicate(self, accented_character):
+        """
+        Characters from the Extended Characters list are usually preceded by
+        their ASCII substitute, in case the decoder is not able to display
+        the special character.
+
+        This is used to remove the substitute character in order to avoid
+        displaying both.
+
+        :type accented_character: str
+        """
+        if self._collection and self._collection[-1].is_text_node() and \
+                self._collection[-1].text:
+            ascii_char = unicodedata.normalize('NFD', accented_character)\
+                .encode('ascii', 'ignore').decode("utf-8")
+            if ascii_char and self._collection[-1].text[-1] == ascii_char:
+                self._collection[-1].text = self._collection[-1].text[:-1]
+
 
 def _get_layout_from_tuple(position_tuple):
     """Create a Layout object from the positioning information given
@@ -417,15 +446,17 @@ def _get_layout_from_tuple(position_tuple):
 
     row, column = position_tuple
 
-    horizontal = Size(100 * column / 32.0, UnitEnum.PERCENT)
-    vertical = Size(100 * (row - 1) / 15.0, UnitEnum.PERCENT)
+    # Horizontal safe area between 10% and 90%
+    horizontal = Size(80 * column / 32.0 + 10, UnitEnum.PERCENT)
+    # Vertical safe area between 5% and 95%
+    vertical = Size(90 * (row - 1) / 15.0 + 5, UnitEnum.PERCENT)
     return Layout(origin=Point(horizontal, vertical),
                   alignment=Alignment(HorizontalAlignmentEnum.LEFT,
                                       VerticalAlignmentEnum.TOP)
                   )
 
 
-class _InstructionNode(object):
+class _InstructionNode:
     """Value object, that can contain text information, or interpretable
     commands (such as explicit line breaks or turning italics on/off).
 
@@ -440,7 +471,7 @@ class _InstructionNode(object):
 
     def __init__(self, text=None, position=None, type_=0):
         """
-        :type text: unicode
+        :type text: str
         :param position: a tuple of ints (row, column)
         :param type_: self.TEXT | self.BREAK | self.ITALICS
         :type type_: int
@@ -452,7 +483,7 @@ class _InstructionNode(object):
     def add_chars(self, *args):
         """This being a text node, add characters to it.
         :param args:
-        :type args: tuple[unicode]
+        :type args: tuple[str]
         :return:
         """
         if self.text is None:
@@ -507,8 +538,7 @@ class _InstructionNode(object):
         return self._type == self.CHANGE_POSITION
 
     def get_text(self):
-        """A little legacy code.
-        """
+        """A little legacy code."""
         return ' '.join(self.text.split())
 
     @classmethod
@@ -529,7 +559,7 @@ class _InstructionNode(object):
         :type position: tuple[int]
         :param position: a tuple (row, col) to mark the positioning
 
-        :type chars: tuple[unicode]
+        :type chars: tuple[str]
         :param chars: characters to add to the text
 
         :rtype: _InstructionNode
@@ -566,7 +596,7 @@ class _InstructionNode(object):
         if self._type == self.BREAK:
             extra = 'BR'
         elif self._type == self.TEXT:
-            extra = '"{}"'.format(self.text)
+            extra = f'"{self.text}"'
         elif self._type in (self.ITALICS_ON, self.ITALICS_OFF):
             extra = 'italics {}'.format(
                 'on' if self._type == self.ITALICS_ON else 'off'
@@ -574,7 +604,7 @@ class _InstructionNode(object):
         else:
             extra = 'change position'
 
-        return '<INode: {extra} >'.format(extra=extra)
+        return f'<INode: {extra} >'
 
 
 def _format_italics(collection):

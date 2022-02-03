@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 from itertools import product
 
 COMMANDS = {
@@ -327,7 +325,7 @@ COMMANDS = {
     '94d9': '<$>{break}<$>',
     '94d6': '<$>{break}<$>',
     '94d5': '<$>{break}<$>',
-    '15462': '<$>{break}<$>',
+    '1562': '<$>{break}<$>',
     '94d3': '<$>{break}<$>',
     '94d0': '<$>{break}<$>',
     '13e0': '<$>{break}<$>',
@@ -366,7 +364,7 @@ COMMANDS = {
     '13cd': '<$>{break}<$>',
     '97da': '<$>{break}<$>',
     '13cb': '<$>{break}<$>',
-    '13462': '<$>{break}<$>',
+    '1362': '<$>{break}<$>',
     '16ec': '<$>{break}<$>',
     '16ea': '<$>{break}<$>',
     '16ef': '<$>{break}<$>{italic}<$>',
@@ -389,7 +387,7 @@ COMMANDS = {
     '1676': '<$>{break}<$>',
     '1670': '<$>{break}<$>',
     '1673': '<$>{break}<$>',
-    '16462': '<$>{break}<$>',
+    '1662': '<$>{break}<$>',
     '97cb': '<$>{break}<$>',
     '97ce': '<$>{break}<$>{italic}<$>',
     '97cd': '<$>{break}<$>',
@@ -653,7 +651,7 @@ SPECIAL_CHARS = {
     '9131': '°',
     '9132': '½',
     '91b3': '¿',
-    '91b4': '™',
+    '9134': '™',
     '91b5': '¢',
     '91b6': '£',
     '9137': '♪',
@@ -778,11 +776,11 @@ PAC_LOW_BYTE_BY_ROW_RESTRICTED = [
 # Any of the values in that list, coupled with the high order byte will
 # map to the (row, column) tuple.
 # This particular dictionary will get transformed to a more suitable form for
-# usage like PAC_BYTES_TO_POSITIONING_MAP[u'91'][u'd6'] = (1, 12)
+# usage like PAC_BYTES_TO_POSITIONING_MAP['91']['d6'] = (1, 12)
 PAC_BYTES_TO_POSITIONING_MAP = {
     '91': {
-        ('d0', '51', 'c2', '43', 'c4', '45', '46', 'c7', 'c8', '49', '4a', 'cb', '4c', 'cd'): (1, 0),  # noqa
-        ('70', 'f1', '62', 'e3', '64', 'e5', 'e6', '67', '68', 'e9', 'ea', '6b', 'ec', '6d'): (2, 0),  # noqa
+        ('40', 'c1', 'd0', '51', 'c2', '43', 'c4', '45', '46', 'c7', 'c8', '49', '4a', 'cb', '4c', 'cd', 'ce', '4f'): (1, 0),  # noqa
+        ('e0', '70', 'f1', '62', '61', 'e3', '64', 'e5', 'e6', '67', '68', 'e9', 'ea', '6b', 'ec', '6d', '6e', 'ef'): (2, 0),  # noqa
         ('52', 'd3'): (1, 4),
         ('54', 'd5'): (1, 8),
         ('d6', '57'): (1, 12),
@@ -796,12 +794,12 @@ PAC_BYTES_TO_POSITIONING_MAP = {
         ('76', 'f7'): (2, 12),
         ('f8', '79'): (2, 16),
         ('7a', 'fb'): (2, 20),
-        ('7c', 'fd'): (2, 24),
+        ('7c', 'fc', 'fd'): (2, 24),
         ('fe', '7f'): (2, 28)
     },
     '92': {
-        ('d0', '51', 'c2', '43', 'c4', '45', '46', 'c7', 'c8', '49', '4a', 'cb', '4c', 'cd'): (3, 0),  # noqa
-        ('70', 'f1', '62', 'e3', '64', 'e5', 'e6', '67', '68', 'e9', 'ea', '6b', 'ec', '6d'): (4, 0),  # noqa
+        ('40', 'c1', '4f', 'd0', '51', 'c2', '43', 'c4', '45', '46', 'c7', 'c8', '49', '4a', 'cb', '4c', 'cd', 'ce'): (3, 0),  # noqa
+        ('e0', '61', 'ef', '70', 'f1', '62', 'e3', '64', 'e5', 'e6', '67', '68', 'e9', 'ea', '6b', 'ec', '6d', '6e'): (4, 0),  # noqa
         ('52', 'd3'): (3, 4),
         ('54', 'd5'): (3, 8),
         ('d6', '57'): (3, 12),
@@ -814,13 +812,13 @@ PAC_BYTES_TO_POSITIONING_MAP = {
         ('f4', '75'): (4, 8),
         ('76', 'f7'): (4, 12),
         ('f8', '79'): (4, 16),
-        ('7a', 'fb'): (4, 20),
+        ('7a', 'fc', 'fb'): (4, 20),
         ('7c', 'fd'): (4, 24),
         ('fe', '7f'): (4, 28)
     },
     '15': {
-        ('d0', '51', 'c2', '43', 'c4', '45', '46', 'c7', 'c8', '49', '4a', 'cb', '4c', 'cd'): (5, 0),  # noqa
-        ('70', 'f1', '62', 'e3', '64', 'e5', 'e6', '67', '68', 'e9', 'ea', '6b', 'ec', '6d'): (6, 0),  # noqa
+        ('40', 'ce', '4f', 'd0', '51', 'c1', 'c2', '43', 'c4', '45', '46', 'c7', 'c8', '49', '4a', 'cb', '4c', 'cd'): (5, 0),  # noqa
+        ('e0', 'ef', '70', 'f1', '61', '62', 'e3', '64', 'e5', 'e6', '67', '68', 'e9', 'ea', '6b', 'ec', '6d', '6e'): (6, 0),  # noqa
         ('52', 'd3'): (5, 4),
         ('54', 'd5'): (5, 8),
         ('d6', '57'): (5, 12),
@@ -834,12 +832,12 @@ PAC_BYTES_TO_POSITIONING_MAP = {
         ('76', 'f7'): (6, 12),
         ('f8', '79'): (6, 16),
         ('7a', 'fb'): (6, 20),
-        ('7c', 'fd'): (6, 24),
+        ('7c', 'fc', 'fd'): (6, 24),
         ('fe', '7f'): (6, 28)
     },
     '16': {
-        ('d0', '51', 'c2', '43', 'c4', '45', '46', 'c7', 'c8', '49', '4a', 'cb', '4c', 'cd'): (7, 0),  # noqa
-        ('70', 'f1', '62', 'e3', '64', 'e5', 'e6', '67', '68', 'e9', 'ea', '6b', 'ec', '6d'): (8, 0),  # noqa
+        ('40', 'c1', 'ce', '4f', 'd0', '51', 'c2', '43', 'c4', '45', '46', 'c7', 'c8', '49', '4a', 'cb', '4c', 'cd'): (7, 0),  # noqa
+        ('e0', '61', '62', '6e', 'ef', '70', 'f1', '62', 'e3', '64', 'e5', 'e6', '67', '68', 'e9', 'ea', '6b', 'ec', '6d'): (8, 0),  # noqa
         ('52', 'd3'): (7, 4),
         ('54', 'd5'): (7, 8),
         ('d6', '57'): (7, 12),
@@ -853,12 +851,12 @@ PAC_BYTES_TO_POSITIONING_MAP = {
         ('76', 'f7'): (8, 12),
         ('f8', '79'): (8, 16),
         ('7a', 'fb'): (8, 20),
-        ('7c', 'fd'): (8, 24),
+        ('fc', '7c', 'fd'): (8, 24),
         ('fe', '7f'): (8, 28)
     },
     '97': {
-        ('d0', '51', 'c2', '43', 'c4', '45', '46', 'c7', 'c8', '49', '4a', 'cb', '4c', 'cd'): (9, 0),  # noqa
-        ('70', 'f1', '62', 'e3', '64', 'e5', 'e6', '67', '68', 'e9', 'ea', '6b', 'ec', '6d'): (10, 0),  # noqa
+        ('40', 'c1', 'ce', '4f', 'd0', '51', 'c2', '43', 'c4', '45', '46', 'c7', 'c8', '49', '4a', 'cb', '4c', 'cd'): (9, 0),  # noqa
+        ('e0', '61', '6e', 'ef', '70', 'f1', '62', 'e3', '64', 'e5', 'e6', '67', '68', 'e9', 'ea', '6b', 'ec', '6d'): (10, 0),  # noqa
         ('52', 'd3'): (9, 4),
         ('54', 'd5'): (9, 8),
         ('d6', '57'): (9, 12),
@@ -872,11 +870,11 @@ PAC_BYTES_TO_POSITIONING_MAP = {
         ('76', 'f7'): (10, 12),
         ('f8', '79'): (10, 16),
         ('7a', 'fb'): (10, 20),
-        ('7c', 'fd'): (10, 24),
+        ('fc', '7c', 'fd'): (10, 24),
         ('fe', '7f'): (10, 28)
     },
     '10': {
-        ('d0', '51', 'c2', '43', 'c4', '45', '46', 'c7', 'c8', '49', '4a', 'cb', '4c', 'cd'): (11, 0),  # noqa
+        ('40', 'c1', 'ce', '4f', 'd0', '51', 'c2', '43', 'c4', '45', '46', 'c7', 'c8', '49', '4a', 'cb', '4c', 'cd'): (11, 0),  # noqa
         ('52', 'd3'): (11, 4),
         ('54', 'd5'): (11, 8),
         ('d6', '57'): (11, 12),
@@ -886,8 +884,8 @@ PAC_BYTES_TO_POSITIONING_MAP = {
         ('5e', 'df'): (11, 28),
     },
     '13': {
-        ('d0', '51', 'c2', '43', 'c4', '45', '46', 'c7', 'c8', '49', '4a', 'cb', '4c', 'cd'): (12, 0),  # noqa
-        ('70', 'f1', '62', 'e3', '64', 'e5', 'e6', '67', '68', 'e9', 'ea', '6b', 'ec', '6d'): (13, 0),  # noqa
+        ('40', 'c1', 'ce', '4f', 'd0', '51', 'c2', '43', 'c4', '45', '46', 'c7', 'c8', '49', '4a', 'cb', '4c', 'cd'): (12, 0),  # noqa
+        ('e0', '61', '62', '6e', 'ef', '70', 'f1', '62', 'e3', '64', 'e5', 'e6', '67', '68', 'e9', 'ea', '6b', 'ec', '6d'): (13, 0),  # noqa
         ('52', 'd3'): (12, 4),
         ('54', 'd5'): (12, 8),
         ('d6', '57'): (12, 12),
@@ -901,12 +899,12 @@ PAC_BYTES_TO_POSITIONING_MAP = {
         ('76', 'f7'): (13, 12),
         ('f8', '79'): (13, 16),
         ('7a', 'fb'): (13, 20),
-        ('7c', 'fd'): (13, 24),
+        ('7c', 'fc', 'fd'): (13, 24),
         ('fe', '7f'): (13, 28)
     },
     '94': {
-        ('d0', '51', 'c2', '43', 'c4', '45', '46', 'c7', 'c8', '49', '4a', 'cb', '4c', 'cd'): (14, 0),  # noqa
-        ('70', 'f1', '62', 'e3', '64', 'e5', 'e6', '67', '68', 'e9', 'ea', '6b', 'ec', '6d'): (15, 0),  # noqa
+        ('40', 'c1', 'ce', '4f', 'd0', '51', 'c2', '43', 'c4', '45', '46', 'c7', 'c8', '49', '4a', 'cb', '4c', 'cd'): (14, 0),  # noqa
+        ('e0', '61', '6e', 'ef', '70', 'f1', '62', 'e3', '64', 'e5', 'e6', '67', '68', 'e9', 'ea', '6b', 'ec', '6d'): (15, 0),  # noqa
         ('52', 'd3'): (14, 4),
         ('54', 'd5'): (14, 8),
         ('d6', '57'): (14, 12),
@@ -920,10 +918,14 @@ PAC_BYTES_TO_POSITIONING_MAP = {
         ('76', 'f7'): (15, 12),
         ('f8', '79'): (15, 16),
         ('7a', 'fb'): (15, 20),
-        ('7c', 'fd'): (15, 24),
+        ('7c', 'fc', 'fd'): (15, 24),
         ('fe', '7f'): (15, 28)
     }
 }
+
+# Tab Offset command
+# - this moves the positioning 1, 2, or 3 columns to the right
+PAC_TAB_OFFSET_COMMANDS = {'97a1': 1, '97a2': 2, '9723': 3}
 
 
 def _create_position_to_bytes_map(bytes_to_pos):
@@ -938,12 +940,12 @@ def _create_position_to_bytes_map(bytes_to_pos):
             if row not in result:
                 result[row] = {}
 
-            result[row][column] = (
-                tuple(product([high_byte], low_byte_list)))
+            result[row][column] = tuple(product([high_byte], low_byte_list))
     return result
 
+
 # (Almost) the reverse of PAC_BYTES_TO_POSITIONING_MAP. Call with arguments
-# like for example [15][4] to get the tuple ((u'94', u'f2'), (u'94', u'73'))
+# like for example [15][4] to get the tuple (('94', 'f2'), ('94', '73'))
 POSITIONING_TO_PAC_MAP = _create_position_to_bytes_map(
     PAC_BYTES_TO_POSITIONING_MAP
 )
@@ -953,20 +955,30 @@ def _restructure_bytes_to_position_map(byte_to_pos_map):
     return {
         k_: {
             low_byte: byte_to_pos_map[k_][low_byte_list]
-            for low_byte_list in list(v_.keys()) for low_byte in low_byte_list
+            for low_byte_list in list(v_.keys())
+            for low_byte in low_byte_list
         }
         for k_, v_ in list(byte_to_pos_map.items())
     }
 
-# Now use the dict with arguments like [u'91'][u'75'] directly.
+
+# Now use the dict with arguments like ['91']['75'] directly.
 PAC_BYTES_TO_POSITIONING_MAP = _restructure_bytes_to_position_map(
     PAC_BYTES_TO_POSITIONING_MAP)
 
 
 # Inverted character lookup
-CHARACTER_TO_CODE = dict(zip(CHARACTERS.values(), CHARACTERS.keys()))
-SPECIAL_OR_EXTENDED_CHAR_TO_CODE = dict(zip(EXTENDED_CHARS.values(), EXTENDED_CHARS.keys()))
-SPECIAL_OR_EXTENDED_CHAR_TO_CODE.update(dict(zip(SPECIAL_CHARS.values(), SPECIAL_CHARS.keys())))
+CHARACTER_TO_CODE = {
+    character: code
+    for code, character in CHARACTERS.items()
+}
+
+SPECIAL_OR_EXTENDED_CHAR_TO_CODE = {
+    character: code for code, character in EXTENDED_CHARS.items()
+}
+SPECIAL_OR_EXTENDED_CHAR_TO_CODE.update(
+    {character: code for code, character in SPECIAL_CHARS.items()}
+)
 
 # Time to transmit a single codeword = 1 second / 29.97
 MICROSECONDS_PER_CODEWORD = 1000.0 * 1000.0 / (30.0 * 1000.0 / 1001.0)

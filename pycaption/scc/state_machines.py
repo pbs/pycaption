@@ -1,7 +1,7 @@
 from ..exceptions import CaptionReadSyntaxError
 
 
-class _PositioningTracker(object):
+class _PositioningTracker:
     """Helps determine the positioning of a node, having kept track of
     positioning-related commands.
     """
@@ -13,6 +13,10 @@ class _PositioningTracker(object):
         self._positions = [positioning]
         self._break_required = False
         self._repositioning_required = False
+        # Since the actual column is not applied when encountering a line break
+        # this attribute is used to store it and determine by comparison if the
+        # next positioning is actually a Tab Offset
+        self._last_column = None
 
     def update_positioning(self, positioning):
         """Being notified of a position change, updates the internal state,
@@ -26,21 +30,31 @@ class _PositioningTracker(object):
 
         if not current:
             if positioning:
-                # set the positioning for the first time
+                # Set the positioning for the first time
                 self._positions = [positioning]
             return
 
         row, col = current
-        new_row, _ = positioning
+        if self._break_required:
+            col = self._last_column
+        new_row, new_col = positioning
+        is_tab_offset = new_row == row and col + 1 <= new_col <= col + 3
 
-        # is the new position simply one line below?
+        # One line below will be treated as line break, not repositioning
         if new_row == row + 1:
             self._positions.append((new_row, col))
             self._break_required = True
+            self._last_column = new_col
+        # Tab offsets after line breaks will be ignored to avoid repositioning
+        elif self._break_required and is_tab_offset:
+            return
         else:
-            # reset the "current" position altogether.
+            # Reset the "current" position altogether.
             self._positions = [positioning]
-            self._repositioning_required = True
+            # Tab offsets are not interpreted as repositioning, but adjustments
+            # to the previous PAC command
+            if not is_tab_offset:
+                self._repositioning_required = True
 
     def get_current_position(self):
         """Returns the current usable position
@@ -65,8 +79,7 @@ class _PositioningTracker(object):
         return self._repositioning_required
 
     def acknowledge_position_changed(self):
-        """Acknowledge the position tracer that the position was changed
-        """
+        """Acknowledge the position tracer that the position was changed"""
         self._repositioning_required = False
 
     def is_linebreak_required(self):
@@ -76,8 +89,7 @@ class _PositioningTracker(object):
         return self._break_required
 
     def acknowledge_linebreak_consumed(self):
-        """Call to acknowledge that the line required was consumed
-        """
+        """Call to acknowledge that the line required was consumed"""
         self._break_required = False
 
 
@@ -95,7 +107,7 @@ class DefaultProvidingPositionTracker(_PositioningTracker):
         :type default: tuple[int]
         :param default: a tuple of ints (row, column) to use as fallback
         """
-        super(DefaultProvidingPositionTracker, self).__init__(positioning)
+        super().__init__(positioning)
 
         if default:
             self.default = default
@@ -107,10 +119,7 @@ class DefaultProvidingPositionTracker(_PositioningTracker):
         :rtype: tuple[int]
         """
         try:
-            return (
-                super(DefaultProvidingPositionTracker, self).
-                get_current_position()
-            )
+            return super().get_current_position()
         except CaptionReadSyntaxError:
             return self.default
 
@@ -124,5 +133,4 @@ class DefaultProvidingPositionTracker(_PositioningTracker):
         if positioning:
             self.default = positioning
 
-        super(DefaultProvidingPositionTracker, self).update_positioning(
-            positioning)
+        super().update_positioning(positioning)
