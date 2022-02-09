@@ -49,6 +49,13 @@ class TestSAMIReader(ReaderTestingMixIn):
 
         assert "#ffeedd" == p_style['color']
 
+    def test_invalid_color_code(self, sample_sami):
+        with pytest.raises(CaptionReadSyntaxError) as exc_info:
+            self.reader.read(sample_sami.replace("#ffeedd", "ffffff"))
+        assert exc_info.value.args[0] == \
+               "Invalid color value: ffffff. Check for missing # before hex " \
+               "values or misspelled color values."
+
     def test_empty_file(self, sample_sami_empty):
         with pytest.raises(CaptionReadNoCaptions):
             self.reader.read(sample_sami_empty)

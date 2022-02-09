@@ -1,5 +1,9 @@
 Changelog
 ---------
+Unreleased
+^^^^^^^^^^
+- Added CaptionReadSyntaxError for invalid colors in SAMIReader
+
 2.0.4
 ^^^^^
 - Updated the counting of frames to happen after processing SCC commands
