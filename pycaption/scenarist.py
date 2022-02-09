@@ -1,12 +1,14 @@
 import os
 import tempfile
 import zipfile
+from collections import OrderedDict
 from datetime import timedelta
 from io import BytesIO
 
 from PIL import Image, ImageFont, ImageDraw
 
 from pycaption.base import BaseWriter, CaptionSet, Caption
+from pycaption.geometry import UnitEnum, Size
 
 HEADER = """st_format 2
 SubTitle\tFace_Painting
@@ -57,7 +59,7 @@ def _zippy(base_path, path, archive):
 
 
 class ScenaristDVDWriter(BaseWriter):
-    VALID_POSITION = ['top', 'bottom']
+    VALID_POSITION = ['top', 'bottom', 'source']
 
     paColor = (255, 255, 255)  # letter body
     e1Color = (190, 190, 190)  # antialiasing color
@@ -75,7 +77,7 @@ class ScenaristDVDWriter(BaseWriter):
         self.tape_type = tape_type
         self.frame_rate = frame_rate
 
-    def write(self, caption_set: CaptionSet, position='bottom'):
+    def write(self, caption_set: CaptionSet, position='bottom', avoid_same_next_start_prev_end=False):
         position = position.lower().strip()
         if position not in ScenaristDVDWriter.VALID_POSITION:
             raise ValueError('Unknown position. Supported: {}'.format(','.join(ScenaristDVDWriter.VALID_POSITION)))
@@ -83,10 +85,46 @@ class ScenaristDVDWriter(BaseWriter):
         lang = caption_set.get_languages().pop()
         caps = caption_set.get_captions(lang)
 
+        # group captions that have the same start time
+        caps_start_time = OrderedDict()
+        for i, cap in enumerate(caps):
+            if cap.start not in caps_start_time:
+                caps_start_time[cap.start] = [cap]
+            else:
+                caps_start_time[cap.start].append(cap)
+        # order by start timestamp
+        caps_start_time = OrderedDict(sorted(caps_start_time.items(), key=lambda item: item[0]))
+
+        # check if captions with the same start time also have the same end time
+        # fail if different end times are found - this is not (yet?) supported
+        caps_final = []
+        for start_time, caps_list in caps_start_time.items():
+            if len(caps_list) == 1:
+                caps_final.append(caps_list)
+            else:
+                end_times = list(set([c.end for c in caps_list]))
+                if len(end_times) != 1:
+                    raise ValueError('Unsupported subtitles - overlapping subtitles with different end times found')
+                else:
+                    caps_final.append(caps_list)
+
+        if avoid_same_next_start_prev_end:
+            for i, caps_list in enumerate(caps_final):
+                if i == 0:
+                    continue
+
+                prev_end_time = caps_final[i-1][0].end
+                current_start_time = caps_list[0].start
+
+                if current_start_time == prev_end_time:
+                    for c in caps_list:
+                        c.start = min(c.start + ((1/self.frame_rate) * 1000000), c.end)
+
         buf = BytesIO()
 
+        # I manually edited the TTF to include the note chars. See this issue for details:
         # https://github.com/googlefonts/noto-fonts/issues/1663
-        fnt = ImageFont.truetype(os.path.dirname(__file__) + '/NotoSansDisplay-Regular.ttf', 30)
+        fnt = ImageFont.truetype(os.path.dirname(__file__) + '/NotoSansDisplay-Regular-note.ttf', 30)
 
         with tempfile.TemporaryDirectory() as tmpDir:
             with open(tmpDir + '/subtitles.sst', 'w+') as sst:
@@ -98,17 +136,18 @@ class ScenaristDVDWriter(BaseWriter):
                     e2_red=self.e2Color[0], e2_green=self.e2Color[1], e2_blue=self.e2Color[2],
                     tape_type=self.tape_type,
                 ))
-                for cap in caps:
+
+                for i, cap_list in enumerate(caps_final):
                     sst.write("%04d %s %s subtitle%04d.tif\n" % (
                         index,
-                        self.format_ts(cap.start),
-                        self.format_ts(cap.end),
+                        self.format_ts(cap_list[0].start),
+                        self.format_ts(cap_list[0].end),
                         index
                     ))
 
                     img = Image.new('RGB', (self.video_width, self.video_height), self.bgColor)
                     draw = ImageDraw.Draw(img)
-                    self.printLine(draw, cap, fnt, position)
+                    self.printLine(draw, cap_list, fnt, position)
 
                     # quantize the image to our palette
                     img_quant = img.quantize(palette=self.palette_image, dither=0)
@@ -129,35 +168,63 @@ class ScenaristDVDWriter(BaseWriter):
         str_value = str_value + ':%02d' % (int((int(value / 1000) % 1000) / int(1000 / self.frame_rate)))
         return str_value
 
-    def printLine(self, draw: ImageDraw, caption: Caption, fnt: ImageFont, position: str = 'bottom'):
-        text = caption.get_text()
-        l, t, r, b = draw.textbbox((0, 0), text, font=fnt)
-        x = self.video_width / 2 - r / 2
-        if position == 'bottom':
-            y = self.video_height - b - 10  # padding for readability
-        elif position == 'top':
-            y = 10
-        else:
-            raise ValueError('Unknown "position": {}'.format(position))
+    def printLine(self, draw: ImageDraw, caption_list: Caption, fnt: ImageFont, position: str = 'bottom'):
+        for caption in caption_list:
+            text = caption.get_text()
+            l, t, r, b = draw.textbbox((0, 0), text, font=fnt)
 
-        borderColor = self.e2Color
-        fontColor = self.paColor
-        for adj in range(2):
-            # move right
-            draw.text((x - adj, y), text, font=fnt, fill=borderColor)
-            # move left
-            draw.text((x + adj, y), text, font=fnt, fill=borderColor)
-            # move up
-            draw.text((x, y + adj), text, font=fnt, fill=borderColor)
-            # move down
-            draw.text((x, y - adj), text, font=fnt, fill=borderColor)
-            # diagnal left up
-            draw.text((x - adj, y + adj), text, font=fnt, fill=borderColor)
-            # diagnal right up
-            draw.text((x + adj, y + adj), text, font=fnt, fill=borderColor)
-            # diagnal left down
-            draw.text((x - adj, y - adj), text, font=fnt, fill=borderColor)
-            # diagnal right down
-            draw.text((x + adj, y - adj), text, font=fnt, fill=borderColor)
+            x = None
+            y = None
 
-        draw.text((x, y), text, font=fnt, fill=fontColor)
+            if position == 'source':
+                layout_info = caption.layout_info
+                if layout_info:
+                    origin = layout_info.origin
+                    if origin:
+                        x_ = origin.x
+                        y_ = origin.y
+
+                        if isinstance(x_, Size) \
+                                and isinstance(y_, Size) \
+                                and x_.unit == UnitEnum.PERCENT \
+                                and y_.unit == UnitEnum.PERCENT:
+                            x = self.video_width * (x_.value / 100)
+                            y = self.video_height * (y_.value / 100)
+
+                            # padding for readability
+                            if y_.value > 70:
+                                y = y - 10
+
+                if x is None and y is None:
+                    position = 'bottom'
+
+            else:
+                x = self.video_width / 2 - r / 2
+                if position == 'bottom':
+                    y = self.video_height - b - 10  # padding for readability
+                elif position == 'top':
+                    y = 10
+                else:
+                    raise ValueError('Unknown "position": {}'.format(position))
+
+            borderColor = self.e2Color
+            fontColor = self.paColor
+            for adj in range(2):
+                # move right
+                draw.text((x - adj, y), text, font=fnt, fill=borderColor)
+                # move left
+                draw.text((x + adj, y), text, font=fnt, fill=borderColor)
+                # move up
+                draw.text((x, y + adj), text, font=fnt, fill=borderColor)
+                # move down
+                draw.text((x, y - adj), text, font=fnt, fill=borderColor)
+                # diagnal left up
+                draw.text((x - adj, y + adj), text, font=fnt, fill=borderColor)
+                # diagnal right up
+                draw.text((x + adj, y + adj), text, font=fnt, fill=borderColor)
+                # diagnal left down
+                draw.text((x - adj, y - adj), text, font=fnt, fill=borderColor)
+                # diagnal right down
+                draw.text((x + adj, y - adj), text, font=fnt, fill=borderColor)
+
+            draw.text((x, y), text, font=fnt, fill=fontColor)
