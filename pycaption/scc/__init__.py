@@ -624,7 +624,8 @@ class _SccTimeTranslator:
             Helpful for when the captions are off by some time interval.
         :rtype: int
         """
-        if not re.match(r'\d{2}:\d{2}:\d{2}[:;]\d{2}', stamp):
+        if not re.match(r'\d{2}:\d{2}:\d{2}[:;]\d{1,2}', stamp):
+            breakpoint()
             raise CaptionReadTimingError(
                 "Timestamps should follow the hour:minute:seconds"
                 ";frames or hour:minute:seconds:frames format. Please correct "
