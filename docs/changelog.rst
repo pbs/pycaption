@@ -1,5 +1,9 @@
 Changelog
 ---------
+Unreleased
+^^^^^^^^^^
+- Added CaptionReadTimingError for invalid SCC timestamps
+
 2.0.4
 ^^^^^
 - Updated the counting of frames to happen after processing SCC commands
