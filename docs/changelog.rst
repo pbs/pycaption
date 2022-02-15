@@ -2,7 +2,7 @@ Changelog
 ---------
 Unreleased
 ^^^^^^^^^^
-- Handled missing 'begin' time on DFXPReader
+- Raise CaptionReadTimingError when missing 'begin' or 'end' and 'dur' time on DFXPReader
 
 2.0.4
 ^^^^^

@@ -49,6 +49,12 @@ class TestDFXPReader(ReaderTestingMixIn):
             DFXPReader().read(sample_dfxp_missing_begin)
         assert exc_info.value.args[0].startswith('Missing begin time on line ')
 
+    def test_missing_end_and_dur(self, sample_dfxp_missing_end_and_dur):
+        with pytest.raises(CaptionReadTimingError) as exc_info:
+            DFXPReader().read(sample_dfxp_missing_end_and_dur)
+        assert exc_info.value.args[0].startswith(
+            'Missing end time or duration on line ')
+
     def test_offset_time(self):
         reader = DFXPReader()
 
