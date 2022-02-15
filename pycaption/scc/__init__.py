@@ -625,7 +625,6 @@ class _SccTimeTranslator:
         :rtype: int
         """
         if not re.match(r'\d{2}:\d{2}:\d{2}[:;]\d{1,2}', stamp):
-            breakpoint()
             raise CaptionReadTimingError(
                 "Timestamps should follow the hour:minute:seconds"
                 ";frames or hour:minute:seconds:frames format. Please correct "
