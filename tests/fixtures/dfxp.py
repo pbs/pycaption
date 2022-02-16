@@ -1228,11 +1228,29 @@ def sample_dfxp_with_alternative_timing_formats():
 def sample_dfxp_empty_paragraph():
     return """
 <?xml version="1.0" encoding="UTF-16"?>
-<tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml">
+<tt xml:lang="en-US" xmlns="http://www.w3.org/ns/ttml">
 <body>
   <div>
     <p begin="0:00:02.07" end="0:00:05.07"></p>
     <p begin="0:00:05.07" end="0:00:06.21">SESSION GOT OFF TO A LATE START,</p>
+  </div>
+ </body>
+</tt>
+"""
+
+
+@pytest.fixture(scope="session")
+def sample_dfxp_only_spaces_paragraph():
+    return """
+<?xml version="1.0" encoding="UTF-16"?>
+<tt xml:lang="en-US" xmlns="http://www.w3.org/ns/ttml">
+<body>
+  <div>
+    <p begin="00:00:00.36" end="00:00:00.43">
+    </p>
+    <p begin="0:00:02.07" end="0:00:05.07">         </p>
+    <p begin="0:00:05.07" end="0:00:06.21"> </p>
+    <p begin="0:00:07.07" end="0:00:08.21">Test tabs, spaces and new line</p>
   </div>
  </body>
 </tt>

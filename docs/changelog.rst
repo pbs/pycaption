@@ -1,5 +1,9 @@
 Changelog
 ---------
+Unreleased
+^^^^^^^^^^
+- Updated DFXPReader to ignore paragraphs that only contain spaces, tabs or new lines
+
 2.0.4
 ^^^^^
 - Updated the counting of frames to happen after processing SCC commands
