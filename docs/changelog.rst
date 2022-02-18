@@ -1,5 +1,9 @@
 Changelog
 ---------
+Unreleased
+^^^^^^^^^^
+- Raise CaptionReadTimingError when missing 'begin' or 'end' and 'dur' time on DFXPReader
+
 2.0.4
 ^^^^^
 - Updated the counting of frames to happen after processing SCC commands

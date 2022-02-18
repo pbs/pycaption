@@ -10,6 +10,7 @@ from ..base import (
 )
 from ..exceptions import (
     CaptionReadNoCaptions, CaptionReadSyntaxError, InvalidInputError,
+    CaptionReadTimingError,
 )
 from ..geometry import (
     Point, Stretch, UnitEnum, Padding, VerticalAlignmentEnum,
@@ -121,11 +122,21 @@ class DFXPReader(BaseReader):
         return None
 
     def _find_times(self, p_tag):
-        start = self._translate_time(p_tag['begin'])
+        begin = p_tag.get('begin')
+        if not begin:
+            raise CaptionReadTimingError(
+                f'Missing begin time on line {p_tag}.')
 
-        try:
+        end = p_tag.get('end')
+        dur = p_tag.get('dur')
+        if not end and not dur:
+            raise CaptionReadTimingError(
+                f'Missing end time or duration on line {p_tag}.')
+
+        start = self._translate_time(begin)
+        if end:
             end = self._translate_time(p_tag['end'])
-        except KeyError:
+        else:
             dur = self._translate_time(p_tag['dur'])
             end = start + dur
 
