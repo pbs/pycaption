@@ -1,6 +1,7 @@
 import pytest
 
 from pycaption import SCCReader, CaptionReadNoCaptions, CaptionNode
+from pycaption.exceptions import CaptionReadTimingError
 from pycaption.geometry import (
     UnitEnum, HorizontalAlignmentEnum, VerticalAlignmentEnum,
 )
@@ -45,6 +46,15 @@ class TestSCCReader(ReaderTestingMixIn):
 
         assert delta_start < TOLERANCE_MICROSECONDS
         assert delta_end < TOLERANCE_MICROSECONDS
+
+    def test_invalid_timestamps(self, sample_scc_pop_on):
+        with pytest.raises(CaptionReadTimingError) as exc_info:
+            SCCReader().read(sample_scc_pop_on.replace(':', '.'))
+        assert exc_info.value.args[0].startswith(
+            "Timestamps should follow the hour:minute:seconds;frames or "
+            "hour:minute:seconds:frames format. Please correct the following "
+            "time:")
+
 
     def test_empty_file(self, sample_scc_empty):
         with pytest.raises(CaptionReadNoCaptions):
