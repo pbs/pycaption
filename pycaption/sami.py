@@ -36,6 +36,7 @@ OBS:
 
 """
 import re
+from xml.dom import SyntaxErr
 from collections import deque
 from copy import deepcopy
 from html.entities import name2codepoint
@@ -55,10 +56,8 @@ from .exceptions import (
 )
 from .geometry import Layout, Alignment, Padding, Size
 
-
 # change cssutils default logging
 log.setLevel(FATAL)
-
 
 SAMI_BASE_MARKUP = '''
 <sami>
@@ -372,9 +371,8 @@ class SAMIReader(BaseReader):
         :param align: A unicode string representing a CSS text-align value
         """
         if not self.first_alignment:
-            self.first_alignment = Alignment.from_horizontal_and_vertical_align(  # noqa
-                text_align=align
-            )
+            self.first_alignment = \
+                Alignment.from_horizontal_and_vertical_align(text_align=align)
 
 
 class SAMIWriter(BaseWriter):
@@ -772,7 +770,13 @@ class SAMIParser(HTMLParser):
             # keep any style attributes that are needed
             for prop in rule.style:
                 if prop.name == 'color':
-                    cv = cssutils_css.ColorValue(prop.value)
+                    try:
+                        cv = cssutils_css.ColorValue(prop.value)
+                    except SyntaxErr:
+                        raise CaptionReadSyntaxError(
+                            f"Invalid color value: {prop.value}. Check for "
+                            f"missing # before hex values or misspelled color "
+                            f"values.")
                     # Code for RGB to hex conversion comes from
                     # http://bit.ly/1kwfBnQ
                     new_style['color'] = (f'#{cv.red:02x}{cv.green:02x}'

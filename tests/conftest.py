@@ -18,6 +18,7 @@ from tests.fixtures.dfxp import (  # noqa: F401
     sample_dfxp_with_templated_style, sample_dfxp_with_escaped_apostrophe,
     sample_dfxp_with_alternative_timing_formats, sample_dfxp_empty_paragraph,
     sample_dfxp_only_spaces_paragraph, sample_dfxp_incorrect_time_format,
+    sample_dfxp_missing_begin, sample_dfxp_missing_end_and_dur,
     sample_dfxp_with_frame_timing, sample_dfxp_empty_cue,
     sample_dfxp_empty_cue_output,
     sample_dfxp_invalid_positioning_value_template,

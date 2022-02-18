@@ -87,7 +87,8 @@ from copy import deepcopy
 from pycaption.base import (
     BaseReader, BaseWriter, CaptionSet, CaptionNode,
 )
-from pycaption.exceptions import CaptionReadNoCaptions, InvalidInputError
+from pycaption.exceptions import CaptionReadNoCaptions, InvalidInputError, \
+    CaptionReadTimingError
 from .constants import (
     HEADER, COMMANDS, SPECIAL_CHARS, EXTENDED_CHARS, CHARACTERS,
     MICROSECONDS_PER_CODEWORD, CHARACTER_TO_CODE,
@@ -623,6 +624,12 @@ class _SccTimeTranslator:
             Helpful for when the captions are off by some time interval.
         :rtype: int
         """
+        if not re.match(r'\d{2}:\d{2}:\d{2}[:;]\d{1,2}', stamp):
+            raise CaptionReadTimingError(
+                "Timestamps should follow the hour:minute:seconds"
+                ";frames or hour:minute:seconds:frames format. Please correct "
+                f"the following time: {stamp}.")
+
         if ';' in stamp:
             # Drop-frame timebase runs at the same rate as wall clock
             seconds_per_timestamp_second = 1.0
