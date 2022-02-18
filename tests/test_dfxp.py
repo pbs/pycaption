@@ -155,6 +155,12 @@ class TestDFXPReader(ReaderTestingMixIn):
         except CaptionReadError:
             pytest.fail("Failing on empty paragraph")
 
+    def test_only_spaces_paragraph(self, sample_dfxp_only_spaces_paragraph):
+        caption_set = DFXPReader().read(sample_dfxp_only_spaces_paragraph)
+        caps = caption_set.get_captions('en-US')
+
+        assert len(caps) == 1
+
     def test_properly_converts_frametiming(self, sample_dfxp_with_frame_timing):
         caption_set = DFXPReader().read(sample_dfxp_with_frame_timing)
         caps = caption_set.get_captions('en-US')

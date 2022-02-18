@@ -105,7 +105,7 @@ class DFXPReader(BaseReader):
     def _translate_div(self, div):
         return CaptionList(
             [self._translate_p_tag(p_tag)
-             for p_tag in div.find_all('p') if p_tag.contents],
+             for p_tag in div.find_all('p') if p_tag.get_text().strip()],
             div.layout_info
         )
 
