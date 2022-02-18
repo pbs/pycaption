@@ -2,6 +2,7 @@ Changelog
 ---------
 Unreleased
 ^^^^^^^^^^
+- Added CaptionReadSyntaxError for invalid colors in SAMIReader
 - Raise CaptionReadTimingError when missing 'begin' or 'end' and 'dur' time on DFXPReader
 
 2.0.4
