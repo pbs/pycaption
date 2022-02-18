@@ -1,7 +1,7 @@
 Changelog
 ---------
-Unreleased
-^^^^^^^^^^
+2.0.5
+^^^^^
 - Updated DFXPReader to ignore paragraphs that only contain spaces, tabs or new lines
 - Added CaptionReadTimingError for invalid SCC timestamps
 - Added CaptionReadSyntaxError for invalid colors in SAMIReader
