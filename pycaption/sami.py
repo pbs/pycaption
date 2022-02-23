@@ -53,6 +53,7 @@ from .base import (
 )
 from .exceptions import (
     CaptionReadNoCaptions, CaptionReadSyntaxError, InvalidInputError,
+    CaptionReadTimingError
 )
 from .geometry import Layout, Alignment, Padding, Size
 
@@ -191,6 +192,10 @@ class SAMIReader(BaseReader):
         milliseconds = 0
 
         for p in sami_soup.select(f'p[lang|={language}]'):
+            start = p.parent.get('start')
+            if start is None:
+                raise CaptionReadTimingError(
+                    f"Missing start time on the following line: {p.parent}.")
             milliseconds = int(float(p.parent['start']))
             start = milliseconds * 1000
             end = 0
