@@ -1,5 +1,9 @@
 Changelog
 ---------
+Unreleased
+^^^^^^^^^^
+- Fixed SCC translator not recognising special and extended characters
+
 2.0.5
 ^^^^^
 - Updated DFXPReader to ignore paragraphs that only contain spaces, tabs or new lines
