@@ -192,11 +192,11 @@ class SAMIReader(BaseReader):
         milliseconds = 0
 
         for p in sami_soup.select(f'p[lang|={language}]'):
-            start = p.parent.get('start')
-            if start is None:
+            start_str = p.parent.get('start')
+            if not start_str:
                 raise CaptionReadTimingError(
                     f"Missing start time on the following line: {p.parent}.")
-            milliseconds = int(float(p.parent['start']))
+            milliseconds = int(float(start_str))
             start = milliseconds * 1000
             end = 0
 
