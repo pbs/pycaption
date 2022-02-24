@@ -55,7 +55,7 @@ def sample_translated_scc_no_brackets():
 def sample_translated_scc_commands_not_found():
     return """Scenarist_SCC V1.0
 
-00:04:36;06 942x 942x 942x 942x [row 01, column 12, with plain white text.] [MA] 13b0 525x c8cx ba8x
+00:04:36;06 942x 942x 942x 942x [row 01, column 12, with plain white text.] [MA] [Ä] 525x c8cx ba8x
 """
 
 
