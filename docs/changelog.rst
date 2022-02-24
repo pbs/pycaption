@@ -1,5 +1,9 @@
 Changelog
 ---------
+Unreleased
+^^^^^^^^^^
+- Updated flashing cues validation for SCCReader to raise a CaptionReadTimingError
+
 2.0.5
 ^^^^^
 - Updated DFXPReader to ignore paragraphs that only contain spaces, tabs or new lines

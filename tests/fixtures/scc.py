@@ -247,7 +247,7 @@ Scenarist_SCC V1.0
 
 
 @pytest.fixture(scope="session")
-def sample_scc_flashing_captions():
+def sample_scc_flashing_cue():
     return """\
 Scenarist_SCC V1.0
 
