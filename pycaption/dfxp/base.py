@@ -48,6 +48,15 @@ DFXP_DEFAULT_REGION = Layout(
 DFXP_DEFAULT_STYLE_ID = 'default'
 DFXP_DEFAULT_REGION_ID = 'bottom'
 
+CLOCK_TIME_PATTERN = (
+    r'(?P<clock_time>(?P<hours>\d+):(?P<minutes>\d{2}):(?P<seconds>\d{2})'
+    r'(:(?P<frames>\d{2})|\.(?P<sub_frames>\d+))?)'
+)
+OFFSET_TIME_PATTERN = (r'(?P<offset_time>(?P<time_count>\d+(\.\d+)?)'
+                       r'(?P<metric>h|m|s|ms|f|t))')
+TIME_EXPRESSION_PATTERN = re.compile(
+    fr'^({CLOCK_TIME_PATTERN}|{OFFSET_TIME_PATTERN})$')
+
 
 class DFXPReader(BaseReader):
     def __init__(self, *args, **kw):
@@ -143,38 +152,24 @@ class DFXPReader(BaseReader):
         return start, end
 
     def _translate_time(self, stamp):
-        if stamp[-1].isdigit():
-            timesplit = stamp.split(':')
-
-            if len(timesplit) < 3:
-                raise CaptionReadSyntaxError(
-                    'Begin and end time should follow the '
-                    'hour:minute:seconds.milliseconds or '
-                    'hour:minute:seconds:frames format. '
-                    'Milliseconds and frames are optional.'
-                    f'Please correct the following time {stamp}')
-
-            if '.' not in timesplit[2]:
-                timesplit[2] += '.000'
-
-            secsplit = timesplit[2].split('.')
-            if len(timesplit) > 3:
-                secsplit.append(float(timesplit[3]) / 30 * 1000000)
-            while len(secsplit[1]) < 3:
-                secsplit[1] += '0'
-            microseconds = (int(timesplit[0]) * 3600000000
-                            + int(timesplit[1]) * 60000000
-                            + int(secsplit[0]) * 1000000
-                            + int(secsplit[1]) * 1000)
-            if len(secsplit) > 2:
-                microseconds += int(secsplit[2])
-
-            return microseconds
+        match = TIME_EXPRESSION_PATTERN.search(stamp)
+        if not match:
+            raise CaptionReadTimingError(
+                f'Invalid timestamp: {stamp}. Accepted formats: '
+                'hours:minutes:seconds / hours:minutes:seconds:frames / '
+                'hours:minutes:seconds.sub-frames / time_count+h|m|s|ms|f|t.')
+        if match.group('clock_time'):
+            microseconds = (int(match.group('hours')) * 3600000000
+                            + int(match.group('minutes')) * 60000000
+                            + int(match.group('seconds')) * 1000000)
+            if match.group('sub_frames'):
+                microseconds += int(
+                    match.group('sub_frames').ljust(3, '0')) * 1000
+            elif match.group('frames'):
+                microseconds += int(match.group('frames')) / 30 * 1000000
         else:
-            # Must be offset-time
-            m = re.search('^([0-9.]+)([a-z]+)$', stamp)
-            value = float(m.group(1))
-            metric = m.group(2)
+            value = float(match.group('time_count'))
+            metric = match.group("metric")
             if metric == "h":
                 microseconds = value * 60 * 60 * 1000000
             elif metric == "m":
@@ -183,11 +178,13 @@ class DFXPReader(BaseReader):
                 microseconds = value * 1000000
             elif metric == "ms":
                 microseconds = value * 1000
-            else:
-                raise InvalidInputError("Unsupported offset-time metric "
-                                        + metric)
+            elif metric == "f":
+                microseconds = value / 30 * 1000000
+            elif metric == "t":
+                raise NotImplementedError("The tick metric for time count is "
+                                          "not currently implemented.")
 
-            return int(microseconds)
+        return int(microseconds)
 
     def _translate_tag(self, tag):
         # convert text

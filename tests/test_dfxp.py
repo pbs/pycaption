@@ -41,8 +41,10 @@ class TestDFXPReader(ReaderTestingMixIn):
         assert 18752000 == paragraph.end
 
     def test_incorrect_time_format(self, sample_dfxp_incorrect_time_format):
-        with pytest.raises(CaptionReadSyntaxError):
+        with pytest.raises(CaptionReadTimingError) as exc_info:
             DFXPReader().read(sample_dfxp_incorrect_time_format)
+
+        assert exc_info.value.args[0].startswith('Invalid timestamp: ')
 
     def test_missing_begin(self, sample_dfxp_missing_begin):
         with pytest.raises(CaptionReadTimingError) as exc_info:
@@ -65,7 +67,7 @@ class TestDFXPReader(ReaderTestingMixIn):
         assert 180000000 == reader._translate_time("3m")
         assert 14400000000 == reader._translate_time("4h")
         # Tick values are not supported
-        with pytest.raises(InvalidInputError):
+        with pytest.raises(NotImplementedError):
             reader._translate_time("2.3t")
 
     def test_empty_file(self, sample_dfxp_empty):
