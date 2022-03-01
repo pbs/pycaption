@@ -155,9 +155,8 @@ class DFXPReader(BaseReader):
         match = TIME_EXPRESSION_PATTERN.search(stamp)
         if not match:
             raise CaptionReadTimingError(
-                f'Invalid timestamp: {stamp}. Accepted formats: '
-                'hours:minutes:seconds / hours:minutes:seconds:frames / '
-                'hours:minutes:seconds.sub-frames / time_count+h|m|s|ms|f|t.')
+                f'Invalid timestamp: {stamp}. Accepted formats: hh:mm:ss / '
+                'hh:mm:ss:ff / hh:mm:ss.sub-frames / time_count h|m|s|ms|f.')
         if match.group('clock_time'):
             microseconds = (int(match.group('hours')) * 3600000000
                             + int(match.group('minutes')) * 60000000

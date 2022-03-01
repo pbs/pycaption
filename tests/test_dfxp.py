@@ -66,9 +66,27 @@ class TestDFXPReader(ReaderTestingMixIn):
         assert 1234567 == reader._translate_time("1.234567s")
         assert 180000000 == reader._translate_time("3m")
         assert 14400000000 == reader._translate_time("4h")
+        assert 53333 == reader._translate_time("1.6f")
         # Tick values are not supported
         with pytest.raises(NotImplementedError):
             reader._translate_time("2.3t")
+
+    @pytest.mark.parametrize('timestamp, microseconds', [
+        ('12:23:34', 44614000000), ('23:34:45:56', 84886866666),
+        ('34:45:56.7', 125156700000), ('13:24:35.67', 48275670000),
+        ('24:35:46.456', 88546456000), ('1:23:34', 5014000000)])
+    def test_clock_time(self, timestamp, microseconds):
+        assert DFXPReader()._translate_time(timestamp) == microseconds
+
+    @pytest.mark.parametrize('timestamp', [
+        '1:1:11', '1:11:1', '1:11:11:1', '11:11:11:11.11', '11:11:11,11',
+        '11.11.11.11', '11:11:11.', 'o1:11:11'])
+    def test_invalid_timestamp(self, timestamp):
+        with pytest.raises(CaptionReadTimingError) as exc_info:
+            DFXPReader()._translate_time(timestamp)
+
+        assert exc_info.value.args[0].startswith(
+            f'Invalid timestamp: {timestamp}.')
 
     def test_empty_file(self, sample_dfxp_empty):
         with pytest.raises(CaptionReadNoCaptions):
