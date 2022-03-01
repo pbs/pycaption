@@ -1,5 +1,9 @@
 Changelog
 ---------
+Unreleased
+^^^^^^^^^^
+- Updated DFXPReader timestamp validation according to TTML time expression specs
+
 2.0.5
 ^^^^^
 - Updated DFXPReader to ignore paragraphs that only contain spaces, tabs or new lines
