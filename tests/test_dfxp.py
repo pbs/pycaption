@@ -44,7 +44,7 @@ class TestDFXPReader(ReaderTestingMixIn):
         with pytest.raises(CaptionReadTimingError) as exc_info:
             DFXPReader().read(sample_dfxp_incorrect_time_format)
 
-        assert exc_info.value.args[0].startswith('Invalid timestamp: ')
+        assert exc_info.value.args[0].startswith("Invalid timestamp: 0:05.")
 
     def test_missing_begin(self, sample_dfxp_missing_begin):
         with pytest.raises(CaptionReadTimingError) as exc_info:
