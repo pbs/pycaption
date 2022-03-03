@@ -221,7 +221,7 @@ class TestSCCReader(ReaderTestingMixIn):
             SCCReader().read(sample_scc_flashing_cue)
 
         assert exc_info.value.args[0].startswith(
-            'Unsupported cue duration around')
+            "Unsupported cue duration around 00:00:20.433")
 
 
 class TestCoverageOnly:
