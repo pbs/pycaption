@@ -86,7 +86,7 @@ class SAMIReader(BaseReader):
 
         content, doc_styles, doc_langs = (
             self._get_sami_parser_class()().feed(content))
-        sami_soup = self._get_xml_parser_class()(content)
+        sami_soup = self._get_xml_parser_class()(content, features="lxml")
 
         # Get the global layout that applies to all <p> tags
         global_layout = self._build_layout(doc_styles.get('p', {}))

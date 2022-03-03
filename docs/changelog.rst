@@ -1,5 +1,10 @@
 Changelog
 ---------
+Unreleased
+^^^^^^^^^^
+- Updated Size.from_string() to accept 0 size without measuring unit
+- Replaced ValueError with CaptionReadSyntaxError for invalid sizes passed to Size.from_string()
+
 2.0.5
 ^^^^^
 - Updated DFXPReader to ignore paragraphs that only contain spaces, tabs or new lines
