@@ -136,7 +136,7 @@ class TestSize:
         assert size.unit == unit
 
     @pytest.mark.parametrize('string', ['10', '11,1px', '12xx', '%', 'o1pt'])
-    def test_valid_size_from_string(self, string):
+    def test_invalid_size_from_string(self, string):
         with pytest.raises(CaptionReadSyntaxError) as exc_info:
             Size.from_string(string)
 
