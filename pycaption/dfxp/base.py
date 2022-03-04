@@ -57,6 +57,13 @@ OFFSET_TIME_PATTERN = (r'(?P<offset_time>(?P<time_count>\d+(\.\d+)?)'
 TIME_EXPRESSION_PATTERN = re.compile(
     fr'^({CLOCK_TIME_PATTERN}|{OFFSET_TIME_PATTERN})$')
 
+MICROSECONDS_PER_UNIT = {
+    "hours": 3600000000,
+    "minutes": 60000000,
+    "seconds": 1000000,
+    "milliseconds": 1000
+}
+
 
 class DFXPReader(BaseReader):
     def __init__(self, *args, **kw):
@@ -158,27 +165,31 @@ class DFXPReader(BaseReader):
                 f'Invalid timestamp: {stamp}. Accepted formats: hh:mm:ss / '
                 'hh:mm:ss:ff / hh:mm:ss.sub-frames / time_count h|m|s|ms|f.')
         if match.group('clock_time'):
-            microseconds = (int(match.group('hours')) * 3600000000
-                            + int(match.group('minutes')) * 60000000
-                            + int(match.group('seconds')) * 1000000)
+            microseconds = int(match.group('hours')) * \
+                MICROSECONDS_PER_UNIT["hours"]
+            microseconds += int(match.group('minutes')) * \
+                MICROSECONDS_PER_UNIT["minutes"]
+            microseconds += int(match.group('seconds')) * \
+                MICROSECONDS_PER_UNIT["seconds"]
             if match.group('sub_frames'):
-                microseconds += int(
-                    match.group('sub_frames').ljust(3, '0')) * 1000
+                microseconds += int(match.group('sub_frames').ljust(3, '0')) * \
+                    MICROSECONDS_PER_UNIT["milliseconds"]
             elif match.group('frames'):
-                microseconds += int(match.group('frames')) / 30 * 1000000
+                microseconds += int(match.group('frames')) / 30 * \
+                    MICROSECONDS_PER_UNIT["seconds"]
         else:
             value = float(match.group('time_count'))
             metric = match.group("metric")
             if metric == "h":
-                microseconds = value * 60 * 60 * 1000000
+                microseconds = value * MICROSECONDS_PER_UNIT["hours"]
             elif metric == "m":
-                microseconds = value * 60 * 1000000
+                microseconds = value * MICROSECONDS_PER_UNIT["minutes"]
             elif metric == "s":
-                microseconds = value * 1000000
+                microseconds = value * MICROSECONDS_PER_UNIT["seconds"]
             elif metric == "ms":
-                microseconds = value * 1000
+                microseconds = value * MICROSECONDS_PER_UNIT["milliseconds"]
             elif metric == "f":
-                microseconds = value / 30 * 1000000
+                microseconds = value / 30 * MICROSECONDS_PER_UNIT["seconds"]
             elif metric == "t":
                 raise NotImplementedError("The tick metric for time count is "
                                           "not currently implemented.")
@@ -669,6 +680,7 @@ class LayoutInfoScraper:
     """Encapsulates the methods for determining the layout information about
     an element (with the element's region playing an important role).
     """
+
     def __init__(self, document, region=None):
         """
         :param document: the BeautifulSoup document instance, of which `region`
@@ -820,16 +832,16 @@ class LayoutInfoScraper:
             text_align_source = None
 
         text_align = (
-            self._find_attribute(text_align_source, 'tts:textAlign')
-            or _create_external_horizontal_alignment(
-                DFXP_DEFAULT_REGION.alignment.horizontal
-            )
+                self._find_attribute(text_align_source, 'tts:textAlign')
+                or _create_external_horizontal_alignment(
+            DFXP_DEFAULT_REGION.alignment.horizontal
+        )
         )
         display_align = (
-            self._find_attribute(usable_elem, 'tts:displayAlign')
-            or _create_external_vertical_alignment(
-                DFXP_DEFAULT_REGION.alignment.vertical
-            )
+                self._find_attribute(usable_elem, 'tts:displayAlign')
+                or _create_external_vertical_alignment(
+            DFXP_DEFAULT_REGION.alignment.vertical
+        )
         )
         alignment = _create_internal_alignment(text_align, display_align)
 
@@ -954,6 +966,7 @@ class RegionCreator:
 
         *: NULL means LayoutAwareBeautifulParser.NO_POSITIONING_INFO
     """
+
     def __init__(self, dfxp, caption_set):
         """
         :type dfxp: BeautifulSoup
@@ -1021,7 +1034,6 @@ class RegionCreator:
             if (
                     region_spec.origin or region_spec.extent
                     or region_spec.padding or region_spec.alignment):
-
                 new_region = dfxp.new_tag('region')
                 new_id = id_factory()
                 new_region['xml:id'] = new_id
@@ -1319,6 +1331,7 @@ class _OrderedSet(list):
     """Quick implementation of a set that tracks the order. If this is a
     performance bottleneck, replace it with some other implementation.
     """
+
     def add(self, p_object):
         if p_object not in self:
             super().append(p_object)
