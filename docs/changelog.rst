@@ -3,6 +3,8 @@ Changelog
 Unreleased
 ^^^^^^^^^^
 - Updated flashing cues validation for SCCReader to raise a CaptionReadTimingError
+- Fixed SCC translator not recognising special and extended characters
+- Raise CaptionReadTimingError for missing 'start' on SAMIReader
 
 2.0.5
 ^^^^^

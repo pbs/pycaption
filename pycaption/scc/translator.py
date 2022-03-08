@@ -564,7 +564,7 @@ def translate_scc(scc_content, brackets='[]'):
     opening_bracket, closing_bracket = brackets if brackets else ('', '')
     scc_elements = set(scc_content.split())
     for elem in scc_elements:
-        name = COMMAND_LABELS.get(elem)
+        name = COMMAND_LABELS.get(elem, ALL_CHARACTERS.get(elem))
         # If a 2 byte command was not found, try retrieving 1 byte characters
         if not name:
             char1 = ALL_CHARACTERS.get(elem[:2])
