@@ -1,5 +1,9 @@
 Changelog
 ---------
+Unreleased
+^^^^^^^^^^
+- Raise CaptionReadTimingError for missing 'start' on SAMIReader
+
 2.0.5
 ^^^^^
 - Updated DFXPReader to ignore paragraphs that only contain spaces, tabs or new lines
