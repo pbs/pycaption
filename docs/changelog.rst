@@ -1,7 +1,7 @@
 Changelog
 ---------
-Unreleased
-^^^^^^^^^^
+2.0.6
+^^^^^
 - Updated Size.from_string() to accept 0 size without measuring unit
 - Replaced ValueError with CaptionReadSyntaxError for invalid sizes passed to Size.from_string()
 - Updated DFXPReader timestamp validation according to TTML time expression specs
