@@ -237,8 +237,10 @@ class SCCReader(BaseReader):
             # less than .05s kill it (this is likely caused by a standalone
             # EOC marker in the SCC file)
             if 0 < cap.end - cap.start < 50000:
-                raise ValueError('unsupported length found in SCC '
-                                 f'input file: {cap}')
+                raise CaptionReadTimingError(
+                    f'Unsupported cue duration around {cap.format_start()} '
+                    f'for line beginning with "{cap.get_text()}". Duration '
+                    f'must be at least 0.05 seconds.')
 
         if captions.is_empty():
             raise CaptionReadNoCaptions("empty caption file")

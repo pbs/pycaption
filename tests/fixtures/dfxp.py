@@ -1313,7 +1313,7 @@ def sample_dfxp_with_frame_timing():
  </head>
  <body>
   <div region="bottom" xml:lang="en-US">
-   <p begin="00:00:09:20" end="00:00:12:7" region="b1">
+   <p begin="00:00:09:20" end="00:00:12:07" region="b1">
     ABC
    </p>
   </div>
@@ -1456,7 +1456,7 @@ def sample_dfxp_with_nested_spans():
  </head>
  <body>
   <div xml:lang="en-US" region="bottom">
-   <p begin="00:00:03.209" end="00:00:8.312" region="bottom">
+   <p begin="00:00:03.209" end="00:00:08.312" region="bottom">
     That is <span style="s3"><span style="s2"><span style="s1">nested</span></span></span>.
    </p>
   </div>
