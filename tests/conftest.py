@@ -59,7 +59,7 @@ from tests.fixtures.scc import (  # noqa: F401
     sample_scc_eoc_first_command, sample_scc_with_extended_characters,
     sample_scc_with_ampersand_character, sample_scc_multiple_formats,
     sample_scc_repeated_tab_offset, sample_scc_tab_offset,
-    sample_scc_with_unknown_commands
+    sample_scc_with_unknown_commands, sample_scc_special_and_extended_characters
 )
 from tests.fixtures.srt import (  # noqa: F401
     sample_srt, sample_srt_ascii, sample_srt_numeric, sample_srt_empty,
@@ -69,7 +69,8 @@ from tests.fixtures.srt import (  # noqa: F401
 )
 from tests.fixtures.translated_scc import (  # noqa: F401
     sample_translated_scc_custom_brackets, sample_translated_scc_success,
-    sample_translated_scc_commands_not_found, sample_translated_scc_no_brackets
+    sample_translated_scc_commands_not_found, sample_translated_scc_no_brackets,
+    sample_translated_scc_special_and_extended_characters
 )
 from tests.fixtures.webvtt import (  # noqa: F401
     sample_webvtt, sample_webvtt_from_dfxp, sample_webvtt_from_sami,

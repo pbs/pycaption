@@ -55,7 +55,7 @@ def sample_translated_scc_no_brackets():
 def sample_translated_scc_commands_not_found():
     return """Scenarist_SCC V1.0
 
-00:04:36;06 942x 942x 942x 942x [row 01, column 12, with plain white text.] [MA] 13b0 525x c8cx ba8x
+00:04:36;06 942x 942x 942x 942x [row 01, column 12, with plain white text.] [MA] [Ä] 525x c8cx ba8x
 """
 
 
@@ -81,4 +81,24 @@ def sample_translated_scc_custom_brackets():
 
 00:00:36:04 {Erase Displayed Memory} {Erase Displayed Memory}
 
+"""
+
+
+@pytest.fixture(scope="session")
+def sample_translated_scc_special_and_extended_characters():
+    return """Scenarist_SCC V1.0
+
+00:00:16;29 [ ] [®] [°] [½] [¿] [™] [¢] [£] 
+
+00:04:36;06 [♪] [à] [ ] [è] [â] [ê] [î] [ô] [û]
+
+00:08:00;00 [É] [Ó] [Ú] [Ü] [ü] [‘] [¡] [*] [’] [—] [©]
+
+00:12:00;23 [℠] [•] [“] [”] [À] [Â] [Ç] [È] [Ê] [Ë] [ë] [Î] [Ï] 
+
+00:16:24;11 [ï] [Ô] [Ù] [ù] [Û] [«] [»] [Ã] [ã] [Í] [Ì] [ì] [Ò]
+
+00:20:19;12 [ò] [Õ] [õ] [{] [}] [\\] [^] [_] [¦] [~] [Ä] [ä] [Ö]
+
+00:24:39;28 [ö] [ß] [¥] [¤] [|] [Å] [å] [Ø] [ø] [┌] [┐] [└] [┘]
 """

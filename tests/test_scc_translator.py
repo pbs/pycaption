@@ -26,3 +26,10 @@ class TestSCCTranslator:
         result = translate_scc(sample_scc_with_unknown_commands)
 
         assert sample_translated_scc_commands_not_found == result
+
+    def test_special_and_extended_characters(
+            self, sample_scc_special_and_extended_characters,
+            sample_translated_scc_special_and_extended_characters):
+        result = translate_scc(sample_scc_special_and_extended_characters)
+
+        assert sample_translated_scc_special_and_extended_characters == result
