@@ -2,6 +2,8 @@ Changelog
 ---------
 Unreleased
 ^^^^^^^^^^
+- Updated Size.from_string() to accept 0 size without measuring unit
+- Replaced ValueError with CaptionReadSyntaxError for invalid sizes passed to Size.from_string()
 - Updated DFXPReader timestamp validation according to TTML time expression specs
 - Updated flashing cues validation for SCCReader to raise a CaptionReadTimingError
 - Fixed SCC translator not recognising special and extended characters

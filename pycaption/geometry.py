@@ -7,9 +7,10 @@ CONVENTIONS:
   responsible for the recalculation should return a new object with the
   necessary modifications.
 """
+import re
 from enum import Enum
 
-from .exceptions import RelativizationError
+from .exceptions import RelativizationError, CaptionReadSyntaxError
 
 
 class UnitEnum(Enum):
@@ -501,37 +502,22 @@ class Size:
         :type string: str
         :rtype: Size
         """
-
-        raw_number = string
-        for unit in list(UnitEnum):
-            if raw_number.endswith(unit.value):
-                raw_number = raw_number.rstrip(unit.value)
-                break
+        size_pattern = re.compile(
+            r"^(((?P<value>\d+(\.\d+)?)(?P<unit>"
+            fr"{'|'.join([unit.value for unit in UnitEnum])}))|0)$")
+        match = size_pattern.search(string)
+        if not match:
+            raise CaptionReadSyntaxError(
+                f"Invalid size: {string}. Please make sure the provided value "
+                "is a number followed by one of the supported units: "
+                f"{', '.join([unit.value for unit in UnitEnum])}.")
+        unit = match.group("unit")
+        if unit:
+            value = match.group("value")
+            return cls(value, UnitEnum(unit))
         else:
-            unit = None
-
-        if unit is not None:
-            value = None
-            try:
-                value = float(raw_number)
-                value = int(raw_number)
-            except ValueError:
-                pass
-
-            if value is None:
-                raise ValueError(
-                    """Couldn't recognize the value "{value}" as a number"""
-                    .format(value=raw_number)
-                )
-            instance = cls(value, unit)
-            return instance
-        else:
-            raise ValueError(
-                "The specified value is not valid because its unit "
-                f"is not recognized: {raw_number}. "
-                "The only supported units are: "
-                f"{', '.join(UnitEnum._member_map_)}"
-            )
+            # If the unit is missing, the only accepted alternative is zero
+            return cls(match.group(0), UnitEnum.PIXEL)
 
     def __repr__(self):
         return f'<Size ({self.value} {self.unit.value})>'
