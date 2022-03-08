@@ -55,7 +55,6 @@ class TestSCCReader(ReaderTestingMixIn):
             "hour:minute:seconds:frames format. Please correct the following "
             "time:")
 
-
     def test_empty_file(self, sample_scc_empty):
         with pytest.raises(CaptionReadNoCaptions):
             SCCReader().read(sample_scc_empty)
@@ -216,6 +215,13 @@ class TestSCCReader(ReaderTestingMixIn):
         ]
 
         assert expected_lines == actual_lines
+
+    def test_flashing_cue(self, sample_scc_flashing_cue):
+        with pytest.raises(CaptionReadTimingError) as exc_info:
+            SCCReader().read(sample_scc_flashing_cue)
+
+        assert exc_info.value.args[0].startswith(
+            "Unsupported cue duration around 00:00:20.433")
 
 
 class TestCoverageOnly:

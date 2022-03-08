@@ -693,3 +693,29 @@ def sample_sami_with_separate_multi_lang():
  </body>
 </sami>
 """
+
+
+@pytest.fixture(scope="session")
+def sample_sami_missing_start():
+    return """
+    <SAMI><HEAD><TITLE>NOVA3213</TITLE><STYLE TYPE="text/css">
+    <!--
+    P { margin-left:  1pt;
+        margin-right: 1pt;
+        margin-bottom: 2pt;
+        margin-top: 2pt;
+        text-align: center;
+        font-size: 10pt;
+        font-family: Arial;
+        font-weight: normal;
+        font-style: normal;
+        color: #ffeedd; }
+
+    .ENCC {Name: English; lang: en-US; SAMI_Type: CC;}
+
+    --></STYLE></HEAD><BODY>
+    <SYNC><P class="ENCC">
+           ( clock ticking )
+    </P></SYNC>
+    </BODY></SAMI>
+    """

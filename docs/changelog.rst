@@ -3,6 +3,9 @@ Changelog
 Unreleased
 ^^^^^^^^^^
 - Updated DFXPReader timestamp validation according to TTML time expression specs
+- Updated flashing cues validation for SCCReader to raise a CaptionReadTimingError
+- Fixed SCC translator not recognising special and extended characters
+- Raise CaptionReadTimingError for missing 'start' on SAMIReader
 
 2.0.5
 ^^^^^

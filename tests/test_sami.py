@@ -3,6 +3,7 @@ from copy import deepcopy
 import pytest
 
 from pycaption import SAMIReader, CaptionReadNoCaptions, CaptionReadSyntaxError
+from pycaption.exceptions import CaptionReadTimingError
 from pycaption.geometry import HorizontalAlignmentEnum, Size, UnitEnum  # noqa
 from tests.mixins import ReaderTestingMixIn
 
@@ -35,6 +36,13 @@ class TestSAMIReader(ReaderTestingMixIn):
 
         assert 17000000 == paragraph.start
         assert 18752000 == paragraph.end
+
+    def test_missing_start(self, sample_sami_missing_start):
+        with pytest.raises(CaptionReadTimingError) as exc_info:
+            self.reader.read(sample_sami_missing_start)
+
+        assert exc_info.value.args[0].startswith(
+            "Missing start time on the following line: ")
 
     def test_6digit_color_code_from_6digit_input(self, sample_sami):
         caption_set = self.reader.read(sample_sami)

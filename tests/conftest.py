@@ -47,7 +47,7 @@ from tests.fixtures.sami import (  # noqa: F401
     sample_sami_including_decimal_charref,
     sample_sami_including_html5_entityref, sample_sami_with_unclosed_tag,
     sample_sami_with_inline_lang, sample_sami_from_dfxp_with_nested_spans,
-    sample_sami_with_separate_multi_lang,
+    sample_sami_with_separate_multi_lang, sample_sami_missing_start
 )
 from tests.fixtures.scc import (  # noqa: F401
     sample_scc_created_dfxp_with_wrongly_closing_spans,
@@ -55,11 +55,11 @@ from tests.fixtures.scc import (  # noqa: F401
     sample_scc_produces_captions_with_start_and_end_time_the_same,
     sample_scc_pop_on, sample_scc_multiple_positioning, sample_scc_with_italics,
     sample_scc_empty, sample_scc_roll_up_ru2, sample_no_positioning_at_all_scc,
-    sample_scc_no_explicit_end_to_last_caption, sample_scc_flashing_captions,
+    sample_scc_no_explicit_end_to_last_caption, sample_scc_flashing_cue,
     sample_scc_eoc_first_command, sample_scc_with_extended_characters,
     sample_scc_with_ampersand_character, sample_scc_multiple_formats,
     sample_scc_repeated_tab_offset, sample_scc_tab_offset,
-    sample_scc_with_unknown_commands
+    sample_scc_with_unknown_commands, sample_scc_special_and_extended_characters
 )
 from tests.fixtures.srt import (  # noqa: F401
     sample_srt, sample_srt_ascii, sample_srt_numeric, sample_srt_empty,
@@ -69,7 +69,8 @@ from tests.fixtures.srt import (  # noqa: F401
 )
 from tests.fixtures.translated_scc import (  # noqa: F401
     sample_translated_scc_custom_brackets, sample_translated_scc_success,
-    sample_translated_scc_commands_not_found, sample_translated_scc_no_brackets
+    sample_translated_scc_commands_not_found, sample_translated_scc_no_brackets,
+    sample_translated_scc_special_and_extended_characters
 )
 from tests.fixtures.webvtt import (  # noqa: F401
     sample_webvtt, sample_webvtt_from_dfxp, sample_webvtt_from_sami,
