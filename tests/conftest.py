@@ -47,7 +47,7 @@ from tests.fixtures.sami import (  # noqa: F401
     sample_sami_including_decimal_charref,
     sample_sami_including_html5_entityref, sample_sami_with_unclosed_tag,
     sample_sami_with_inline_lang, sample_sami_from_dfxp_with_nested_spans,
-    sample_sami_with_separate_multi_lang,
+    sample_sami_with_separate_multi_lang, sample_sami_missing_start
 )
 from tests.fixtures.scc import (  # noqa: F401
     sample_scc_created_dfxp_with_wrongly_closing_spans,

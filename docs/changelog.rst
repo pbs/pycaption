@@ -3,6 +3,7 @@ Changelog
 Unreleased
 ^^^^^^^^^^
 - Fixed SCC translator not recognising special and extended characters
+- Raise CaptionReadTimingError for missing 'start' on SAMIReader
 
 2.0.5
 ^^^^^
