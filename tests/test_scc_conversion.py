@@ -69,9 +69,3 @@ class TestSCCToWebVTT:
         webvtt = WebVTTWriter().write(caption_set)
 
         assert webvtt == sample_webvtt_from_scc_properly_writes_newlines_output
-
-
-class TestSCCEOCNewline:
-    def test_eoc_on_newline_rejection(self, sample_scc_flashing_captions):
-        with pytest.raises(ValueError):
-            SCCReader().read(sample_scc_flashing_captions)
