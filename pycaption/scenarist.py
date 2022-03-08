@@ -124,7 +124,7 @@ class ScenaristDVDWriter(BaseWriter):
 
         # I manually edited the TTF to include the note chars. See this issue for details:
         # https://github.com/googlefonts/noto-fonts/issues/1663
-        fnt = ImageFont.truetype(os.path.dirname(__file__) + '/NotoSansDisplay-Regular-note.ttf', 30)
+        fnt = ImageFont.truetype(os.path.dirname(__file__) + '/NotoSansDisplay-Regular.ttf', 30)
 
         with tempfile.TemporaryDirectory() as tmpDir:
             with open(tmpDir + '/subtitles.sst', 'w+') as sst:
