@@ -124,7 +124,7 @@ class ScenaristDVDWriter(BaseWriter):
 
         # I manually edited the TTF to include the note chars. See this issue for details:
         # https://github.com/googlefonts/noto-fonts/issues/1663
-        fnt = ImageFont.truetype(os.path.dirname(__file__) + '/NotoSansDisplay-Regular.ttf', 30)
+        fnt = ImageFont.truetype(os.path.dirname(__file__) + '/NotoSansDisplay-Regular-note.ttf', 30)
 
         with tempfile.TemporaryDirectory() as tmpDir:
             with open(tmpDir + '/subtitles.sst', 'w+') as sst:
@@ -176,29 +176,29 @@ class ScenaristDVDWriter(BaseWriter):
             x = None
             y = None
 
+            # if position is specified as source, get the layout info
+            # fall back to "bottom" position if we can't get it
             if position == 'source':
-                layout_info = caption.layout_info
-                if layout_info:
-                    origin = layout_info.origin
-                    if origin:
-                        x_ = origin.x
-                        y_ = origin.y
+                try:
+                    x_ = caption.layout_info.origin.x
+                    y_ = caption.layout_info.origin.y
 
-                        if isinstance(x_, Size) \
-                                and isinstance(y_, Size) \
-                                and x_.unit == UnitEnum.PERCENT \
-                                and y_.unit == UnitEnum.PERCENT:
-                            x = self.video_width * (x_.value / 100)
-                            y = self.video_height * (y_.value / 100)
+                    if isinstance(x_, Size) \
+                            and isinstance(y_, Size) \
+                            and x_.unit == UnitEnum.PERCENT \
+                            and y_.unit == UnitEnum.PERCENT:
+                        x = self.video_width * (x_.value / 100)
+                        y = self.video_height * (y_.value / 100)
 
-                            # padding for readability
-                            if y_.value > 70:
-                                y = y - 10
-
-                if x is None and y is None:
+                        # padding for readability
+                        if y_.value > 70:
+                            y = y - 10
+                    else:
+                        position = 'bottom'
+                except:
                     position = 'bottom'
 
-            else:
+            if position != 'source':
                 x = self.video_width / 2 - r / 2
                 if position == 'bottom':
                     y = self.video_height - b - 10  # padding for readability
