@@ -1,5 +1,9 @@
 Changelog
 ---------
+Unreleased
+^^^^^^^^^^
+- Implemented skipping duplicate special characters for SCCReader
+
 2.0.6
 ^^^^^
 - Updated Size.from_string() to accept 0 size without measuring unit

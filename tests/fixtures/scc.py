@@ -351,11 +351,23 @@ Scenarist_SCC V1.0
 
 
 @pytest.fixture(scope="session")
-def sample_scc_repeated_tab_offset():
+def sample_scc_duplicate_tab_offset():
     return """\
 Scenarist_SCC V1.0
 
 00:00:29:04 9420 1370 97a1 1370 97a1 91ae 5b52 6164 e9ef 20f2 e570 eff2 f4e5 f25d 94d0 97a1 94d0 97a1 91ae 5468 e520 49ad 31b0 20d3 616e f461 20cd ef6e e9e3 6120 46f2 e5e5 f761 7980 9470 97a1 9470 97a1 91ae f7e5 73f4 62ef 756e 6420 e973 20ea 616d 6de5 642c 9420 942c 942f 9420 94d0 97a2 94d0 97a2 91ae 6475 e520 f4ef 2061 20f4 68f2 e5e5 ade3 61f2 2061 e3e3 e964 e56e f480 9470 97a2 9470 97a2 91ae 62ec efe3 6be9 6e67 20ec 616e e573 2031 2061 6e64 2032 942f
+"""
+
+
+@pytest.fixture(scope="session")
+def sample_scc_duplicate_special_characters():
+    return """\
+Scenarist_SCC V1.0
+
+00:23:28;01 9420 91b0 91b0 9131 9131 9132 9132 91b3 91b3 9134 9134 91b5 91b5 91b6 91b6 9137 9137 9138 9138 91b9 91b9 91ba 91ba 913b 913b 91bc 91bc 913d 913d 913e 913e 91bf 91bf 942f
+
+00:53:28;01 9420 91b0 9131 9132 91b3 9134 91b5 91b6 9137 9138 91b9 91ba 913b 91bc 913d 913e 91bf 942f
+
 """
 
 

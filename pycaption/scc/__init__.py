@@ -321,7 +321,9 @@ class SCCReader(BaseReader):
         # up for redundancy in case the signal is garbled in transmission.
         # The decoder is programmed to ignore a second command when it is the
         # same as the first.
-        if word in COMMANDS or _is_pac_command(word):
+        # Also like codes, Special Characters are always doubled up,
+        # with only one member of each pair being displayed.
+        if word in COMMANDS or _is_pac_command(word) or word in SPECIAL_CHARS:
             if word == self.last_command:
                 self.last_command = ''
                 return True
