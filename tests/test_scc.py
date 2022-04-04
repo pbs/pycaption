@@ -190,14 +190,14 @@ class TestSCCReader(ReaderTestingMixIn):
 
         assert expected_timings == actual_timings
 
-    def test_removed_extended_characters_ascii_duplicate(
+    def test_skip_extended_characters_ascii_duplicate(
             self, sample_scc_with_extended_characters):
         caption_set = SCCReader().read(sample_scc_with_extended_characters)
         nodes = caption_set.get_captions('en-US')[0].nodes
 
         assert nodes[0].content == 'MÄRTHA:'
 
-    def test_ignore_repeated_tab_offset(self, sample_scc_repeated_tab_offset):
+    def test_skip_duplicate_tab_offset(self, sample_scc_duplicate_tab_offset):
         expected_lines = [
             '[Radio reporter]',
             'The I-10 Santa Monica Freeway',
@@ -206,7 +206,21 @@ class TestSCCReader(ReaderTestingMixIn):
             'blocking lanes 1 and 2',
         ]
 
-        caption_set = SCCReader().read(sample_scc_repeated_tab_offset)
+        caption_set = SCCReader().read(sample_scc_duplicate_tab_offset)
+        actual_lines = [
+            node.content
+            for cap_ in caption_set.get_captions('en-US')
+            for node in cap_.nodes
+            if node.type_ == CaptionNode.TEXT
+        ]
+
+        assert expected_lines == actual_lines
+
+    def test_skip_duplicate_special_characters(
+            self, sample_scc_duplicate_special_characters):
+        expected_lines = ['®°½¿™¢£♪à èâêîôû', '®°½¿™¢£♪à èâêîôû']
+
+        caption_set = SCCReader().read(sample_scc_duplicate_special_characters)
         actual_lines = [
             node.content
             for cap_ in caption_set.get_captions('en-US')
@@ -247,7 +261,7 @@ class TestCoverageOnly:
             'HELPING THE LOCAL NEIGHBORHOODS',
             'AND IMPROVING THE LIVES OF ALL',
             'WE SERVE.',
-            '®°½½',
+            '®°½',
             'ABû',
             'ÁÁÉÓ¡',
             "WHERE YOU'RE STANDING NOW,",
