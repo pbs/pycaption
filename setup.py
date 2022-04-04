@@ -8,9 +8,14 @@ README_PATH = os.path.join(
 )
 
 dependencies = [
-    'beautifulsoup4>=4.8.1,<4.10',
-    'lxml>=4.6.3,<4.7',
+    'beautifulsoup4>=4.8.1,<4.11',
+    'lxml>=4.6.3,<4.9',
     'cssutils>=2.0.0,<2.4',
+]
+
+dev_dependencies = [
+    'pytest',
+    'pytest-lazy-fixture'
 ]
 
 setup(
@@ -28,6 +33,9 @@ setup(
     },
     python_requires='>=3.6,<4.0',
     install_requires=dependencies,
+    extras_require={
+        'dev': dev_dependencies
+    },
     packages=find_packages(),
     include_package_data=True,
     classifiers=[

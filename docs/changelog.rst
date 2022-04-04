@@ -3,6 +3,8 @@ Changelog
 Unreleased
 ^^^^^^^^^^
 - Implemented skipping duplicate special characters for SCCReader
+- Added support for beautifulsoup 4.10 and lxml 4.8
+- Added pytest and pytest-lazy-fixture as development dependencies
 
 2.0.6
 ^^^^^
