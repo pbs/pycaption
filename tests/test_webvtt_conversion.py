@@ -78,12 +78,12 @@ class TestWebVTTtoWebVTT(WebVTTTestingMixIn):
         assert sample_webvtt_with_cue_settings == webvtt
 
     def test_positioning_is_kept(self,
-                                 sample_webvtt_from_dfxp_with_positioning):
+                                 sample_webvtt_keeps_positioning):
         caption_set = WebVTTReader().read(
-            sample_webvtt_from_dfxp_with_positioning)
+            sample_webvtt_keeps_positioning)
         results = WebVTTWriter().write(caption_set)
 
-        assert sample_webvtt_from_dfxp_with_positioning == results
+        assert sample_webvtt_keeps_positioning == results
 
     def test_output_timestamps(self, sample_webvtt_timestamps):
         expected_timestamp_line_pattern = re.compile(

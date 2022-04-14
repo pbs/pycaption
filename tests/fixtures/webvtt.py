@@ -111,10 +111,10 @@ This is <i>italic</i>, <b>bold</b>, <u>underline</u>, <i><u><b>everything togeth
 
 
 @pytest.fixture(scope="session")
-def sample_webvtt_from_dfxp_with_positioning():
+def sample_webvtt_keeps_positioning():
     return """WEBVTT
 
-00:01.000 --> 00:03.000 position:25% line:25% size:50%
+00:01.000 --> 00:03.000 align:start position:25% line:25% size:50%
 You might not remember us. We are a typical transparent region with centered text that has an outline.
 
 00:03.500 --> 00:05.000 align:right position:25% line:25% size:50%
@@ -133,7 +133,7 @@ the last cue
 def sample_webvtt_from_dfxp_with_positioning_and_style():
     return """WEBVTT
 
-00:01.000 --> 00:03.000 position:25% line:25% size:50%
+00:01.000 --> 00:03.000 align:start position:25% line:25% size:50%
 You might not remember us. We are a typical transparent region with centered text that has an outline.
 
 00:03.500 --> 00:05.000 align:right position:25% line:25% size:50%
