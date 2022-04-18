@@ -1,5 +1,9 @@
 Changelog
 ---------
+Unreleased
+^^^^^^^^^^
+- Added support for Python 3.10
+
 2.0.7
 ^^^^^
 - Implemented skipping duplicate special characters for SCCReader
