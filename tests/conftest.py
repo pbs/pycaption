@@ -77,7 +77,7 @@ from tests.fixtures.webvtt import (  # noqa: F401
     sample_webvtt, sample_webvtt_from_dfxp, sample_webvtt_from_sami,
     sample_webvtt_from_sami_with_style, sample_webvtt_from_sami_with_id_style,
     sample_webvtt_from_dfxp_with_style,
-    sample_webvtt_from_dfxp_with_positioning,
+    sample_webvtt_keeps_positioning,
     sample_webvtt_from_dfxp_with_positioning_and_style,
     sample_webvtt_from_srt, sample_webvtt_from_webvtt,
     sample_webvtt_2, sample_webvtt_empty, sample_webvtt_double_br,

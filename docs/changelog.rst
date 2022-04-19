@@ -3,6 +3,7 @@ Changelog
 Unreleased
 ^^^^^^^^^^
 - Added support for Python 3.10
+- Added default start align to WebVTTWriter
 
 2.0.7
 ^^^^^
