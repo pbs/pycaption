@@ -149,7 +149,7 @@ class NotifyingDict(dict):
         :param observer: any callable that can be called with 2 positional
             arguments
         """
-        if not isinstance(observer, collections.Callable):
+        if not callable(observer):
             raise TypeError('The observer should be callable')
 
         self.observers.append(observer)
