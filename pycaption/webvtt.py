@@ -309,7 +309,6 @@ class WebVTTWriter(BaseWriter):
         left_offset = None
         top_offset = None
         cue_width = None
-        alignment = None
 
         already_relative = False
         if not self.relativize:
@@ -363,11 +362,9 @@ class WebVTTWriter(BaseWriter):
             # long vertically as the text it contains and nothing can be cut
             # out
 
-        try:
-            alignment = WEBVTT_VERSION_OF[layout.alignment.horizontal]
-        except (AttributeError, KeyError):
-            pass
-
+        alignment = WEBVTT_VERSION_OF.get(
+            layout.alignment.horizontal,
+            WEBVTT_VERSION_OF[HorizontalAlignmentEnum.START])
         cue_settings = ''
 
         if alignment and alignment != 'middle':

@@ -1,5 +1,9 @@
 Changelog
 ---------
+Unreleased
+^^^^^^^^^^
+- Added default start align to WebVTTWriter
+
 2.0.7
 ^^^^^
 - Implemented skipping duplicate special characters for SCCReader
