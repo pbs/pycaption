@@ -16,8 +16,8 @@ Tape_Type\t{tape_type}
 Display_Start\tnon_forced
 Pixel_Area\t(2 479)
 Display_Area\t(0 2 719 479)
-Color\t(0 1 2 3)
-Contrast\t(7 7 7 7)
+Color\t{color}
+Contrast\t{contrast}
 BG\t({bg_red} {bg_green} {bg_blue} = = =)
 PA\t({pa_red} {pa_green} {pa_blue} = = =)
 E1\t({e1_red} {e1_green} {e1_blue} = = =)
@@ -72,10 +72,17 @@ class ScenaristDVDWriter(BaseWriter):
     palette_image.putpalette([*paColor, *e1Color, *e2Color, *bgColor] + [0, 0, 0] * 252)
 
     def __init__(self, relativize=True, video_width=720, video_height=480, fit_to_screen=True, tape_type='NON_DROP',
-                 frame_rate=25):
+                 frame_rate=25, compat=False):
         super().__init__(relativize, video_width, video_height, fit_to_screen)
         self.tape_type = tape_type
         self.frame_rate = frame_rate
+
+        if compat:
+            self.color = '(1 2 3 4)'
+            self.contrast = '(15 15 15 0)'
+        else:
+            self.color = '(0 1 2 3)'
+            self.contrast = '(7 7 7 7)'
 
     def write(self, caption_set: CaptionSet, position='bottom', avoid_same_next_start_prev_end=False):
         position = position.lower().strip()
@@ -134,7 +141,7 @@ class ScenaristDVDWriter(BaseWriter):
                     pa_red=self.paColor[0], pa_green=self.paColor[1], pa_blue=self.paColor[2],
                     e1_red=self.e1Color[0], e1_green=self.e1Color[1], e1_blue=self.e1Color[2],
                     e2_red=self.e2Color[0], e2_green=self.e2Color[1], e2_blue=self.e2Color[2],
-                    tape_type=self.tape_type,
+                    tape_type=self.tape_type, color=self.color, contrast=self.contrast
                 ))
 
                 for i, cap_list in enumerate(caps_final):
