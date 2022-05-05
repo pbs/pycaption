@@ -60,30 +60,30 @@ class TestDFXPReader(ReaderTestingMixIn):
     def test_offset_time(self):
         reader = DFXPReader()
 
-        assert 1 == reader._translate_time("0.001ms")
-        assert 2000 == reader._translate_time("2ms")
-        assert 1000000 == reader._translate_time("1s")
-        assert 1234567 == reader._translate_time("1.234567s")
-        assert 180000000 == reader._translate_time("3m")
-        assert 14400000000 == reader._translate_time("4h")
-        assert 53333 == reader._translate_time("1.6f")
+        assert 1 == reader._convert_timestamp_to_microseconds("0.001ms")
+        assert 2000 == reader._convert_timestamp_to_microseconds("2ms")
+        assert 1000000 == reader._convert_timestamp_to_microseconds("1s")
+        assert 1234567 == reader._convert_timestamp_to_microseconds("1.234567s")
+        assert 180000000 == reader._convert_timestamp_to_microseconds("3m")
+        assert 14400000000 == reader._convert_timestamp_to_microseconds("4h")
+        assert 53333 == reader._convert_timestamp_to_microseconds("1.6f")
         # Tick values are not supported
         with pytest.raises(NotImplementedError):
-            reader._translate_time("2.3t")
+            reader._convert_timestamp_to_microseconds("2.3t")
 
     @pytest.mark.parametrize('timestamp, microseconds', [
         ('12:23:34', 44614000000), ('23:34:45:56', 84886866666),
         ('34:45:56.7', 125156700000), ('13:24:35.67', 48275670000),
         ('24:35:46.456', 88546456000), ('1:23:34', 5014000000)])
     def test_clock_time(self, timestamp, microseconds):
-        assert DFXPReader()._translate_time(timestamp) == microseconds
+        assert DFXPReader()._convert_timestamp_to_microseconds(timestamp) == microseconds
 
     @pytest.mark.parametrize('timestamp', [
         '1:1:11', '1:11:1', '1:11:11:1', '11:11:11:11.11', '11:11:11,11',
         '11.11.11.11', '11:11:11.', 'o1:11:11'])
     def test_invalid_timestamp(self, timestamp):
         with pytest.raises(CaptionReadTimingError) as exc_info:
-            DFXPReader()._translate_time(timestamp)
+            DFXPReader()._convert_timestamp_to_microseconds(timestamp)
 
         assert exc_info.value.args[0].startswith(
             f'Invalid timestamp: {timestamp}.')
@@ -147,12 +147,12 @@ class TestDFXPReader(ReaderTestingMixIn):
             sample_dfxp_multiple_captions_with_the_same_timing
         )
         expected_layouts = [
-            (((10, UnitEnum.PERCENT), (10, UnitEnum.PERCENT)), None, None,
-             (HorizontalAlignmentEnum.CENTER, VerticalAlignmentEnum.BOTTOM)),
-            (((40, UnitEnum.PERCENT), (40, UnitEnum.PERCENT)), None, None,
-             (HorizontalAlignmentEnum.CENTER, VerticalAlignmentEnum.BOTTOM)),
-            (((10, UnitEnum.PERCENT), (70, UnitEnum.PERCENT)), None, None,
-             (HorizontalAlignmentEnum.CENTER, VerticalAlignmentEnum.BOTTOM))]
+            (((10, UnitEnum.PERCENT), (10, UnitEnum.PERCENT)),
+             None, None, None),
+            (((40, UnitEnum.PERCENT), (40, UnitEnum.PERCENT)),
+             None, None, None),
+            (((10, UnitEnum.PERCENT), (70, UnitEnum.PERCENT)),
+             None, None, None)]
         actual_layouts = [c_.layout_info.serialized() for c_ in
                           captionset.get_captions('en-US')]
 

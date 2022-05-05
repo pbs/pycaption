@@ -238,10 +238,10 @@ def sample_dfxp_with_relativized_positioning():
   <styling/>
   <layout>
    <region tts:displayAlign="after" tts:textAlign="center" xml:id="bottom"/>
-   <region tts:displayAlign="after" tts:extent="70% 25%" tts:origin="15% 15%" tts:padding="10% 10% 10% 10%" xml:id="r0"/>
-   <region tts:displayAlign="after" tts:extent="50% 10%" tts:origin="25% 25%" tts:textAlign="right" xml:id="r1"/>
-   <region tts:displayAlign="after" tts:extent="25% 25%" tts:origin="50% 50%" tts:textAlign="left" xml:id="r2"/>
-   <region tts:displayAlign="after" tts:extent="25% 20%" tts:origin="25% 75%" tts:textAlign="right" xml:id="r3"/>
+   <region tts:displayAlign="after" tts:extent="70% 25%" tts:origin="15% 15%" tts:padding="10% 10% 10% 10%" tts:textAlign="center" xml:id="r0"/>
+   <region tts:extent="50% 10%" tts:origin="25% 25%" tts:textAlign="right" xml:id="r1"/>
+   <region tts:extent="25% 25%" tts:origin="50% 50%" tts:textAlign="left" xml:id="r2"/>
+   <region tts:extent="25% 20%" tts:origin="25% 75%" tts:textAlign="right" xml:id="r3"/>
   </layout>
  </head>
  <body>
@@ -393,7 +393,7 @@ def sample_dfxp_long_cue_fit_to_screen():
   </styling>
   <layout>
    <region tts:displayAlign="after" tts:textAlign="center" xml:id="bottom"/>
-   <region tts:displayAlign="after" tts:extent="65% 70%" tts:origin="25% 25%" tts:textAlign="center" xml:id="r0"/>
+   <region tts:extent="65% 70%" tts:origin="25% 25%" tts:textAlign="center" xml:id="r0"/>
   </layout>
  </head>
  <body>
@@ -579,7 +579,7 @@ def sample_dfxp_invalid_but_supported_positioning_output():
    <region tts:displayAlign="after" tts:extent="30% 7.67%" tts:origin="1px 2px" tts:textAlign="center" xml:id="r2"/>
    <region tts:displayAlign="before" tts:extent="60% 22%" tts:textAlign="right" xml:id="r3"/>
    <region tts:displayAlign="after" tts:origin="11% 11%" tts:textAlign="center" xml:id="r4"/>
-   <region tts:displayAlign="after" tts:origin="11% 11%" tts:textAlign="right" xml:id="r5"/>
+   <region tts:origin="11% 11%" tts:textAlign="right" xml:id="r5"/>
   </layout>
  </head>
  <body>
@@ -588,13 +588,13 @@ def sample_dfxp_invalid_but_supported_positioning_output():
     Hello there!
    </p>
    <p begin="00:00:05.700" end="00:00:06.210" region="r1" style="p" tts:displayAlign="after" tts:extent="30% 7.67%" tts:origin="20% 15.67%" tts:textAlign="center">
-    How are you?<span region="r2" tts:origin="1px 2px" tts:textAlign="center" tts:extent="30% 7.67%" tts:displayAlign="after">&gt;&gt;Fine, thx&lt;&lt;</span>
+    How are you?<span region="r2" tts:origin="1px 2px" tts:extent="30% 7.67%" tts:textAlign="center" tts:displayAlign="after">&gt;&gt;Fine, thx&lt;&lt;</span>
    </p>
    <p begin="00:00:07.900" end="00:00:08.900" region="r3" style="p" tts:displayAlign="before" tts:extent="60% 22%" tts:textAlign="right">
     Just fine?
    </p>
    <p begin="00:00:09.900" end="00:00:10.800" region="r4" style="p" tts:displayAlign="after" tts:origin="11% 11%" tts:textAlign="center">
-    <span tts:textAlign="right" region="r5" tts:origin="11% 11%" tts:textAlign="right" tts:displayAlign="after">&gt;&gt;&gt;Lol, yes!</span>
+    <span tts:textAlign="right" region="r5" tts:origin="11% 11%" tts:textAlign="right">&gt;&gt;&gt;Lol, yes!</span>
    </p>
   </div>
  </body>
@@ -661,11 +661,11 @@ def sample_dfxp_multiple_regions_output():
   </styling>
   <layout>
    <region tts:displayAlign="after" tts:textAlign="center" xml:id="bottom"/>
-   <region tts:displayAlign="after" tts:extent="30px 40px" tts:origin="40px 50px" tts:textAlign="center" xml:id="r0"/>
+   <region tts:extent="30px 40px" tts:origin="40px 50px" tts:textAlign="center" xml:id="r0"/>
    <region tts:displayAlign="after" tts:extent="50% 50%" tts:origin="10% 30%" tts:textAlign="center" xml:id="r1"/>
    <region tts:displayAlign="after" tts:padding="2c 2c 2c 2c" tts:textAlign="center" xml:id="r2"/>
    <region tts:displayAlign="after" tts:extent="3em 4em" tts:padding="3px 4px 5px 4px" tts:textAlign="center" xml:id="r3"/>
-   <region tts:displayAlign="after" tts:textAlign="start" xml:id="r4"/>
+   <region tts:textAlign="start" xml:id="r4"/>
   </layout>
  </head>
  <body>

@@ -1,5 +1,9 @@
 Changelog
 ---------
+Unreleased
+^^^^^^^^^^
+- Removed DFXPReader default alignments
+
 2.0.8
 ^^^^^
 - Added support for Python 3.10

@@ -337,7 +337,7 @@ def sample_webvtt_empty_cue_output():
     return """\
 WEBVTT
 
-00:01.209 --> 00:02.312 position:10% line:10% size:80%
+00:01.209 --> 00:02.312 align:start position:10% line:10% size:80%
 abc
 """
 

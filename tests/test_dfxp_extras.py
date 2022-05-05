@@ -82,7 +82,7 @@ class TestSinglePositioningDFXPWRiter:
 
         dfxp = SinglePositioningDFXPWriter(new_region).write(caption_set)
 
-        region = BeautifulSoup(dfxp).find('region')
+        region = BeautifulSoup(dfxp, features='lxml').find('region')
 
         assert 'xml:id' in region.attrs
         assert region.attrs['xml:id'] != DFXP_DEFAULT_REGION_ID
@@ -132,7 +132,7 @@ class TestSinglePositioningDFXPWRiter:
 class TestLegacyDFXPWriter:
     def test_default_style_is_written_to_output_file(
             self, sample_dfxp_with_templated_style):
-        caption_set = DFXPReader(read_invalid_positioning=True).read(
+        caption_set = DFXPReader(read_invalid_inline_positioning=True).read(
             sample_dfxp_with_templated_style.format(
                 style_name="foxy_the_squirrel"))
 

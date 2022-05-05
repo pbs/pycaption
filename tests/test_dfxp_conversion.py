@@ -92,7 +92,7 @@ class TestDFXPtoDFXP(DFXPTestingMixIn):
         # and write incorrectly specified positioning information.
         # By incorrect, I mean the specs say that those attributes should be
         # ignored, not that the attributes themselves are outside of the specs
-        caption_set = DFXPReader(read_invalid_positioning=True).read(
+        caption_set = DFXPReader(read_invalid_inline_positioning=True).read(
             sample_dfxp_invalid_but_supported_positioning_input
         )
         result = DFXPWriter(
@@ -150,33 +150,30 @@ class TestDFXPtoDFXP(DFXPTestingMixIn):
 
 
 class TestDFXPtoWebVTT(WebVTTTestingMixIn):
-    def test_dfxp_to_webvtt_conversion(self, sample_webvtt_from_dfxp,
-                                       sample_dfxp):
+    def test_conversion(self, sample_webvtt_from_dfxp, sample_dfxp):
         caption_set = DFXPReader().read(sample_dfxp)
         results = WebVTTWriter().write(caption_set)
 
         assert isinstance(results, str)
         self.assert_webvtt_equals(sample_webvtt_from_dfxp, results)
 
-    def test_dfxp_with_inline_style_to_webvtt_conversion(
-            self, sample_webvtt_from_dfxp_with_style,
-            sample_dfxp_with_inline_style):
+    def test_inline_style_conversion(self, sample_webvtt_from_dfxp_with_style,
+                                     sample_dfxp_with_inline_style):
         caption_set = DFXPReader().read(sample_dfxp_with_inline_style)
         results = WebVTTWriter().write(caption_set)
 
         assert isinstance(results, str)
         self.assert_webvtt_equals(sample_webvtt_from_dfxp_with_style, results)
 
-    def test_dfxp_with_defined_style_to_webvtt_conversion(
-            self, sample_webvtt_from_dfxp_with_style,
-            sample_dfxp_with_defined_style):
+    def test_defined_style_conversion(self, sample_webvtt_from_dfxp_with_style,
+                                      sample_dfxp_with_defined_style):
         caption_set = DFXPReader().read(sample_dfxp_with_defined_style)
         results = WebVTTWriter().write(caption_set)
 
         assert isinstance(results, str)
         self.assert_webvtt_equals(sample_webvtt_from_dfxp_with_style, results)
 
-    def test_dfxp_with_inherited_style_to_webvtt_conversion(
+    def test_inherited_style_conversion(
             self, sample_webvtt_from_dfxp_with_style,
             sample_dfxp_with_inherited_style):
         caption_set = DFXPReader().read(sample_dfxp_with_inherited_style)
@@ -185,7 +182,7 @@ class TestDFXPtoWebVTT(WebVTTTestingMixIn):
         assert isinstance(results, str)
         self.assert_webvtt_equals(sample_webvtt_from_dfxp_with_style, results)
 
-    def test_dfxp_with_positioning_to_webvtt_conversion(
+    def test_positioning_conversion(
             self, sample_webvtt_from_dfxp_with_positioning_and_style,
             sample_dfxp_with_positioning):
         caption_set = DFXPReader().read(sample_dfxp_with_positioning)
@@ -198,14 +195,14 @@ class TestDFXPtoWebVTT(WebVTTTestingMixIn):
             sample_webvtt_from_dfxp_with_positioning_and_style, results
         )
 
-    def test_dfxp_to_webvtt_adds_explicit_size(
+    def test_add_explicit_size(
             self, sample_webvtt_output_long_cue, sample_dfxp_long_cue):
         caption_set = DFXPReader().read(sample_dfxp_long_cue)
         results = WebVTTWriter().write(caption_set)
 
         assert sample_webvtt_output_long_cue == results
 
-    def test_dfxp_to_webvtt_preserves_proper_alignment(
+    def test_preserve_proper_alignment(
             self, webvtt_from_dfxp_with_conflicting_align,
             dfxp_style_region_align_conflict):
         # This failed at one point when the CaptionSet had node breaks with
@@ -216,12 +213,23 @@ class TestDFXPtoWebVTT(WebVTTTestingMixIn):
 
         assert webvtt_from_dfxp_with_conflicting_align == results
 
-    def test_dfxp_empty_cue_to_webvtt(self, sample_webvtt_empty_cue_output,
-                                      sample_dfxp_empty_cue):
+    def test_empty_cue(self, sample_webvtt_empty_cue_output,
+                       sample_dfxp_empty_cue):
         caption_set = DFXPReader().read(sample_dfxp_empty_cue)
         results = WebVTTWriter().write(caption_set)
 
         self.assert_webvtt_equals(sample_webvtt_empty_cue_output, results)
+
+    def test_input_inline_positioning_output_default_alignment_is_start(
+            self, sample_dfxp_invalid_but_supported_positioning_input):
+        caption_set = DFXPReader(read_invalid_inline_positioning=True)\
+            .read(sample_dfxp_invalid_but_supported_positioning_input)
+        results = WebVTTWriter(video_width=640, video_height=360)\
+            .write(caption_set)
+        start_align_count = results.count('align:start')
+
+        assert start_align_count == 3, \
+            f"{3-start_align_count} default alignment(s) missing."
 
 
 class TestDFXPtoMicroDVD(MicroDVDTestingMixIn):
@@ -243,7 +251,7 @@ class TestDFXPtoMicroDVD(MicroDVDTestingMixIn):
 class TestLegacyDFXP:
     def test_legacy_convert(self, sample_dfxp_for_legacy_writer_output,
                             sample_dfxp_for_legacy_writer_input):
-        caption_set = DFXPReader(read_invalid_positioning=True).read(
+        caption_set = DFXPReader(read_invalid_inline_positioning=True).read(
             sample_dfxp_for_legacy_writer_input
         )
 

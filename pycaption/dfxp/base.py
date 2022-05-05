@@ -64,12 +64,22 @@ MICROSECONDS_PER_UNIT = {
     "milliseconds": 1000
 }
 
+DFXP_DEFAULT_LANGUAGE_CODE = "en"
+
 
 class DFXPReader(BaseReader):
     def __init__(self, *args, **kw):
         super().__init__(*args, **kw)
-        self.read_invalid_positioning = (
-            kw.get('read_invalid_positioning', False))
+        """ This is to support positioning attributes directly on the paragraph
+        elements. According to the documentation, these attributes shouldn't be
+        taken into account:
+        https://www.w3.org/TR/ttml1/#style-attribute-origin
+        This attribute (origin, extent) may be specified by any element type 
+        that permits use of attributes in the TT Style Namespace; however,
+        this attribute applies as a style property only to those element types
+        indicated in the following table."""
+        self.read_invalid_inline_positioning = (
+            kw.get('read_invalid_inline_positioning', False))
         self.nodes = []
 
     def detect(self, content):
@@ -83,7 +93,8 @@ class DFXPReader(BaseReader):
             raise InvalidInputError('The content is not a unicode string.')
 
         dfxp_document = self._get_dfxp_parser_class()(
-            content, read_invalid_positioning=self.read_invalid_positioning)
+            content, read_invalid_inline_positioning=
+            self.read_invalid_inline_positioning)
 
         caption_dict = {}
         style_dict = {}
@@ -95,7 +106,7 @@ class DFXPReader(BaseReader):
         for div in dfxp_document.find_all('div'):
             lang = div.attrs.get('xml:lang', default_language)
 
-            caption_dict[lang] = self._translate_div(div)
+            caption_dict[lang] = self._convert_div_to_caption_list(div)
 
         for style in dfxp_document.find_all('style'):
             id_ = style.attrs.get('xml:id') or style.attrs.get('id')
@@ -104,7 +115,7 @@ class DFXPReader(BaseReader):
                 # descendants of <region> tags. See link:
                 # http://www.w3.org/TR/ttaf1-dfxp/#styling-vocabulary-style
                 if 'region' not in [parent_.name for parent_ in style.parents]:
-                    style_dict[id_] = self._translate_style(style)
+                    style_dict[id_] = self._convert_style(style)
 
         caption_set = CaptionSet(caption_dict, styles=style_dict)
 
@@ -118,18 +129,18 @@ class DFXPReader(BaseReader):
         """Hook method for providing a custom DFXP parser"""
         return LayoutAwareDFXPParser
 
-    def _translate_div(self, div):
+    def _convert_div_to_caption_list(self, div):
         return CaptionList(
-            [self._translate_p_tag(p_tag)
+            [self._convert_p_tag_to_caption(p_tag)
              for p_tag in div.find_all('p') if p_tag.get_text().strip()],
             div.layout_info
         )
 
-    def _translate_p_tag(self, p_tag):
-        start, end = self._find_times(p_tag)
+    def _convert_p_tag_to_caption(self, p_tag):
+        start, end = self._find_and_convert_times(p_tag)
         self.nodes = []
-        self._translate_tag(p_tag)
-        styles = self._translate_style(p_tag)
+        self._convert_tag_to_node(p_tag)
+        styles = self._convert_style(p_tag)
 
         if len(self.nodes) > 0:
             return Caption(
@@ -137,7 +148,7 @@ class DFXPReader(BaseReader):
                 layout_info=p_tag.layout_info)
         return None
 
-    def _find_times(self, p_tag):
+    def _find_and_convert_times(self, p_tag):
         begin = p_tag.get('begin')
         if not begin:
             raise CaptionReadTimingError(
@@ -149,54 +160,62 @@ class DFXPReader(BaseReader):
             raise CaptionReadTimingError(
                 f'Missing end time or duration on line {p_tag}.')
 
-        start = self._translate_time(begin)
+        start = self._convert_timestamp_to_microseconds(begin)
         if end:
-            end = self._translate_time(p_tag['end'])
+            end = self._convert_timestamp_to_microseconds(p_tag['end'])
         else:
-            dur = self._translate_time(p_tag['dur'])
+            dur = self._convert_timestamp_to_microseconds(p_tag['dur'])
             end = start + dur
 
         return start, end
 
-    def _translate_time(self, stamp):
+    def _convert_timestamp_to_microseconds(self, stamp):
         match = TIME_EXPRESSION_PATTERN.search(stamp)
         if not match:
             raise CaptionReadTimingError(
                 f'Invalid timestamp: {stamp}. Accepted formats: hh:mm:ss / '
                 'hh:mm:ss:ff / hh:mm:ss.sub-frames / time_count h|m|s|ms|f.')
         if match.group('clock_time'):
-            microseconds = int(match.group('hours')) * \
-                MICROSECONDS_PER_UNIT["hours"]
-            microseconds += int(match.group('minutes')) * \
-                MICROSECONDS_PER_UNIT["minutes"]
-            microseconds += int(match.group('seconds')) * \
-                MICROSECONDS_PER_UNIT["seconds"]
-            if match.group('sub_frames'):
-                microseconds += int(match.group('sub_frames').ljust(3, '0')) * \
-                    MICROSECONDS_PER_UNIT["milliseconds"]
-            elif match.group('frames'):
-                microseconds += int(match.group('frames')) / 30 * \
-                    MICROSECONDS_PER_UNIT["seconds"]
+            return self._convert_clock_time_to_microseconds(match)
         else:
-            value = float(match.group('time_count'))
-            metric = match.group("metric")
-            if metric == "h":
-                microseconds = value * MICROSECONDS_PER_UNIT["hours"]
-            elif metric == "m":
-                microseconds = value * MICROSECONDS_PER_UNIT["minutes"]
-            elif metric == "s":
-                microseconds = value * MICROSECONDS_PER_UNIT["seconds"]
-            elif metric == "ms":
-                microseconds = value * MICROSECONDS_PER_UNIT["milliseconds"]
-            elif metric == "f":
-                microseconds = value / 30 * MICROSECONDS_PER_UNIT["seconds"]
-            elif metric == "t":
-                raise NotImplementedError("The tick metric for time count is "
-                                          "not currently implemented.")
+            return self._convert_time_count_to_microseconds(match)
 
+    @staticmethod
+    def _convert_clock_time_to_microseconds(clock_time_match):
+        microseconds = int(clock_time_match.group('hours')) * \
+                       MICROSECONDS_PER_UNIT["hours"]
+        microseconds += int(clock_time_match.group('minutes')) * \
+                        MICROSECONDS_PER_UNIT["minutes"]
+        microseconds += int(clock_time_match.group('seconds')) * \
+                        MICROSECONDS_PER_UNIT["seconds"]
+        if clock_time_match.group('sub_frames'):
+            microseconds += int(clock_time_match.group('sub_frames').ljust(
+                3, '0')) * MICROSECONDS_PER_UNIT["milliseconds"]
+        elif clock_time_match.group('frames'):
+            microseconds += int(clock_time_match.group('frames')) / 30 * \
+                            MICROSECONDS_PER_UNIT["seconds"]
         return int(microseconds)
 
-    def _translate_tag(self, tag):
+    @staticmethod
+    def _convert_time_count_to_microseconds(time_count_match):
+        value = float(time_count_match.group('time_count'))
+        metric = time_count_match.group("metric")
+        if metric == "h":
+            microseconds = value * MICROSECONDS_PER_UNIT["hours"]
+        elif metric == "m":
+            microseconds = value * MICROSECONDS_PER_UNIT["minutes"]
+        elif metric == "s":
+            microseconds = value * MICROSECONDS_PER_UNIT["seconds"]
+        elif metric == "ms":
+            microseconds = value * MICROSECONDS_PER_UNIT["milliseconds"]
+        elif metric == "f":
+            microseconds = value / 30 * MICROSECONDS_PER_UNIT["seconds"]
+        elif metric == "t":
+            raise NotImplementedError("The tick metric for time count is "
+                                      "not currently implemented.")
+        return int(microseconds)
+
+    def _convert_tag_to_node(self, tag):
         # convert text
         if isinstance(tag, NavigableString):
             # strips indentation whitespace only
@@ -219,15 +238,15 @@ class DFXPReader(BaseReader):
         # convert italics
         elif tag.name == 'span':
             # convert span
-            self._translate_span(tag)
+            self._convert_span_to_nodes(tag)
         else:
             # recursively call function for any children elements
             for a in tag.contents:
-                self._translate_tag(a)
+                self._convert_tag_to_node(a)
 
-    def _translate_span(self, tag):
+    def _convert_span_to_nodes(self, tag):
         # convert tag attributes
-        args = self._translate_style(tag)
+        args = self._convert_style(tag)
         # only include span tag if attributes returned
         # TODO - this is an obvious very old bug. args will be a dictionary.
         # but since nobody complained, I'll leave it like that.
@@ -241,7 +260,7 @@ class DFXPReader(BaseReader):
 
             # recursively call function for any children elements
             for a in tag.contents:
-                self._translate_tag(a)
+                self._convert_tag_to_node(a)
             node = CaptionNode.create_style(
                 False, args, layout_info=tag.layout_info)
             node.start = False
@@ -249,10 +268,10 @@ class DFXPReader(BaseReader):
             self.nodes.append(node)
         else:
             for a in tag.contents:
-                self._translate_tag(a)
+                self._convert_tag_to_node(a)
 
     # convert style from DFXP
-    def _translate_style(self, tag):
+    def _convert_style(self, tag):
         """Converts the attributes of an XML node to a dictionary. This is a
          deprecated method of handling styling/ layout information, and
          overlaps (in partially known ways)with the newer way of doing stuff.
@@ -299,23 +318,23 @@ class DFXPWriter(BaseWriter):
         self.region_creator = None
         super().__init__(*args, **kwargs)
 
-    def write(self, caption_set, force=''):
+    def write(self, caption_set, required_language=''):
         """Converts a CaptionSet into an equivalent corresponding DFXP file
 
         :type caption_set: pycaption.base.CaptionSet
-        :param force: only use this language, if available in the caption_set
+        :param required_language: only use this language, if available in the
+        caption_set
 
         :rtype: str
         """
         dfxp = BeautifulSoup(DFXP_BASE_MARKUP, 'lxml-xml')
-        dfxp.find('tt')['xml:lang'] = "en"
 
         langs = caption_set.get_languages()
-        if force in langs:
-            langs = [force]
-            dfxp.find('tt')['xml:lang'] = force
+        if required_language in langs:
+            langs = [required_language]
+            dfxp.find('tt')['xml:lang'] = required_language
         else:
-            dfxp.find('tt')['xml:lang'] = "en"
+            dfxp.find('tt')['xml:lang'] = DFXP_DEFAULT_LANGUAGE_CODE
 
         caption_set = deepcopy(caption_set)
 
@@ -505,7 +524,7 @@ class LayoutAwareDFXPParser(BeautifulSoup):
 
     def __init__(self, markup="", features="html.parser", builder=None,
                  parse_only=None, from_encoding=None,
-                 read_invalid_positioning=False, **kwargs):
+                 read_invalid_inline_positioning=False, **kwargs):
         """The `features` param determines the parser to be used. The parsers
         are usually html parsers, some more forgiving than others, and as such
         they do stuff very differently especially for xml files. We chose this
@@ -526,9 +545,9 @@ class LayoutAwareDFXPParser(BeautifulSoup):
         An alternative would be using html5lib, but that (1) is an external
         dependency and (2) BeautifulSoup says it's the slowest option.
 
-        :type read_invalid_positioning: bool
-        :param read_invalid_positioning: if True, will try to also look for
-            layout info on every element itself (even if the docs explicitly
+        :type read_invalid_inline_positioning: bool
+        :param read_invalid_inline_positioning: if True, will try to also look
+            for layout info on every element itself (even if the docs explicitly
             call for ignoring attributes, when incorrectly placed)
 
 
@@ -542,7 +561,7 @@ class LayoutAwareDFXPParser(BeautifulSoup):
         super().__init__(
             markup, features, builder, parse_only, from_encoding, **kwargs)
 
-        self.read_invalid_positioning = read_invalid_positioning
+        self.read_invalid_inline_positioning = read_invalid_inline_positioning
 
         for div in self.find_all('div'):
             self._pre_order_visit(div)
@@ -655,7 +674,7 @@ class LayoutAwareDFXPParser(BeautifulSoup):
         region_scraper = self._get_layout_info_scraper_class()(self, region_tag)
 
         layout_info = region_scraper.scrape_positioning_info(
-            element, self.read_invalid_positioning
+            element, self.read_invalid_inline_positioning
         )
 
         if layout_info and any(layout_info):
@@ -831,18 +850,8 @@ class LayoutInfoScraper:
         else:
             text_align_source = None
 
-        text_align = (
-                self._find_attribute(text_align_source, 'tts:textAlign')
-                or _create_external_horizontal_alignment(
-            DFXP_DEFAULT_REGION.alignment.horizontal
-        )
-        )
-        display_align = (
-                self._find_attribute(usable_elem, 'tts:displayAlign')
-                or _create_external_vertical_alignment(
-            DFXP_DEFAULT_REGION.alignment.vertical
-        )
-        )
+        text_align = self._find_attribute(text_align_source, 'tts:textAlign')
+        display_align = self._find_attribute(usable_elem, 'tts:displayAlign')
         alignment = _create_internal_alignment(text_align, display_align)
 
         return origin, extent, padding, alignment
@@ -1239,6 +1248,25 @@ def _create_external_alignment(alignment):
     :type alignment: Alignment
     :rtype: dict
     """
+    # result = {}
+    # if not alignment:
+    #     alignment = DFXP_DEFAULT_REGION.alignment
+    # elif not alignment.horizontal:
+    #     alignment.horizontal = DFXP_DEFAULT_REGION.alignment.horizontal
+    # elif not alignment.vertical:
+    #     alignment.vertical = DFXP_DEFAULT_REGION.alignment.vertical
+    #
+    # horizontal_alignment = _create_external_horizontal_alignment(
+    #     alignment.horizontal or DFXP_DEFAULT_REGION.alignment.horizontal)
+    # if horizontal_alignment:
+    #     result['tts:textAlign'] = horizontal_alignment
+    #
+    # vertical_alignment = _create_external_vertical_alignment(
+    #     alignment.vertical)
+    # if vertical_alignment:
+    #     result['tts:displayAlign'] = vertical_alignment
+    #
+    # return result
     result = {}
     if not alignment:
         return result
@@ -1307,10 +1335,7 @@ def _convert_layout_to_attributes(layout):
     """
     result = {}
     if not layout:
-        # TODO - change this to actually use the DFXP_DEFAULT_REGION
-        result['tts:textAlign'] = HorizontalAlignmentEnum.CENTER
-        result['tts:displayAlign'] = VerticalAlignmentEnum.BOTTOM
-        return result
+        return _create_external_alignment(DFXP_DEFAULT_REGION.alignment)
 
     if layout.origin:
         result['tts:origin'] = layout.origin.to_xml_attribute()
@@ -1323,6 +1348,8 @@ def _convert_layout_to_attributes(layout):
 
     if layout.alignment:
         result.update(_create_external_alignment(layout.alignment))
+    else:
+        result.update(_create_external_alignment(DFXP_DEFAULT_REGION.alignment))
 
     return result
 
