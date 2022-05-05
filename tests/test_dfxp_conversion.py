@@ -92,7 +92,7 @@ class TestDFXPtoDFXP(DFXPTestingMixIn):
         # and write incorrectly specified positioning information.
         # By incorrect, I mean the specs say that those attributes should be
         # ignored, not that the attributes themselves are outside of the specs
-        caption_set = DFXPReader(read_invalid_inline_positioning=True).read(
+        caption_set = DFXPReader(read_invalid_positioning=True).read(
             sample_dfxp_invalid_but_supported_positioning_input
         )
         result = DFXPWriter(
@@ -222,14 +222,14 @@ class TestDFXPtoWebVTT(WebVTTTestingMixIn):
 
     def test_input_inline_positioning_output_default_alignment_is_start(
             self, sample_dfxp_invalid_but_supported_positioning_input):
-        caption_set = DFXPReader(read_invalid_inline_positioning=True)\
+        caption_set = DFXPReader(read_invalid_positioning=True) \
             .read(sample_dfxp_invalid_but_supported_positioning_input)
-        results = WebVTTWriter(video_width=640, video_height=360)\
+        results = WebVTTWriter(video_width=640, video_height=360) \
             .write(caption_set)
         start_align_count = results.count('align:start')
 
         assert start_align_count == 3, \
-            f"{3-start_align_count} default alignment(s) missing."
+            f"{3 - start_align_count} default alignment(s) missing."
 
 
 class TestDFXPtoMicroDVD(MicroDVDTestingMixIn):
@@ -251,7 +251,7 @@ class TestDFXPtoMicroDVD(MicroDVDTestingMixIn):
 class TestLegacyDFXP:
     def test_legacy_convert(self, sample_dfxp_for_legacy_writer_output,
                             sample_dfxp_for_legacy_writer_input):
-        caption_set = DFXPReader(read_invalid_inline_positioning=True).read(
+        caption_set = DFXPReader(read_invalid_positioning=True).read(
             sample_dfxp_for_legacy_writer_input
         )
 

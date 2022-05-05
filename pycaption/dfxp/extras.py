@@ -44,17 +44,17 @@ class SinglePositioningDFXPWriter(DFXPWriter):
         super().__init__(*args, **kwargs)
         self.default_positioning = default_positioning
 
-    def write(self, captions_set, required_language=''):
+    def write(self, captions_set, force=''):
         """Writes a DFXP file using the positioning provided in the initializer
 
         :type captions_set: pycaption.base.CaptionSet
-        :param required_language: only write this language, if available in the CaptionSet
+        :param force: only write this language, if available in the CaptionSet
         :rtype: str
         """
         captions_set = self._create_single_positioning_caption_set(
             captions_set, self.default_positioning)
 
-        return super().write(captions_set, required_language)  # noqa
+        return super().write(captions_set, force)  # noqa
 
     @staticmethod
     def _create_single_positioning_caption_set(caption_set, positioning):

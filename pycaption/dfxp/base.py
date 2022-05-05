@@ -78,8 +78,8 @@ class DFXPReader(BaseReader):
         that permits use of attributes in the TT Style Namespace; however,
         this attribute applies as a style property only to those element types
         indicated in the following table."""
-        self.read_invalid_inline_positioning = (
-            kw.get('read_invalid_inline_positioning', False))
+        self.read_invalid_positioning = (
+            kw.get('read_invalid_positioning', False))
         self.nodes = []
 
     def detect(self, content):
@@ -93,8 +93,8 @@ class DFXPReader(BaseReader):
             raise InvalidInputError('The content is not a unicode string.')
 
         dfxp_document = self._get_dfxp_parser_class()(
-            content, read_invalid_inline_positioning=
-            self.read_invalid_inline_positioning)
+            content, read_invalid_positioning=
+            self.read_invalid_positioning)
 
         caption_dict = {}
         style_dict = {}
@@ -318,11 +318,11 @@ class DFXPWriter(BaseWriter):
         self.region_creator = None
         super().__init__(*args, **kwargs)
 
-    def write(self, caption_set, required_language=''):
+    def write(self, caption_set, force=''):
         """Converts a CaptionSet into an equivalent corresponding DFXP file
 
         :type caption_set: pycaption.base.CaptionSet
-        :param required_language: only use this language, if available in the
+        :param force: only use this language, if available in the
         caption_set
 
         :rtype: str
@@ -330,9 +330,9 @@ class DFXPWriter(BaseWriter):
         dfxp = BeautifulSoup(DFXP_BASE_MARKUP, 'lxml-xml')
 
         langs = caption_set.get_languages()
-        if required_language in langs:
-            langs = [required_language]
-            dfxp.find('tt')['xml:lang'] = required_language
+        if force in langs:
+            langs = [force]
+            dfxp.find('tt')['xml:lang'] = force
         else:
             dfxp.find('tt')['xml:lang'] = DFXP_DEFAULT_LANGUAGE_CODE
 
@@ -524,7 +524,7 @@ class LayoutAwareDFXPParser(BeautifulSoup):
 
     def __init__(self, markup="", features="html.parser", builder=None,
                  parse_only=None, from_encoding=None,
-                 read_invalid_inline_positioning=False, **kwargs):
+                 read_invalid_positioning=False, **kwargs):
         """The `features` param determines the parser to be used. The parsers
         are usually html parsers, some more forgiving than others, and as such
         they do stuff very differently especially for xml files. We chose this
@@ -545,8 +545,8 @@ class LayoutAwareDFXPParser(BeautifulSoup):
         An alternative would be using html5lib, but that (1) is an external
         dependency and (2) BeautifulSoup says it's the slowest option.
 
-        :type read_invalid_inline_positioning: bool
-        :param read_invalid_inline_positioning: if True, will try to also look
+        :type read_invalid_positioning: bool
+        :param read_invalid_positioning: if True, will try to also look
             for layout info on every element itself (even if the docs explicitly
             call for ignoring attributes, when incorrectly placed)
 
@@ -561,7 +561,7 @@ class LayoutAwareDFXPParser(BeautifulSoup):
         super().__init__(
             markup, features, builder, parse_only, from_encoding, **kwargs)
 
-        self.read_invalid_inline_positioning = read_invalid_inline_positioning
+        self.read_invalid_positioning = read_invalid_positioning
 
         for div in self.find_all('div'):
             self._pre_order_visit(div)
@@ -674,7 +674,7 @@ class LayoutAwareDFXPParser(BeautifulSoup):
         region_scraper = self._get_layout_info_scraper_class()(self, region_tag)
 
         layout_info = region_scraper.scrape_positioning_info(
-            element, self.read_invalid_inline_positioning
+            element, self.read_invalid_positioning
         )
 
         if layout_info and any(layout_info):
@@ -1248,25 +1248,6 @@ def _create_external_alignment(alignment):
     :type alignment: Alignment
     :rtype: dict
     """
-    # result = {}
-    # if not alignment:
-    #     alignment = DFXP_DEFAULT_REGION.alignment
-    # elif not alignment.horizontal:
-    #     alignment.horizontal = DFXP_DEFAULT_REGION.alignment.horizontal
-    # elif not alignment.vertical:
-    #     alignment.vertical = DFXP_DEFAULT_REGION.alignment.vertical
-    #
-    # horizontal_alignment = _create_external_horizontal_alignment(
-    #     alignment.horizontal or DFXP_DEFAULT_REGION.alignment.horizontal)
-    # if horizontal_alignment:
-    #     result['tts:textAlign'] = horizontal_alignment
-    #
-    # vertical_alignment = _create_external_vertical_alignment(
-    #     alignment.vertical)
-    # if vertical_alignment:
-    #     result['tts:displayAlign'] = vertical_alignment
-    #
-    # return result
     result = {}
     if not alignment:
         return result

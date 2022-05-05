@@ -57,7 +57,7 @@ class TestDFXPReader(ReaderTestingMixIn):
         assert exc_info.value.args[0].startswith(
             'Missing end time or duration on line ')
 
-    def test_offset_time(self):
+    def test_convert_timestamp_to_microseconds(self):
         reader = DFXPReader()
 
         assert 1 == reader._convert_timestamp_to_microseconds("0.001ms")
@@ -76,7 +76,8 @@ class TestDFXPReader(ReaderTestingMixIn):
         ('34:45:56.7', 125156700000), ('13:24:35.67', 48275670000),
         ('24:35:46.456', 88546456000), ('1:23:34', 5014000000)])
     def test_clock_time(self, timestamp, microseconds):
-        assert DFXPReader()._convert_timestamp_to_microseconds(timestamp) == microseconds
+        assert DFXPReader()._convert_timestamp_to_microseconds(
+            timestamp) == microseconds
 
     @pytest.mark.parametrize('timestamp', [
         '1:1:11', '1:11:1', '1:11:11:1', '11:11:11:11.11', '11:11:11,11',
@@ -101,7 +102,7 @@ class TestDFXPReader(ReaderTestingMixIn):
             self, sample_dfxp_invalid_positioning_value_template):
         invalid_value_dfxp = (
             sample_dfxp_invalid_positioning_value_template.
-            format(origin="px 5px")
+                format(origin="px 5px")
         )
         with pytest.raises(CaptionReadSyntaxError):
             DFXPReader().read(invalid_value_dfxp)
@@ -115,7 +116,7 @@ class TestDFXPReader(ReaderTestingMixIn):
             DFXPReader().read(invalid_dfxp)
 
     def test_individual_timings_of_captions_with_matching_timespec_are_kept(
-        self, sample_dfxp_multiple_captions_with_the_same_timing
+            self, sample_dfxp_multiple_captions_with_the_same_timing
     ):
         captionset = DFXPReader().read(
             sample_dfxp_multiple_captions_with_the_same_timing
@@ -141,7 +142,7 @@ class TestDFXPReader(ReaderTestingMixIn):
         assert expected_texts == actual_texts
 
     def test_individual_layouts_of_captions_with_matching_timespec_are_kept(
-        self, sample_dfxp_multiple_captions_with_the_same_timing
+            self, sample_dfxp_multiple_captions_with_the_same_timing
     ):
         captionset = DFXPReader().read(
             sample_dfxp_multiple_captions_with_the_same_timing
