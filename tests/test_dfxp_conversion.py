@@ -17,7 +17,7 @@ VIDEO_HEIGHT = 360
 
 
 class TestDFXPtoDFXP(DFXPTestingMixIn):
-    def test_dfxp_to_dfxp_conversion(self, sample_dfxp_output, sample_dfxp):
+    def test_conversion(self, sample_dfxp_output, sample_dfxp):
         caption_set = DFXPReader().read(sample_dfxp)
         results = DFXPWriter().write(caption_set)
 
@@ -44,8 +44,8 @@ class TestDFXPtoDFXP(DFXPTestingMixIn):
         assert style
         assert style.attrs == default_style
 
-    def test_default_styling_p_tags(self, sample_dfxp):
-        caption_set = DFXPReader().read(sample_dfxp)
+    def test_default_styling_p_tags(self, sample_dfxp_default_styling_p_tags):
+        caption_set = DFXPReader().read(sample_dfxp_default_styling_p_tags)
         result = DFXPWriter().write(caption_set)
 
         soup = BeautifulSoup(result, 'lxml')

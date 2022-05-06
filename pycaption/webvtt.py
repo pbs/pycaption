@@ -24,7 +24,7 @@ OTHER_SPAN_PATTERN = re.compile(
 
 WEBVTT_VERSION_OF = {
     HorizontalAlignmentEnum.LEFT: 'left',
-    HorizontalAlignmentEnum.CENTER: 'middle',
+    HorizontalAlignmentEnum.CENTER: 'center',
     HorizontalAlignmentEnum.RIGHT: 'right',
     HorizontalAlignmentEnum.START: 'start',
     HorizontalAlignmentEnum.END: 'end'
@@ -371,7 +371,10 @@ class WebVTTWriter(BaseWriter):
             alignment = DEFAULT_ALIGN
         cue_settings = ''
 
-        if alignment and alignment != 'middle':
+        if alignment and \
+                alignment != WEBVTT_VERSION_OF[HorizontalAlignmentEnum.CENTER]:
+            # Not sure why this condition was here, maybe because center
+            # alignment is applied automatically without needing to specify it
             cue_settings += f" align:{alignment}"
         if left_offset:
             cue_settings += f" position:{left_offset}"

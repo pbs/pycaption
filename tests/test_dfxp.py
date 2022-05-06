@@ -148,12 +148,12 @@ class TestDFXPReader(ReaderTestingMixIn):
             sample_dfxp_multiple_captions_with_the_same_timing
         )
         expected_layouts = [
-            (((10, UnitEnum.PERCENT), (10, UnitEnum.PERCENT)),
-             None, None, None),
-            (((40, UnitEnum.PERCENT), (40, UnitEnum.PERCENT)),
-             None, None, None),
-            (((10, UnitEnum.PERCENT), (70, UnitEnum.PERCENT)),
-             None, None, None)]
+            (((10, UnitEnum.PERCENT), (10, UnitEnum.PERCENT)), None, None,
+             (HorizontalAlignmentEnum.START, VerticalAlignmentEnum.BOTTOM)),
+            (((40, UnitEnum.PERCENT), (40, UnitEnum.PERCENT)), None, None,
+             (HorizontalAlignmentEnum.START, VerticalAlignmentEnum.BOTTOM)),
+            (((10, UnitEnum.PERCENT), (70, UnitEnum.PERCENT)), None, None,
+             (HorizontalAlignmentEnum.START, VerticalAlignmentEnum.BOTTOM))]
         actual_layouts = [c_.layout_info.serialized() for c_ in
                           captionset.get_captions('en-US')]
 

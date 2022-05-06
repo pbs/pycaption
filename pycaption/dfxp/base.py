@@ -42,7 +42,7 @@ DFXP_DEFAULT_STYLE = {
 
 DFXP_DEFAULT_REGION = Layout(
     alignment=Alignment(
-        HorizontalAlignmentEnum.CENTER, VerticalAlignmentEnum.BOTTOM)
+        HorizontalAlignmentEnum.START, VerticalAlignmentEnum.BOTTOM)
 )
 
 DFXP_DEFAULT_STYLE_ID = 'default'
@@ -850,8 +850,18 @@ class LayoutInfoScraper:
         else:
             text_align_source = None
 
-        text_align = self._find_attribute(text_align_source, 'tts:textAlign')
-        display_align = self._find_attribute(usable_elem, 'tts:displayAlign')
+        text_align = (
+                self._find_attribute(text_align_source, 'tts:textAlign')
+                or _create_external_horizontal_alignment(
+            DFXP_DEFAULT_REGION.alignment.horizontal
+        )
+        )
+        display_align = (
+                self._find_attribute(usable_elem, 'tts:displayAlign')
+                or _create_external_vertical_alignment(
+            DFXP_DEFAULT_REGION.alignment.vertical
+        )
+        )
         alignment = _create_internal_alignment(text_align, display_align)
 
         return origin, extent, padding, alignment

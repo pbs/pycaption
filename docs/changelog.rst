@@ -2,7 +2,8 @@ Changelog
 ---------
 Unreleased
 ^^^^^^^^^^
-- Removed DFXPReader default alignments
+- Changed DFXPReader default horizontal alignment from 'center' to 'start'
+- Updated WebVTT horizontal alignment from 'middle' to 'center'
 
 2.0.8
 ^^^^^
