@@ -9,41 +9,40 @@ def sample_dfxp():
     xmlns:tts="http://www.w3.org/ns/ttml#styling">
  <head>
   <styling>
-   <style xml:id="p" tts:color="#ffeedd" tts:fontFamily="Arial"
-          tts:fontSize="10pt" tts:textAlign="center"/>
+   <style tts:color="white" tts:fontFamily="monospace" tts:fontSize="1c" xml:id="default"/>
   </styling>
   <layout>
-  <region tts:displayAlign="after" tts:textAlign="center" xml:id="bottom"></region>
+  <region tts:displayAlign="after" tts:textAlign="start" xml:id="bottom"/>
   </layout>
  </head>
  <body>
   <div xml:lang="en-US" region="bottom">
-   <p begin="00:00:09.209" end="00:00:12.312" region="bottom" style="p">
+   <p begin="00:00:09.209" end="00:00:12.312" region="bottom" style="default">
     ( clock ticking )
    </p>
-   <p begin="00:00:14.848" end="00:00:17.000" region="bottom" style="p">
+   <p begin="00:00:14.848" end="00:00:17.000" region="bottom" style="default">
     MAN:<br/>
     When we think<br/>
     \u266a ...say bow, wow, \u266a
    </p>
-   <p begin="00:00:17.000" end="00:00:18.752" region="bottom" style="p">
+   <p begin="00:00:17.000" end="00:00:18.752" region="bottom" style="default">
     <span tts:textalign="right">we have this vision of Einstein</span>
    </p>
-   <p begin="00:00:18.752" end="00:00:20.887" region="bottom" style="p">
+   <p begin="00:00:18.752" end="00:00:20.887" region="bottom" style="default">
    <br/>
     as an old, wrinkly man<br/>
     with white hair.
    </p>
-   <p begin="00:00:20.887" end="00:00:26.760" region="bottom" style="p">
+   <p begin="00:00:20.887" end="00:00:26.760" region="bottom" style="default">
     MAN 2:<br/>
     E equals m c-squared is<br/>
     not about an old Einstein.
    </p>
-   <p begin="00:00:26.760" end="00:00:32.200" region="bottom" style="p">
+   <p begin="00:00:26.760" end="00:00:32.200" region="bottom" style="default">
     MAN 2:<br/>
     It's all about an eternal Einstein.
    </p>
-   <p begin="00:00:32.200" end="00:00:36.200" region="bottom" style="p">
+   <p begin="00:00:32.200" end="00:00:36.200" region="bottom" style="default">
     &lt;LAUGHING &amp; WHOOPS!&gt;
    </p>
   </div>
@@ -203,7 +202,7 @@ def sample_dfxp_with_positioning():
         <style xml:id="padded" tts:backgroundColor="yellow" tts:padding="10%"/>
     </styling>
     <layout>
-        <region xml:id="regionOne" tts:textAlign='middle' tts:origin='96px 54px' tts:extent='70% 25%' style="padded"/>
+        <region xml:id="regionOne" tts:textAlign='center' tts:origin='96px 54px' tts:extent='70% 25%' style="padded"/>
         <region xml:id="regionTwo" tts:backgroundColor="blue" tts:textAlign='right' tts:origin='25% 25%' tts:extent='50% 10%'/>
         <region xml:id="regionThree" tts:backgroundColor="green" tts:textAlign='left' tts:origin='50% 50%' tts:extent='25% 25%'/>
         <region xml:id="regionFour" tts:backgroundColor="red" tts:textAlign='right' tts:origin='25% 75%' tts:extent='25% 25%'/>
@@ -237,8 +236,8 @@ def sample_dfxp_with_relativized_positioning():
  <head>
   <styling/>
   <layout>
-   <region tts:displayAlign="after" tts:textAlign="center" xml:id="bottom"/>
-   <region tts:displayAlign="after" tts:extent="70% 25%" tts:origin="15% 15%" tts:padding="10% 10% 10% 10%" xml:id="r0"/>
+   <region tts:displayAlign="after" tts:textAlign="start" xml:id="bottom"/>
+   <region tts:displayAlign="after" tts:extent="70% 25%" tts:origin="15% 15%" tts:padding="10% 10% 10% 10%" tts:textAlign="center" xml:id="r0"/>
    <region tts:displayAlign="after" tts:extent="50% 10%" tts:origin="25% 25%" tts:textAlign="right" xml:id="r1"/>
    <region tts:displayAlign="after" tts:extent="25% 25%" tts:origin="50% 50%" tts:textAlign="left" xml:id="r2"/>
    <region tts:displayAlign="after" tts:extent="25% 20%" tts:origin="25% 75%" tts:textAlign="right" xml:id="r3"/>
@@ -361,7 +360,7 @@ def sample_dfxp_long_cue():
    <style tts:backgroundColor="black" tts:color="white" tts:fontFamily="monospace" tts:fontSize="8%" xml:id="basic"/>
   </styling>
   <layout>
-   <region tts:displayAlign="after" tts:textAlign="center" xml:id="bottom"/>
+   <region tts:displayAlign="after" tts:textAlign="start" xml:id="bottom"/>
    <region tts:origin="25% 25%" tts:textAlign="center" xml:id="r0"/>
   </layout>
  </head>
@@ -392,7 +391,7 @@ def sample_dfxp_long_cue_fit_to_screen():
    <style tts:color="white" tts:fontFamily="monospace" tts:fontSize="8%" xml:id="basic"/>
   </styling>
   <layout>
-   <region tts:displayAlign="after" tts:textAlign="center" xml:id="bottom"/>
+   <region tts:displayAlign="after" tts:textAlign="start" xml:id="bottom"/>
    <region tts:displayAlign="after" tts:extent="65% 70%" tts:origin="25% 25%" tts:textAlign="center" xml:id="r0"/>
   </layout>
  </head>
@@ -573,27 +572,27 @@ def sample_dfxp_invalid_but_supported_positioning_output():
    <style tts:color="#ffeedd" tts:fontFamily="Arial" tts:fontSize="10pt" tts:textAlign="center" xml:id="p"/>
   </styling>
   <layout>
-   <region tts:displayAlign="after" tts:textAlign="center" xml:id="bottom"/>
-   <region tts:displayAlign="after" tts:extent="62.5% 5.33%" tts:origin="17.5% 10%" tts:textAlign="center" xml:id="r0"/>
-   <region tts:displayAlign="after" tts:extent="30% 7.67%" tts:origin="20% 15.67%" tts:textAlign="center" xml:id="r1"/>
-   <region tts:displayAlign="after" tts:extent="30% 7.67%" tts:origin="1px 2px" tts:textAlign="center" xml:id="r2"/>
+   <region tts:displayAlign="after" tts:textAlign="start" xml:id="bottom"/>
+   <region tts:displayAlign="after" tts:extent="62.5% 5.33%" tts:origin="17.5% 10%" tts:textAlign="start" xml:id="r0"/>
+   <region tts:displayAlign="after" tts:extent="30% 7.67%" tts:origin="20% 15.67%" tts:textAlign="start" xml:id="r1"/>
+   <region tts:displayAlign="after" tts:extent="30% 7.67%" tts:origin="1px 2px" tts:textAlign="start" xml:id="r2"/>
    <region tts:displayAlign="before" tts:extent="60% 22%" tts:textAlign="right" xml:id="r3"/>
-   <region tts:displayAlign="after" tts:origin="11% 11%" tts:textAlign="center" xml:id="r4"/>
+   <region tts:displayAlign="after" tts:origin="11% 11%" tts:textAlign="start" xml:id="r4"/>
    <region tts:displayAlign="after" tts:origin="11% 11%" tts:textAlign="right" xml:id="r5"/>
   </layout>
  </head>
  <body>
-  <div region="bottom" tts:displayAlign="after" tts:textAlign="center" xml:lang="en-US">
-   <p begin="00:00:02.777" end="00:00:05.700" region="r0" style="p" tts:displayAlign="after" tts:extent="62.5% 5.33%" tts:origin="17.5% 10%" tts:textAlign="center">
+  <div region="bottom" tts:displayAlign="after" tts:textAlign="start" xml:lang="en-US">
+   <p begin="00:00:02.777" end="00:00:05.700" region="r0" style="p" tts:displayAlign="after" tts:extent="62.5% 5.33%" tts:origin="17.5% 10%" tts:textAlign="start">
     Hello there!
    </p>
-   <p begin="00:00:05.700" end="00:00:06.210" region="r1" style="p" tts:displayAlign="after" tts:extent="30% 7.67%" tts:origin="20% 15.67%" tts:textAlign="center">
-    How are you?<span region="r2" tts:origin="1px 2px" tts:textAlign="center" tts:extent="30% 7.67%" tts:displayAlign="after">&gt;&gt;Fine, thx&lt;&lt;</span>
+   <p begin="00:00:05.700" end="00:00:06.210" region="r1" style="p" tts:displayAlign="after" tts:extent="30% 7.67%" tts:origin="20% 15.67%" tts:textAlign="start">
+    How are you?<span region="r2" tts:origin="1px 2px" tts:extent="30% 7.67%" tts:textAlign="start" tts:displayAlign="after">&gt;&gt;Fine, thx&lt;&lt;</span>
    </p>
    <p begin="00:00:07.900" end="00:00:08.900" region="r3" style="p" tts:displayAlign="before" tts:extent="60% 22%" tts:textAlign="right">
     Just fine?
    </p>
-   <p begin="00:00:09.900" end="00:00:10.800" region="r4" style="p" tts:displayAlign="after" tts:origin="11% 11%" tts:textAlign="center">
+   <p begin="00:00:09.900" end="00:00:10.800" region="r4" style="p" tts:displayAlign="after" tts:origin="11% 11%" tts:textAlign="start">
     <span tts:textAlign="right" region="r5" tts:origin="11% 11%" tts:textAlign="right" tts:displayAlign="after">&gt;&gt;&gt;Lol, yes!</span>
    </p>
   </div>
@@ -660,12 +659,11 @@ def sample_dfxp_multiple_regions_output():
    <style tts:color="#ffeedd" tts:fontFamily="Arial" tts:fontSize="10pt" tts:textAlign="center" xml:id="p"/>
   </styling>
   <layout>
-   <region tts:displayAlign="after" tts:textAlign="center" xml:id="bottom"/>
+   <region tts:displayAlign="after" tts:textAlign="start" xml:id="bottom"/>
    <region tts:displayAlign="after" tts:extent="30px 40px" tts:origin="40px 50px" tts:textAlign="center" xml:id="r0"/>
-   <region tts:displayAlign="after" tts:extent="50% 50%" tts:origin="10% 30%" tts:textAlign="center" xml:id="r1"/>
-   <region tts:displayAlign="after" tts:padding="2c 2c 2c 2c" tts:textAlign="center" xml:id="r2"/>
-   <region tts:displayAlign="after" tts:extent="3em 4em" tts:padding="3px 4px 5px 4px" tts:textAlign="center" xml:id="r3"/>
-   <region tts:displayAlign="after" tts:textAlign="start" xml:id="r4"/>
+   <region tts:displayAlign="after" tts:extent="50% 50%" tts:origin="10% 30%" tts:textAlign="start" xml:id="r1"/>
+   <region tts:displayAlign="after" tts:padding="2c 2c 2c 2c" tts:textAlign="start" xml:id="r2"/>
+   <region tts:displayAlign="after" tts:extent="3em 4em" tts:padding="3px 4px 5px 4px" tts:textAlign="start" xml:id="r3"/>
   </layout>
  </head>
  <body>
@@ -682,7 +680,7 @@ def sample_dfxp_multiple_regions_output():
    <p begin="00:00:10.707" end="00:00:11.210" region="r3" style="p">
     What do you have in mind?
    </p>
-   <p begin="00:00:12.900" end="00:00:13.900" region="r4" style="p" tts:textAlign="start">
+   <p begin="00:00:12.900" end="00:00:13.900" region="bottom" style="p" tts:textAlign="start">
     To write random words here!
    </p>
   </div>
@@ -701,7 +699,7 @@ def sample_dfxp_to_render_with_only_default_positioning_input():
    <style tts:color="#ffeedd" tts:fontFamily="Arial" tts:fontSize="10pt" tts:textAlign="left" xml:id="p2"/>
   </styling>
   <layout>
-   <region tts:displayAlign="after" tts:textAlign="center" xml:id="bottom"/>
+   <region tts:displayAlign="after" tts:textAlign="start" xml:id="bottom"/>
    <region tts:displayAlign="after" tts:extent="30px 40px" tts:origin="40px 50px" tts:textAlign="center" xml:id="r0"/>
    <region tts:displayAlign="after" tts:extent="50% 50%" tts:origin="10% 30%" tts:textAlign="center" xml:id="r1"/>
    <region tts:displayAlign="after" tts:padding="2c 2c 2c 2c" tts:textAlign="center" xml:id="r2"/>
@@ -740,7 +738,7 @@ def sample_dfxp_to_dfxp_output():
    <style tts:color="#ffeedd" tts:fontFamily="Arial" tts:fontSize="10pt" tts:textAlign="center" xml:id="p"/>
   </styling>
   <layout>
-   <region tts:displayAlign="after" tts:textAlign="center" xml:id="bottom"/>
+   <region tts:displayAlign="after" tts:textAlign="start" xml:id="bottom"/>
    <region tts:displayAlign="after" tts:textAlign="right" xml:id="r0"/>
   </layout>
  </head>
@@ -789,41 +787,41 @@ def sample_dfxp_output():
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling">
  <head>
   <styling>
-   <style tts:color="#ffeedd" tts:fontFamily="Arial" tts:fontSize="10pt" tts:textAlign="center" xml:id="p"/>
+   <style tts:color="white" tts:fontFamily="monospace" tts:fontSize="1c" xml:id="default"/>
   </styling>
   <layout>
-   <region tts:displayAlign="after" tts:textAlign="center" xml:id="bottom"/>
+   <region tts:displayAlign="after" tts:textAlign="start" xml:id="bottom"/>
    <region tts:displayAlign="after" tts:textAlign="right" xml:id="r0"/>
   </layout>
  </head>
  <body>
   <div region="bottom" xml:lang="en-US">
-   <p begin="00:00:09.209" end="00:00:12.312" region="bottom" style="p">
+   <p begin="00:00:09.209" end="00:00:12.312" region="bottom" style="default">
     ( clock ticking )
    </p>
-   <p begin="00:00:14.848" end="00:00:17.000" region="bottom" style="p">
+   <p begin="00:00:14.848" end="00:00:17.000" region="bottom" style="default">
     MAN:<br/>
     When we think<br/>
-    \u266a ...say bow, wow, \u266a
+    ♪ ...say bow, wow, ♪
    </p>
-   <p begin="00:00:17.000" end="00:00:18.752" region="bottom" style="p">
+   <p begin="00:00:17.000" end="00:00:18.752" region="bottom" style="default">
     <span tts:textAlign="right" region="r0">we have this vision of Einstein</span>
    </p>
-   <p begin="00:00:18.752" end="00:00:20.887" region="bottom" style="p">
+   <p begin="00:00:18.752" end="00:00:20.887" region="bottom" style="default">
     <br/>
     as an old, wrinkly man<br/>
     with white hair.
    </p>
-   <p begin="00:00:20.887" end="00:00:26.760" region="bottom" style="p">
+   <p begin="00:00:20.887" end="00:00:26.760" region="bottom" style="default">
     MAN 2:<br/>
     E equals m c-squared is<br/>
     not about an old Einstein.
    </p>
-   <p begin="00:00:26.760" end="00:00:32.200" region="bottom" style="p">
+   <p begin="00:00:26.760" end="00:00:32.200" region="bottom" style="default">
     MAN 2:<br/>
     It's all about an eternal Einstein.
    </p>
-   <p begin="00:00:32.200" end="00:00:36.200" region="bottom" style="p">
+   <p begin="00:00:32.200" end="00:00:36.200" region="bottom" style="default">
     &lt;LAUGHING &amp; WHOOPS!&gt;
    </p>
   </div>
@@ -841,7 +839,7 @@ def sample_dfxp_style_tag_with_no_xml_id_input():
    <style tts:color="#ffeedd" tts:fontFamily="Arial" tts:fontSize="10pt" xml:id="p"/>
   </styling>
   <layout>
-   <region tts:displayAlign="after" tts:textAlign="center" xml:id="bottom"/>
+   <region tts:displayAlign="after" tts:textAlign="start" xml:id="bottom"/>
    <region tts:displayAlign="after" xml:id="r0">
     <style tts:textAlign="start"/>
    </region>
@@ -873,13 +871,12 @@ def sample_dfxp_style_tag_with_no_xml_id_output():
    <style tts:color="#ffeedd" tts:fontFamily="Arial" tts:fontSize="10pt" xml:id="p"/>
   </styling>
   <layout>
-   <region tts:displayAlign="after" tts:textAlign="center" xml:id="bottom"/>
-   <region tts:displayAlign="after" tts:textAlign="start" xml:id="r0"/>
+   <region tts:displayAlign="after" tts:textAlign="start" xml:id="bottom"/>
   </layout>
  </head>
  <body>
   <div region="bottom" xml:lang="en">
-   <p begin="00:00:09.209" end="00:00:12.312" region="r0" style="p">
+   <p begin="00:00:09.209" end="00:00:12.312" region="bottom" style="p">
     ( clock ticking )
    </p>
    <p begin="00:00:14.848" end="00:00:17.000" region="bottom" style="p">
@@ -902,7 +899,7 @@ def sample_dfxp_from_scc_output():
    <style tts:color="white" tts:fontFamily="monospace" tts:fontSize="1c" xml:id="default"/>
   </styling>
   <layout>
-   <region tts:displayAlign="after" tts:textAlign="center" xml:id="bottom"/>
+   <region tts:displayAlign="after" tts:textAlign="start" xml:id="bottom"/>
    <region tts:displayAlign="before" tts:origin="10% 77%" tts:textAlign="left" xml:id="r0"/>
    <region tts:displayAlign="before" tts:origin="40% 5%" tts:textAlign="left" xml:id="r1"/>
    <region tts:displayAlign="before" tts:origin="70% 23%" tts:textAlign="left" xml:id="r2"/>
@@ -976,7 +973,7 @@ def sample_dfxp_with_properly_closing_spans_output():
    <style tts:color="white" tts:fontFamily="monospace" tts:fontSize="1c" xml:id="default"/>
   </styling>
   <layout>
-   <region tts:displayAlign="after" tts:textAlign="center" xml:id="bottom"/>
+   <region tts:displayAlign="after" tts:textAlign="start" xml:id="bottom"/>
    <region tts:displayAlign="before" tts:extent="70% 12%" tts:origin="20% 83%" tts:textAlign="left" xml:id="r0"/>
    <region tts:displayAlign="before" tts:extent="60% 12%" tts:origin="30% 83%" tts:textAlign="left" xml:id="r1"/>
    <region tts:displayAlign="before" tts:extent="40% 12%" tts:origin="50% 83%" tts:textAlign="left" xml:id="r2"/>
@@ -1350,8 +1347,8 @@ def sample_dfxp_empty_cue_output():
       <style tts:color="white" tts:fontFamily="monospace" tts:fontSize="1c" xml:id="default"/>
    </styling>
    <layout>
-     <region tts:displayAlign="after" tts:origin="10% 10%" tts:textAlign="center" xml:id="r0"/>
-     <region tts:displayAlign="after" tts:extent="80% 85%" tts:origin="10% 10%" tts:textAlign="center" xml:id="r1"/>
+      <region tts:displayAlign="after" tts:origin="10% 10%" tts:textAlign="start" xml:id="r0"/>
+      <region tts:displayAlign="after" tts:extent="80% 85%" tts:origin="10% 10%" tts:textAlign="start" xml:id="r1"/>
    </layout>
  </head>
  <body>
@@ -1424,7 +1421,7 @@ def sample_dfxp_with_ampersand_character():
    <style tts:color="white" tts:fontFamily="monospace" tts:fontSize="1c" xml:id="default"/>
   </styling>
   <layout>
-   <region tts:displayAlign="after" tts:textAlign="center" xml:id="bottom"/>
+   <region tts:displayAlign="after" tts:textAlign="start" xml:id="bottom"/>
    <region tts:displayAlign="before" tts:extent="70% 90%" tts:origin="20% 5%" tts:textAlign="left" xml:id="r0"/>
   </layout>
  </head>
@@ -1458,6 +1455,56 @@ def sample_dfxp_with_nested_spans():
   <div xml:lang="en-US" region="bottom">
    <p begin="00:00:03.209" end="00:00:08.312" region="bottom">
     That is <span style="s3"><span style="s2"><span style="s1">nested</span></span></span>.
+   </p>
+  </div>
+ </body>
+</tt>"""
+
+
+@pytest.fixture(scope="session")
+def sample_dfxp_default_styling_p_tags():
+    return """\
+<?xml version="1.0" encoding="utf-8"?>
+<tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml"
+    xmlns:tts="http://www.w3.org/ns/ttml#styling">
+ <head>
+  <styling>
+   <style xml:id="p" tts:color="#ffeedd" tts:fontFamily="Arial"
+          tts:fontSize="10pt" tts:textAlign="center"/>
+  </styling>
+  <layout>
+  <region tts:displayAlign="after" tts:textAlign="center" xml:id="bottom"></region>
+  </layout>
+ </head>
+ <body>
+  <div xml:lang="en-US" region="bottom">
+   <p begin="00:00:09.209" end="00:00:12.312" region="bottom" style="p">
+    ( clock ticking )
+   </p>
+   <p begin="00:00:14.848" end="00:00:17.000" region="bottom" style="p">
+    MAN:<br/>
+    When we think<br/>
+    \u266a ...say bow, wow, \u266a
+   </p>
+   <p begin="00:00:17.000" end="00:00:18.752" region="bottom" style="p">
+    <span tts:textalign="right">we have this vision of Einstein</span>
+   </p>
+   <p begin="00:00:18.752" end="00:00:20.887" region="bottom" style="p">
+   <br/>
+    as an old, wrinkly man<br/>
+    with white hair.
+   </p>
+   <p begin="00:00:20.887" end="00:00:26.760" region="bottom" style="p">
+    MAN 2:<br/>
+    E equals m c-squared is<br/>
+    not about an old Einstein.
+   </p>
+   <p begin="00:00:26.760" end="00:00:32.200" region="bottom" style="p">
+    MAN 2:<br/>
+    It's all about an eternal Einstein.
+   </p>
+   <p begin="00:00:32.200" end="00:00:36.200" region="bottom" style="p">
+    &lt;LAUGHING &amp; WHOOPS!&gt;
    </p>
   </div>
  </body>

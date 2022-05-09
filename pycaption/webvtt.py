@@ -24,13 +24,13 @@ OTHER_SPAN_PATTERN = re.compile(
 
 WEBVTT_VERSION_OF = {
     HorizontalAlignmentEnum.LEFT: 'left',
-    HorizontalAlignmentEnum.CENTER: 'middle',
+    HorizontalAlignmentEnum.CENTER: 'center',
     HorizontalAlignmentEnum.RIGHT: 'right',
     HorizontalAlignmentEnum.START: 'start',
     HorizontalAlignmentEnum.END: 'end'
 }
 
-DEFAULT_ALIGNMENT = 'middle'
+DEFAULT_ALIGN = 'start'
 
 
 def microseconds(h, m, s, f):
@@ -220,7 +220,8 @@ class WebVTTWriter(BaseWriter):
         captions = caption_set.get_captions(lang)
 
         return output + '\n'.join(
-            [self._write_caption(caption_set, caption) for caption in captions])
+            [self._convert_caption(caption_set, caption)
+             for caption in captions])
 
     def _timestamp(self, ts):
         td = datetime.timedelta(microseconds=ts)
@@ -231,7 +232,8 @@ class WebVTTWriter(BaseWriter):
             s = f"{hh:02}:{s}"
         return s
 
-    def _tags_for_style(self, style):
+    @staticmethod
+    def _convert_style_to_text_tag(style):
         if style == 'italics':
             return ['<i>', '</i>']
         elif style == 'underline':
@@ -261,11 +263,11 @@ class WebVTTWriter(BaseWriter):
 
         return resulting_style
 
-    def _write_caption(self, caption_set, caption):
+    def _convert_caption(self, caption_set, caption):
         """
         :type caption: Caption
         """
-        layout_groups = self._layout_groups(caption.nodes, caption_set)
+        layout_groups = self._group_cues_by_layout(caption.nodes, caption_set)
 
         start = self._timestamp(caption.start)
         end = self._timestamp(caption.end)
@@ -275,24 +277,24 @@ class WebVTTWriter(BaseWriter):
 
         cue_style_tags = ['', '']
 
+        # Text styling
         style = self._calculate_resulting_style(caption.style, caption_set)
         for key, value in sorted(style.items()):
             if value:
-                tags = self._tags_for_style(key)
-#                    print "tags: " + str(tags) + "\n"
+                tags = self._convert_style_to_text_tag(key)
                 cue_style_tags[0] += tags[0]
                 cue_style_tags[1] = tags[1] + cue_style_tags[1]
 
         for cue_text, layout in layout_groups:
             if not layout:
                 layout = caption.layout_info or self.global_layout
-            cue_settings = self._cue_settings_from(layout)
+            cue_settings = self._convert_positioning(layout)
             output += timespan + cue_settings + '\n'
             output += cue_style_tags[0] + cue_text + cue_style_tags[1] + '\n'
 
         return output
 
-    def _cue_settings_from(self, layout):
+    def _convert_positioning(self, layout):
         """
         Return WebVTT cue settings string based on layout info
         :type layout: Layout
@@ -362,12 +364,17 @@ class WebVTTWriter(BaseWriter):
             # long vertically as the text it contains and nothing can be cut
             # out
 
-        alignment = WEBVTT_VERSION_OF.get(
-            layout.alignment.horizontal,
-            WEBVTT_VERSION_OF[HorizontalAlignmentEnum.START])
+        if layout.alignment:
+            alignment = WEBVTT_VERSION_OF.get(
+                layout.alignment.horizontal, DEFAULT_ALIGN)
+        else:
+            alignment = DEFAULT_ALIGN
         cue_settings = ''
 
-        if alignment and alignment != 'middle':
+        if alignment and \
+                alignment != WEBVTT_VERSION_OF[HorizontalAlignmentEnum.CENTER]:
+            # Not sure why this condition was here, maybe because center
+            # alignment is applied automatically without needing to specify it
             cue_settings += f" align:{alignment}"
         if left_offset:
             cue_settings += f" position:{left_offset}"
@@ -378,7 +385,7 @@ class WebVTTWriter(BaseWriter):
 
         return cue_settings
 
-    def _layout_groups(self, nodes, caption_set):
+    def _group_cues_by_layout(self, nodes, caption_set):
         """
         Convert a Caption's nodes to WebVTT cue or cues (depending on
         whether they have the same positioning or not).
@@ -404,7 +411,7 @@ class WebVTTWriter(BaseWriter):
                     s = ''
                 # ATTENTION: This is where the plain unicode node content is
                 # finally encoded as WebVTT.
-                s += self._encode(node.content) or '&nbsp;'
+                s += self._encode_illegal_characters(node.content) or '&nbsp;'
                 current_layout = node.layout_info
             elif node.type_ == CaptionNode.STYLE:
                 resulting_style = self._calculate_resulting_style(
@@ -417,7 +424,7 @@ class WebVTTWriter(BaseWriter):
 
                 for style in styles:
                     if style in resulting_style and resulting_style[style]:
-                        tags = self._tags_for_style(style)
+                        tags = self._convert_style_to_text_tag(style)
                         if node.start:
                             s += tags[0]
                         else:
@@ -436,7 +443,7 @@ class WebVTTWriter(BaseWriter):
             layout_groups.append((s, current_layout))
         return layout_groups
 
-    def _encode(self, s):
+    def _encode_illegal_characters(self, s):
         """
         Convert cue text from plain unicode to WebVTT XML-like format
         escaping illegal characters. For a list of illegal characters see:

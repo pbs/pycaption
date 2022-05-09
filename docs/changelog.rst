@@ -1,5 +1,10 @@
 Changelog
 ---------
+Unreleased
+^^^^^^^^^^
+- Changed DFXPReader default horizontal alignment from 'center' to 'start'
+- Updated WebVTT horizontal alignment from 'middle' to 'center'
+
 2.0.8
 ^^^^^
 - Added support for Python 3.10

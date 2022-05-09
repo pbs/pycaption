@@ -38,6 +38,40 @@ It's all about an eternal Einstein.
 def sample_webvtt_from_dfxp():
     return """WEBVTT
 
+00:09.209 --> 00:12.312 align:start
+( clock ticking )
+
+00:14.848 --> 00:17.000 align:start
+MAN:
+When we think
+♪ ...say bow, wow, ♪
+
+00:17.000 --> 00:18.752 align:right
+we have this vision of Einstein
+
+00:18.752 --> 00:20.887 align:start
+&nbsp;
+as an old, wrinkly man
+with white hair.
+
+00:20.887 --> 00:26.760 align:start
+MAN 2:
+E equals m c-squared is
+not about an old Einstein.
+
+00:26.760 --> 00:32.200 align:start
+MAN 2:
+It's all about an eternal Einstein.
+
+00:32.200 --> 00:36.200 align:start
+&lt;LAUGHING &amp; WHOOPS!>
+"""
+
+
+@pytest.fixture(scope="session")
+def sample_webvtt_from_sami():
+    return """WEBVTT
+
 00:09.209 --> 00:12.312
 ( clock ticking )
 
@@ -66,11 +100,6 @@ It's all about an eternal Einstein.
 00:32.200 --> 00:36.200
 &lt;LAUGHING &amp; WHOOPS!>
 """
-
-
-@pytest.fixture(scope="session")
-def sample_webvtt_from_sami(sample_webvtt_from_dfxp):
-    return sample_webvtt_from_dfxp
 
 
 @pytest.fixture(scope="session")
@@ -133,7 +162,7 @@ the last cue
 def sample_webvtt_from_dfxp_with_positioning_and_style():
     return """WEBVTT
 
-00:01.000 --> 00:03.000 align:start position:25% line:25% size:50%
+00:01.000 --> 00:03.000 position:25% line:25% size:50%
 You might not remember us. We are a typical transparent region with centered text that has an outline.
 
 00:03.500 --> 00:05.000 align:right position:25% line:25% size:50%
@@ -246,13 +275,13 @@ def sample_webvtt_output_long_cue():
     return """\
 WEBVTT
 
-00:01.000 --> 00:02.000
+00:01.000 --> 00:02.000 align:start
 NARRATOR:
 
 00:02.000 --> 00:03.000 position:25% line:25% size:65%
 They built the largest, most incredible, wildest, craziest,
 
-00:03.000 --> 00:04.000
+00:03.000 --> 00:04.000 align:start
 most complex machine in history.
 """
 
@@ -275,7 +304,7 @@ def sample_webvtt_with_cue_settings():
     return """\
 WEBVTT
 
-00:01.000 --> 00:06.000 align:middle position:37% line:74%
+00:01.000 --> 00:06.000 align:center position:37% line:74%
 37% 74% - NARRATOR:
 
 00:01.000 --> 00:06.000 this is invalid, but will also be kept
@@ -337,7 +366,7 @@ def sample_webvtt_empty_cue_output():
     return """\
 WEBVTT
 
-00:01.209 --> 00:02.312 position:10% line:10% size:80%
+00:01.209 --> 00:02.312 align:start position:10% line:10% size:80%
 abc
 """
 

@@ -11,8 +11,7 @@ from tests.mixins import (
 
 
 class TestSAMItoWebVTT(WebVTTTestingMixIn):
-    def test_sami_to_webvtt_conversion(
-            self, sample_webvtt_from_sami, sample_sami):
+    def test_conversion(self, sample_webvtt_from_sami, sample_sami):
         caption_set = SAMIReader().read(sample_sami)
         results = WebVTTWriter(
             video_width=640, video_height=360).write(caption_set)
@@ -20,9 +19,8 @@ class TestSAMItoWebVTT(WebVTTTestingMixIn):
         assert isinstance(results, str)
         self.assert_webvtt_equals(sample_webvtt_from_sami, results)
 
-    def test_sami_with_style_tags_to_webvtt_conversion(
-            self, sample_webvtt_from_sami_with_style,
-            sample_sami_with_style_tags):
+    def test_style_tags_conversion(self, sample_webvtt_from_sami_with_style,
+                                   sample_sami_with_style_tags):
         caption_set = SAMIReader().read(sample_sami_with_style_tags)
         results = WebVTTWriter(
             video_width=640, video_height=360).write(caption_set)
@@ -30,7 +28,7 @@ class TestSAMItoWebVTT(WebVTTTestingMixIn):
         assert isinstance(results, str)
         self.assert_webvtt_equals(sample_webvtt_from_sami_with_style, results)
 
-    def test_sami_with_css_inline_style_to_webvtt_conversion(
+    def test_css_inline_style_conversion(
             self, sample_webvtt_from_sami_with_style,
             sample_sami_with_css_inline_style):
         caption_set = SAMIReader().read(sample_sami_with_css_inline_style)
@@ -40,7 +38,7 @@ class TestSAMItoWebVTT(WebVTTTestingMixIn):
         assert isinstance(results, str)
         self.assert_webvtt_equals(sample_webvtt_from_sami_with_style, results)
 
-    def test_sami_with_css_id_style_to_webvtt_conversion(
+    def test_css_id_style_conversion(
             self, sample_webvtt_from_sami_with_id_style,
             sample_sami_with_css_id_style):
         caption_set = SAMIReader().read(sample_sami_with_css_id_style)
@@ -101,7 +99,7 @@ class TestWebVTTtoWebVTT(WebVTTTestingMixIn):
 
 
 class TestWebVTTtoDFXP(DFXPTestingMixIn):
-    def test_webvtt_to_dfxp_conversion(self, sample_dfxp, sample_webvtt):
+    def test_conversion(self, sample_dfxp, sample_webvtt):
         caption_set = WebVTTReader().read(sample_webvtt)
         results = DFXPWriter().write(caption_set)
 

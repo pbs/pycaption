@@ -20,7 +20,7 @@ from tests.fixtures.dfxp import (  # noqa: F401
     sample_dfxp_only_spaces_paragraph, sample_dfxp_incorrect_time_format,
     sample_dfxp_missing_begin, sample_dfxp_missing_end_and_dur,
     sample_dfxp_with_frame_timing, sample_dfxp_empty_cue,
-    sample_dfxp_empty_cue_output,
+    sample_dfxp_empty_cue_output, sample_dfxp_default_styling_p_tags,
     sample_dfxp_invalid_positioning_value_template,
     sample_dfxp_multiple_captions_with_the_same_timing,
     sample_dfxp_with_ampersand_character, sample_dfxp_with_nested_spans,

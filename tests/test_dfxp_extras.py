@@ -82,7 +82,7 @@ class TestSinglePositioningDFXPWRiter:
 
         dfxp = SinglePositioningDFXPWriter(new_region).write(caption_set)
 
-        region = BeautifulSoup(dfxp).find('region')
+        region = BeautifulSoup(dfxp, features='lxml').find('region')
 
         assert 'xml:id' in region.attrs
         assert region.attrs['xml:id'] != DFXP_DEFAULT_REGION_ID
