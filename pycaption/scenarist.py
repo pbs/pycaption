@@ -6,6 +6,7 @@ from datetime import timedelta
 from io import BytesIO
 
 from PIL import Image, ImageFont, ImageDraw
+from fontTools.ttLib import TTFont
 
 from pycaption.base import BaseWriter, CaptionSet, Caption
 from pycaption.geometry import UnitEnum, Size
@@ -84,6 +85,36 @@ class ScenaristDVDWriter(BaseWriter):
             self.color = '(0 1 2 3)'
             self.contrast = '(7 7 7 7)'
 
+    def get_font_with_all_glyphs_path(self, captions, font_paths):
+        """
+        Takes a list of captions and a list of font paths to search for fonts that include all glyphs that appear in
+        the captions.
+        @return: Font path or NoneType if no fonts are appropriate
+        """
+        def has_glyph(font, glyph):
+            for table in font['cmap'].tables:
+                if ord(glyph) in table.cmap.keys():
+                    return True
+            return False
+
+        all_characters = []
+        for caption_list in captions:
+            for caption in caption_list:
+                all_characters.extend([char for char in caption.get_text() if char and char.strip()])
+        unique_characters = list(set(all_characters))
+
+        chosen_font = None
+        for font_candidate in font_paths:
+            ttf_font = TTFont(font_candidate)
+            glyphs = {c: has_glyph(ttf_font, c) for c in unique_characters}
+
+            missing_glyphs = {k: v for k, v in glyphs.items() if not v}
+
+            if not missing_glyphs:
+                chosen_font = font_candidate
+                break
+        return chosen_font
+
     def write(self, caption_set: CaptionSet, position='bottom', avoid_same_next_start_prev_end=False):
         position = position.lower().strip()
         if position not in ScenaristDVDWriter.VALID_POSITION:
@@ -127,12 +158,22 @@ class ScenaristDVDWriter(BaseWriter):
                     for c in caps_list:
                         c.start = min(c.start + ((1/self.frame_rate) * 1000000), c.end)
 
+        # Determine if our fonts support all the glyphs in the source subtitle
+        # Fonts are checked in the order in which they appear in the `font_paths` list.
+        # The path to the  first font to include all the glyphs gets returned
+        font_paths = [
+            # I manually edited the TTF to include the note chars. See this issue for details:
+            # https://github.com/googlefonts/noto-fonts/issues/1663
+            f"{os.path.dirname(__file__)}/NotoSansDisplay-Regular-note.ttf",
+            f"{os.path.dirname(__file__)}/NotoSansSC-Regular.otf",
+        ]
+
+        fnt = self.get_font_with_all_glyphs_path(caps_final, font_paths)
+        if not fnt:
+            raise ValueError('Cannot get font with all characters present)')
+        fnt = ImageFont.truetype(fnt, 30)
+
         buf = BytesIO()
-
-        # I manually edited the TTF to include the note chars. See this issue for details:
-        # https://github.com/googlefonts/noto-fonts/issues/1663
-        fnt = ImageFont.truetype(os.path.dirname(__file__) + '/NotoSansDisplay-Regular-note.ttf', 30)
-
         with tempfile.TemporaryDirectory() as tmpDir:
             with open(tmpDir + '/subtitles.sst', 'w+') as sst:
                 index = 1
