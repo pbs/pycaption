@@ -166,6 +166,9 @@ class ScenaristDVDWriter(BaseWriter):
             # https://github.com/googlefonts/noto-fonts/issues/1663
             f"{os.path.dirname(__file__)}/NotoSansDisplay-Regular-note.ttf",
             f"{os.path.dirname(__file__)}/NotoSansSC-Regular.otf",
+            f"{os.path.dirname(__file__)}/NotoSansTC-Regular.otf",
+            f"{os.path.dirname(__file__)}/NotoSansJP-Regular.otf",
+            f"{os.path.dirname(__file__)}/NotoSansKR-Regular.otf",
         ]
 
         fnt = self.get_font_with_all_glyphs_path(caps_final, font_paths)
