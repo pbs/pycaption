@@ -452,6 +452,11 @@ class WebVTTWriter(BaseWriter):
         """
         s = s.replace('&', '&amp;')
         s = s.replace('<', '&lt;')
+        # revert the tags that are allowed
+        allowed_tags = ['c', 'i', 'u', 'b']
+        for tag in allowed_tags:
+            s = s.replace(f'&lt;{tag}>', f'<{tag}>')
+            s = s.replace(f'&lt;/{tag}>', f'</{tag}>')
 
         # The substring "-->" is also not allowed according to this:
         #   - http://dev.w3.org/html5/webvtt/#dfn-webvtt-cue-block
