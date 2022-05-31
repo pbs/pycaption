@@ -3,3 +3,4 @@ lxml>=3.2.3
 cssutils>=0.9.10
 Pillow>=7.0.0
 fonttools~=4.33.3
+langcodes~=3.3.0

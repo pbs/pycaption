@@ -7,6 +7,7 @@ from io import BytesIO
 
 from PIL import Image, ImageFont, ImageDraw
 from fontTools.ttLib import TTFont
+from langcodes import Language, tag_distance
 
 from pycaption.base import BaseWriter, CaptionSet, Caption
 from pycaption.geometry import UnitEnum, Size
@@ -71,6 +72,15 @@ class ScenaristDVDWriter(BaseWriter):
 
     palette_image = Image.new("P", (1, 1))
     palette_image.putpalette([*paColor, *e1Color, *e2Color, *bgColor] + [0, 0, 0] * 252)
+
+    font_langs = {
+        Language.get('en'): f"{os.path.dirname(__file__)}/NotoSansDisplay-Regular-note.ttf",
+        Language.get('ru'): f"{os.path.dirname(__file__)}/NotoSansDisplay-Regular-note.ttf",
+        Language.get('ja-JP'): f"{os.path.dirname(__file__)}/NotoSansJP-Regular.otf",
+        Language.get('zh-TW'): f"{os.path.dirname(__file__)}/NotoSansTC-Regular.otf",
+        Language.get('zh-CN'): f"{os.path.dirname(__file__)}/NotoSansSC-Regular.otf",
+        Language.get('ko-KR'): f"{os.path.dirname(__file__)}/NotoSansKR-Regular.otf",
+    }
 
     def __init__(self, relativize=True, video_width=720, video_height=480, fit_to_screen=True, tape_type='NON_DROP',
                  frame_rate=25, compat=False):
@@ -158,22 +168,18 @@ class ScenaristDVDWriter(BaseWriter):
                     for c in caps_list:
                         c.start = min(c.start + ((1/self.frame_rate) * 1000000), c.end)
 
-        # Determine if our fonts support all the glyphs in the source subtitle
-        # Fonts are checked in the order in which they appear in the `font_paths` list.
-        # The path to the  first font to include all the glyphs gets returned
-        font_paths = [
-            # I manually edited the TTF to include the note chars. See this issue for details:
-            # https://github.com/googlefonts/noto-fonts/issues/1663
-            f"{os.path.dirname(__file__)}/NotoSansDisplay-Regular-note.ttf",
-            f"{os.path.dirname(__file__)}/NotoSansSC-Regular.otf",
-            f"{os.path.dirname(__file__)}/NotoSansTC-Regular.otf",
-            f"{os.path.dirname(__file__)}/NotoSansJP-Regular.otf",
-            f"{os.path.dirname(__file__)}/NotoSansKR-Regular.otf",
+        requested_lang = Language.get(lang)
+        distances = [
+            (tag_distance(requested_lang, l), fnt)
+            for l, fnt in self.font_langs.items()
+            if tag_distance(requested_lang, l) < 100
         ]
+        if not distances:
+            raise ValueError('Cannot find appropriate font for selected language')
 
-        fnt = self.get_font_with_all_glyphs_path(caps_final, font_paths)
-        if not fnt:
-            raise ValueError('Cannot get font with all characters present)')
+        distances.sort(key=lambda l: l[0])
+        fnt = distances[0][1]
+        print(fnt)
         fnt = ImageFont.truetype(fnt, 30)
 
         buf = BytesIO()
