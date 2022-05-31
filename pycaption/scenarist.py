@@ -95,32 +95,41 @@ class ScenaristDVDWriter(BaseWriter):
             self.color = '(0 1 2 3)'
             self.contrast = '(7 7 7 7)'
 
+    def get_characters(self, captions):
+        all_characters = []
+        for caption_list in captions:
+            for caption in caption_list:
+                all_characters.extend([char for char in caption.get_text() if char and char.strip()])
+        unique_characters = list(set(all_characters))
+        return unique_characters
+
+    def font_has_all_glyphs(self, font, characters):
+        def has_glyph(fnt, glyph):
+            for table in fnt['cmap'].tables:
+                if ord(glyph) in table.cmap.keys():
+                    return True
+            return False
+
+        ttf_font = TTFont(font)
+        glyphs = {c: has_glyph(ttf_font, c) for c in characters}
+
+        missing_glyphs = {k: v for k, v in glyphs.items() if not v}
+        if not missing_glyphs:
+            return True
+        else:
+            return False
+
     def get_font_with_all_glyphs_path(self, captions, font_paths):
         """
         Takes a list of captions and a list of font paths to search for fonts that include all glyphs that appear in
         the captions.
         @return: Font path or NoneType if no fonts are appropriate
         """
-        def has_glyph(font, glyph):
-            for table in font['cmap'].tables:
-                if ord(glyph) in table.cmap.keys():
-                    return True
-            return False
-
-        all_characters = []
-        for caption_list in captions:
-            for caption in caption_list:
-                all_characters.extend([char for char in caption.get_text() if char and char.strip()])
-        unique_characters = list(set(all_characters))
+        unique_characters = self.get_characters(captions)
 
         chosen_font = None
         for font_candidate in font_paths:
-            ttf_font = TTFont(font_candidate)
-            glyphs = {c: has_glyph(ttf_font, c) for c in unique_characters}
-
-            missing_glyphs = {k: v for k, v in glyphs.items() if not v}
-
-            if not missing_glyphs:
+            if self.font_has_all_glyphs(font_candidate, unique_characters):
                 chosen_font = font_candidate
                 break
         return chosen_font
@@ -180,6 +189,9 @@ class ScenaristDVDWriter(BaseWriter):
         distances.sort(key=lambda l: l[0])
         fnt = distances[0][1]
         print(fnt)
+        if not self.font_has_all_glyphs(fnt, self.get_characters(caps_final)):
+            raise ValueError('Selected font was missing glyphs')
+
         fnt = ImageFont.truetype(fnt, 30)
 
         buf = BytesIO()
