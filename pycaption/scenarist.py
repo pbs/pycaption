@@ -76,10 +76,10 @@ class ScenaristDVDWriter(BaseWriter):
     font_langs = {
         Language.get('en'): f"{os.path.dirname(__file__)}/NotoSansDisplay-Regular-note.ttf",
         Language.get('ru'): f"{os.path.dirname(__file__)}/NotoSansDisplay-Regular-note.ttf",
-        Language.get('ja-JP'): f"{os.path.dirname(__file__)}/NotoSansJP-Regular.otf",
-        Language.get('zh-TW'): f"{os.path.dirname(__file__)}/NotoSansTC-Regular.otf",
-        Language.get('zh-CN'): f"{os.path.dirname(__file__)}/NotoSansSC-Regular.otf",
-        Language.get('ko-KR'): f"{os.path.dirname(__file__)}/NotoSansKR-Regular.otf",
+        Language.get('ja-JP'): f"{os.path.dirname(__file__)}/NotoSansCJKjp-Regular.otf",
+        Language.get('zh-TW'): f"{os.path.dirname(__file__)}/NotoSansCJKtc-Regular.otf",
+        Language.get('zh-CN'): f"{os.path.dirname(__file__)}/NotoSansCJKsc-Regular.otf",
+        Language.get('ko-KR'): f"{os.path.dirname(__file__)}/NotoSansCJKkr-Regular.otf",
     }
 
     def __init__(self, relativize=True, video_width=720, video_height=480, fit_to_screen=True, tape_type='NON_DROP',
