@@ -205,7 +205,13 @@ class ScenaristDVDWriter(BaseWriter):
         if not self.font_has_all_glyphs(fnt, self.get_characters(caps_final)):
             raise ValueError('Selected font was missing glyphs')
 
-        fnt = ImageFont.truetype(fnt, 30)
+        font_size = 30
+        if self.video_width < 500:
+            font_size = 16
+
+        print(font_size)
+
+        fnt = ImageFont.truetype(fnt, font_size)
 
         buf = BytesIO()
         with tempfile.TemporaryDirectory() as tmpDir:
