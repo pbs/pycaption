@@ -12,12 +12,25 @@ from langcodes import Language, tag_distance
 from pycaption.base import BaseWriter, CaptionSet, Caption
 from pycaption.geometry import UnitEnum, Size
 
+def get_sst_pixel_display_params(video_width, video_height):
+    py0 = 2
+    py1 = video_height - 1
+
+    dx0 = 0
+    dy0 = 2
+
+    dx1 = video_width - 1
+    dy1 = video_height - 1
+
+    return py0, py1, dy0, dy1, dx0, dx1
+
+
 HEADER = """st_format 2
 SubTitle\tFace_Painting
 Tape_Type\t{tape_type}
 Display_Start\tnon_forced
-Pixel_Area\t(2 479)
-Display_Area\t(0 2 719 479)
+Pixel_Area\t({py0} {py1})
+Display_Area\t({dx0} {dy0} {dx1} {dy1})
 Color\t{color}
 Contrast\t{contrast}
 BG\t({bg_red} {bg_green} {bg_blue} = = =)
@@ -198,7 +211,10 @@ class ScenaristDVDWriter(BaseWriter):
         with tempfile.TemporaryDirectory() as tmpDir:
             with open(tmpDir + '/subtitles.sst', 'w+') as sst:
                 index = 1
+                py0, py1, dy0, dy1, dx0, dx1 = get_sst_pixel_display_params(self.video_width, self.video_height)
                 sst.write(HEADER.format(
+                    py0=py0, py1=py1,
+                    dx0=dx0, dy0=dy0, dx1=dx1, dy1=dy1,
                     bg_red=self.bgColor[0], bg_green=self.bgColor[1], bg_blue=self.bgColor[2],
                     pa_red=self.paColor[0], pa_green=self.paColor[1], pa_blue=self.paColor[2],
                     e1_red=self.e1Color[0], e1_green=self.e1Color[1], e1_blue=self.e1Color[2],
