@@ -65,6 +65,8 @@ MICROSECONDS_PER_UNIT = {
 }
 
 DFXP_DEFAULT_LANGUAGE_CODE = "en"
+DFXP_DEFAULT_FRAMERATE = "30"
+DFXP_DEFAULT_FRAMERATEMULTIPLIER = "1000 1000"
 
 
 class DFXPReader(BaseReader):
@@ -81,6 +83,7 @@ class DFXPReader(BaseReader):
         self.read_invalid_positioning = (
             kw.get('read_invalid_positioning', False))
         self.nodes = []
+        self.framerate = self._get_framerate(DFXP_DEFAULT_FRAMERATE, DFXP_DEFAULT_FRAMERATEMULTIPLIER)
 
     def detect(self, content):
         if '</tt>' in content.lower():
@@ -101,6 +104,11 @@ class DFXPReader(BaseReader):
 
         default_language = dfxp_document.tt.attrs.get('xml:lang',
                                                       DEFAULT_LANGUAGE_CODE)
+        framerate = dfxp_document.tt.attrs.get('ttp:framerate',
+                                               DFXP_DEFAULT_FRAMERATE)
+        framerate_multiplier = dfxp_document.tt.attrs.get('ttp:frameratemultiplier',
+                                                          DFXP_DEFAULT_FRAMERATEMULTIPLIER)
+        self.framerate = self._get_framerate(framerate, framerate_multiplier)
 
         # Each div represents all the captions for a single language.
         for div in dfxp_document.find_all('div'):
@@ -169,6 +177,13 @@ class DFXPReader(BaseReader):
 
         return start, end
 
+    @staticmethod
+    def _get_framerate(framerate, framerate_multiplier):
+        numerator, denominator = framerate_multiplier.split()
+        framerate_multiplier = int(numerator) / int(denominator)
+        framerate = float(framerate) * framerate_multiplier
+        return framerate
+
     def _convert_timestamp_to_microseconds(self, stamp):
         match = TIME_EXPRESSION_PATTERN.search(stamp)
         if not match:
@@ -180,8 +195,7 @@ class DFXPReader(BaseReader):
         else:
             return self._convert_time_count_to_microseconds(match)
 
-    @staticmethod
-    def _convert_clock_time_to_microseconds(clock_time_match):
+    def _convert_clock_time_to_microseconds(self, clock_time_match):
         microseconds = int(clock_time_match.group('hours')) * \
                        MICROSECONDS_PER_UNIT["hours"]
         microseconds += int(clock_time_match.group('minutes')) * \
@@ -192,12 +206,11 @@ class DFXPReader(BaseReader):
             microseconds += int(clock_time_match.group('sub_frames').ljust(
                 3, '0')) * MICROSECONDS_PER_UNIT["milliseconds"]
         elif clock_time_match.group('frames'):
-            microseconds += int(clock_time_match.group('frames')) / 30 * \
+            microseconds += int(clock_time_match.group('frames')) / self.framerate * \
                             MICROSECONDS_PER_UNIT["seconds"]
         return int(microseconds)
 
-    @staticmethod
-    def _convert_time_count_to_microseconds(time_count_match):
+    def _convert_time_count_to_microseconds(self, time_count_match):
         value = float(time_count_match.group('time_count'))
         metric = time_count_match.group("metric")
         if metric == "h":
@@ -209,7 +222,7 @@ class DFXPReader(BaseReader):
         elif metric == "ms":
             microseconds = value * MICROSECONDS_PER_UNIT["milliseconds"]
         elif metric == "f":
-            microseconds = value / 30 * MICROSECONDS_PER_UNIT["seconds"]
+            microseconds = value / self.framerate * MICROSECONDS_PER_UNIT["seconds"]
         elif metric == "t":
             raise NotImplementedError("The tick metric for time count is "
                                       "not currently implemented.")

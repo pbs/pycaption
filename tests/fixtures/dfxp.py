@@ -1509,3 +1509,48 @@ def sample_dfxp_default_styling_p_tags():
   </div>
  </body>
 </tt>"""
+
+
+@pytest.fixture(scope="session")
+def sample_dfxp_framerate():
+    return """\
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml" 
+    xmlns:tts="http://www.w3.org/ns/ttml#styling" 
+    xmlns:ttm="http://www.w3.org/ns/ttml#metadata" 
+        xmlns:ttp="http://www.w3.org/ns/ttml#parameter" 
+        xmlns:smpte="http://www.smpte-ra.org/schemas/2052-1/2010/smpte-tt" 
+        xmlns:m608="http://www.smpte-ra.org/schemas/2052-1/2010/smpte-tt#cea608" 
+        ttp:timeBase="media" ttp:frameRate="24" ttp:frameRateMultiplier="1000 1001">
+    <head>
+        <metadata>
+            <ttm:desc>SMPTE 2052 Timed Text Captions document created by MacCaption™ version 7.0.12</ttm:desc>
+            <smpte:information xmlns:m608="http://www.smpte-ra.org/schemas/2052-1/2010/smpte-tt#cea608" 
+            origin="http://www.smpte-ra.org/schemas/2052-1/2010/smpte-tt#cea608" 
+            mode="Preserved" m608:channel="CC1" m608:programName="Demo" m608:captionService="F1C1CC"/>
+        </metadata>
+        <styling>
+            <style xml:id="basic" tts:color="white" tts:backgroundColor="black" tts:showBackground="whenActive" 
+            tts:fontFamily="monospace" tts:fontSize="80%" tts:fontWeight="normal" tts:fontStyle="normal"/>
+        </styling>
+        <layout>
+            <region xml:id="pop1" tts:backgroundColor="transparent" tts:showBackground="whenActive"/>
+            <region xml:id="pop2" tts:backgroundColor="transparent" tts:showBackground="whenActive"/>
+            <region xml:id="pop3" tts:backgroundColor="transparent" tts:showBackground="whenActive"/>
+            <region xml:id="pop4" tts:backgroundColor="transparent" tts:showBackground="whenActive"/>
+        </layout>
+    </head>
+    <body>
+        <div>
+            <p begin="00:00:00:15" end="00:00:08:05" region="bottom" style="default">
+            MAN 2:<br/>
+            E equals m c-squared is<br/>
+            not about an old Einstein.
+           </p>
+           <p begin="00:00:08:05" end="00:00:09:16" region="bottom" style="default">
+            MAN 2:<br/>
+            It's all about an eternal Einstein.
+           </p>
+        </div>
+    </body>
+</tt>"""

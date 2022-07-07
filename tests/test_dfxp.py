@@ -40,6 +40,13 @@ class TestDFXPReader(ReaderTestingMixIn):
         assert 17000000 == paragraph.start
         assert 18752000 == paragraph.end
 
+    def test_proper_timestamps_framerate(self, sample_dfxp_framerate):
+        captions = DFXPReader().read(sample_dfxp_framerate)
+        paragraph = captions.get_captions("en")[1]
+
+        assert 8208541 == paragraph.start
+        assert 9667333 == paragraph.end
+
     def test_incorrect_time_format(self, sample_dfxp_incorrect_time_format):
         with pytest.raises(CaptionReadTimingError) as exc_info:
             DFXPReader().read(sample_dfxp_incorrect_time_format)
@@ -70,6 +77,13 @@ class TestDFXPReader(ReaderTestingMixIn):
         # Tick values are not supported
         with pytest.raises(NotImplementedError):
             reader._convert_timestamp_to_microseconds("2.3t")
+
+    def test_convert_timestamp_to_microseconds_framerate(self):
+        reader = DFXPReader()
+        reader.framerate = 24
+
+        assert 66666 == reader._convert_timestamp_to_microseconds("1.6f")
+        assert 625000 == reader._convert_timestamp_to_microseconds("00:00:00:15")
 
     @pytest.mark.parametrize('timestamp, microseconds', [
         ('12:23:34', 44614000000), ('23:34:45:56', 84886866666),
