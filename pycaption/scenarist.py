@@ -116,7 +116,7 @@ class ScenaristDVDWriter(BaseWriter):
         unique_characters = list(set(all_characters))
         return unique_characters
 
-    def font_has_all_glyphs(self, font, characters):
+    def get_missing_glyphs(self, font, characters):
         def has_glyph(fnt, glyph):
             for table in fnt['cmap'].tables:
                 if ord(glyph) in table.cmap.keys():
@@ -127,25 +127,7 @@ class ScenaristDVDWriter(BaseWriter):
         glyphs = {c: has_glyph(ttf_font, c) for c in characters}
 
         missing_glyphs = {k: v for k, v in glyphs.items() if not v}
-        if not missing_glyphs:
-            return True
-        else:
-            return False
-
-    def get_font_with_all_glyphs_path(self, captions, font_paths):
-        """
-        Takes a list of captions and a list of font paths to search for fonts that include all glyphs that appear in
-        the captions.
-        @return: Font path or NoneType if no fonts are appropriate
-        """
-        unique_characters = self.get_characters(captions)
-
-        chosen_font = None
-        for font_candidate in font_paths:
-            if self.font_has_all_glyphs(font_candidate, unique_characters):
-                chosen_font = font_candidate
-                break
-        return chosen_font
+        return missing_glyphs
 
     def write(self, caption_set: CaptionSet, position='bottom', avoid_same_next_start_prev_end=False):
         position = position.lower().strip()
@@ -202,8 +184,10 @@ class ScenaristDVDWriter(BaseWriter):
         distances.sort(key=lambda l: l[0])
         fnt = distances[0][1]
         print(fnt)
-        if not self.font_has_all_glyphs(fnt, self.get_characters(caps_final)):
-            raise ValueError('Selected font was missing glyphs')
+        missing_glyphs = self.get_missing_glyphs(fnt, self.get_characters(caps_final))
+
+        if missing_glyphs:
+            raise ValueError(f'Selected font was missing glyphs: {" ".join(missing_glyphs.keys())}')
 
         font_size = 30
         if self.video_width < 500:
