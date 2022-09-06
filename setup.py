@@ -8,9 +8,9 @@ README_PATH = os.path.join(
 )
 
 dependencies = [
-    'beautifulsoup4>=4.8.1,<4.11',
-    'lxml>=4.6.3,<4.9',
-    'cssutils>=2.0.0,<2.4',
+    'beautifulsoup4>=4.8.1',
+    'lxml>=4.9.1',
+    'cssutils>=2.0.0',
 ]
 
 dev_dependencies = [
@@ -20,7 +20,7 @@ dev_dependencies = [
 
 setup(
     name='pycaption',
-    version='2.0.9',
+    version='2.1.0',
     description='Closed caption converter',
     long_description=open(README_PATH).read(),
     author='Joe Norton',
