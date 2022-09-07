@@ -1,5 +1,9 @@
 Changelog
 ---------
+2.1.0
+^^^^^
+- Remove upper limit for dependency versions to solve vulnerabilities
+
 2.0.9
 ^^^^^
 - Changed DFXPReader default horizontal alignment from 'center' to 'start'
