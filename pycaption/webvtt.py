@@ -203,9 +203,10 @@ class WebVTTWriter(BaseWriter):
     video_width = None
     video_height = None
 
-    def write(self, caption_set):
+    def write(self, caption_set, force_hours=False):
         """
         :type caption_set: CaptionSet
+        @param force_hours: force writing timestamps in full (hh:mm:ss.xxx) even when "hour" is 0
         """
         output = self.HEADER
 
@@ -227,14 +228,14 @@ class WebVTTWriter(BaseWriter):
         captions = caption_set.get_captions(lang)
 
         return output + '\n'.join(
-            [self._write_caption(caption_set, caption) for caption in captions])
+            [self._write_caption(caption_set, caption, force_hours) for caption in captions])
 
-    def _timestamp(self, ts):
+    def _timestamp(self, ts, force_hours):
         td = datetime.timedelta(microseconds=ts)
         mm, ss = divmod(td.seconds, 60)
         hh, mm = divmod(mm, 60)
         s = "%02d:%02d.%03d" % (mm, ss, td.microseconds/1000)
-        if hh:
+        if hh or force_hours:
             s = "%02d:%s" % (hh, s)
         return s
 
@@ -266,14 +267,14 @@ class WebVTTWriter(BaseWriter):
 
         return resulting_style
 
-    def _write_caption(self, caption_set, caption):
+    def _write_caption(self, caption_set, caption, force_hours):
         """
         :type caption: Caption
         """
         layout_groups = self._layout_groups(caption.nodes, caption_set)
 
-        start = self._timestamp(caption.start)
-        end = self._timestamp(caption.end)
+        start = self._timestamp(caption.start, force_hours)
+        end = self._timestamp(caption.end, force_hours)
         timespan = "{} --> {}".format(start, end)
 
         output = ''
