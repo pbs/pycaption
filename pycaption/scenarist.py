@@ -161,6 +161,7 @@ class ScenaristDVDWriter(BaseWriter):
                     caps_final.append(caps_list)
 
         if avoid_same_next_start_prev_end:
+            min_diff = (1/self.frame_rate) * 1000000
             for i, caps_list in enumerate(caps_final):
                 if i == 0:
                     continue
@@ -168,9 +169,9 @@ class ScenaristDVDWriter(BaseWriter):
                 prev_end_time = caps_final[i-1][0].end
                 current_start_time = caps_list[0].start
 
-                if current_start_time == prev_end_time:
+                if (current_start_time == prev_end_time) or ((current_start_time - prev_end_time) < min_diff):
                     for c in caps_list:
-                        c.start = min(c.start + ((1/self.frame_rate) * 1000000), c.end)
+                        c.start = min(c.start + min_diff, c.end)
 
         requested_lang = Language.get(lang)
         distances = [
