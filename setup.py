@@ -18,10 +18,6 @@ dev_dependencies = [
     'pytest-lazy-fixture'
 ]
 
-transcript_dependencies = [
-    'nltk'
-]
-
 setup(
     name='pycaption',
     version='2.1.0',
@@ -38,8 +34,7 @@ setup(
     python_requires='>=3.6,<4.0',
     install_requires=dependencies,
     extras_require={
-        'dev': dev_dependencies,
-        'transcript': transcript_dependencies
+        'dev': dev_dependencies
     },
     packages=find_packages(),
     include_package_data=True,

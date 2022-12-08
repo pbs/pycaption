@@ -7,7 +7,6 @@ from .sami import SAMIReader, SAMIWriter
 from .srt import SRTReader, SRTWriter
 from .scc import SCCReader, SCCWriter
 from .scc.translator import translate_scc
-from .transcript import TranscriptWriter
 from .webvtt import WebVTTReader, WebVTTWriter
 from .exceptions import (
     CaptionReadError, CaptionReadNoCaptions, CaptionReadSyntaxError,
@@ -19,8 +18,7 @@ __all__ = [
     'MicroDVDWriter', 'SAMIReader', 'SAMIWriter', 'SRTReader', 'SRTWriter',
     'SCCReader', 'SCCWriter', 'translate_scc', 'WebVTTReader', 'WebVTTWriter',
     'CaptionReadError', 'CaptionReadNoCaptions', 'CaptionReadSyntaxError',
-    'detect_format', 'CaptionNode', 'Caption', 'CaptionList', 'CaptionSet',
-    'TranscriptWriter'
+    'detect_format', 'CaptionNode', 'Caption', 'CaptionList', 'CaptionSet'
 ]
 
 SUPPORTED_READERS = (
