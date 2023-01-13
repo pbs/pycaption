@@ -18,7 +18,7 @@ class TranscriptWriter(BaseWriter):
         transcripts = []
 
         for lang in captions.get_languages():
-            lang_transcript = f'* {lang.upper()} Transcript *\n'
+            lang_transcript = ''
 
             for caption in captions.get_captions(lang):
                 lang_transcript = self._strip_text(caption.nodes,
