@@ -2,14 +2,15 @@ import os
 
 try:
     import nltk.data
-except ImportError:
-    raise ImportError(
-        'You must install nltk==2.0.4 and numpy==1.7.1 to be able to use this.')
+except ModuleNotFoundError:
+    nltk = None
 from pycaption.base import BaseWriter, CaptionNode
 
 
 class TranscriptWriter(BaseWriter):
     def __init__(self, *args, **kw):
+        if not nltk:
+            raise ModuleNotFoundError('Missing Dependency You must install nltk ')
         self.nltk = nltk.data.load(f'file:{os.path.dirname(__file__)}'
                                    '/english.pickle')
 
@@ -17,7 +18,7 @@ class TranscriptWriter(BaseWriter):
         transcripts = []
 
         for lang in captions.get_languages():
-            lang_transcript = f'* {lang.upper()} Transcript *\n'
+            lang_transcript = ''
 
             for caption in captions.get_captions(lang):
                 lang_transcript = self._strip_text(caption.nodes,
