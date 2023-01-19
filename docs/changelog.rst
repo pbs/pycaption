@@ -1,5 +1,9 @@
 Changelog
 ---------
+2.1.1
+^^^^^
+- Added nltk as transcript dependency
+
 2.1.0
 ^^^^^
 - Remove upper limit for dependency versions to solve vulnerabilities
