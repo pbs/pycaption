@@ -47,7 +47,8 @@ def sample_dfxp():
    </p>
   </div>
  </body>
-</tt>"""
+</tt>
+"""
 
 
 @pytest.fixture(scope="session")
@@ -260,7 +261,8 @@ def sample_dfxp_with_relativized_positioning():
    </p>
   </div>
  </body>
-</tt>"""
+</tt>
+"""
 
 
 @pytest.fixture(scope="session")
@@ -348,7 +350,8 @@ def sample_dfxp_from_sami_with_positioning():
    </p>
   </div>
  </body>
-</tt>"""
+</tt>
+"""
 
 
 @pytest.fixture(scope="session")
@@ -408,7 +411,8 @@ def sample_dfxp_long_cue_fit_to_screen():
    </p>
   </div>
  </body>
-</tt>"""
+</tt>
+"""
 
 
 @pytest.fixture(scope="session")
@@ -431,7 +435,8 @@ def sample_dfxp_from_sami_with_margins():
    </p>
   </div>
  </body>
-</tt>"""
+</tt>
+"""
 
 
 @pytest.fixture(scope="session")
@@ -454,7 +459,8 @@ def sample_dfxp_from_sami_with_lang_margins():
    </p>
   </div>
  </body>
-</tt>"""
+</tt>
+"""
 
 
 @pytest.fixture(scope="session")
@@ -476,7 +482,8 @@ def sample_dfxp_from_sami_with_span():
    </p>
   </div>
  </body>
-</tt>"""
+</tt>
+"""
 
 
 @pytest.fixture(scope="session")
@@ -499,7 +506,8 @@ def sample_dfxp_from_sami_with_bad_span_align():
    </p>
   </div>
  </body>
-</tt>"""
+</tt>
+"""
 
 
 @pytest.fixture(scope="session")
@@ -597,7 +605,8 @@ def sample_dfxp_invalid_but_supported_positioning_output():
    </p>
   </div>
  </body>
-</tt>"""
+</tt>
+"""
 
 
 @pytest.fixture(scope="session")
@@ -685,7 +694,8 @@ def sample_dfxp_multiple_regions_output():
    </p>
   </div>
  </body>
-</tt>"""
+</tt>
+"""
 
 
 @pytest.fixture(scope="session")
@@ -826,7 +836,8 @@ def sample_dfxp_output():
    </p>
   </div>
  </body>
-</tt>"""
+</tt>
+"""
 
 
 @pytest.fixture(scope="session")
@@ -886,7 +897,8 @@ def sample_dfxp_style_tag_with_no_xml_id_output():
    </p>
   </div>
  </body>
-</tt>"""
+</tt>
+"""
 
 
 @pytest.fixture(scope="session")
@@ -960,7 +972,8 @@ def sample_dfxp_from_scc_output():
    </p>
   </div>
  </body>
-</tt>"""
+</tt>
+"""
 
 
 @pytest.fixture(scope="session")
@@ -1009,7 +1022,8 @@ def sample_dfxp_with_properly_closing_spans_output():
    </p>
   </div>
  </body>
-</tt>"""
+</tt>
+"""
 
 
 @pytest.fixture(scope="session")
@@ -1109,7 +1123,8 @@ def sample_dfxp_for_legacy_writer_output():
    </p>
   </div>
  </body>
-</tt>"""
+</tt>
+"""
 
 
 @pytest.fixture(scope="session")
@@ -1358,7 +1373,8 @@ def sample_dfxp_empty_cue_output():
      </p>
    </div>
  </body>
-</tt>"""
+</tt>
+"""
 
 
 @pytest.fixture(scope="session")
@@ -1432,7 +1448,8 @@ def sample_dfxp_with_ampersand_character():
    </p>
   </div>
  </body>
-</tt>"""
+</tt>
+"""
 
 
 @pytest.fixture(scope="session")
