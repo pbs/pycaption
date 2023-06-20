@@ -116,18 +116,85 @@ class ScenaristDVDWriter(BaseWriter):
         unique_characters = list(set(all_characters))
         return unique_characters
 
-    def get_missing_glyphs(self, font, characters):
-        def has_glyph(fnt, glyph):
-            for table in fnt['cmap'].tables:
-                if ord(glyph) in table.cmap.keys():
-                    return True
-            return False
+    def get_characters_with_captions(self, captions):# -> dict[str, list[int]]:
+        chars_with_captions = {}
+        for caption_list in captions:
+            for caption in caption_list:
+                current_caption_chars = [char for char in caption.get_text() if char and char.strip()]
+                for char in current_caption_chars:
+                    if char not in chars_with_captions:
+                        chars_with_captions[char] = []
+                    chars_with_captions[char].append(caption)
+        return chars_with_captions
 
+    def get_missing_glyphs(self, font, characters):
         ttf_font = TTFont(font)
-        glyphs = {c: has_glyph(ttf_font, c) for c in characters}
+        glyphs = {c: self._has_glyph(ttf_font, c) for c in characters}
 
         missing_glyphs = {k: v for k, v in glyphs.items() if not v}
         return missing_glyphs
+
+    @staticmethod
+    def _has_glyph(fnt, glyph):
+        for table in fnt['cmap'].tables:
+            if ord(glyph) in table.cmap.keys():
+                return True
+        return False
+
+    def get_missing_glyphs_with_timestamps(
+            self, font, characters_with_timestamps # : dict[str, list[int]]
+    ): # -> dict[str, list[int]]:
+        ttf_font = TTFont(font)
+
+        missing_glyphs_with_timestamps = {}
+        for glyph, timestamps in characters_with_timestamps.items():
+            is_glyph_in_font = self._has_glyph(ttf_font, glyph)
+            if not is_glyph_in_font:
+                missing_glyphs_with_timestamps[glyph] = timestamps
+
+        return missing_glyphs_with_timestamps
+
+
+    @staticmethod
+    def group_captions_by_start_time(caps):
+        # group captions that have the same start time
+        caps_start_time = OrderedDict()
+        for i, cap in enumerate(caps):
+            if cap.start not in caps_start_time:
+                caps_start_time[cap.start] = [cap]
+            else:
+                caps_start_time[cap.start].append(cap)
+
+        # order by start timestamp
+        caps_start_time = OrderedDict(sorted(caps_start_time.items(), key=lambda item: item[0]))
+        return caps_start_time
+
+    def check_overlapping_subs(self, captions_by_start_time):
+        caps_final = []
+        overlapping = []
+        for start_time, caps_list in captions_by_start_time.items():
+            if len(caps_list) == 1:
+                caps_final.append(caps_list)
+            else:
+                end_times = list(set([c.end for c in caps_list]))
+                if len(end_times) != 1:
+                    overlapping.append(caps_list)
+                else:
+                    caps_final.append(caps_list)
+        return caps_final, overlapping
+
+    def get_distances(self, lang, font_langs):
+        requested_lang = Language.get(lang)
+        distances = [
+            (tag_distance(requested_lang, l), fnt)
+            for l, fnt in font_langs.items()
+            if tag_distance(requested_lang, l) < 100
+        ]
+        if not distances:
+            return distances
+
+        distances.sort(key=lambda l: l[0])
+        return distances
 
     def write(self, caption_set: CaptionSet, position='bottom', avoid_same_next_start_prev_end=False):
         position = position.lower().strip()
@@ -138,27 +205,13 @@ class ScenaristDVDWriter(BaseWriter):
         caps = caption_set.get_captions(lang)
 
         # group captions that have the same start time
-        caps_start_time = OrderedDict()
-        for i, cap in enumerate(caps):
-            if cap.start not in caps_start_time:
-                caps_start_time[cap.start] = [cap]
-            else:
-                caps_start_time[cap.start].append(cap)
-        # order by start timestamp
-        caps_start_time = OrderedDict(sorted(caps_start_time.items(), key=lambda item: item[0]))
+        caps_start_time = self.group_captions_by_start_time(caps)
 
         # check if captions with the same start time also have the same end time
         # fail if different end times are found - this is not (yet?) supported
-        caps_final = []
-        for start_time, caps_list in caps_start_time.items():
-            if len(caps_list) == 1:
-                caps_final.append(caps_list)
-            else:
-                end_times = list(set([c.end for c in caps_list]))
-                if len(end_times) != 1:
-                    raise ValueError('Unsupported subtitles - overlapping subtitles with different end times found')
-                else:
-                    caps_final.append(caps_list)
+        caps_final, overlapping = self.check_overlapping_subs(caps_start_time)
+        if overlapping:
+            raise ValueError('Unsupported subtitles - overlapping subtitles with different end times found')
 
         if avoid_same_next_start_prev_end:
             min_diff = (1/self.frame_rate) * 1000000
@@ -173,16 +226,10 @@ class ScenaristDVDWriter(BaseWriter):
                     for c in caps_list:
                         c.start = min(c.start + min_diff, c.end)
 
-        requested_lang = Language.get(lang)
-        distances = [
-            (tag_distance(requested_lang, l), fnt)
-            for l, fnt in self.font_langs.items()
-            if tag_distance(requested_lang, l) < 100
-        ]
+        distances = self.get_distances(lang, self.font_langs)
         if not distances:
             raise ValueError('Cannot find appropriate font for selected language')
 
-        distances.sort(key=lambda l: l[0])
         fnt = distances[0][1]
         print(fnt)
         missing_glyphs = self.get_missing_glyphs(fnt, self.get_characters(caps_final))

@@ -1357,3 +1357,40 @@ class _OrderedSet(list):
     def discard(self, value):
         if value in self:
             super().remove(value)
+
+
+class DFXPReaderNewLineFix(DFXPReader):
+    def _translate_tag(self, tag):
+        # convert text
+        if isinstance(tag, NavigableString):
+            # strips indentation whitespace only
+            pattern = re.compile(r"^(?:[\n\r]+\s*)?(.+)", re.MULTILINE)
+            matches = list(pattern.finditer(tag))
+
+            # result = pattern.search(tag)
+            while matches:
+                m = matches.pop(0)
+                # Escaping/unescaping xml entities is the responsibility of the
+                # xml parser used by BeautifulSoup in its initialization. The
+                # content of the tag variable at this point should be a plain
+                # unicode string with xml entities already converted to unicode
+                # characters.
+                tag_text = m.groups()[0].strip()
+                node = CaptionNode.create_text(tag_text, layout_info=tag.layout_info)
+                self.nodes.append(node)
+                if matches:
+                    self.nodes.append(CaptionNode.create_break(layout_info=tag.layout_info))
+        # convert line breaks
+        elif tag.name == "br":
+            self.nodes.append(CaptionNode.create_break(layout_info=tag.layout_info))
+        # convert italics
+        elif tag.name == "span":
+            # convert span
+            self._translate_span(tag)
+        elif tag.name == "p" and not tag.contents:
+            node = CaptionNode.create_text("", layout_info=tag.layout_info)
+            self.nodes.append(node)
+        else:
+            # recursively call function for any children elements
+            for a in tag.contents:
+                self._translate_tag(a)
