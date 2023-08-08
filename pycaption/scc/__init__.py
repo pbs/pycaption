@@ -570,6 +570,8 @@ class SCCWriter(BaseWriter):
                 return caption_node.content
             elif caption_node.type_ == CaptionNode.BREAK:
                 return '\n'
+            else:
+                return ''
         caption_text = ''.join(
             [caption_node_to_text(node) for node in caption.nodes])
         inner_lines = caption_text.split('\n')
