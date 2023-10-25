@@ -9,6 +9,7 @@ from pycaption.geometry import (
     UnitEnum, HorizontalAlignmentEnum, VerticalAlignmentEnum,
 )
 from tests.mixins import ReaderTestingMixIn
+from pytest_lazyfixture import lazy_fixture
 
 
 class TestDFXPReader(ReaderTestingMixIn):
