@@ -1,7 +1,6 @@
 pytest
 pytest-cov
 pytest-lazy-fixture
-pytest-html
 beautifulsoup4>=4.8.1
 lxml>=4.9.1
 cssutils>=2.0.0
