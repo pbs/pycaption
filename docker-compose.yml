@@ -1,19 +1,6 @@
 version: '3.8'
 
 services:
-  db:
-    image: postgres:13-alpine
-    user: postgres
-    environment:
-      - POSTGRES_DB=pycaption_db
-      - POSTGRES_USER=user
-      - POSTGRES_PASSWORD=pass
-      - PGDATA=/var/lib/postgresql/data
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
-
   test_py37:
     image: python:3.7-slim-bullseye
     command: sh -c "
@@ -21,12 +8,10 @@ services:
       pip install --upgrade pip;
       pip install -r test_requirements.txt;
       pip install -e .;
-      pytest tests/ -vvvv --junitxml test_report.xml --cov=tests --cov-report xml:coverage.xml;
+      pytest -vvvv --html=test_report.html --self-contained-html --cov=pycaption --cov-report=xml:coverage.xml;
       "
     volumes:
       - .:/pycaption
-    depends_on:
-      - db
 
   test_py38:
     image: python:3.8-slim-bullseye
@@ -35,12 +20,10 @@ services:
       pip install --upgrade pip;
       pip install -r test_requirements.txt;
       pip install -e .;
-      pytest tests/ -vvvv --junitxml test_report.xml --cov=tests --cov-report xml:coverage.xml;
+      pytest -vvvv --html=test_report.html --self-contained-html --cov=pycaption --cov-report=xml:coverage.xml;
       "
     volumes:
       - .:/pycaption
-    depends_on:
-      - db
 
   test_py39:
     image: python:3.9-slim-bullseye
@@ -49,13 +32,31 @@ services:
       pip install --upgrade pip;
       pip install -r test_requirements.txt;
       pip install -e .;
-      pytest tests/ -vvvv --junitxml test_report.xml --cov=tests --cov-report xml:coverage.xml;
+      pytest -vvvv --html=test_report.html --self-contained-html --cov=pycaption --cov-report=xml:coverage.xml;
       "
     volumes:
       - .:/pycaption
-    depends_on:
-      - db
 
-volumes:
-  pgdata:
-    driver: local
+  test_py310:
+    image: python:3.10-slim-bullseye
+    command: sh -c "
+      cd pycaption;
+      pip install --upgrade pip;
+      pip install -r test_requirements.txt;
+      pip install -e .;
+      pytest -vvvv --html=test_report.html --self-contained-html --cov=pycaption --cov-report=xml:coverage.xml;
+      "
+    volumes:
+      - .:/pycaption
+
+  test_py311:
+    image: python:3.11-slim-bullseye
+    command: sh -c "
+      cd pycaption;
+      pip install --upgrade pip;
+      pip install -r test_requirements.txt;
+      pip install -e .;
+      pytest -vvvv --html=test_report.html --self-contained-html --cov=pycaption --cov-report=xml:coverage.xml;
+      "
+    volumes:
+      - .:/pycaption
