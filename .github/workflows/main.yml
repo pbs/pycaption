@@ -27,11 +27,14 @@ jobs:
 
       - name: Run Test
         id: tests
-        run: ./run_tests.sh test_${{ matrix.python-version }}
+        run: |
+          ./run_tests.sh test_${{ matrix.python-version }} 
+          ls -al 
         continue-on-error: true
 
       - name: Add context info to env
         run: |
+          ls -al 
           sudo apt-get install -y --no-install-recommends libxml-xpath-perl
           COVERAGE=`xpath -q -e "floor(/coverage/@line-rate * 100)" coverage.xml`
           FAILED_AMOUNT=`xpath -q -e "number(/testsuites/testsuite/@failures)" junit.xml`
