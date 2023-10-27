@@ -8,9 +8,9 @@ on:
   workflow_call:
     secrets:
       SLACK_BOT_TOKEN:
-        required: false
+        required: true
       SLACK_CHANNEL_ID:
-        required: false
+        required: true
   workflow_dispatch:
 
 jobs:
