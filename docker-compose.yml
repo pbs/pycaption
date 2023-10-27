@@ -5,8 +5,8 @@ services:
     image: postgres:13-alpine
     user: postgres
     environment:
-      - POSTGRES_DB=history_db
-      - POSTGRES_USER=history_user2
+      - POSTGRES_DB=pycaption_db
+      - POSTGRES_USER=user
       - POSTGRES_PASSWORD=pass
       - PGDATA=/var/lib/postgresql/data
     volumes:
@@ -21,7 +21,7 @@ services:
       pip install --upgrade pip;
       pip install -r test_requirements.txt;
       pip install -e .;
-      python runtests.py -vv --html=./test-results_py37.html --self-contained-html --cov=pycaption --cov-report=term-missing:skip-covered;
+      pytest tests/ -vvvv --junitxml test_report.xml --cov=tests --cov-report xml:coverage.xml;
       "
     volumes:
       - .:/pycaption
@@ -35,7 +35,7 @@ services:
       pip install --upgrade pip;
       pip install -r test_requirements.txt;
       pip install -e .;
-      python runtests.py -vv --html=./test-results_py38.html --self-contained-html --cov=pycaption --cov-report=term-missing:skip-covered;
+      pytest tests/ -vvvv --junitxml test_report.xml --cov=tests --cov-report xml:coverage.xml;
       "
     volumes:
       - .:/pycaption
@@ -49,7 +49,7 @@ services:
       pip install --upgrade pip;
       pip install -r test_requirements.txt;
       pip install -e .;
-      python runtests.py -vv --html=./test-results_py39.html --self-contained-html --cov=pycaption --cov-report=term-missing:skip-covered;
+      pytest tests/ -vvvv --junitxml test_report.xml --cov=tests --cov-report xml:coverage.xml;
       "
     volumes:
       - .:/pycaption
