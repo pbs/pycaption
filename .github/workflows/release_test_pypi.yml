@@ -5,7 +5,7 @@ on: workflow_dispatch
 jobs:
   call-unit-tests-workflow:
     name: Run unit tests
-    uses: ./.github/workflows/main.yml
+    uses: ./.github/workflows/unit_tests.yml
     secrets:
       SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
       SLACK_CHANNEL_ID: ${{ secrets.SLACK_CHANNEL_ID }}
