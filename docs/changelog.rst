@@ -1,5 +1,12 @@
 Changelog
 ---------
+2.2.0
+^^^^^
+- Added support for Python 3.11
+- Added support for Beautifulsoup 4.12.2
+- Remove support for Beautifulsoup < 4.12.1
+- DFXP captions now end consistently with a newline
+
 2.1.1
 ^^^^^
 - Added nltk as transcript dependency
