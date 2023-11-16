@@ -327,6 +327,9 @@ class SCCReader(BaseReader):
             if word == self.last_command:
                 self.last_command = ''
                 return True
+            elif _is_pac_command(word) and _is_pac_command(self.last_command):
+                self.last_command = ''
+                return True
             # Fix for the <position> <tab offset> <position> <tab offset>
             # repetition
             elif _is_pac_command(word) and word in self.last_command:

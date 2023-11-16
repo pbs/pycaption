@@ -342,10 +342,9 @@ class InstructionNodeCreator:
 
         :type command: str
         """
-        self._update_positioning(command)
-
+        if command not in ["9120", "91ae", "912f", "91a1"]:
+            self._update_positioning(command)
         text = COMMANDS.get(command, '')
-
         if 'italic' in text:
             if 'end' not in text:
                 self._collection.append(
@@ -353,6 +352,8 @@ class InstructionNodeCreator:
                         self._position_tracer.get_current_position())
                 )
             else:
+                if command == "91ae":
+                    print(command)
                 self._collection.append(
                     _InstructionNode.create_italics_style(
                         self._position_tracer.get_current_position(),
@@ -365,11 +366,13 @@ class InstructionNodeCreator:
 
         :type command: str
         """
+
         if command in PAC_TAB_OFFSET_COMMANDS:
             tab_offset = PAC_TAB_OFFSET_COMMANDS[command]
             prev_positioning = self._position_tracer.default
             positioning = (prev_positioning[0],
                            prev_positioning[1] + tab_offset)
+
         else:
             first, second = command[:2], command[2:]
 
