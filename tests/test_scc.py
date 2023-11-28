@@ -1,4 +1,5 @@
 import pytest
+from pytest_lazyfixture import lazy_fixture
 
 from pycaption import SCCReader, CaptionReadNoCaptions, CaptionNode
 from pycaption.exceptions import CaptionReadTimingError
@@ -23,11 +24,11 @@ class TestSCCReader(ReaderTestingMixIn):
         super().assert_positive_answer_for_detection(sample_scc_pop_on)
 
     @pytest.mark.parametrize('different_sample', [
-        pytest.lazy_fixture('sample_dfxp'),
-        pytest.lazy_fixture('sample_microdvd'),
-        pytest.lazy_fixture('sample_sami'),
-        pytest.lazy_fixture('sample_srt'),
-        pytest.lazy_fixture('sample_webvtt')
+        lazy_fixture('sample_dfxp'),
+        lazy_fixture('sample_microdvd'),
+        lazy_fixture('sample_sami'),
+        lazy_fixture('sample_srt'),
+        lazy_fixture('sample_webvtt')
     ])
     def test_negative_answer_for_detection(self, different_sample):
         super().assert_negative_answer_for_detection(different_sample)
@@ -236,6 +237,38 @@ class TestSCCReader(ReaderTestingMixIn):
 
         assert exc_info.value.args[0].startswith(
             "Unsupported cue duration around 00:00:20.433")
+
+    def test_skip_first_pac_command(self, sample_scc_with_consecutive_pac_commands):
+        caption_set = SCCReader().read(sample_scc_with_consecutive_pac_commands)
+        caption = caption_set.get_captions('en-US')
+        actual_lines = [
+            node.content
+            for cap_ in caption
+            for node in cap_.nodes
+            if node.type_ == CaptionNode.TEXT
+        ]
+        expected_lines = [
+            '[ NARRATOR ]',
+             'MONKEYS LOVE THINGS THAT FLY.',
+             'YAY!',
+             '[ HOOTING ]',
+             "ESPECIALLY IF THEY'RE THE ONES",
+             'WHO GET TO FLY THEM.',
+             '[ CHILD ]',
+             'GEORGE MADE A MACHINE',
+             'FOR HOWIE TO',
+             'TO FIND CURIOUS GEORGE',
+             'AND HIS FRIENDS',
+             'EVERY DAY ONLINE,',
+             'SWING BY PBSKIDS.ORG',
+             'TO PLAY FUN GAMES AND WATCH',
+             'YOUR FAVORITE VIDEOS.',
+             'SWING BY PBSKIDS.ORG',
+             'TO PLAY FUN GAMES AND WATCH',
+             'YOUR FAVORITE VIDEOS.'
+        ]
+        # is not breaking the lines
+        assert expected_lines == actual_lines
 
 
 class TestCoverageOnly:

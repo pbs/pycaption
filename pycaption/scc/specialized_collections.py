@@ -352,8 +352,6 @@ class InstructionNodeCreator:
                         self._position_tracer.get_current_position())
                 )
             else:
-                if command == "91ae":
-                    print(command)
                 self._collection.append(
                     _InstructionNode.create_italics_style(
                         self._position_tracer.get_current_position(),
