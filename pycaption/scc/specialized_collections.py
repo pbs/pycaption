@@ -8,7 +8,7 @@ from ..geometry import (
 )
 from .constants import (
     PAC_BYTES_TO_POSITIONING_MAP, COMMANDS, PAC_TAB_OFFSET_COMMANDS,
-    MICROSECONDS_PER_CODEWORD, EXTENDED_CHARS, CHARACTERS
+    MICROSECONDS_PER_CODEWORD, INCONVERTIBLE_EXTENDED_CHARS_ASSOCIATION
 )
 
 PopOnCue = collections.namedtuple("PopOnCue", "buffer, start, end")
@@ -423,12 +423,21 @@ class InstructionNodeCreator:
 
         :type accented_character: str
         """
-        is_text_node = self._collection and self._collection[-1].is_text_node() and self._collection[-1].text
+        is_text_node = (
+                self._collection and
+                self._collection[-1].is_text_node() and
+                self._collection[-1].text
+                )
         if is_text_node:
-            last_char = self._collection[-1].text[-1]
-            is_char = last_char in CHARACTERS.values() or last_char in EXTENDED_CHARS.values()
-            if is_char:
+            try:
+                ascii_char = unicodedata.normalize('NFD', accented_character) \
+                    .encode('ascii', 'strict').decode("utf-8")
+            except (UnicodeEncodeError, UnicodeDecodeError):
+                ascii_char = INCONVERTIBLE_EXTENDED_CHARS_ASSOCIATION[accented_character]
+
+            if ascii_char and self._collection[-1].text[-1] == ascii_char:
                 self._collection[-1].text = self._collection[-1].text[:-1]
+
 
 
 def _get_layout_from_tuple(position_tuple):
