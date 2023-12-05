@@ -292,7 +292,7 @@ class SCCReader(BaseReader):
                 self._translate_word(word)
 
     def _translate_word(self, word):
-        if self._handle_double_command(word):
+        if self._skip_double_command(word):
             # count frames for timing
             self.time_translator.increment_frames()
             return
@@ -316,7 +316,7 @@ class SCCReader(BaseReader):
         # count frames for timing only after processing a command
         self.time_translator.increment_frames()
 
-    def _handle_double_command(self, word):
+    def _skip_double_command(self, word):
         # If the caption is to be broadcast, each of the commands are doubled
         # up for redundancy in case the signal is garbled in transmission.
         # The decoder is programmed to ignore a second command when it is the
