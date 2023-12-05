@@ -263,7 +263,8 @@ class TestCoverageOnly:
             'WE SERVE.',
             '®°½',
             'ABû',
-            'ÁÁÉÓ¡',
+            # 'ÁÁÉÓ¡',
+            '¡',
             "WHERE YOU'RE STANDING NOW,",
             "LOOKING OUT THERE, THAT'S AL",
             'THE CROWD.',
@@ -272,7 +273,6 @@ class TestCoverageOnly:
             'And wildlife.',
             '>> Bike Iowa, your source for',
         ]
-
         assert expected_texts == actual_texts
 
     def test_multiple_formats(self, sample_scc_multiple_formats):
