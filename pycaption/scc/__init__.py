@@ -88,7 +88,7 @@ from pycaption.base import (
     BaseReader, BaseWriter, CaptionSet, CaptionNode,
 )
 from pycaption.exceptions import CaptionReadNoCaptions, InvalidInputError, \
-    CaptionReadTimingError
+    CaptionReadTimingError, CaptionLineLengthError
 from .constants import (
     HEADER, COMMANDS, SPECIAL_CHARS, EXTENDED_CHARS, CHARACTERS,
     MICROSECONDS_PER_CODEWORD, CHARACTER_TO_CODE,
@@ -232,6 +232,22 @@ class SCCReader(BaseReader):
         captions = CaptionSet({lang: self.caption_stash.get_all()})
 
         # check captions for incorrect lengths
+        lines = []
+        for caption in self.caption_stash._collection:
+            caption_text = "".join(caption.to_real_caption().get_text_nodes())
+            lines.extend(caption_text.split("\n"))
+        lines_too_long = [line for line in lines if len(line) >= 32]
+
+        if bool(lines_too_long):
+            msg = ""
+            for line in lines_too_long:
+                msg += line + f" - Length { len(line)}" + "\n"
+            raise CaptionLineLengthError(
+                f"32 character limit for caption cue in scc file.\n"
+                f"Lines longer than 32:\n"
+                f"{msg}"
+            )
+
         for cap in captions.get_captions(lang):
             # if there's an end time on a caption and the difference is
             # less than .05s kill it (this is likely caused by a standalone
@@ -526,13 +542,7 @@ class SCCWriter(BaseWriter):
     # Wrap lines at 32 chars
     @staticmethod
     def _layout_line(caption):
-        def caption_node_to_text(caption_node):
-            if caption_node.type_ == CaptionNode.TEXT:
-                return caption_node.content
-            elif caption_node.type_ == CaptionNode.BREAK:
-                return '\n'
-        caption_text = ''.join(
-            [caption_node_to_text(node) for node in caption.nodes])
+        caption_text = "".join(caption.get_text_nodes())
         inner_lines = caption_text.split('\n')
         inner_lines_laid_out = [textwrap.fill(x, 32) for x in inner_lines]
         return '\n'.join(inner_lines_laid_out)
