@@ -1,4 +1,5 @@
 from itertools import product
+from collections import defaultdict
 
 COMMANDS = {
     '9420': '',
@@ -985,3 +986,64 @@ MICROSECONDS_PER_CODEWORD = 1000.0 * 1000.0 / (30.0 * 1000.0 / 1001.0)
 
 
 HEADER = 'Scenarist_SCC V1.0'
+
+# taken from
+# http://www.theneitherworld.com/mcpoodle/SCC_TOOLS/DOCS/CC_CHARS.HTML
+INCONVERTIBLE_TO_ASCII_EXTENDED_CHARS_ASSOCIATION = {
+    '¡': "!",   # inverted exclamation mark
+     '¤': "C",  # currency
+     '¥': "Y",  # yen
+     '¦': "-",  # broken bar
+     '©': "c",  # copyright sign
+     '«': '"',  # left pointing double angle quotation mark
+     '»': '"',  # right pointing double angle quotation mark
+     'À': "A",
+     'Á': "A",
+     'Â': "A",
+     'Ã': "A",
+     'Ä': "A",
+     'Å': "A",
+     'Ç': "C",
+     'È': "E",
+     'É': "E",
+     'Ê': "E",
+     'Ë': "E",
+     'Ì': "I",
+     'Í': "I",
+     'Î': "I",
+     'Ï': "I",
+     'Ò': "O",
+     'Ó': "O",
+     'Ô': ")",
+     'Õ': "O",
+     'Ö': "O",
+     'Ø': "O",
+     'Ù': "U",
+     'Ú': "U",
+     'Û': "U",
+     'Ü': "U",
+     'ß': "s",
+     'ã': "a",
+     'ä': "a",
+     'å': "a",
+     'ë': "e",
+     'ì': "i",
+     'ï': "i",
+     'ò': "o",
+     'õ': "o",
+     'ö': "o",
+     'ø': "o",
+     'ù': "u",
+     'ü': "u",
+     '—': "-",  # em dash
+     '‘': "'",
+     '’': "'",
+     '“': '"',
+     '”': '"',
+     '•': ".",
+     '℠': "s",
+     '┌': "+",
+     '┐': "+",
+     '└': "+",
+     '┘': "+"
+}
