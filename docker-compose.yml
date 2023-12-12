@@ -1,18 +1,6 @@
 version: '3.8'
 
 services:
-  test_py37:
-    image: python:3.7-slim-bullseye
-    command: sh -c "
-      cd pycaption;
-      pip install --upgrade pip;
-      pip install -r test_requirements.txt;
-      pip install -e .;
-      pytest -vvvv --color=yes --junit-xml=junit.xml --cov=pycaption --cov-report xml:coverage.xml;
-      "
-    volumes:
-      - .:/pycaption
-
   test_py38:
     image: python:3.8-slim-bullseye
     command: sh -c "
@@ -51,6 +39,18 @@ services:
 
   test_py311:
     image: python:3.11-slim-bullseye
+    command: sh -c "
+      cd pycaption;
+      pip install --upgrade pip;
+      pip install -r test_requirements.txt;
+      pip install -e .;
+      pytest -vvvv --color=yes --junit-xml=junit.xml --cov=pycaption --cov-report xml:coverage.xml;
+      "
+    volumes:
+      - .:/pycaption
+
+  test_py312:
+    image: python:3.12-slim-bullseye
     command: sh -c "
       cd pycaption;
       pip install --upgrade pip;
