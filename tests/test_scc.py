@@ -193,9 +193,11 @@ class TestSCCReader(ReaderTestingMixIn):
     def test_skip_extended_characters_ascii_duplicate(
             self, sample_scc_with_extended_characters):
         caption_set = SCCReader().read(sample_scc_with_extended_characters)
-        nodes = caption_set.get_captions('en-US')[0].nodes
-
-        assert nodes[0].content == 'MÄRTHA:'
+        captions = caption_set.get_captions('en-US')
+        assert captions[0].nodes[0].content == 'MÄRTHA:'
+        expected_result = ['JUNIOR: ¡Yum!', None, 'Ya me siento mucho mejor.']
+        content = [node.content for node in captions[1].nodes]
+        assert all(result in expected_result for result in content)
 
     def test_skip_duplicate_tab_offset(self, sample_scc_duplicate_tab_offset):
         expected_lines = [
@@ -272,7 +274,6 @@ class TestCoverageOnly:
             'And wildlife.',
             '>> Bike Iowa, your source for',
         ]
-
         assert expected_texts == actual_texts
 
     def test_multiple_formats(self, sample_scc_multiple_formats):
