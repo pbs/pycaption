@@ -274,7 +274,7 @@ class ScenaristDVDWriter(BaseWriter):
 
                     # quantize the image to our palette
                     img_quant = img.quantize(palette=self.palette_image, dither=0)
-                    img_quant.save(tmpDir + '/subtitle%04d.tif' % index, compression="tiff_deflate")
+                    img_quant.save(tmpDir + '/subtitle%04d.tif' % index, compression="raw")
 
                     index = index + 1
             zipit(tmpDir, buf)
