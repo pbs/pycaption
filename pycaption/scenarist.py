@@ -196,7 +196,16 @@ class ScenaristDVDWriter(BaseWriter):
         distances.sort(key=lambda l: l[0])
         return distances
 
-    def write(self, caption_set: CaptionSet, position='bottom', avoid_same_next_start_prev_end=False):
+    def write(
+            self,
+            caption_set: CaptionSet,
+            position='bottom',
+            avoid_same_next_start_prev_end=False,
+            tiff_compression='tiff_deflate',
+    ):
+        if tiff_compression not in ['tiff_deflate', 'raw']:
+            raise ValueError('Unknown tiff_compression. Supported: {}'.format('tiff_deflate, raw'))
+
         position = position.lower().strip()
         if position not in ScenaristDVDWriter.VALID_POSITION:
             raise ValueError('Unknown position. Supported: {}'.format(','.join(ScenaristDVDWriter.VALID_POSITION)))
@@ -274,7 +283,7 @@ class ScenaristDVDWriter(BaseWriter):
 
                     # quantize the image to our palette
                     img_quant = img.quantize(palette=self.palette_image, dither=0)
-                    img_quant.save(tmpDir + '/subtitle%04d.tif' % index, compression="raw")
+                    img_quant.save(tmpDir + '/subtitle%04d.tif' % index, compression=tiff_compression)
 
                     index = index + 1
             zipit(tmpDir, buf)
