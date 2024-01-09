@@ -1,5 +1,9 @@
 Changelog
 ---------
+2.2.1
+^^^^^
+- Ignore the substitute character that comes before the extended character in SCC files.
+
 2.2.0
 ^^^^^
 - Added support for Python 3.11
