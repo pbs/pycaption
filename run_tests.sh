@@ -2,11 +2,11 @@
 
 DOCKER_CMD="docker-compose -p pycaption"
 
-SERVICE="test_py311"
+SERVICE="test_py312"
 
 if [ "$@" ]; then
-  if [ "$1" == "test_py37" ] || [ "$1" == "test_py38" ]  || \
-  [ "$1" == "test_py39"  ] || [ "$1" == "test_py310" ] || [ "$1" == "test_py311" ]; then
+  if [ "$1" == "test_py38" ]  || [ "$1" == "test_py39"  ] ||
+  [ "$1" == "test_py310" ] || [ "$1" == "test_py311" ] || [ "$1" == "test_py312" ]; then
     SERVICE="$1"
   fi
 fi

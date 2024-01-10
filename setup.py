@@ -35,7 +35,7 @@ setup(
         'Release notes': 'https://pycaption.readthedocs.io'
                          '/en/stable/changelog.html',
     },
-    python_requires='>=3.6,<4.0',
+    python_requires='>=3.8,<4.0',
     install_requires=dependencies,
     extras_require={
         'dev': dev_dependencies,
@@ -49,11 +49,11 @@ setup(
         'Operating System :: OS Independent',
         'Programming Language :: Python',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.6',
-        'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
+        'Programming Language :: Python :: 3.11',
+        'Programming Language :: Python :: 3.12',
         'Topic :: Software Development :: Libraries',
         'Topic :: Software Development :: Libraries :: Python Modules',
         'Topic :: Multimedia :: Video',
