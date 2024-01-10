@@ -1,5 +1,10 @@
 Changelog
 ---------
+2.2.2
+^^^^^
+- Remove support for Python 3.6 & 3.7
+- Restrict SCC source files to 31 characters per line (32 will throw an exception)
+
 2.2.1
 ^^^^^
 - Ignore the substitute character that comes before the extended character in SCC files.
