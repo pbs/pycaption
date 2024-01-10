@@ -212,7 +212,7 @@ class Caption:
             f'{self.format_start()} --> {self.format_end()}\n{self.get_text()}'
         )
 
-    def get_text(self):
+    def get_text_nodes(self):
         """
         Get the text of the caption.
         """
@@ -224,7 +224,10 @@ class Caption:
                 return '\n'
             return ''
 
-        text_nodes = [get_text_for_node(node) for node in self.nodes]
+        return [get_text_for_node(node) for node in self.nodes]
+
+    def get_text(self):
+        text_nodes = self.get_text_nodes()
         return ''.join(text_nodes).strip()
 
     def _format_timestamp(self, microseconds, msec_separator=None):

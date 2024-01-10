@@ -35,3 +35,9 @@ class RelativizationError(Exception):
 
 class InvalidInputError(RuntimeError):
     """Error raised when the input is invalid (i.e. a unicode string)"""
+
+
+class CaptionLineLengthError(CaptionReadError):
+    """
+    Error raised when a Caption has a line longer than 32 characters.
+    """

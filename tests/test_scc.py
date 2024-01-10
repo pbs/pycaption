@@ -1,7 +1,7 @@
 import pytest
 
 from pycaption import SCCReader, CaptionReadNoCaptions, CaptionNode
-from pycaption.exceptions import CaptionReadTimingError
+from pycaption.exceptions import CaptionReadTimingError, CaptionLineLengthError
 from pycaption.geometry import (
     UnitEnum, HorizontalAlignmentEnum, VerticalAlignmentEnum,
 )
@@ -238,6 +238,14 @@ class TestSCCReader(ReaderTestingMixIn):
 
         assert exc_info.value.args[0].startswith(
             "Unsupported cue duration around 00:00:20.433")
+
+    def test_line_too_long(self, sample_scc_with_line_too_long):
+        with pytest.raises(CaptionLineLengthError) as exc_info:
+            SCCReader().read(sample_scc_with_line_too_long)
+
+        assert exc_info.value.args[0].startswith(
+            "32 character limit for caption cue in scc file.")
+        assert "And he said, I can do a TV show. - Length 32" in exc_info.value.args[0].split("\n")
 
 
 class TestCoverageOnly:
