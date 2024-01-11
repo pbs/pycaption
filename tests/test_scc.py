@@ -2,7 +2,7 @@ import pytest
 from pytest_lazyfixture import lazy_fixture
 
 from pycaption import SCCReader, CaptionReadNoCaptions, CaptionNode
-from pycaption.exceptions import CaptionReadTimingError
+from pycaption.exceptions import CaptionReadTimingError, CaptionLineLengthError
 from pycaption.geometry import (
     UnitEnum, HorizontalAlignmentEnum, VerticalAlignmentEnum,
 )
@@ -194,9 +194,11 @@ class TestSCCReader(ReaderTestingMixIn):
     def test_skip_extended_characters_ascii_duplicate(
             self, sample_scc_with_extended_characters):
         caption_set = SCCReader().read(sample_scc_with_extended_characters)
-        nodes = caption_set.get_captions('en-US')[0].nodes
-
-        assert nodes[0].content == 'MÄRTHA:'
+        captions = caption_set.get_captions('en-US')
+        assert captions[0].nodes[0].content == 'MÄRTHA:'
+        expected_result = ['JUNIOR: ¡Yum!', None, 'Ya me siento mucho mejor.']
+        content = [node.content for node in captions[1].nodes]
+        assert all(result in expected_result for result in content)
 
     def test_skip_duplicate_tab_offset(self, sample_scc_duplicate_tab_offset):
         expected_lines = [
@@ -270,6 +272,14 @@ class TestSCCReader(ReaderTestingMixIn):
         # is not breaking the lines
         assert expected_lines == actual_lines
 
+    def test_line_too_long(self, sample_scc_with_line_too_long):
+        with pytest.raises(CaptionLineLengthError) as exc_info:
+            SCCReader().read(sample_scc_with_line_too_long)
+
+        assert exc_info.value.args[0].startswith(
+            "32 character limit for caption cue in scc file.")
+        assert "And he said, I can do a TV show. - Length 32" in exc_info.value.args[0].split("\n")
+
 
 class TestCoverageOnly:
     """In order to refactor safely, we need coverage of 95% or more.
@@ -305,7 +315,6 @@ class TestCoverageOnly:
             'And wildlife.',
             '>> Bike Iowa, your source for',
         ]
-
         assert expected_texts == actual_texts
 
     def test_multiple_formats(self, sample_scc_multiple_formats):
@@ -363,7 +372,6 @@ class TestCoverageOnly:
         ]
 
         actual_timings = [(c_.start, c_.end) for c_ in captions]
-
         assert expected_timings == actual_timings
 
     def test_freeze_colon_spec_time(self, sample_scc_pop_on):

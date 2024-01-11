@@ -88,7 +88,7 @@ from pycaption.base import (
     BaseReader, BaseWriter, CaptionSet, CaptionNode,
 )
 from pycaption.exceptions import CaptionReadNoCaptions, InvalidInputError, \
-    CaptionReadTimingError
+    CaptionReadTimingError, CaptionLineLengthError
 from .constants import (
     HEADER, COMMANDS, SPECIAL_CHARS, EXTENDED_CHARS, CHARACTERS,
     MICROSECONDS_PER_CODEWORD, CHARACTER_TO_CODE,
@@ -232,6 +232,22 @@ class SCCReader(BaseReader):
         captions = CaptionSet({lang: self.caption_stash.get_all()})
 
         # check captions for incorrect lengths
+        lines = []
+        for caption in self.caption_stash._collection:
+            caption_text = "".join(caption.to_real_caption().get_text_nodes())
+            lines.extend(caption_text.split("\n"))
+        lines_too_long = [line for line in lines if len(line) >= 32]
+
+        if bool(lines_too_long):
+            msg = ""
+            for line in lines_too_long:
+                msg += line + f" - Length { len(line)}" + "\n"
+            raise CaptionLineLengthError(
+                f"32 character limit for caption cue in scc file.\n"
+                f"Lines longer than 32:\n"
+                f"{msg}"
+            )
+
         for cap in captions.get_captions(lang):
             # if there's an end time on a caption and the difference is
             # less than .05s kill it (this is likely caused by a standalone
@@ -285,21 +301,27 @@ class SCCReader(BaseReader):
         self.time_translator.start_at(parts[0][0])
 
         # loop through each word
-        for word in parts[0][2].split(' '):
-            # ignore empty results or invalid commands
-            word = word.strip()
-            if len(word) == 4:
-                self._translate_word(word)
+        words = [word.strip() for word in parts[0][2].split(' ') if len(word) == 4]
 
-    def _translate_word(self, word):
-        if self._skip_double_command(word):
+        for idx, word in enumerate(words):
+            self._translate_word(word, words, idx)
+
+    @staticmethod
+    def get_command(commands, idx):
+        try:
+            return commands[idx]
+        except IndexError:
+            return None
+
+    def _translate_word(self, word, words, idx):
+        if self._skip_double_command(word, words, idx):
             # count frames for timing
             self.time_translator.increment_frames()
             return
         # first check if word is a command
         # TODO - check that all the positioning commands are here, or use
         # some other strategy to determine if the word is a command.
-        if word in COMMANDS or _is_pac_command(word):
+        if word in COMMANDS or _is_pac_command(word) or word in PAC_TAB_OFFSET_COMMANDS:
             self._translate_command(word)
 
         # second, check if word is a special character
@@ -316,32 +338,35 @@ class SCCReader(BaseReader):
         # count frames for timing only after processing a command
         self.time_translator.increment_frames()
 
-    def _skip_double_command(self, word):
+    def _skip_double_command(self, word, words, idx):
         # If the caption is to be broadcast, each of the commands are doubled
         # up for redundancy in case the signal is garbled in transmission.
         # The decoder is programmed to ignore a second command when it is the
         # same as the first.
         # Also like codes, Special Characters are always doubled up,
         # with only one member of each pair being displayed.
+        next_command = self.get_command(words, idx + 1)
+        second_next = self.get_command(words, idx + 2)
         if word in COMMANDS or _is_pac_command(word) or word in SPECIAL_CHARS:
-            if word == self.last_command:
+            # skip duplicates, execute the last occurrence
+            if word == next_command:
                 self.last_command = ''
                 return True
-            elif _is_pac_command(word) and _is_pac_command(self.last_command):
+            # Fix for the <position> <position> to execute only the last one
+            elif _is_pac_command(word) and _is_pac_command(next_command):
                 self.last_command = ''
                 return True
             # Fix for the <position> <tab offset> <position> <tab offset>
             # repetition
-            elif _is_pac_command(word) and word in self.last_command:
+            elif _is_pac_command(word) and next_command in PAC_TAB_OFFSET_COMMANDS and _is_pac_command(second_next):
                 self.last_command = ''
                 return True
+            # execute offset commands only if previous command is PAC and next is not pack
             elif word in PAC_TAB_OFFSET_COMMANDS:
-                if _is_pac_command(self.last_command):
-                    self.last_command += f" {word}"
+                if _is_pac_command(self.last_command) and not _is_pac_command(next_command):
                     return False
                 else:
                     return True
-
         self.last_command = word
         return False
 
@@ -529,13 +554,7 @@ class SCCWriter(BaseWriter):
     # Wrap lines at 32 chars
     @staticmethod
     def _layout_line(caption):
-        def caption_node_to_text(caption_node):
-            if caption_node.type_ == CaptionNode.TEXT:
-                return caption_node.content
-            elif caption_node.type_ == CaptionNode.BREAK:
-                return '\n'
-        caption_text = ''.join(
-            [caption_node_to_text(node) for node in caption.nodes])
+        caption_text = "".join(caption.get_text_nodes())
         inner_lines = caption_text.split('\n')
         inner_lines_laid_out = [textwrap.fill(x, 32) for x in inner_lines]
         return '\n'.join(inner_lines_laid_out)
