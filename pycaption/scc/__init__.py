@@ -236,7 +236,7 @@ class SCCReader(BaseReader):
         for caption in self.caption_stash._collection:
             caption_text = "".join(caption.to_real_caption().get_text_nodes())
             lines.extend(caption_text.split("\n"))
-        lines_too_long = [line for line in lines if len(line) >= 32]
+        lines_too_long = [line for line in lines if len(line) > 32]
 
         if bool(lines_too_long):
             msg = ""
