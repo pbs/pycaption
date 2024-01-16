@@ -73,17 +73,15 @@ class TestSCCReader(ReaderTestingMixIn):
             ((40.0, UnitEnum.PERCENT), (53.0, UnitEnum.PERCENT)),
             ((70.0, UnitEnum.PERCENT), (17.0, UnitEnum.PERCENT)),
             ((20.0, UnitEnum.PERCENT), (35.0, UnitEnum.PERCENT)),
-            ((20.0, UnitEnum.PERCENT), (83.0, UnitEnum.PERCENT)),
+            ((25.0, UnitEnum.PERCENT), (83.0, UnitEnum.PERCENT)),
             ((70.0, UnitEnum.PERCENT), (11.0, UnitEnum.PERCENT)),
             ((40.0, UnitEnum.PERCENT), (41.0, UnitEnum.PERCENT)),
-            ((20.0, UnitEnum.PERCENT), (71.0, UnitEnum.PERCENT))
+            ((25.0, UnitEnum.PERCENT), (71.0, UnitEnum.PERCENT))
         ]
-
         actual_positioning = [
             caption_.layout_info.origin.serialized()
             for caption_ in captions.get_captions('en-US')
         ]
-
         assert expected_positioning == actual_positioning
 
     def test_tab_offset(self, sample_scc_tab_offset):
@@ -275,10 +273,10 @@ class TestSCCReader(ReaderTestingMixIn):
     def test_line_too_long(self, sample_scc_with_line_too_long):
         with pytest.raises(CaptionLineLengthError) as exc_info:
             SCCReader().read(sample_scc_with_line_too_long)
-
         assert exc_info.value.args[0].startswith(
             "32 character limit for caption cue in scc file.")
-        assert "And he said, I can do a TV show. - Length 32" in exc_info.value.args[0].split("\n")
+        assert ("the showowowowowowowowowowowowowowowowowowowowowowowowowowow started - Length 68"
+                in exc_info.value.args[0].split("\n"))
 
 
 class TestCoverageOnly:
@@ -371,6 +369,24 @@ class TestCoverageOnly:
             (44266666.666666664, 44866666.666666664),
         ]
 
+        l = [(766666.6666666667, 2800000.0),
+             (2800000.0, 4600000.0),
+             (4600000.0, 6166666.666666667),
+             (6166666.666666667, 9733333.333333332),
+             (9733333.333333332, 11266666.666666668),
+             (11266666.666666668, 12266666.666666668),
+             (12266666.666666668, 13266666.666666668),
+             (13266666.666666668, 14266666.666666668),
+             (14266666.666666668, 17066666.666666668),
+             (17066666.666666668, 18666666.666666668),
+             (18666666.666666668, 20233333.333333336),
+             (20233333.333333336, 21833333.333333332),
+             (21833333.333333332, 34900000.0),
+             (34900000.0, 36400000.0),
+             (36400000.0, 44266666.666666664),
+             (44266666.666666664, 44866666.666666664)
+]
+
         actual_timings = [(c_.start, c_.end) for c_ in captions]
         assert expected_timings == actual_timings
 
@@ -388,6 +404,21 @@ class TestCoverageOnly:
             (26659966.666666664, 32132100.000000004),
             (32132100.000000004, 36169466.666666664),
         ]
+
+        l = [(9776433.333333332, 12312300.0),
+             (14781433.33333333, 16950266.666666664),
+             (16950266.666666664, 18685333.333333332),
+             (18685333.333333332, 20820800.0),
+             (20820800.0, 26693333.333333332),
+             (26693333.333333332, 32165466.66666666),
+             (32165466.66666666, 36202833.33333332)]
+        l1 = [(9776433.333333332, 12312300.0),
+             (14781433.33333333, 16950266.666666664),
+             (16950266.666666664, 18685333.333333332),
+             (18685333.333333332, 20820800.0),
+             (20820800.0, 26693333.333333332),
+             (26693333.333333332, 32165466.66666666),
+             (32165466.66666666, 36202833.33333332)]
 
         actual_timings = [
             (c_.start, c_.end) for c_ in scc1.get_captions('en-US')]
@@ -610,4 +641,4 @@ class TestTimingCorrectingCaptionList:
         # just one caption, first EOC disappears
         num_captions = len(caption_set.get_captions('en-US'))
 
-        assert num_captions == 2
+        assert num_captions == 1

@@ -236,7 +236,7 @@ class SCCReader(BaseReader):
         for caption in self.caption_stash._collection:
             caption_text = "".join(caption.to_real_caption().get_text_nodes())
             lines.extend(caption_text.split("\n"))
-        lines_too_long = [line for line in lines if len(line) >= 32]
+        lines_too_long = [line for line in lines if len(line) > 32]
 
         if bool(lines_too_long):
             msg = ""
@@ -347,28 +347,31 @@ class SCCReader(BaseReader):
         # with only one member of each pair being displayed.
         next_command = self.get_command(words, idx + 1)
         second_next = self.get_command(words, idx + 2)
+        prev_command = self.get_command(words, idx - 1)
+
         if word in COMMANDS or _is_pac_command(word) or word in SPECIAL_CHARS:
-            # skip duplicates, execute the last occurrence
-            if word == next_command:
+            # skip duplicates, execute the last occurrence if not a positioning command
+            if word == self.last_command and not _is_pac_command(word):
                 self.last_command = ''
                 return True
-            # Fix for the <position> <position> to execute only the last one
+            # skip consecutive positioning commands, execute the last one
             elif _is_pac_command(word) and _is_pac_command(next_command):
                 self.last_command = ''
                 return True
-            # Fix for the <position> <tab offset> <position> <tab offset>
-            # repetition
+            # Fix for the <position> <tab offset> <position> <tab offset> repetition
+            # execute the last positioning command
             elif _is_pac_command(word) and next_command in PAC_TAB_OFFSET_COMMANDS and _is_pac_command(second_next):
                 self.last_command = ''
                 return True
-            # execute offset commands only if previous command is PAC and next is not pack
+            # execute offset commands only if previous command is PAC and next is not PAC
             elif word in PAC_TAB_OFFSET_COMMANDS:
                 if _is_pac_command(self.last_command) and not _is_pac_command(next_command):
+                    self.last_command = word
                     return False
                 else:
                     return True
-        self.last_command = word
-        return False
+            self.last_command = word
+            return False
 
     def _translate_special_char(self, word):
         self.buffer.add_chars(SPECIAL_CHARS[word])
