@@ -4,6 +4,8 @@ Changelog
 ^^^^^
 - Remove support for Python 3.6 & 3.7
 - Restrict SCC source files to 31 characters per line (32 will throw an exception)
+- Bump readthedocs-sphinx-search from 0.3.1 to 0.3.2
+- Change Apache copyright licensing (ending) copyright year
 
 2.2.1
 ^^^^^
