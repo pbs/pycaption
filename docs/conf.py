@@ -45,7 +45,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = 'pycaption'
-copyright = '2012-2023, PBS.org ' \
+copyright = '2012-2024, PBS.org ' \
             '(available under the Apache License, Version 2.0)'
 
 # The version info for the project you're documenting, acts as replacement for
