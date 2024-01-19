@@ -245,7 +245,8 @@ class TestSCCReader(ReaderTestingMixIn):
 
         assert exc_info.value.args[0].startswith(
             "32 character limit for caption cue in scc file.")
-        assert "And he said, I can do a TV show. - Length 32" in exc_info.value.args[0].split("\n")
+        assert ("was Cal l l l l l l l l l l l l l l l l l l l l l l l l l l l l Denison, a friend - Length 81"
+                in exc_info.value.args[0].split("\n"))
 
 
 class TestCoverageOnly:
