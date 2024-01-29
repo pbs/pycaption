@@ -43,6 +43,11 @@ setup(
     },
     packages=find_packages(),
     include_package_data=True,
+    entry_points={
+        'console_scripts': [
+            'pycaption = pycaption.cli:main',
+        ],
+    },
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'License :: OSI Approved :: Apache Software License',
