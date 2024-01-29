@@ -3,6 +3,10 @@ import pytest
 
 @pytest.fixture(scope="session")
 def sample_microdvd():
+    return sample_microdvd_base()
+
+
+def sample_microdvd_base():
     return """{230}{307}( clock ticking )
 {371}{425}MAN:|When we think|\u266a ...say bow, wow, \u266a
 {425}{468}we have this vision of Einstein

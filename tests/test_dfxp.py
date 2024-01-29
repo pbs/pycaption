@@ -9,7 +9,11 @@ from pycaption.geometry import (
     UnitEnum, HorizontalAlignmentEnum, VerticalAlignmentEnum,
 )
 from tests.mixins import ReaderTestingMixIn
-from pytest_lazyfixture import lazy_fixture
+from tests.fixtures.microdvd import sample_microdvd_base
+from tests.fixtures.sami import sample_sami_base
+from tests.fixtures.scc import sample_scc_pop_on_base
+from tests.fixtures.srt import sample_srt_base
+from tests.fixtures.webvtt import sample_webvtt_base
 
 
 class TestDFXPReader(ReaderTestingMixIn):
@@ -20,11 +24,11 @@ class TestDFXPReader(ReaderTestingMixIn):
         super().assert_positive_answer_for_detection(sample_dfxp)
 
     @pytest.mark.parametrize('different_sample', [
-        pytest.lazy_fixture('sample_microdvd'),
-        pytest.lazy_fixture('sample_sami'),
-        pytest.lazy_fixture('sample_scc_pop_on'),
-        pytest.lazy_fixture('sample_srt'),
-        pytest.lazy_fixture('sample_webvtt')
+        sample_microdvd_base(),
+        sample_sami_base(),
+        sample_scc_pop_on_base(),
+        sample_srt_base(),
+        sample_webvtt_base()
     ])
     def test_negative_answer_for_detection(self, different_sample):
         super().assert_negative_answer_for_detection(different_sample)
@@ -103,7 +107,7 @@ class TestDFXPReader(ReaderTestingMixIn):
             self, sample_dfxp_invalid_positioning_value_template):
         invalid_value_dfxp = (
             sample_dfxp_invalid_positioning_value_template.
-                format(origin="px 5px")
+            format(origin="px 5px")
         )
         with pytest.raises(CaptionReadSyntaxError):
             DFXPReader().read(invalid_value_dfxp)

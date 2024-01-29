@@ -5,6 +5,11 @@ import pytest
 from pycaption import SAMIReader, CaptionReadNoCaptions, CaptionReadSyntaxError
 from pycaption.exceptions import CaptionReadTimingError
 from pycaption.geometry import HorizontalAlignmentEnum, Size, UnitEnum  # noqa
+from tests.fixtures.dfxp import sample_dfxp_base
+from tests.fixtures.microdvd import sample_microdvd_base
+from tests.fixtures.scc import sample_scc_pop_on_base
+from tests.fixtures.srt import sample_srt_base
+from tests.fixtures.webvtt import sample_webvtt_base
 from tests.mixins import ReaderTestingMixIn
 
 
@@ -16,11 +21,11 @@ class TestSAMIReader(ReaderTestingMixIn):
         super().assert_positive_answer_for_detection(sample_sami)
 
     @pytest.mark.parametrize('different_sample', [
-        pytest.lazy_fixture('sample_dfxp'),
-        pytest.lazy_fixture('sample_microdvd'),
-        pytest.lazy_fixture('sample_scc_pop_on'),
-        pytest.lazy_fixture('sample_srt'),
-        pytest.lazy_fixture('sample_webvtt')
+        sample_dfxp_base(),
+        sample_microdvd_base(),
+        sample_scc_pop_on_base(),
+        sample_srt_base(),
+        sample_webvtt_base()
     ])
     def test_negative_answer_for_detection(self, different_sample):
         super().assert_negative_answer_for_detection(different_sample)

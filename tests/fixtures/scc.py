@@ -48,6 +48,10 @@ Scenarist_SCC V1.0
 
 @pytest.fixture(scope="session")
 def sample_scc_pop_on():
+    return sample_scc_pop_on_base()
+
+
+def sample_scc_pop_on_base():
     return """Scenarist_SCC V1.0
 
 00:00:09:05 94ae 94ae 9420 9420 9470 9470 a820 e3ec efe3 6b20 f4e9 e36b e96e 6720 2980 942c 942c 942f 942f

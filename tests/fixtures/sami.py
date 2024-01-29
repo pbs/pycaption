@@ -3,6 +3,10 @@ import pytest
 
 @pytest.fixture(scope="session")
 def sample_sami():
+    return sample_sami_base()
+
+
+def sample_sami_base():
     return """
 <SAMI><HEAD><TITLE>NOVA3213</TITLE><STYLE TYPE="text/css">
 <!--

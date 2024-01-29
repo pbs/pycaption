@@ -14,8 +14,7 @@ dependencies = [
 ]
 
 dev_dependencies = [
-    'pytest',
-    'pytest-lazy-fixture'
+    'pytest'
 ]
 
 transcript_dependencies = [

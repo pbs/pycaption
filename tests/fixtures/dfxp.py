@@ -3,6 +3,10 @@ import pytest
 
 @pytest.fixture(scope="session")
 def sample_dfxp():
+    return sample_dfxp_base()
+
+
+def sample_dfxp_base():
     return """\
 <?xml version="1.0" encoding="utf-8"?>
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml"

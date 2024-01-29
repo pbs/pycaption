@@ -3,6 +3,10 @@ import pytest
 
 @pytest.fixture(scope="session")
 def sample_srt():
+    return sample_srt_base()
+
+
+def sample_srt_base():
     return """1
 00:00:09,209 --> 00:00:12,312
 ( clock ticking )

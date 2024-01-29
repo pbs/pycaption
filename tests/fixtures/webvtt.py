@@ -3,6 +3,10 @@ import pytest
 
 @pytest.fixture(scope="session")
 def sample_webvtt():
+    return sample_webvtt_base()
+
+
+def sample_webvtt_base():
     return """WEBVTT
 
 00:09.209 --> 00:12.312

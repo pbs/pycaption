@@ -1,6 +1,11 @@
 import pytest
 
 from pycaption import SRTReader, CaptionReadNoCaptions
+from tests.fixtures.dfxp import sample_dfxp_base
+from tests.fixtures.microdvd import sample_microdvd_base
+from tests.fixtures.sami import sample_sami_base
+from tests.fixtures.scc import sample_scc_pop_on_base
+from tests.fixtures.webvtt import sample_webvtt_base
 from tests.mixins import ReaderTestingMixIn
 
 
@@ -12,11 +17,11 @@ class TestSRTReader(ReaderTestingMixIn):
         super().assert_positive_answer_for_detection(sample_srt)
 
     @pytest.mark.parametrize('different_sample', [
-        pytest.lazy_fixture('sample_dfxp'),
-        pytest.lazy_fixture('sample_microdvd'),
-        pytest.lazy_fixture('sample_sami'),
-        pytest.lazy_fixture('sample_scc_pop_on'),
-        pytest.lazy_fixture('sample_webvtt')
+        sample_dfxp_base(),
+        sample_microdvd_base(),
+        sample_sami_base(),
+        sample_scc_pop_on_base(),
+        sample_webvtt_base()
     ])
     def test_negative_answer_for_detection(self, different_sample):
         super().assert_negative_answer_for_detection(different_sample)
