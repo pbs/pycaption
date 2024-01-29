@@ -1,5 +1,3 @@
-#!/bin/bash -eux
-
 DOCKER_CMD="docker-compose -p pycaption"
 
 SERVICE="test_py312"
