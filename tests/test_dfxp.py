@@ -2,14 +2,12 @@ import pytest
 
 from pycaption import DFXPReader, CaptionReadNoCaptions
 from pycaption.exceptions import (
-    CaptionReadSyntaxError, InvalidInputError, CaptionReadError,
-    CaptionReadTimingError,
+    CaptionReadSyntaxError, CaptionReadError, CaptionReadTimingError,
 )
 from pycaption.geometry import (
     UnitEnum, HorizontalAlignmentEnum, VerticalAlignmentEnum,
 )
 from tests.mixins import ReaderTestingMixIn
-from pytest_lazyfixture import lazy_fixture
 
 
 class TestDFXPReader(ReaderTestingMixIn):
@@ -19,15 +17,20 @@ class TestDFXPReader(ReaderTestingMixIn):
     def test_positive_answer_for_detection(self, sample_dfxp):
         super().assert_positive_answer_for_detection(sample_dfxp)
 
-    @pytest.mark.parametrize('different_sample', [
-        pytest.lazy_fixture('sample_microdvd'),
-        pytest.lazy_fixture('sample_sami'),
-        pytest.lazy_fixture('sample_scc_pop_on'),
-        pytest.lazy_fixture('sample_srt'),
-        pytest.lazy_fixture('sample_webvtt')
-    ])
-    def test_negative_answer_for_detection(self, different_sample):
-        super().assert_negative_answer_for_detection(different_sample)
+    def test_negative_answer_for_microdvd(self, sample_microdvd):
+        super().assert_negative_answer_for_detection(sample_microdvd)
+
+    def test_negative_answer_for_sami(self, sample_sami):
+        super().assert_negative_answer_for_detection(sample_sami)
+
+    def test_negative_answer_for_scc_on_pop_on(self, sample_scc_pop_on):
+        super().assert_negative_answer_for_detection(sample_scc_pop_on)
+
+    def test_negative_answer_for_srt(self, sample_srt):
+        super().assert_negative_answer_for_detection(sample_srt)
+
+    def test_negative_answer_for_webvtt(self, sample_webvtt):
+        super().assert_negative_answer_for_detection(sample_webvtt)
 
     def test_caption_length(self, sample_dfxp):
         captions = DFXPReader().read(sample_dfxp)
@@ -72,23 +75,30 @@ class TestDFXPReader(ReaderTestingMixIn):
         with pytest.raises(NotImplementedError):
             reader._convert_timestamp_to_microseconds("2.3t")
 
-    @pytest.mark.parametrize('timestamp, microseconds', [
-        ('12:23:34', 44614000000), ('23:34:45:56', 84886866666),
-        ('34:45:56.7', 125156700000), ('13:24:35.67', 48275670000),
-        ('24:35:46.456', 88546456000), ('1:23:34', 5014000000)])
-    def test_clock_time(self, timestamp, microseconds):
-        assert DFXPReader()._convert_timestamp_to_microseconds(
-            timestamp) == microseconds
+    def test_clock_time(self):
+        timestamp_mapp = {
+            '12:23:34': 44614000000,
+            '23:34:45:56': 84886866666,
+            '34:45:56.7': 125156700000,
+            '13:24:35.67': 48275670000,
+            '24:35:46.456': 88546456000,
+            '1:23:34': 5014000000
+        }
+        for timestamp in timestamp_mapp:
+            assert DFXPReader()._convert_timestamp_to_microseconds(
+                timestamp) == timestamp_mapp.get(timestamp)
 
-    @pytest.mark.parametrize('timestamp', [
-        '1:1:11', '1:11:1', '1:11:11:1', '11:11:11:11.11', '11:11:11,11',
-        '11.11.11.11', '11:11:11.', 'o1:11:11'])
-    def test_invalid_timestamp(self, timestamp):
+    def test_invalid_timestamp(self):
+        timestamps = [
+            '1:1:11', '1:11:1', '1:11:11:1', '11:11:11:11.11', '11:11:11,11',
+            '11.11.11.11', '11:11:11.', 'o1:11:11'
+        ]
         with pytest.raises(CaptionReadTimingError) as exc_info:
-            DFXPReader()._convert_timestamp_to_microseconds(timestamp)
+            for timestamp in timestamps:
+                DFXPReader()._convert_timestamp_to_microseconds(timestamp)
 
-        assert exc_info.value.args[0].startswith(
-            f'Invalid timestamp: {timestamp}.')
+            assert exc_info.value.args[0].startswith(
+                f'Invalid timestamp: {timestamp}.')
 
     def test_empty_file(self, sample_dfxp_empty):
         with pytest.raises(CaptionReadNoCaptions):

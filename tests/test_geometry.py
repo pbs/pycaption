@@ -125,19 +125,20 @@ class TestIsRelative:
 
 
 class TestSize:
-    @pytest.mark.parametrize('string, value, unit', [
-        ('1px', 1.0, UnitEnum.PIXEL), ('2.3em', 2.3, UnitEnum.EM),
-        ('12.34%', 12.34, UnitEnum.PERCENT), ('1.234c', 1.234, UnitEnum.CELL),
-        ('10pt', 10.0, UnitEnum.PT), ('0', 0.0, UnitEnum.PIXEL)])
-    def test_valid_size_from_string(self, string, value, unit):
-        size = Size.from_string(string)
+    def test_valid_size_from_string(self):
+        strings = ['1px', '2.3em', '12.34%', '1.234c', '10pt', '0']
+        values = [1.0, 2.3, 12.34, 1.234, 10, 0.0]
+        units = [UnitEnum.PIXEL, UnitEnum.EM, UnitEnum.PERCENT, UnitEnum.CELL, UnitEnum.PT, UnitEnum.PIXEL]
 
-        assert size.value == value
-        assert size.unit == unit
+        for idx, str in enumerate(strings):
+            size = Size.from_string(str)
 
-    @pytest.mark.parametrize('string', ['10', '11,1px', '12xx', '%', 'o1pt'])
-    def test_invalid_size_from_string(self, string):
+            assert size.value == values[idx]
+            assert size.unit == units[idx]
+
+    def test_invalid_size_from_string(self):
         with pytest.raises(CaptionReadSyntaxError) as exc_info:
-            Size.from_string(string)
+            for st in ['10', '11,1px', '12xx', '%', 'o1pt']:
+                Size.from_string(st)
 
-        assert exc_info.value.args[0].startswith(f"Invalid size: {string}.")
+        assert exc_info.value.args[0].startswith(f"Invalid size: {st}.")
