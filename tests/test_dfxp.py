@@ -75,30 +75,20 @@ class TestDFXPReader(ReaderTestingMixIn):
         with pytest.raises(NotImplementedError):
             reader._convert_timestamp_to_microseconds("2.3t")
 
-    def test_clock_time(self):
-        timestamp_mapp = {
-            '12:23:34': 44614000000,
-            '23:34:45:56': 84886866666,
-            '34:45:56.7': 125156700000,
-            '13:24:35.67': 48275670000,
-            '24:35:46.456': 88546456000,
-            '1:23:34': 5014000000
-        }
-        for timestamp in timestamp_mapp:
-            assert DFXPReader()._convert_timestamp_to_microseconds(
-                timestamp) == timestamp_mapp.get(timestamp)
+    @pytest.mark.parametrize('timestamp, microseconds', [
+        ('12:23:34', 44614000000), ('23:34:45:56', 84886866666),
+        ('34:45:56.7', 125156700000), ('13:24:35.67', 48275670000),
+        ('24:35:46.456', 88546456000), ('1:23:34', 5014000000)])
+    def test_clock_time(self, timestamp, microseconds):
+        assert DFXPReader()._convert_timestamp_to_microseconds(
+            timestamp) == microseconds
 
-    def test_invalid_timestamp(self):
-        timestamps = [
-            '1:1:11', '1:11:1', '1:11:11:1', '11:11:11:11.11', '11:11:11,11',
-            '11.11.11.11', '11:11:11.', 'o1:11:11'
-        ]
+    @pytest.mark.parametrize('timestamp', [
+        '1:1:11', '1:11:1', '1:11:11:1', '11:11:11:11.11', '11:11:11,11',
+        '11.11.11.11', '11:11:11.', 'o1:11:11'])
+    def test_invalid_timestamp(self, timestamp):
         with pytest.raises(CaptionReadTimingError) as exc_info:
-            for timestamp in timestamps:
-                DFXPReader()._convert_timestamp_to_microseconds(timestamp)
-
-            assert exc_info.value.args[0].startswith(
-                f'Invalid timestamp: {timestamp}.')
+            DFXPReader()._convert_timestamp_to_microseconds(timestamp)
 
     def test_empty_file(self, sample_dfxp_empty):
         with pytest.raises(CaptionReadNoCaptions):
