@@ -1,5 +1,10 @@
 Changelog
 ---------
+2.2.3.dev
+^^^^^
+- Add new substitute character to ignore before extended character
+    in SCC input files
+
 2.2.2
 ^^^^^
 - Remove support for Python 3.6 & 3.7
