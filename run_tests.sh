@@ -1,5 +1,4 @@
-#!/bin/bash -eux
-
+#!/bin/bash
 DOCKER_CMD="docker-compose -p pycaption"
 
 SERVICE="test_py312"
@@ -20,4 +19,11 @@ function cleanup {
 
 $DOCKER_CMD run --rm "$SERVICE"
 
-cleanup
+if [ $? != 0 ]; then
+  cleanup
+  exit 1
+else
+  cleanup
+fi
+
+
