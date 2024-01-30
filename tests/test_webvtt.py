@@ -14,15 +14,20 @@ class TestWebVTTReader(ReaderTestingMixIn):
     def test_positive_answer_for_detection(self, sample_webvtt):
         super().assert_positive_answer_for_detection(sample_webvtt)
 
-    @pytest.mark.parametrize('different_sample', [
-        pytest.lazy_fixture('sample_dfxp'),
-        pytest.lazy_fixture('sample_microdvd'),
-        pytest.lazy_fixture('sample_sami'),
-        pytest.lazy_fixture('sample_scc_pop_on'),
-        pytest.lazy_fixture('sample_srt')
-    ])
-    def test_negative_answer_for_detection(self, different_sample):
-        super().assert_negative_answer_for_detection(different_sample)
+    def test_negative_answer_for_detection_dfxp(self, sample_dfxp):
+        super().assert_negative_answer_for_detection(sample_dfxp)
+
+    def test_negative_answer_for_detection_microdvd(self, sample_microdvd):
+        super().assert_negative_answer_for_detection(sample_microdvd)
+
+    def test_negative_answer_for_detection_sami(self, sample_sami):
+        super().assert_negative_answer_for_detection(sample_sami)
+
+    def test_negative_answer_for_detection_scc_pop_on(self, sample_scc_pop_on):
+        super().assert_negative_answer_for_detection(sample_scc_pop_on)
+
+    def test_negative_answer_for_detection_srt(self, sample_srt):
+        super().assert_negative_answer_for_detection(sample_srt)
 
     def test_caption_length(self, sample_webvtt_2):
         captions = self.reader.read(sample_webvtt_2)
