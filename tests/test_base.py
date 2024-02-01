@@ -1,6 +1,9 @@
 import pytest
 
 from pycaption.base import CaptionList, Caption
+from pycaption import (
+    DFXPReader, SAMIReader, SCCReader
+)
 
 
 class TestCaption:
@@ -56,3 +59,11 @@ class TestCaptionList:
 
         with pytest.raises(ValueError):
             newcaps = self.caps + CaptionList([4], layout_info="Other Layout")
+
+
+class TestBaseReader:
+
+    def test_get_initial_timestamp_dfxp(self, sample_dfxp):
+        assert DFXPReader().get_initial_timestamp(sample_dfxp) == "00:00:09.209"
+
+    

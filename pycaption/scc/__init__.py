@@ -493,12 +493,6 @@ class SCCReader(BaseReader):
         self.caption_stash.create_and_store(
             pop_on_cue.buffer, pop_on_cue.start, end)
 
-    def get_initial_timestamp(self):
-        try:
-            return self.caption_stash._collection[0].to_real_caption().format_start()
-        except (AttributeError, IndexError):
-            return None
-
 
 class SCCWriter(BaseWriter):
     def __init__(self, *args, **kw):
