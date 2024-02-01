@@ -66,4 +66,8 @@ class TestBaseReader:
     def test_get_initial_timestamp_dfxp(self, sample_dfxp):
         assert DFXPReader().get_initial_timestamp(sample_dfxp) == "00:00:09.209"
 
-    
+    def test_get_initial_timestamp_sami(self, sample_sami):
+        assert SAMIReader().get_initial_timestamp(sample_sami) == "00:00:09.209"
+
+    def test_get_initial_timestamp_scc(self, sample_scc_pop_on):
+        assert SCCReader().get_initial_timestamp(sample_scc_pop_on) == "00:00:09.743"

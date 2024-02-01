@@ -85,7 +85,7 @@ from collections import deque
 from copy import deepcopy
 
 from pycaption.base import (
-    BaseReader, BaseWriter, CaptionSet, CaptionNode,
+    BaseReader, BaseWriter, CaptionSet
 )
 from pycaption.exceptions import CaptionReadNoCaptions, InvalidInputError, \
     CaptionReadTimingError, CaptionLineLengthError
@@ -94,7 +94,7 @@ from .constants import (
     MICROSECONDS_PER_CODEWORD, CHARACTER_TO_CODE,
     SPECIAL_OR_EXTENDED_CHAR_TO_CODE, PAC_BYTES_TO_POSITIONING_MAP,
     PAC_HIGH_BYTE_BY_ROW, PAC_LOW_BYTE_BY_ROW_RESTRICTED,
-    PAC_TAB_OFFSET_COMMANDS, COMMANDS_WITHOUT_INCREMENT_FRAMES
+    PAC_TAB_OFFSET_COMMANDS
 )
 from .specialized_collections import (  # noqa: F401
     TimingCorrectingCaptionList, NotifyingDict, CaptionCreator,
@@ -330,8 +330,7 @@ class SCCReader(BaseReader):
             self._translate_characters(word)
 
         # count frames for timing only after processing a command
-        if word not in COMMANDS_WITHOUT_INCREMENT_FRAMES:
-            self.time_translator.increment_frames()
+        self.time_translator.increment_frames()
 
     def _handle_double_command(self, word):
         # If the caption is to be broadcast, each of the commands are doubled
