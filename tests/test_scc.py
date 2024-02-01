@@ -279,7 +279,6 @@ class TestCoverageOnly:
             'WE SERVE.',
             '®°½',
             'ABû',
-            # 'ÁÁÉÓ¡',
             'ÁÉÓ¡',
             "WHERE YOU'RE STANDING NOW,",
             "LOOKING OUT THERE, THAT'S AL",
@@ -289,9 +288,6 @@ class TestCoverageOnly:
             'And wildlife.',
             '>> Bike Iowa, your source for',
         ]
-        print("==========")
-        from pprint import pprint
-        pprint(actual_texts)
         assert expected_texts == actual_texts
 
     def test_multiple_formats(self, sample_scc_multiple_formats):
