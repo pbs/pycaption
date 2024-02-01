@@ -430,16 +430,15 @@ class InstructionNodeCreator:
                 )
         if is_text_node:
             try:
-                ascii_char = unicodedata.normalize('NFD', accented_character) \
+                ascii_char = [
+                    unicodedata.normalize('NFD', accented_character)
                     .encode('ascii', 'strict').decode("utf-8")
-            except (UnicodeEncodeError, UnicodeDecodeError):
-                ascii_char = INCONVERTIBLE_TO_ASCII_EXTENDED_CHARS_ASSOCIATION[
-                    accented_character
                 ]
+            except (UnicodeEncodeError, UnicodeDecodeError):
+                ascii_char = INCONVERTIBLE_TO_ASCII_EXTENDED_CHARS_ASSOCIATION.get(accented_character)
 
-            if ascii_char and self._collection[-1].text[-1] == ascii_char:
+            if ascii_char and self._collection[-1].text[-1] in ascii_char:
                 self._collection[-1].text = self._collection[-1].text[:-1]
-
 
 
 def _get_layout_from_tuple(position_tuple):
