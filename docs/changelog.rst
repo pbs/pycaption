@@ -1,6 +1,6 @@
 Changelog
 ---------
-2.2.3.dev
+2.2.3
 ^^^^^
 - Add new substitute character to ignore before extended character
     in SCC input files
