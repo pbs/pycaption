@@ -1,9 +1,12 @@
 Changelog
 ---------
+2.2.4
+^^^^^
+- Skip duplicated extended characters.
+
 2.2.3
 ^^^^^
-- Add new substitute character to ignore before extended character
-    in SCC input files
+- Add new substitute character to ignore before extended character in SCC input files
 
 2.2.2
 ^^^^^

@@ -339,7 +339,7 @@ class SCCReader(BaseReader):
         # same as the first.
         # Also like codes, Special Characters are always doubled up,
         # with only one member of each pair being displayed.
-        if word in COMMANDS or _is_pac_command(word) or word in SPECIAL_CHARS:
+        if word in COMMANDS or _is_pac_command(word) or word in SPECIAL_CHARS or word in EXTENDED_CHARS:
             if word == self.last_command:
                 self.last_command = ''
                 return True

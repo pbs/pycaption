@@ -279,7 +279,7 @@ class TestCoverageOnly:
             'WE SERVE.',
             '®°½',
             'ABû',
-            'ÁÁÉÓ¡',
+            'ÁÉÓ¡',
             "WHERE YOU'RE STANDING NOW,",
             "LOOKING OUT THERE, THAT'S AL",
             'THE CROWD.',
