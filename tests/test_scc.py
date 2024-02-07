@@ -1,5 +1,4 @@
 import pytest
-from pytest_lazyfixture import lazy_fixture
 
 from pycaption import SCCReader, CaptionReadNoCaptions, CaptionNode
 from pycaption.exceptions import CaptionReadTimingError, CaptionLineLengthError
@@ -23,15 +22,20 @@ class TestSCCReader(ReaderTestingMixIn):
     def test_positive_answer_for_detection(self, sample_scc_pop_on):
         super().assert_positive_answer_for_detection(sample_scc_pop_on)
 
-    @pytest.mark.parametrize('different_sample', [
-        lazy_fixture('sample_dfxp'),
-        lazy_fixture('sample_microdvd'),
-        lazy_fixture('sample_sami'),
-        lazy_fixture('sample_srt'),
-        lazy_fixture('sample_webvtt')
-    ])
-    def test_negative_answer_for_detection(self, different_sample):
-        super().assert_negative_answer_for_detection(different_sample)
+    def test_negative_answer_for_detection_dfxp(self, sample_dfxp):
+        super().assert_negative_answer_for_detection(sample_dfxp)
+
+    def test_negative_answer_for_detection_microdvd(self, sample_microdvd):
+        super().assert_negative_answer_for_detection(sample_microdvd)
+
+    def test_negative_answer_for_detection_sami(self, sample_sami):
+        super().assert_negative_answer_for_detection(sample_sami)
+
+    def test_negative_answer_for_detection_srt(self, sample_srt):
+        super().assert_negative_answer_for_detection(sample_srt)
+
+    def test_negative_answer_for_detection_webvtt(self, sample_webvtt):
+        super().assert_negative_answer_for_detection(sample_webvtt)
 
     def test_caption_length(self, sample_scc_pop_on):
         captions = SCCReader().read(sample_scc_pop_on)
@@ -78,10 +82,12 @@ class TestSCCReader(ReaderTestingMixIn):
             ((40.0, UnitEnum.PERCENT), (41.0, UnitEnum.PERCENT)),
             ((25.0, UnitEnum.PERCENT), (71.0, UnitEnum.PERCENT))
         ]
+
         actual_positioning = [
             caption_.layout_info.origin.serialized()
             for caption_ in captions.get_captions('en-US')
         ]
+
         assert expected_positioning == actual_positioning
 
     def test_tab_offset(self, sample_scc_tab_offset):
@@ -273,9 +279,10 @@ class TestSCCReader(ReaderTestingMixIn):
     def test_line_too_long(self, sample_scc_with_line_too_long):
         with pytest.raises(CaptionLineLengthError) as exc_info:
             SCCReader().read(sample_scc_with_line_too_long)
+
         assert exc_info.value.args[0].startswith(
             "32 character limit for caption cue in scc file.")
-        assert ("the showowowowowowowowowowowowowowowowowowowowowowowowowowow started - Length 68"
+        assert ("was Cal l l l l l l l l l l l l l l l l l l l l l l l l l l l l Denison, a friend - Length 81"
                 in exc_info.value.args[0].split("\n"))
 
 
@@ -304,7 +311,7 @@ class TestCoverageOnly:
             'WE SERVE.',
             '®°½',
             'ABû',
-            'ÁÁÉÓ¡',
+            'ÁÉÓ¡',
             "WHERE YOU'RE STANDING NOW,",
             "LOOKING OUT THERE, THAT'S AL",
             'THE CROWD.',

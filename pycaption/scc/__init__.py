@@ -348,7 +348,7 @@ class SCCReader(BaseReader):
         next_command = self.get_command(words, idx + 1)
         second_next = self.get_command(words, idx + 2)
 
-        if word in COMMANDS or _is_pac_command(word) or word in SPECIAL_CHARS:
+        if word in COMMANDS or _is_pac_command(word) or word in SPECIAL_CHARS or word in EXTENDED_CHARS:
             # skip duplicates, execute the last occurrence if not a positioning command
             if word == self.last_command and not _is_pac_command(word):
                 self.last_command = ''

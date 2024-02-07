@@ -1,9 +1,19 @@
 Changelog
 ---------
+2.2.4
+^^^^^
+- Skip duplicated extended characters.
+
+2.2.3
+^^^^^
+- Add new substitute character to ignore before extended character in SCC input files
+
 2.2.2
 ^^^^^
 - Remove support for Python 3.6 & 3.7
 - Restrict SCC source files to 31 characters per line (32 will throw an exception)
+- Bump readthedocs-sphinx-search from 0.3.1 to 0.3.2
+- Change Apache copyright licensing (ending) copyright year
 
 2.2.1
 ^^^^^
