@@ -6,5 +6,6 @@ include pycaption/NotoSansCJKsc-Regular.otf
 include pycaption/NotoSansCJKtc-Regular.otf
 include pycaption/NotoSansCJKjp-Regular.otf
 include pycaption/NotoSansCJKkr-Regular.otf
+include pycaption/NotoSansDisplay-RegularAndArabic.ttf
 recursive-exclude tests *
 include README.rst requirements.txt
