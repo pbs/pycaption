@@ -4,3 +4,5 @@ cssutils>=0.9.10
 Pillow>=7.0.0
 fonttools~=4.33.3
 langcodes~=3.3.0
+arabic-reshaper==3.0.0
+python-bidi==0.4.2

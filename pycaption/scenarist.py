@@ -6,11 +6,14 @@ from datetime import timedelta
 from io import BytesIO
 
 from PIL import Image, ImageFont, ImageDraw
+import arabic_reshaper
+from bidi.algorithm import get_display
 from fontTools.ttLib import TTFont
 from langcodes import Language, tag_distance
 
-from pycaption.base import BaseWriter, CaptionSet, Caption
+from pycaption.base import BaseWriter, CaptionSet, Caption, CaptionNode
 from pycaption.geometry import UnitEnum, Size
+
 
 def get_sst_pixel_display_params(video_width, video_height):
     py0 = 2
@@ -87,12 +90,15 @@ class ScenaristDVDWriter(BaseWriter):
     palette_image.putpalette([*paColor, *e1Color, *e2Color, *bgColor] + [0, 0, 0] * 252)
 
     font_langs = {
-        Language.get('en'): f"{os.path.dirname(__file__)}/NotoSansDisplay-Regular-note.ttf",
-        Language.get('ru'): f"{os.path.dirname(__file__)}/NotoSansDisplay-Regular-note.ttf",
-        Language.get('ja-JP'): f"{os.path.dirname(__file__)}/NotoSansCJKjp-Regular.otf",
-        Language.get('zh-TW'): f"{os.path.dirname(__file__)}/NotoSansCJKtc-Regular.otf",
-        Language.get('zh-CN'): f"{os.path.dirname(__file__)}/NotoSansCJKsc-Regular.otf",
-        Language.get('ko-KR'): f"{os.path.dirname(__file__)}/NotoSansCJKkr-Regular.otf",
+        Language.get('en'): {'fontfile': f"{os.path.dirname(__file__)}/NotoSansDisplay-Regular-note.ttf",
+                             'align': 'left'},
+        Language.get('ru'): {'fontfile': f"{os.path.dirname(__file__)}/NotoSansDisplay-Regular-note.ttf",
+                             'align': 'left'},
+        Language.get('ar'): {'fontfile': f"{os.path.dirname(__file__)}/NotoSansArabic-Regular.ttf", 'align': 'right'},
+        Language.get('ja-JP'): {'fontfile': f"{os.path.dirname(__file__)}/NotoSansCJKjp-Regular.otf", 'align': 'left'},
+        Language.get('zh-TW'): {'fontfile': f"{os.path.dirname(__file__)}/NotoSansCJKtc-Regular.otf", 'align': 'left'},
+        Language.get('zh-CN'): {'fontfile': f"{os.path.dirname(__file__)}/NotoSansCJKsc-Regular.otf", 'align': 'left'},
+        Language.get('ko-KR'): {'fontfile': f"{os.path.dirname(__file__)}/NotoSansCJKkr-Regular.otf", 'align': 'left'},
     }
 
     def __init__(self, relativize=True, video_width=720, video_height=480, fit_to_screen=True, tape_type='NON_DROP',
@@ -116,7 +122,7 @@ class ScenaristDVDWriter(BaseWriter):
         unique_characters = list(set(all_characters))
         return unique_characters
 
-    def get_characters_with_captions(self, captions):# -> dict[str, list[int]]:
+    def get_characters_with_captions(self, captions):  # -> dict[str, list[int]]:
         chars_with_captions = {}
         for caption_list in captions:
             for caption in caption_list:
@@ -132,18 +138,33 @@ class ScenaristDVDWriter(BaseWriter):
         glyphs = {c: self._has_glyph(ttf_font, c) for c in characters}
 
         missing_glyphs = {k: v for k, v in glyphs.items() if not v}
+
         return missing_glyphs
 
     @staticmethod
     def _has_glyph(fnt, glyph):
+        NOT_ACTUAL_GLYPHS = [
+            '\u202A',  # Left-to-Right Embedding (LRE)
+            '\u202B',  # Right-to-Left Embedding (RLE)
+            '\u202C',  # Pop Directional Formatting (PDF)
+            '\u202D',  # Left-to-Right Override (LRO)
+            '\u202E',  # Right-to-Left Override (RLO)
+            '\u200E',  # Left-to-Right Mark (LRM)
+            '\u200F'  # Right-to-Left Mark (RLM)
+        ]
+
+        if glyph in NOT_ACTUAL_GLYPHS:
+            return True
+
         for table in fnt['cmap'].tables:
             if ord(glyph) in table.cmap.keys():
                 return True
+
         return False
 
     def get_missing_glyphs_with_timestamps(
-            self, font, characters_with_timestamps # : dict[str, list[int]]
-    ): # -> dict[str, list[int]]:
+            self, font, characters_with_timestamps  # : dict[str, list[int]]
+    ):  # -> dict[str, list[int]]:
         ttf_font = TTFont(font)
 
         missing_glyphs_with_timestamps = {}
@@ -153,7 +174,6 @@ class ScenaristDVDWriter(BaseWriter):
                 missing_glyphs_with_timestamps[glyph] = timestamps
 
         return missing_glyphs_with_timestamps
-
 
     @staticmethod
     def group_captions_by_start_time(caps):
@@ -223,12 +243,12 @@ class ScenaristDVDWriter(BaseWriter):
             raise ValueError('Unsupported subtitles - overlapping subtitles with different end times found')
 
         if avoid_same_next_start_prev_end:
-            min_diff = (1/self.frame_rate) * 1000000
+            min_diff = (1 / self.frame_rate) * 1000000
             for i, caps_list in enumerate(caps_final):
                 if i == 0:
                     continue
 
-                prev_end_time = caps_final[i-1][0].end
+                prev_end_time = caps_final[i - 1][0].end
                 current_start_time = caps_list[0].start
 
                 if (current_start_time == prev_end_time) or ((current_start_time - prev_end_time) < min_diff):
@@ -239,8 +259,8 @@ class ScenaristDVDWriter(BaseWriter):
         if not distances:
             raise ValueError('Cannot find appropriate font for selected language')
 
-        fnt = distances[0][1]
-        print(fnt)
+        fnt = distances[0][1]['fontfile']
+        align = distances[0][1]['align']
         missing_glyphs = self.get_missing_glyphs(fnt, self.get_characters(caps_final))
 
         if missing_glyphs:
@@ -279,7 +299,7 @@ class ScenaristDVDWriter(BaseWriter):
 
                     img = Image.new('RGB', (self.video_width, self.video_height), self.bgColor)
                     draw = ImageDraw.Draw(img)
-                    self.printLine(draw, cap_list, fnt, position)
+                    self.printLine(draw, cap_list, fnt, position, align)
 
                     # quantize the image to our palette
                     img_quant = img.quantize(palette=self.palette_image, dither=0)
@@ -300,10 +320,10 @@ class ScenaristDVDWriter(BaseWriter):
         str_value = str_value + ':%02d' % (int((int(value / 1000) % 1000) / int(1000 / self.frame_rate)))
         return str_value
 
-    def printLine(self, draw: ImageDraw, caption_list: Caption, fnt: ImageFont, position: str = 'bottom'):
+    def printLine(self, draw: ImageDraw, caption_list: Caption, fnt: ImageFont, position: str = 'bottom', align: str = 'left'):
         for caption in caption_list:
             text = caption.get_text()
-            l, t, r, b = draw.textbbox((0, 0), text, font=fnt)
+            l, t, r, b = draw.textbbox((0, 0), text, font=fnt, align=align)
 
             x = None
             y = None
@@ -343,20 +363,20 @@ class ScenaristDVDWriter(BaseWriter):
             fontColor = self.paColor
             for adj in range(2):
                 # move right
-                draw.text((x - adj, y), text, font=fnt, fill=borderColor)
+                draw.text((x - adj, y), text, font=fnt, fill=borderColor, align=align)
                 # move left
-                draw.text((x + adj, y), text, font=fnt, fill=borderColor)
+                draw.text((x + adj, y), text, font=fnt, fill=borderColor, align=align)
                 # move up
-                draw.text((x, y + adj), text, font=fnt, fill=borderColor)
+                draw.text((x, y + adj), text, font=fnt, fill=borderColor, align=align)
                 # move down
-                draw.text((x, y - adj), text, font=fnt, fill=borderColor)
+                draw.text((x, y - adj), text, font=fnt, fill=borderColor, align=align)
                 # diagnal left up
-                draw.text((x - adj, y + adj), text, font=fnt, fill=borderColor)
+                draw.text((x - adj, y + adj), text, font=fnt, fill=borderColor, align=align)
                 # diagnal right up
-                draw.text((x + adj, y + adj), text, font=fnt, fill=borderColor)
+                draw.text((x + adj, y + adj), text, font=fnt, fill=borderColor, align=align)
                 # diagnal left down
-                draw.text((x - adj, y - adj), text, font=fnt, fill=borderColor)
+                draw.text((x - adj, y - adj), text, font=fnt, fill=borderColor, align=align)
                 # diagnal right down
-                draw.text((x + adj, y - adj), text, font=fnt, fill=borderColor)
+                draw.text((x + adj, y - adj), text, font=fnt, fill=borderColor, align=align)
 
-            draw.text((x, y), text, font=fnt, fill=fontColor)
+            draw.text((x, y), text, font=fnt, fill=fontColor, align=align)
