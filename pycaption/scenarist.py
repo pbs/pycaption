@@ -94,7 +94,7 @@ class ScenaristDVDWriter(BaseWriter):
                              'align': 'left'},
         Language.get('ru'): {'fontfile': f"{os.path.dirname(__file__)}/NotoSansDisplay-Regular-note.ttf",
                              'align': 'left'},
-        Language.get('ar'): {'fontfile': f"{os.path.dirname(__file__)}/NotoSansArabic-Regular.ttf", 'align': 'right'},
+        Language.get('ar'): {'fontfile': f"{os.path.dirname(__file__)}/NotoSansDisplay-RegularAndArabic.ttf", 'align': 'right'},
         Language.get('ja-JP'): {'fontfile': f"{os.path.dirname(__file__)}/NotoSansCJKjp-Regular.otf", 'align': 'left'},
         Language.get('zh-TW'): {'fontfile': f"{os.path.dirname(__file__)}/NotoSansCJKtc-Regular.otf", 'align': 'left'},
         Language.get('zh-CN'): {'fontfile': f"{os.path.dirname(__file__)}/NotoSansCJKsc-Regular.otf", 'align': 'left'},
