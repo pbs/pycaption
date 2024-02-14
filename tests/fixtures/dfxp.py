@@ -920,10 +920,10 @@ def sample_dfxp_from_scc_output():
    <region tts:displayAlign="before" tts:origin="40% 53%" tts:textAlign="left" xml:id="r5"/>
    <region tts:displayAlign="before" tts:origin="70% 17%" tts:textAlign="left" xml:id="r6"/>
    <region tts:displayAlign="before" tts:origin="20% 35%" tts:textAlign="left" xml:id="r7"/>
-   <region tts:displayAlign="before" tts:origin="20% 83%" tts:textAlign="left" xml:id="r8"/>
+   <region tts:displayAlign="before" tts:origin="25% 83%" tts:textAlign="left" xml:id="r8"/>
    <region tts:displayAlign="before" tts:origin="70% 11%" tts:textAlign="left" xml:id="r9"/>
    <region tts:displayAlign="before" tts:origin="40% 41%" tts:textAlign="left" xml:id="r10"/>
-   <region tts:displayAlign="before" tts:origin="20% 71%" tts:textAlign="left" xml:id="r11"/>
+   <region tts:displayAlign="before" tts:origin="25% 71%" tts:textAlign="left" xml:id="r11"/>
   </layout>
  </head>
  <body>

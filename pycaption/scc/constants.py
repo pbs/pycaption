@@ -987,6 +987,8 @@ MICROSECONDS_PER_CODEWORD = 1000.0 * 1000.0 / (30.0 * 1000.0 / 1001.0)
 
 HEADER = 'Scenarist_SCC V1.0'
 
+UNHANDLED_COMMANDS = ["9120", "91ae", "912f", "91a1"]
+
 # taken from
 # http://www.theneitherworld.com/mcpoodle/SCC_TOOLS/DOCS/CC_CHARS.HTML
 SUBSTITUTES_EXTENDED_CHARS_ASSOCIATION = {
