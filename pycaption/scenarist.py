@@ -342,6 +342,11 @@ class ScenaristDVDWriter(BaseWriter):
                         x = self.video_width * (x_.value / 100)
                         y = self.video_height * (y_.value / 100)
 
+                        # make sure the text doesn't go out of the screen
+                        box_rightmost_edge = x + r
+                        if box_rightmost_edge > self.video_width:
+                            x = float(self.video_width) - float(r) - float(10)
+
                         # padding for readability
                         if y_.value > 70:
                             y = y - 10
