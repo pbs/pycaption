@@ -301,21 +301,27 @@ class SCCReader(BaseReader):
         self.time_translator.start_at(parts[0][0])
 
         # loop through each word
-        for word in parts[0][2].split(' '):
-            # ignore empty results or invalid commands
-            word = word.strip()
-            if len(word) == 4:
-                self._translate_word(word)
+        words = [word.strip() for word in parts[0][2].split(' ') if len(word) == 4]
 
-    def _translate_word(self, word):
-        if self._handle_double_command(word):
+        for idx, word in enumerate(words):
+            self._translate_word(word, words, idx)
+
+    @staticmethod
+    def get_command(commands, idx):
+        try:
+            return commands[idx]
+        except IndexError:
+            return None
+
+    def _translate_word(self, word, words, idx):
+        if self._skip_double_command(word, words, idx):
             # count frames for timing
             self.time_translator.increment_frames()
             return
         # first check if word is a command
         # TODO - check that all the positioning commands are here, or use
         # some other strategy to determine if the word is a command.
-        if word in COMMANDS or _is_pac_command(word):
+        if word in COMMANDS or _is_pac_command(word) or word in PAC_TAB_OFFSET_COMMANDS:
             self._translate_command(word)
 
         # second, check if word is a special character
@@ -332,31 +338,39 @@ class SCCReader(BaseReader):
         # count frames for timing only after processing a command
         self.time_translator.increment_frames()
 
-    def _handle_double_command(self, word):
+    def _skip_double_command(self, word, words, idx):
         # If the caption is to be broadcast, each of the commands are doubled
         # up for redundancy in case the signal is garbled in transmission.
         # The decoder is programmed to ignore a second command when it is the
         # same as the first.
         # Also like codes, Special Characters are always doubled up,
         # with only one member of each pair being displayed.
+        next_command = self.get_command(words, idx + 1)
+        second_next = self.get_command(words, idx + 2)
+
         if word in COMMANDS or _is_pac_command(word) or word in SPECIAL_CHARS or word in EXTENDED_CHARS:
-            if word == self.last_command:
+            # skip duplicates, execute the last occurrence if not a positioning command
+            if word == self.last_command and not _is_pac_command(word):
                 self.last_command = ''
                 return True
-            # Fix for the <position> <tab offset> <position> <tab offset>
-            # repetition
-            elif _is_pac_command(word) and word in self.last_command:
+            # skip consecutive positioning commands, execute the last one
+            elif _is_pac_command(word) and _is_pac_command(next_command):
                 self.last_command = ''
                 return True
+            # Fix for the <position> <tab offset> <position> <tab offset> repetition
+            # execute the last positioning command
+            elif _is_pac_command(word) and next_command in PAC_TAB_OFFSET_COMMANDS and _is_pac_command(second_next):
+                self.last_command = ''
+                return True
+            # execute offset commands only if previous command is PAC and next is not PAC
             elif word in PAC_TAB_OFFSET_COMMANDS:
-                if _is_pac_command(self.last_command):
-                    self.last_command += f" {word}"
+                if _is_pac_command(self.last_command) and not _is_pac_command(next_command):
+                    self.last_command = word
                     return False
                 else:
                     return True
-
-        self.last_command = word
-        return False
+            self.last_command = word
+            return False
 
     def _translate_special_char(self, word):
         self.buffer.add_chars(SPECIAL_CHARS[word])

@@ -61,6 +61,8 @@ from tests.fixtures.scc import (  # noqa: F401
     sample_scc_duplicate_tab_offset, sample_scc_duplicate_special_characters,
     sample_scc_tab_offset, sample_scc_with_unknown_commands,
     sample_scc_special_and_extended_characters,
+    sample_scc_with_consecutive_pac_commands,
+    sample_scc_special_and_extended_characters,
     sample_scc_with_line_too_long
 )
 from tests.fixtures.srt import (  # noqa: F401
