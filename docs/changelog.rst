@@ -1,5 +1,8 @@
 Changelog
 ---------
+2.2.5
+^^^^^
+- In case of multiple consecutive PAC commands, execute only the last one.
 2.2.4
 ^^^^^
 - Skip duplicated extended characters.
