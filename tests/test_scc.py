@@ -285,6 +285,52 @@ class TestSCCReader(ReaderTestingMixIn):
         assert ("was Cal l l l l l l l l l l l l l l l l l l l l l l l l l l l l Denison, a friend - Length 81"
                 in exc_info.value.args[0].split("\n"))
 
+    def test_skip_extended_only_if_no_double_pac(
+            self, sample_scc_with_double_pac, sample_scc_without_double_pac
+    ):
+        caption_set = SCCReader().read(sample_scc_with_double_pac)
+        caption = caption_set.get_captions('en-US')
+        actual_lines = [
+            node.content
+            for cap_ in caption
+            for node in cap_.nodes
+            if node.type_ == CaptionNode.TEXT
+        ]
+        # PAC command doubled so we expect to see 2 out of 4 asterix
+        expected_lines = [
+              'in the process, I ended up',
+              'in this wheelchair,',
+              'so it became hard just',
+              'to get around the wheelchair',
+              'because he had all this',
+              '**',
+              'all over the place so',
+              'when is space became available'
+        ]
+        # is not breaking the lines
+        assert expected_lines == actual_lines
+
+        caption_set = SCCReader().read(sample_scc_without_double_pac)
+        caption = caption_set.get_captions('en-US')
+        actual_lines = [
+            node.content
+            for cap_ in caption
+            for node in cap_.nodes
+            if node.type_ == CaptionNode.TEXT
+        ]
+        # no doubles, so we expect to see 4 out of 4 asterix
+        expected_lines = [
+             'in the process, I ended up',
+             'in this wheelchair,',
+             'so it became hard just',
+             'to get around the wheelchair',
+             'because he had all this ****',
+             'all over the place so',
+             'when is space became available'
+        ]
+        # is not breaking the lines
+        assert expected_lines == actual_lines
+
 
 class TestCoverageOnly:
     """In order to refactor safely, we need coverage of 95% or more.

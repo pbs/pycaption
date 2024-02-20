@@ -991,7 +991,7 @@ UNHANDLED_COMMANDS = ["9120", "91ae", "912f", "91a1"]
 
 # taken from
 # http://www.theneitherworld.com/mcpoodle/SCC_TOOLS/DOCS/CC_CHARS.HTML
-INCONVERTIBLE_TO_ASCII_EXTENDED_CHARS_ASSOCIATION = {
+SUBSTITUTES_EXTENDED_CHARS_ASSOCIATION = {
     '¡': ["!", "i"],   # inverted exclamation mark
      '¤': ["C"],  # currency
      '¥': ["Y"],  # yen
@@ -1047,5 +1047,13 @@ INCONVERTIBLE_TO_ASCII_EXTENDED_CHARS_ASSOCIATION = {
      '┌': ["+"],
      '┐': ["+"],
      '└': ["+"],
-     '┘': ["+"]
+     '┘': ["+"],
+     '*': ['#', 'a'],
+     '{': ['['],
+     '}': [']'],
+     "\\": ['/'],
+     '^': ['/'],
+     '_': ['-'],
+     '~': ['~'],
+     '|': ['/'],
 }

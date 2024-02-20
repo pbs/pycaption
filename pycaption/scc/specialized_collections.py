@@ -8,8 +8,8 @@ from ..geometry import (
 )
 from .constants import (
     PAC_BYTES_TO_POSITIONING_MAP, COMMANDS, PAC_TAB_OFFSET_COMMANDS,
-    MICROSECONDS_PER_CODEWORD, UNHANDLED_COMMANDS,
-    INCONVERTIBLE_TO_ASCII_EXTENDED_CHARS_ASSOCIATION
+    MICROSECONDS_PER_CODEWORD, SUBSTITUTES_EXTENDED_CHARS_ASSOCIATION,
+    MICROSECONDS_PER_CODEWORD, UNHANDLED_COMMANDS
 )
 
 PopOnCue = collections.namedtuple("PopOnCue", "buffer, start, end")
@@ -346,6 +346,7 @@ class InstructionNodeCreator:
         if command not in UNHANDLED_COMMANDS:
             self._update_positioning(command)
         text = COMMANDS.get(command, '')
+
         if 'italic' in text:
             if 'end' not in text:
                 self._collection.append(
@@ -429,13 +430,7 @@ class InstructionNodeCreator:
                 self._collection[-1].text
                 )
         if is_text_node:
-            try:
-                ascii_char = [
-                    unicodedata.normalize('NFD', accented_character)
-                    .encode('ascii', 'strict').decode("utf-8")
-                ]
-            except (UnicodeEncodeError, UnicodeDecodeError):
-                ascii_char = INCONVERTIBLE_TO_ASCII_EXTENDED_CHARS_ASSOCIATION.get(accented_character)
+            ascii_char = SUBSTITUTES_EXTENDED_CHARS_ASSOCIATION.get(accented_character)
 
             if ascii_char and self._collection[-1].text[-1] in ascii_char:
                 self._collection[-1].text = self._collection[-1].text[:-1]

@@ -81,7 +81,7 @@ http://www.theneitherworld.com/mcpoodle/SCC_TOOLS/DOCS/SCC_FORMAT.HTML
 import math
 import re
 import textwrap
-from collections import deque
+from collections import deque, Counter
 from copy import deepcopy
 
 from pycaption.base import (
@@ -313,6 +313,14 @@ class SCCReader(BaseReader):
         except IndexError:
             return None
 
+    @staticmethod
+    def has_doubled_pac(words):
+        counter = Counter(words)
+        doubles = [
+            word for word in counter.keys() if _is_pac_command(word) and counter[word] > 1
+        ]
+        return bool(len(doubles))
+
     def _translate_word(self, word, words, idx):
         if self._skip_double_command(word, words, idx):
             # count frames for timing
@@ -350,7 +358,7 @@ class SCCReader(BaseReader):
 
         if word in COMMANDS or _is_pac_command(word) or word in SPECIAL_CHARS or word in EXTENDED_CHARS:
             # skip duplicates, execute the last occurrence if not a positioning command
-            if word == self.last_command and not _is_pac_command(word):
+            if word == self.last_command and not _is_pac_command(word) and word not in EXTENDED_CHARS:
                 self.last_command = ''
                 return True
             # skip consecutive positioning commands, execute the last one
@@ -369,6 +377,14 @@ class SCCReader(BaseReader):
                     return False
                 else:
                     return True
+            elif word in EXTENDED_CHARS:
+                if self.has_doubled_pac(words):
+                    if word == self.last_command:
+                        self.last_command = ''
+                        return True
+                else:
+                    return False
+
             self.last_command = word
             return False
 
