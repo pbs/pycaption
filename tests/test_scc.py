@@ -77,10 +77,10 @@ class TestSCCReader(ReaderTestingMixIn):
             ((40.0, UnitEnum.PERCENT), (53.0, UnitEnum.PERCENT)),
             ((70.0, UnitEnum.PERCENT), (17.0, UnitEnum.PERCENT)),
             ((20.0, UnitEnum.PERCENT), (35.0, UnitEnum.PERCENT)),
-            ((25.0, UnitEnum.PERCENT), (83.0, UnitEnum.PERCENT)),
+            ((20.0, UnitEnum.PERCENT), (83.0, UnitEnum.PERCENT)),
             ((70.0, UnitEnum.PERCENT), (11.0, UnitEnum.PERCENT)),
             ((40.0, UnitEnum.PERCENT), (41.0, UnitEnum.PERCENT)),
-            ((25.0, UnitEnum.PERCENT), (71.0, UnitEnum.PERCENT))
+            ((20.0, UnitEnum.PERCENT), (71.0, UnitEnum.PERCENT))
         ]
 
         actual_positioning = [
@@ -244,38 +244,6 @@ class TestSCCReader(ReaderTestingMixIn):
         assert exc_info.value.args[0].startswith(
             "Unsupported cue duration around 00:00:20.433")
 
-    def test_skip_first_pac_command(self, sample_scc_with_consecutive_pac_commands):
-        caption_set = SCCReader().read(sample_scc_with_consecutive_pac_commands)
-        caption = caption_set.get_captions('en-US')
-        actual_lines = [
-            node.content
-            for cap_ in caption
-            for node in cap_.nodes
-            if node.type_ == CaptionNode.TEXT
-        ]
-        expected_lines = [
-            '[ NARRATOR ]',
-             'MONKEYS LOVE THINGS THAT FLY.',
-             'YAY!',
-             '[ HOOTING ]',
-             "ESPECIALLY IF THEY'RE THE ONES",
-             'WHO GET TO FLY THEM.',
-             '[ CHILD ]',
-             'GEORGE MADE A MACHINE',
-             'FOR HOWIE TO',
-             'TO FIND CURIOUS GEORGE',
-             'AND HIS FRIENDS',
-             'EVERY DAY ONLINE,',
-             'SWING BY PBSKIDS.ORG',
-             'TO PLAY FUN GAMES AND WATCH',
-             'YOUR FAVORITE VIDEOS.',
-             'SWING BY PBSKIDS.ORG',
-             'TO PLAY FUN GAMES AND WATCH',
-             'YOUR FAVORITE VIDEOS.'
-        ]
-        # is not breaking the lines
-        assert expected_lines == actual_lines
-
     def test_line_too_long(self, sample_scc_with_line_too_long):
         with pytest.raises(CaptionLineLengthError) as exc_info:
             SCCReader().read(sample_scc_with_line_too_long)
@@ -391,6 +359,7 @@ class TestCoverageOnly:
         ]
 
         actual_timings = [(c_.start, c_.end) for c_ in captions]
+
         assert expected_timings == actual_timings
 
     def test_freeze_colon_spec_time(self, sample_scc_pop_on):
@@ -629,4 +598,4 @@ class TestTimingCorrectingCaptionList:
         # just one caption, first EOC disappears
         num_captions = len(caption_set.get_captions('en-US'))
 
-        assert num_captions == 1
+        assert num_captions == 2

@@ -8,8 +8,7 @@ from ..geometry import (
 )
 from .constants import (
     PAC_BYTES_TO_POSITIONING_MAP, COMMANDS, PAC_TAB_OFFSET_COMMANDS,
-    MICROSECONDS_PER_CODEWORD, UNHANDLED_COMMANDS,
-    INCONVERTIBLE_TO_ASCII_EXTENDED_CHARS_ASSOCIATION
+    MICROSECONDS_PER_CODEWORD, INCONVERTIBLE_TO_ASCII_EXTENDED_CHARS_ASSOCIATION
 )
 
 PopOnCue = collections.namedtuple("PopOnCue", "buffer, start, end")
@@ -343,9 +342,10 @@ class InstructionNodeCreator:
 
         :type command: str
         """
-        if command not in UNHANDLED_COMMANDS:
-            self._update_positioning(command)
+        self._update_positioning(command)
+
         text = COMMANDS.get(command, '')
+
         if 'italic' in text:
             if 'end' not in text:
                 self._collection.append(
