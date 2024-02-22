@@ -285,6 +285,20 @@ class TestSCCReader(ReaderTestingMixIn):
         assert ("was Cal l l l l l l l l l l l l l l l l l l l l l l l l l l l l Denison, a friend - Length 81"
                 in exc_info.value.args[0].split("\n"))
 
+    def test_spaces_are_respected(self, sample_scc_with_spaces):
+        expected_lines = ['Welcome to   ', 'The Future of Work.']
+
+        caption_set = SCCReader().read(sample_scc_with_spaces)
+        actual_lines = [
+            node.content
+            for cap_ in caption_set.get_captions('en-US')
+            for node in cap_.nodes
+            if node.type_ == CaptionNode.TEXT
+        ]
+
+        assert expected_lines == actual_lines
+        assert actual_lines[0][-3:] == " " * 3
+
 
 class TestCoverageOnly:
     """In order to refactor safely, we need coverage of 95% or more.

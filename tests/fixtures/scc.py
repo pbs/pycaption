@@ -470,3 +470,16 @@ Scenarist_SCC V1.0
 
 00:00:08;58	9420 9452 4920 ea75 73f4 20f7 616e f4e5 6420 ef6e e520 7368 eff7 2c80 94f2 ea75 73f4 20f4 ef20 6861 76e5 2061 7320 6120 ece9 f4f4 ece5 942c 8080 8080 942f
 """
+
+
+@pytest.fixture(scope="session")
+def sample_scc_with_spaces():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:55;25	9420 942c 942f 9420 9470 97a1 57e5 ece3 ef6d e520 f4ef 9723 2080 2080 2080 91ae 5468 e520 4675 f475 f2e5 20ef e620 57ef f26b ae80
+
+00:00:58;08	942c
+
+00:00:59;10	9420 942c 942f
+"""

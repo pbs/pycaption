@@ -255,7 +255,7 @@ class CaptionCreator:
                 layout_info = _get_layout_from_tuple(instruction.position)
                 caption.nodes.append(
                     CaptionNode.create_text(
-                        instruction.get_text(), layout_info=layout_info),
+                        instruction.text, layout_info=layout_info),
                 )
                 caption.layout_info = layout_info
 
