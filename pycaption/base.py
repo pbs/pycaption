@@ -48,6 +48,19 @@ class BaseReader:
     def read(self, content):
         return CaptionSet({DEFAULT_LANGUAGE_CODE: []})
 
+    def get_initial_timestamp(self, content):
+        """
+        return the start time of first caption in xx:xx:xx.xxx format
+        invocation: reader.get_initial_timestamp(content)
+        :param content: caption file content
+        """
+        try:
+            caps = self.read(content)
+            lang = list(caps._captions.keys())[0]
+            return caps._captions[lang][0].format_start()
+        except (AttributeError, IndexError):
+            return None
+
 
 class BaseWriter:
     def __init__(self, relativize=True, video_width=None, video_height=None,

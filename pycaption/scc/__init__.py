@@ -85,7 +85,7 @@ from collections import deque
 from copy import deepcopy
 
 from pycaption.base import (
-    BaseReader, BaseWriter, CaptionSet, CaptionNode,
+    BaseReader, BaseWriter, CaptionSet
 )
 from pycaption.exceptions import CaptionReadNoCaptions, InvalidInputError, \
     CaptionReadTimingError, CaptionLineLengthError
@@ -94,7 +94,7 @@ from .constants import (
     MICROSECONDS_PER_CODEWORD, CHARACTER_TO_CODE,
     SPECIAL_OR_EXTENDED_CHAR_TO_CODE, PAC_BYTES_TO_POSITIONING_MAP,
     PAC_HIGH_BYTE_BY_ROW, PAC_LOW_BYTE_BY_ROW_RESTRICTED,
-    PAC_TAB_OFFSET_COMMANDS,
+    PAC_TAB_OFFSET_COMMANDS
 )
 from .specialized_collections import (  # noqa: F401
     TimingCorrectingCaptionList, NotifyingDict, CaptionCreator,
