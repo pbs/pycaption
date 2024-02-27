@@ -312,17 +312,41 @@ class InstructionNodeCreator:
             node = _InstructionNode(position=current_position)
             self._collection.append(node)
 
+        break_and_repositioning = (
+                self._position_tracer.is_repositioning_required() and
+                self._position_tracer.is_linebreak_required()
+        )
+        only_break = (
+                self._position_tracer.is_linebreak_required() and not
+                self._position_tracer.is_repositioning_required()
+        )
+
+        only_repositioning = (
+                self._position_tracer.is_repositioning_required() and not
+                self._position_tracer.is_linebreak_required()
+        )
+        # handle break followed by repositioning
+        if break_and_repositioning:
+            self._collection.append(_InstructionNode.create_break(
+                position=current_position))
+            self._collection.append(
+                _InstructionNode.create_repositioning_command(
+                    current_position
+                )
+            )
+            node = _InstructionNode.create_text(current_position)
+            self._collection.append(node)
+            self._position_tracer.acknowledge_linebreak_consumed()
+            self._position_tracer.acknowledge_position_changed()
         # handle a simple line break
-        if self._position_tracer.is_linebreak_required():
-            # must insert a line break here
+        elif only_break:
             self._collection.append(_InstructionNode.create_break(
                 position=current_position))
             node = _InstructionNode.create_text(current_position)
             self._collection.append(node)
             self._position_tracer.acknowledge_linebreak_consumed()
-
         # handle completely new positioning
-        elif self._position_tracer.is_repositioning_required():
+        elif only_repositioning:
             self._collection.append(
                 _InstructionNode.create_repositioning_command(
                     current_position
