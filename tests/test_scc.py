@@ -253,6 +253,35 @@ class TestSCCReader(ReaderTestingMixIn):
         assert ("was Cal l l l l l l l l l l l l l l l l l l l l l l l l l l l l Denison, a friend - Length 81"
                 in exc_info.value.args[0].split("\n"))
 
+    def test_line_not_breaking_on_break_and_repositioning(
+            self, sample_scc_with_break_and_repositioning):
+        expected_lines = [
+             'Allie learned to practice',
+             'and got her ducks in a row,',
+             'and George got a bear.',
+             '[ get enough monkey?',
+             'To find Curious George',
+             'and his friends',
+             'every day online,',
+             'swing by',
+             'pbskids.org',
+             'to play fun games and watch',
+             'your favorite videos.',
+             'You can also read more',
+             'Curious George adventures',
+             'by visiting your local library.'
+        ]
+
+        caption_set = SCCReader().read(sample_scc_with_break_and_repositioning)
+        actual_lines = [
+            node.content
+            for cap_ in caption_set.get_captions('en-US')
+            for node in cap_.nodes
+            if node.type_ == CaptionNode.TEXT
+        ]
+
+        assert expected_lines == actual_lines
+
 
 class TestCoverageOnly:
     """In order to refactor safely, we need coverage of 95% or more.
