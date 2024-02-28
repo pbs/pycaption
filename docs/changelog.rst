@@ -1,5 +1,14 @@
 Changelog
 ---------
+2.2.6
+^^^^^
+- Fix positioning to avoid linebreaks when we have both a break and a repositioning commands.
+- Add logic to reset close italics tags if a new instruction that sets text to plain follow.
+- Fix to honor spaces before inline italic commands.
+
+2.2.5
+^^^^^
+- Yank.
 2.2.4
 ^^^^^
 - Skip duplicated extended characters.
