@@ -468,3 +468,16 @@ Scenarist_SCC V1.0
 
 00:23:15;11	942c
 """
+
+
+@pytest.fixture(scope="session")
+def sample_scc_with_spaces():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:55;25	9420 942c 942f 9420 9470 97a1 57e5 ece3 ef6d e520 f4ef 9723 2080 2080 2080 91ae 5468 e520 4675 f475 f2e5 20ef e620 57ef f26b ae80
+
+00:00:58;08	942c
+
+00:00:59;10	9420 942c 942f
+"""
