@@ -3,6 +3,8 @@ import pytest
 
 @pytest.fixture(scope="session")
 def sample_scc_created_dfxp_with_wrongly_closing_spans():
+# lines 3 and 6 have 9479 (plain text) after italics (91ae)
+# so we need to close italic tag
     return """\
 Scenarist_SCC V1.0
 

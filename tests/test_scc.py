@@ -264,7 +264,7 @@ class TestSCCReader(ReaderTestingMixIn):
              'and his friends',
              'every day online,',
              'swing by',
-             'pbskids.org',
+             ' pbskids.org',
              'to play fun games and watch',
              'your favorite videos.',
              'You can also read more',
@@ -436,13 +436,13 @@ class TestInterpretableNodeCreator:
         node_creator.add_chars('c')
         node_creator.interpret_command('91ae')  # italics ON
 
-        node_creator.interpret_command('9270')  # row 4 col 0
+        node_creator.interpret_command('926e')  # row 4 col 0
         node_creator.add_chars('d')
 
-        node_creator.interpret_command('15d0')  # row 5 col 0 - creates BR
+        node_creator.interpret_command('154f')  # row 5 col 0 - creates BR
         node_creator.add_chars('e')
 
-        node_creator.interpret_command('1570')  # row 6 col 0 - creates BR
+        node_creator.interpret_command('156e')  # row 6 col 0 - creates BR
         node_creator.add_chars('f')
 
         result = list(node_creator)
@@ -463,6 +463,7 @@ class TestInterpretableNodeCreator:
         assert result[8].is_text_node()
 
         assert result[9].requires_repositioning()
+
         assert result[10].is_italics_node()
         assert result[10].sets_italics_on()
 

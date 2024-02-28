@@ -10,6 +10,7 @@ from .constants import (
     PAC_BYTES_TO_POSITIONING_MAP, COMMANDS, PAC_TAB_OFFSET_COMMANDS,
     MICROSECONDS_PER_CODEWORD, INCONVERTIBLE_TO_ASCII_EXTENDED_CHARS_ASSOCIATION
 )
+from .translator import COMMAND_LABELS
 
 PopOnCue = collections.namedtuple("PopOnCue", "buffer, start, end")
 
@@ -254,7 +255,7 @@ class CaptionCreator:
                 layout_info = _get_layout_from_tuple(instruction.position)
                 caption.nodes.append(
                     CaptionNode.create_text(
-                        instruction.get_text(), layout_info=layout_info),
+                        instruction.text, layout_info=layout_info),
                 )
                 caption.layout_info = layout_info
 
@@ -369,6 +370,26 @@ class InstructionNodeCreator:
         self._update_positioning(command)
 
         text = COMMANDS.get(command, '')
+
+        # if a command which sets text to plain have an open
+        # italics tag open, it should close it to reset the text style
+        plain_text_commands = {
+            key: value for key, value in COMMAND_LABELS.items()
+            if "plain" in value
+        }
+        has_open_italics_tag = False
+        for node in self._collection[::-1]:
+            if node.is_italics_node():
+                if node.sets_italics_on():
+                    has_open_italics_tag = True
+                break
+        if command in plain_text_commands and has_open_italics_tag:
+            self._collection.append(
+                _InstructionNode.create_italics_style(
+                    self._position_tracer.get_current_position(),
+                    turn_on=False
+                )
+            )
 
         if 'italic' in text:
             if 'end' not in text:
