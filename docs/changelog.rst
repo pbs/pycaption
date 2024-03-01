@@ -5,6 +5,7 @@ Changelog
 - Fix positioning to avoid linebreaks when we have both a break and a repositioning commands.
 - Add logic to reset close italics tags if a new instruction that sets text to plain follow.
 - Fix to honor spaces before inline italic commands.
+- Fix for italics commands with repositioning to reposition before creating tag.
 
 2.2.5
 ^^^^^

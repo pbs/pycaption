@@ -425,6 +425,10 @@ class TestInterpretableNodeCreator:
         # 4. to get new opening italic nodes after changing position, if 3
         # happened
         # 5. to get a final italic closing node, if one is needed
+        # 6. close italics if there are open italics when
+        # a plain text command is issued
+        # 7, if an italics command also demands repositioning,
+        # first reposition then open italics tag
         node_creator.interpret_command('9470')  # row 15, col 0
         node_creator.interpret_command('9120')  # italics off
         node_creator.interpret_command('9120')  # italics off

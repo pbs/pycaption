@@ -314,17 +314,17 @@ class InstructionNodeCreator:
             self._collection.append(node)
 
         break_and_repositioning = (
-                self._position_tracer.is_repositioning_required() and
-                self._position_tracer.is_linebreak_required()
+                self._position_tracer._repositioning_required and
+                self._position_tracer._break_required
         )
         only_break = (
-                self._position_tracer.is_linebreak_required() and not
-                self._position_tracer.is_repositioning_required()
+                self._position_tracer._break_required and not
+                self._position_tracer._repositioning_required
         )
 
         only_repositioning = (
-                self._position_tracer.is_repositioning_required() and not
-                self._position_tracer.is_linebreak_required()
+                self._position_tracer._repositioning_required and not
+                self._position_tracer._break_required
         )
         # handle break followed by repositioning
         if break_and_repositioning:
@@ -368,9 +368,7 @@ class InstructionNodeCreator:
         :type command: str
         """
         self._update_positioning(command)
-
         text = COMMANDS.get(command, '')
-
         # if a command which sets text to plain have an open
         # italics tag open, it should close it to reset the text style
         plain_text_commands = {
@@ -393,8 +391,19 @@ class InstructionNodeCreator:
 
         if 'italic' in text:
             if 'end' not in text:
-                self._collection.append(
-                    _InstructionNode.create_italics_style(
+                # if the command is PAC and creates italics,
+                # first do break / repositioning before italic tag
+                if self._position_tracer._break_required:
+                    self._collection.append(_InstructionNode.create_break(
+                        position=self._position_tracer.get_current_position()))
+                    self._position_tracer.acknowledge_linebreak_consumed()
+                if self._position_tracer._repositioning_required:
+                    self._collection.append(
+                        _InstructionNode.create_repositioning_command(
+                            self._position_tracer.get_current_position()))
+                    self._position_tracer.acknowledge_position_changed()
+
+                self._collection.append(_InstructionNode.create_italics_style(
                         self._position_tracer.get_current_position())
                 )
             else:
