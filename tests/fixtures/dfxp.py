@@ -1004,15 +1004,15 @@ def sample_dfxp_with_properly_closing_spans_output():
     bbbb
    </p>
    <p begin="00:01:35.633" end="00:01:40.833" region="r2" style="default">
-    <span tts:fontStyle="italic" region="r2">cccc<br/>
-    bbaa</span>
+    <span tts:fontStyle="italic" region="r2">cccc</span><br/>
+    bbaa
    </p>
    <p begin="00:01:55.766" end="00:01:59.500" region="r0" style="default">
     aa
    </p>
    <p begin="00:01:55.766" end="00:01:59.500" region="r3" style="default">
-    <span tts:fontStyle="italic" region="r3">bb<br/>
-    cc</span>
+    <span tts:fontStyle="italic" region="r3">bb</span><br/>
+    cc
    </p>
    <p begin="00:01:59.500" end="00:02:03.500" region="r3" style="default">
     abcd
