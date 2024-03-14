@@ -584,4 +584,4 @@ class TestTimingCorrectingCaptionList:
         # just one caption, first EOC disappears
         num_captions = len(caption_set.get_captions('en-US'))
 
-        assert num_captions == 2
+        assert num_captions == 1
