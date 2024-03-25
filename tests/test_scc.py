@@ -253,6 +253,81 @@ class TestSCCReader(ReaderTestingMixIn):
         assert ("was Cal l l l l l l l l l l l l l l l l l l l l l l l l l l l l Denison, a friend - Length 81"
                 in exc_info.value.args[0].split("\n"))
 
+    def test_lines_starting_with_text(
+            self,
+            sample_scc_starting_with_text_roll,
+            sample_scc_starting_with_text_paint,
+            sample_scc_starting_with_text_pop,
+            sample_scc_starting_with_text_end_in_942f
+    ):
+        # if we're in roll on mode and the last command is not 942f
+        # the characters should be displayed on a new line
+        caption_set = SCCReader().read(sample_scc_starting_with_text_roll)
+        expected_lines = [
+            'THE AMERICAN EXPERIENCE THROUGH',
+            'QUALITY TELEVISION PROGRAMMING.',
+            'TION,',
+            'DEDICATED TO EDUCATION',
+            'AND QUALITY TELEVISION.'
+        ]
+        actual_lines = [
+            node.content
+            for cap_ in caption_set.get_captions('en-US')
+            for node in cap_.nodes
+            if node.type_ == CaptionNode.TEXT
+        ]
+        assert expected_lines == actual_lines
+
+        # in roll mode if text ends with 942f then the text is ignored
+        caption_set = SCCReader().read(sample_scc_starting_with_text_end_in_942f)
+        expected_lines = [
+            'THE AMERICAN EXPERIENCE THROUGH',
+            'QUALITY TELEVISION PROGRAMMING.',
+            'DEDICATED TO EDUCATION',
+            'AND QUALITY TELEVISION.'
+        ]
+        actual_lines = [
+            node.content
+            for cap_ in caption_set.get_captions('en-US')
+            for node in cap_.nodes
+            if node.type_ == CaptionNode.TEXT
+        ]
+        assert expected_lines == actual_lines
+
+        # in paint mode the text will be displayed with no changes
+        # in new line
+        caption_set = SCCReader().read(sample_scc_starting_with_text_paint)
+        expected_lines = [
+            'THE AMERICAN EXPERIENCE THROUGH',
+            'QUALITY TELEVISION PROGRAMMING.',
+            'TION,',
+            'DEDICATED TO EDUCATION',
+            'AND QUALITY TELEVISION.'
+        ]
+        actual_lines = [
+            node.content
+            for cap_ in caption_set.get_captions('en-US')
+            for node in cap_.nodes
+            if node.type_ == CaptionNode.TEXT
+        ]
+        assert expected_lines == actual_lines
+
+        # in pop mode the text will be ignored
+        caption_set = SCCReader().read(sample_scc_starting_with_text_pop)
+        expected_lines = [
+            'THE AMERICAN EXPERIENCE THROUGH',
+            'QUALITY TELEVISION PROGRAMMING.',
+            'DEDICATED TO EDUCATION',
+            'AND QUALITY TELEVISION.'
+        ]
+        actual_lines = [
+            node.content
+            for cap_ in caption_set.get_captions('en-US')
+            for node in cap_.nodes
+            if node.type_ == CaptionNode.TEXT
+        ]
+        assert expected_lines == actual_lines
+
 
 class TestCoverageOnly:
     """In order to refactor safely, we need coverage of 95% or more.

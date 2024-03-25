@@ -298,13 +298,20 @@ class SCCReader(BaseReader):
         r = re.compile(r"([0-9:;]*)([\s\t]*)((.)*)")
         parts = r.findall(line.lower())
         words = parts[0][2].split(' ')
+        last_code = words[-1]
         first_code = words[0]
-        # skip lines which are starting with characters except is in paint mode
-        # don't have a PAC and a caption type command before
-
         first_code_is_text = first_code[:2] in CHARACTERS and first_code[2:] in CHARACTERS
-        if first_code_is_text and self.buffer_dict.active_key != "paint":
-            return
+
+        # in case we're in roll-on mode and the line starts with text and
+        # the line doesn't change mode to pop-on
+        # we print the characters to a new line by inserting 94ad at the start
+        if self.buffer_dict.active_key != "paint" and first_code_is_text:
+            if self.buffer_dict.active_key == "roll" and last_code != "942f":
+                words = ["94ad"] + words
+            else:
+                # if line starts with characters and we're not in paint or roll
+                # mode, we skip this line
+                return
 
         self.time_translator.start_at(parts[0][0])
 

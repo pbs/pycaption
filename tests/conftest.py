@@ -61,7 +61,11 @@ from tests.fixtures.scc import (  # noqa: F401
     sample_scc_duplicate_tab_offset, sample_scc_duplicate_special_characters,
     sample_scc_tab_offset, sample_scc_with_unknown_commands,
     sample_scc_special_and_extended_characters,
-    sample_scc_with_line_too_long
+    sample_scc_with_line_too_long,
+    sample_scc_starting_with_text_roll,
+    sample_scc_starting_with_text_paint,
+    sample_scc_starting_with_text_pop,
+    sample_scc_starting_with_text_end_in_942f
 )
 from tests.fixtures.srt import (  # noqa: F401
     sample_srt, sample_srt_ascii, sample_srt_numeric, sample_srt_empty,
