@@ -297,11 +297,26 @@ class SCCReader(BaseReader):
         # split line in timestamp and words
         r = re.compile(r"([0-9:;]*)([\s\t]*)((.)*)")
         parts = r.findall(line.lower())
+        words = parts[0][2].split(' ')
+        last_code = words[-1]
+        first_code = words[0]
+        first_code_is_text = first_code[:2] in CHARACTERS and first_code[2:] in CHARACTERS
+
+        # in case we're in roll-on mode and the line starts with text and
+        # the line doesn't change mode to pop-on
+        # we print the characters to a new line by inserting 94ad at the start
+        if self.buffer_dict.active_key != "paint" and first_code_is_text:
+            if self.buffer_dict.active_key == "roll" and last_code != "942f":
+                words = ["94ad"] + words
+            else:
+                # if line starts with characters and we're not in paint or roll
+                # mode, we skip this line
+                return
 
         self.time_translator.start_at(parts[0][0])
 
         # loop through each word
-        for word in parts[0][2].split(' '):
+        for word in words:
             # ignore empty results or invalid commands
             word = word.strip()
             if len(word) == 4:
