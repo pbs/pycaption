@@ -17,6 +17,7 @@ class _PositioningTracker:
         # this attribute is used to store it and determine by comparison if the
         # next positioning is actually a Tab Offset
         self._last_column = None
+        self._spaces_to_add = 0
 
     def update_positioning(self, positioning):
         """Being notified of a position change, updates the internal state,
@@ -35,26 +36,15 @@ class _PositioningTracker:
             return
 
         row, col = current
-        if self._break_required:
-            col = self._last_column
         new_row, new_col = positioning
-        is_tab_offset = new_row == row and col + 1 <= new_col <= col + 3
 
-        # One line below will be treated as line break, not repositioning
         if new_row == row + 1:
-            self._positions.append((new_row, col))
+            self._positions.append((new_row, new_col))
             self._break_required = True
-            self._last_column = new_col
-        # Tab offsets after line breaks will be ignored to avoid repositioning
-        elif self._break_required and is_tab_offset:
-            return
+            self._spaces_to_add = new_col
         else:
-            # Reset the "current" position altogether.
             self._positions = [positioning]
-            # Tab offsets are not interpreted as repositioning, but adjustments
-            # to the previous PAC command
-            if not is_tab_offset:
-                self._repositioning_required = True
+            self._repositioning_required = True
 
     def get_current_position(self):
         """Returns the current usable position

@@ -67,5 +67,4 @@ class TestSCCToWebVTT:
         caption_set = SCCReader().read(
             scc_that_generates_webvtt_with_proper_newlines)
         webvtt = WebVTTWriter().write(caption_set)
-
         assert webvtt == sample_webvtt_from_scc_properly_writes_newlines_output

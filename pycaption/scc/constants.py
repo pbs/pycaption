@@ -1,5 +1,4 @@
 from itertools import product
-from collections import defaultdict
 
 COMMANDS = {
     '9420': '',

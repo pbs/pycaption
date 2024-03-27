@@ -10,6 +10,7 @@ from .constants import (
     PAC_BYTES_TO_POSITIONING_MAP, COMMANDS, PAC_TAB_OFFSET_COMMANDS,
     MICROSECONDS_PER_CODEWORD, INCONVERTIBLE_TO_ASCII_EXTENDED_CHARS_ASSOCIATION
 )
+from .translator import not_italics_commands
 
 PopOnCue = collections.namedtuple("PopOnCue", "buffer, start, end")
 
@@ -254,7 +255,7 @@ class CaptionCreator:
                 layout_info = _get_layout_from_tuple(instruction.position)
                 caption.nodes.append(
                     CaptionNode.create_text(
-                        instruction.get_text(), layout_info=layout_info),
+                        instruction.text, layout_info=layout_info),
                 )
                 caption.layout_info = layout_info
 
@@ -312,40 +313,59 @@ class InstructionNodeCreator:
             node = _InstructionNode(position=current_position)
             self._collection.append(node)
 
-        # handle a simple line break
+        # if offset command add spaces
+        if self._position_tracer._spaces_to_add:
+            node = _InstructionNode.create_text(
+                current_position,
+                " " * self._position_tracer._spaces_to_add
+            )
+            self._collection.append(node)
+            self._position_tracer._spaces_to_add = 0
+        node.add_chars(*chars)
+
+    def interpret_command(self, command):
+        """Creates instruction node for the command
+
+        :type command: str
+        """
+        self._update_positioning(command)
+        text = COMMANDS.get(command, '')
+        current_position = self._position_tracer.get_current_position()
+
+        # if a command sets text to something else than italic is having an open
+        # italics tag, it should close it to reset the text style
+        # doing this first so it close the tag in current line
+
+        has_open_italics_tag = False
+        for node in self._collection[::-1]:
+            if node.is_italics_node():
+                if node.sets_italics_on():
+                    has_open_italics_tag = True
+                break
+        if command in not_italics_commands and has_open_italics_tag:
+            self._collection.append(
+                _InstructionNode.create_italics_style(
+                    self._position_tracer.get_current_position(),
+                    turn_on=False
+                )
+            )
+
+        # add break instruction node
         if self._position_tracer.is_linebreak_required():
-            # must insert a line break here
             self._collection.append(_InstructionNode.create_break(
                 position=current_position))
-            node = _InstructionNode.create_text(current_position)
-            self._collection.append(node)
             self._position_tracer.acknowledge_linebreak_consumed()
 
-        # handle completely new positioning
-        elif self._position_tracer.is_repositioning_required():
+        # add repositioning instruction node
+        if self._position_tracer.is_repositioning_required():
             self._collection.append(
                 _InstructionNode.create_repositioning_command(
                     current_position
                 )
             )
-            node = _InstructionNode.create_text(current_position)
-            self._collection.append(node)
             self._position_tracer.acknowledge_position_changed()
 
-        node.add_chars(*chars)
-
-    def interpret_command(self, command):
-        """Given a command determines whether to turn italics on or off,
-        or to set the positioning
-
-        This is mostly used to convert from the legacy-style commands
-
-        :type command: str
-        """
-        self._update_positioning(command)
-
-        text = COMMANDS.get(command, '')
-
+        # add italic open/closed italics nodes
         if 'italic' in text:
             if 'end' not in text:
                 self._collection.append(
@@ -370,6 +390,7 @@ class InstructionNodeCreator:
             prev_positioning = self._position_tracer.default
             positioning = (prev_positioning[0],
                            prev_positioning[1] + tab_offset)
+            self._position_tracer._spaces_to_add = tab_offset
         else:
             first, second = command[:2], command[2:]
 
@@ -498,7 +519,6 @@ class _InstructionNode:
         """
         if self.text is None:
             self.text = ''
-
         self.text += ''.join(args)
 
     def is_text_node(self):

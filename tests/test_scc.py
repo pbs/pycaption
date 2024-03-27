@@ -94,14 +94,29 @@ class TestSCCReader(ReaderTestingMixIn):
         captions = SCCReader().read(sample_scc_tab_offset)
 
         # SCC generates only origin, and we always expect it.
+        # expected_positioning = [
+        #     ((37.5, UnitEnum.PERCENT), (83.0, UnitEnum.PERCENT)),
+        #     ((17.5, UnitEnum.PERCENT), (89.0, UnitEnum.PERCENT)),
+        #     ((12.5, UnitEnum.PERCENT), (83.0, UnitEnum.PERCENT)),
+        #     ((27.5, UnitEnum.PERCENT), (83.0, UnitEnum.PERCENT)),
+        #     ((30.0, UnitEnum.PERCENT), (89.0, UnitEnum.PERCENT)),
+        #     ((35.0, UnitEnum.PERCENT), (83.0, UnitEnum.PERCENT)),
+        #     ((17.5, UnitEnum.PERCENT), (83.0, UnitEnum.PERCENT))
+        # ]
+
         expected_positioning = [
             ((37.5, UnitEnum.PERCENT), (83.0, UnitEnum.PERCENT)),
+            ((12.5, UnitEnum.PERCENT), (89.0, UnitEnum.PERCENT)),
             ((17.5, UnitEnum.PERCENT), (89.0, UnitEnum.PERCENT)),
             ((12.5, UnitEnum.PERCENT), (83.0, UnitEnum.PERCENT)),
+            ((32.5, UnitEnum.PERCENT), (89.0, UnitEnum.PERCENT)),
             ((27.5, UnitEnum.PERCENT), (83.0, UnitEnum.PERCENT)),
+            ((15.0, UnitEnum.PERCENT), (89.0, UnitEnum.PERCENT)),
             ((30.0, UnitEnum.PERCENT), (89.0, UnitEnum.PERCENT)),
             ((35.0, UnitEnum.PERCENT), (83.0, UnitEnum.PERCENT)),
-            ((17.5, UnitEnum.PERCENT), (83.0, UnitEnum.PERCENT))
+            ((22.5, UnitEnum.PERCENT), (89.0, UnitEnum.PERCENT)),
+            ((17.5, UnitEnum.PERCENT), (83.0, UnitEnum.PERCENT)),
+            ((22.5, UnitEnum.PERCENT), (89.0, UnitEnum.PERCENT))
         ]
 
         actual_positioning = [
@@ -135,7 +150,8 @@ class TestSCCReader(ReaderTestingMixIn):
         # will most likely change
         assert switches_italics(nodes[0]) is True
         assert switches_italics(nodes[2]) is False
-        assert nodes[1].content == 'abababab'
+        # we're respecting offsets and we have a 97a2 = 2 spaces
+        assert nodes[1].content == '  abababab'
 
     def test_default_positioning_when_no_positioning_is_specified(
             self, sample_no_positioning_at_all_scc):
@@ -200,17 +216,20 @@ class TestSCCReader(ReaderTestingMixIn):
         caption_set = SCCReader().read(sample_scc_with_extended_characters)
         captions = caption_set.get_captions('en-US')
         assert captions[0].nodes[0].content == 'MÄRTHA:'
-        expected_result = ['JUNIOR: ¡Yum!', None, 'Ya me siento mucho mejor.']
+        # 97a1 means one space before Junior
+        # 9723 means three spaces before Ya me ...
+        expected_result = [' JUNIOR: ¡Yum!', None, '   Ya me siento mucho mejor.']
         content = [node.content for node in captions[1].nodes]
         assert all(result in expected_result for result in content)
 
     def test_skip_duplicate_tab_offset(self, sample_scc_duplicate_tab_offset):
+        # 97a1 space before [Radio
         expected_lines = [
-            '[Radio reporter]',
-            'The I-10 Santa Monica Freeway',
-            'westbound is jammed,',
-            'due to a three-car accident',
-            'blocking lanes 1 and 2',
+            ' [Radio reporter]',
+            ' The I-10 Santa Monica Freeway',
+            ' westbound is jammed,',
+            '  due to a three-car accident',
+            '  blocking lanes 1 and 2'
         ]
 
         caption_set = SCCReader().read(sample_scc_duplicate_tab_offset)
@@ -220,7 +239,6 @@ class TestSCCReader(ReaderTestingMixIn):
             for node in cap_.nodes
             if node.type_ == CaptionNode.TEXT
         ]
-
         assert expected_lines == actual_lines
 
     def test_skip_duplicate_special_characters(
@@ -248,9 +266,10 @@ class TestSCCReader(ReaderTestingMixIn):
         with pytest.raises(CaptionLineLengthError) as exc_info:
             SCCReader().read(sample_scc_with_line_too_long)
 
+        # 9723 - 3 spaces before "was Call" so length will be 81 + 3
         assert exc_info.value.args[0].startswith(
             "32 character limit for caption cue in scc file.")
-        assert ("was Cal l l l l l l l l l l l l l l l l l l l l l l l l l l l l Denison, a friend - Length 81"
+        assert ("   was Cal l l l l l l l l l l l l l l l l l l l l l l l l l l l l Denison, a friend - Length 84"
                 in exc_info.value.args[0].split("\n"))
 
 
@@ -294,21 +313,20 @@ class TestCoverageOnly:
         # Test for captions that contain both pop on and paint on formats to
         # ensure the paint on lines are not repeated
         expected_text_lines = [
-            "(Client's Voice)",
-            'Remember that degree',
-            'you got in taxation?',
-            '(Danny)',
-            "Of course you don't",
-            "because you didn't!",
-            "Your job isn't doing hard",
-            'work...',
-            "...it's making them do hard",
-            'work...',
-            '...and getting paid for it.',
-            '(VO)',
-            'Snap and sort your expenses to',
-            'save over $4,600 at tax time.',
-            'QUICKBOOKS. BACKING YOU.',
+            "  (Client's Voice)",
+            '  Remember that degree',
+            '  you got in taxation?',
+            '  (Danny)',
+            "  Of course you don't",
+            "  because you didn't!",
+            "   Your job isn't doing hard",
+            '   work...',
+            "  ...it's making them do hard",
+            '  work...',
+            '  ...and getting paid for it.',
+            ' (VO)', ' Snap and sort your expenses to',
+            ' save over $4,600 at tax time.',
+            'QUICKBOOKS. BACKING YOU.'
         ]
 
         captions = SCCReader().read(sample_scc_multiple_formats) \
@@ -319,7 +337,6 @@ class TestCoverageOnly:
             for node in caption.nodes
             if node.type_ == CaptionNode.TEXT
         ]
-
         assert expected_text_lines == text_lines
 
     def test_freeze_semicolon_spec_time(self, sample_scc_roll_up_ru2):
@@ -407,7 +424,7 @@ class TestInterpretableNodeCreator:
         node_creator.add_chars('c')
         node_creator.interpret_command('91ae')  # italics ON
 
-        node_creator.interpret_command('9270')  # row 4 col 0
+        node_creator.interpret_command('9270')  # row 4 col 0 resets italics
         node_creator.add_chars('d')
 
         node_creator.interpret_command('15d0')  # row 5 col 0 - creates BR
@@ -434,17 +451,12 @@ class TestInterpretableNodeCreator:
         assert result[8].is_text_node()
 
         assert result[9].requires_repositioning()
-        assert result[10].is_italics_node()
-        assert result[10].sets_italics_on()
+        assert result[10].is_text_node()
 
-        assert result[11].is_text_node()
-        assert result[12].is_explicit_break()
-        assert result[13].is_text_node()
-        assert result[14].is_explicit_break()
-        assert result[15].is_text_node()
-
-        assert result[16].is_italics_node()
-        assert result[16].sets_italics_off()
+        assert result[11].is_explicit_break()
+        assert result[12].is_text_node()
+        assert result[13].is_explicit_break()
+        assert result[14].is_text_node()
 
 
 class CaptionDummy:

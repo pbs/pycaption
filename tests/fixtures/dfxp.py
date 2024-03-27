@@ -939,8 +939,8 @@ def sample_dfxp_from_scc_output():
    </p>
    <p begin="00:00:03.136" end="00:00:09.709" region="r3" style="default">
     ghgh<br/>
-    ijij<br/>
-    klkl
+        ijij<br/>
+        klkl
    </p>
    <p begin="00:00:09.709" end="00:00:11.711" region="r4" style="default">
     mnmn
@@ -953,8 +953,8 @@ def sample_dfxp_from_scc_output():
    </p>
    <p begin="00:00:11.711" end="00:00:20.086" region="r7" style="default">
     stst<br/>
-    uvuv<br/>
-    wxwx
+        uvuv<br/>
+        wxwx
    </p>
    <p begin="00:00:20.086" end="00:00:22.088" region="r8" style="default">
     yzyz
@@ -967,8 +967,8 @@ def sample_dfxp_from_scc_output():
    </p>
    <p begin="00:00:22.088" end="00:00:26.088" region="r11" style="default">
     4545<br/>
-    6767<br/>
-    8989
+        6767<br/>
+        8989
    </p>
   </div>
  </body>
@@ -1004,15 +1004,15 @@ def sample_dfxp_with_properly_closing_spans_output():
     bbbb
    </p>
    <p begin="00:01:35.633" end="00:01:40.833" region="r2" style="default">
-    <span tts:fontStyle="italic" region="r2">cccc<br/>
-    bbaa</span>
+    <span tts:fontStyle="italic" region="r2">cccc</span><br/>
+    bbaa
    </p>
    <p begin="00:01:55.766" end="00:01:59.500" region="r0" style="default">
     aa
    </p>
    <p begin="00:01:55.766" end="00:01:59.500" region="r3" style="default">
-    <span tts:fontStyle="italic" region="r3">bb<br/>
-    cc</span>
+    <span tts:fontStyle="italic" region="r3">bb</span><br/>
+    cc
    </p>
    <p begin="00:01:59.500" end="00:02:03.500" region="r3" style="default">
     abcd
