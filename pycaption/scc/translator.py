@@ -545,6 +545,11 @@ COMMAND_LABELS = {
     "94a2": "Alarm On"
 }
 
+not_italics_commands = {
+    key: value for key, value in COMMAND_LABELS.items()
+    if "italic" not in value
+}
+
 
 def translate_scc(scc_content, brackets='[]'):
     """
