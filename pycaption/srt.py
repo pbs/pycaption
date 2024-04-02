@@ -132,7 +132,7 @@ class SRTWriter(BaseWriter):
         srt = ''
         count = 1
 
-        fnt = ImageFont.truetype(os.path.dirname(__file__) + '/NotoSansDisplay-Regular.ttf', 30)
+        fnt = ImageFont.truetype(os.path.dirname(__file__) + '/NotoSansDisplay-Regular-Note-Math.ttf', 30)
 
         img = None
         draw = None

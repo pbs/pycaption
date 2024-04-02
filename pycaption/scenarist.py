@@ -90,9 +90,9 @@ class ScenaristDVDWriter(BaseWriter):
     palette_image.putpalette([*paColor, *e1Color, *e2Color, *bgColor] + [0, 0, 0] * 252)
 
     font_langs = {
-        Language.get('en'): {'fontfile': f"{os.path.dirname(__file__)}/NotoSansDisplay-Regular-note.ttf",
+        Language.get('en'): {'fontfile': f"{os.path.dirname(__file__)}/NotoSansDisplay-Regular-Note-Math.ttf",
                              'align': 'left'},
-        Language.get('ru'): {'fontfile': f"{os.path.dirname(__file__)}/NotoSansDisplay-Regular-note.ttf",
+        Language.get('ru'): {'fontfile': f"{os.path.dirname(__file__)}/NotoSansDisplay-Regular-Note-Math.ttf",
                              'align': 'left'},
         Language.get('ar'): {'fontfile': f"{os.path.dirname(__file__)}/NotoSansDisplay-RegularAndArabic.ttf", 'align': 'right'},
         Language.get('ja-JP'): {'fontfile': f"{os.path.dirname(__file__)}/NotoSansCJKjp-Regular.otf", 'align': 'left'},
