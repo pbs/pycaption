@@ -134,7 +134,7 @@ class SRTWriter(BaseWriter):
                 new_content = self._recreate_line(new_content, node)
 
             # Eliminate excessive line breaks
-            new_content = new_content.strip()
+            new_content = new_content
 
             srt += f"{new_content}\n\n"
             count += 1
@@ -143,8 +143,10 @@ class SRTWriter(BaseWriter):
 
     def _recreate_line(self, srt, line):
         if line.type_ == CaptionNode.TEXT:
-            return srt + f'{line.content} '
+            return srt + f'{line.content}'
         elif line.type_ == CaptionNode.BREAK:
             return srt + '\n'
+        elif line.type_ == CaptionNode.REPOSITIONING:
+            return srt + f'{line.content}'
         else:
             return srt

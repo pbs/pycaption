@@ -13,10 +13,8 @@ class _PositioningTracker:
         self._positions = [positioning]
         self._break_required = False
         self._repositioning_required = False
-        # Since the actual column is not applied when encountering a line break
-        # this attribute is used to store it and determine by comparison if the
-        # next positioning is actually a Tab Offset
-        self._last_column = None
+        self._last_char_position = 0
+        self._spaces_to_add = 0
 
     def update_positioning(self, positioning):
         """Being notified of a position change, updates the internal state,
@@ -26,35 +24,31 @@ class _PositioningTracker:
         :type positioning: tuple[int]
         :param positioning: a tuple (row, col)
         """
-        current = self._positions[-1]
-
-        if not current:
+        previous = self._positions[-1]
+        if not previous:
             if positioning:
                 # Set the positioning for the first time
                 self._positions = [positioning]
             return
 
-        row, col = current
-        if self._break_required:
-            col = self._last_column
+        previous_row, previous_column = previous
         new_row, new_col = positioning
-        is_tab_offset = new_row == row and col + 1 <= new_col <= col + 3
-
-        # One line below will be treated as line break, not repositioning
-        if new_row == row + 1:
-            self._positions.append((new_row, col))
+        print("previous", previous)
+        print("positioning", positioning)
+        if new_row == previous_row + 1:
             self._break_required = True
-            self._last_column = new_col
-        # Tab offsets after line breaks will be ignored to avoid repositioning
-        elif self._break_required and is_tab_offset:
-            return
+            self._spaces_to_add = new_col
+            self._last_char_position = new_col
+            print("break", new_col, self._last_char_position)
         else:
-            # Reset the "current" position altogether.
-            self._positions = [positioning]
-            # Tab offsets are not interpreted as repositioning, but adjustments
-            # to the previous PAC command
-            if not is_tab_offset:
-                self._repositioning_required = True
+            self._repositioning_required = True
+            self._spaces_to_add = new_col - self._last_char_position
+            print("repo", new_col, self._last_char_position)
+
+        self._positions = [positioning]
+        if new_row == previous_row and new_col < self._last_char_position:
+            raise ValueError(
+                f"We cannot go back positioning from {self._last_char_position} to  {new_col}")
 
     def get_current_position(self):
         """Returns the current usable position

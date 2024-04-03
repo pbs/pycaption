@@ -219,6 +219,12 @@ class WebVTTWriter(BaseWriter):
 
         captions = caption_set.get_captions(lang)
 
+        print("writer")
+        print("==============")
+
+        for caption in captions:
+            print(caption.__dict__)
+
         return output + '\n'.join(
             [self._convert_caption(caption_set, caption)
              for caption in captions])
@@ -417,7 +423,6 @@ class WebVTTWriter(BaseWriter):
                 resulting_style = self._calculate_resulting_style(
                     node.content, caption_set
                 )
-
                 styles = ['italics', 'underline', 'bold']
                 if not node.start:
                     styles.reverse()
@@ -432,6 +437,9 @@ class WebVTTWriter(BaseWriter):
 
                 # TODO: Refactor pycaption and eliminate the concept of a
                 # "Style node"
+            elif node.type_ == CaptionNode.REPOSITIONING:
+                s += self._encode_illegal_characters(node.content)
+                current_layout = node.layout_info
             elif node.type_ == CaptionNode.BREAK:
                 if i > 0 and nodes[i - 1].type_ != CaptionNode.TEXT:
                     s += '&nbsp;'

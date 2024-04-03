@@ -113,6 +113,7 @@ class CaptionNode:
     # property of the node, not a type of node itself.
     STYLE = 2
     BREAK = 3
+    REPOSITIONING = 4
 
     def __init__(self, type_, layout_info=None, content=None, start=None):
         """
@@ -133,6 +134,8 @@ class CaptionNode:
             return repr(self.content)
         elif t == CaptionNode.BREAK:
             return repr('BREAK')
+        elif t == CaptionNode.REPOSITIONING:
+            return repr("REPOSITIONING")
         elif t == CaptionNode.STYLE:
             return repr(f'STYLE: {self.start} {self.content}')
         else:
@@ -152,6 +155,12 @@ class CaptionNode:
     @staticmethod
     def create_break(layout_info=None):
         return CaptionNode(CaptionNode.BREAK, layout_info=layout_info)
+
+    @staticmethod
+    def create_repositioning(text, layout_info=None):
+        print("create - add spaces", text, len(text))
+        return CaptionNode(
+            CaptionNode.REPOSITIONING, layout_info=layout_info, content=text)
 
 
 class Caption:
@@ -222,13 +231,15 @@ class Caption:
                 return node.content
             if node.type_ == CaptionNode.BREAK:
                 return '\n'
+            if node.type_ == CaptionNode.REPOSITIONING:
+                return node.content
             return ''
 
         return [get_text_for_node(node) for node in self.nodes]
 
     def get_text(self):
         text_nodes = self.get_text_nodes()
-        return ''.join(text_nodes).strip()
+        return ''.join(text_nodes)
 
     def _format_timestamp(self, microseconds, msec_separator=None):
         duration = timedelta(microseconds=microseconds)
