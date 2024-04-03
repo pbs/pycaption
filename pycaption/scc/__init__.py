@@ -196,6 +196,42 @@ class SCCReader(BaseReader):
         else:
             return False
 
+    @staticmethod
+    def validate_scc_input(captions, lang):
+        caption_set = captions.get_captions(lang)
+
+        # check captions for incorrect lengths
+        lines = []
+        for caption in caption_set:
+            caption_text = "".join(caption.get_text_nodes())
+            lines.extend(caption_text.split("\n"))
+        lines_too_long = [line for line in lines if len(line) > 32]
+        if bool(lines_too_long):
+            msg = ""
+            for line in lines_too_long:
+                msg += line + f" - Length { len(line)}" + "\n"
+            raise CaptionLineLengthError(
+                f"32 character limit for caption cue in scc file.\n"
+                f"Lines longer than 32:\n"
+                f"{msg}"
+            )
+
+        # if there's an end time on a caption and the difference is
+        # less than .05s kill it (this is likely caused by a standalone
+        # EOC marker in the SCC file)
+        for cap in caption_set:
+            if 0 < cap.end - cap.start < 50000:
+                raise CaptionReadTimingError(
+                    f'Unsupported cue duration around {cap.format_start()} '
+                    f'for line beginning with "{cap.get_text()}". Duration '
+                    f'must be at least 0.05 seconds.')
+
+        if captions.is_empty():
+            raise CaptionReadNoCaptions("empty caption file")
+        else:
+            fix_last_captions_without_ending(captions.get_captions(lang))
+        return captions
+
     def read(self, content, lang='en-US', simulate_roll_up=False, offset=0):
         """Converts the unicode string into a CaptionSet
 
@@ -231,39 +267,7 @@ class SCCReader(BaseReader):
 
         captions = CaptionSet({lang: self.caption_stash.get_all()})
 
-        # check captions for incorrect lengths
-        lines = []
-        for caption in self.caption_stash._collection:
-            caption_text = "".join(caption.to_real_caption().get_text_nodes())
-            lines.extend(caption_text.split("\n"))
-        lines_too_long = [line for line in lines if len(line) > 32]
-
-        if bool(lines_too_long):
-            msg = ""
-            for line in lines_too_long:
-                msg += line + f" - Length { len(line)}" + "\n"
-            raise CaptionLineLengthError(
-                f"32 character limit for caption cue in scc file.\n"
-                f"Lines longer than 32:\n"
-                f"{msg}"
-            )
-
-        for cap in captions.get_captions(lang):
-            # if there's an end time on a caption and the difference is
-            # less than .05s kill it (this is likely caused by a standalone
-            # EOC marker in the SCC file)
-            if 0 < cap.end - cap.start < 50000:
-                raise CaptionReadTimingError(
-                    f'Unsupported cue duration around {cap.format_start()} '
-                    f'for line beginning with "{cap.get_text()}". Duration '
-                    f'must be at least 0.05 seconds.')
-
-        if captions.is_empty():
-            raise CaptionReadNoCaptions("empty caption file")
-        else:
-            fix_last_captions_without_ending(captions.get_captions(lang))
-
-        return captions
+        return self.validate_scc_input(captions, lang)
 
     def _flush_implicit_buffers(self, old_key=None, *args):
         """Convert to Captions those buffers whose behavior is implicit.
@@ -297,11 +301,11 @@ class SCCReader(BaseReader):
         # split line in timestamp and words
         r = re.compile(r"([0-9:;]*)([\s\t]*)((.)*)")
         parts = r.findall(line.lower())
+        words = parts[0][2].split(' ')
 
         self.time_translator.start_at(parts[0][0])
 
-        # loop through each word
-        for word in parts[0][2].split(' '):
+        for word in words:
             # ignore empty results or invalid commands
             word = word.strip()
             if len(word) == 4:
@@ -333,6 +337,8 @@ class SCCReader(BaseReader):
         self.time_translator.increment_frames()
 
     def _handle_double_command(self, word):
+        print("=============")
+        print(word)
         # If the caption is to be broadcast, each of the commands are doubled
         # up for redundancy in case the signal is garbled in transmission.
         # The decoder is programmed to ignore a second command when it is the
@@ -343,18 +349,6 @@ class SCCReader(BaseReader):
             if word == self.last_command:
                 self.last_command = ''
                 return True
-            # Fix for the <position> <tab offset> <position> <tab offset>
-            # repetition
-            elif _is_pac_command(word) and word in self.last_command:
-                self.last_command = ''
-                return True
-            elif word in PAC_TAB_OFFSET_COMMANDS:
-                if _is_pac_command(self.last_command):
-                    self.last_command += f" {word}"
-                    return False
-                else:
-                    return True
-
         self.last_command = word
         return False
 
@@ -419,6 +413,7 @@ class SCCReader(BaseReader):
                 self._pop_on(end=self.time)
             if self.buffer.is_empty():
                 return
+            self.buffer._position_tracer._last_char_position = 0
             cue = PopOnCue(buffer=deepcopy(self.buffer), start=self.time, end=0)
             self.pop_ons_queue.appendleft(cue)
             self.buffer = self.node_creator_factory.new_creator()

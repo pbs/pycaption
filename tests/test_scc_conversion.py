@@ -1,5 +1,3 @@
-import pytest
-
 from pycaption import (
     SCCReader, SCCWriter, SRTReader, SRTWriter, DFXPWriter, WebVTTWriter,
 )

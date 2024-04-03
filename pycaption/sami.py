@@ -572,6 +572,9 @@ class SAMIWriter(BaseWriter):
                 line += self._encode(node.content) + ' '
             elif node.type_ == CaptionNode.BREAK:
                 line = line.rstrip() + '<br/>\n    '
+            elif node.type_ == CaptionNode.REPOSITIONING:
+                print(self._encode(node.content))
+                line += node.content
             elif node.type_ == CaptionNode.STYLE:
                 line = self._recreate_line_style(line, node)
 

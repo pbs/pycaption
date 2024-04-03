@@ -1046,3 +1046,8 @@ INCONVERTIBLE_TO_ASCII_EXTENDED_CHARS_ASSOCIATION = {
      '└': ["+"],
      '┘': ["+"]
 }
+
+NOT_ITALICS_COMMANDS = {
+    key: value for key, value in COMMANDS.items()
+    if "italic" not in value and "break" in value
+}

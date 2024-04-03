@@ -8,9 +8,9 @@ from ..geometry import (
 )
 from .constants import (
     PAC_BYTES_TO_POSITIONING_MAP, COMMANDS, PAC_TAB_OFFSET_COMMANDS,
-    MICROSECONDS_PER_CODEWORD, INCONVERTIBLE_TO_ASCII_EXTENDED_CHARS_ASSOCIATION
+    MICROSECONDS_PER_CODEWORD, INCONVERTIBLE_TO_ASCII_EXTENDED_CHARS_ASSOCIATION,
+    NOT_ITALICS_COMMANDS
 )
-from .translator import not_italics_commands
 
 PopOnCue = collections.namedtuple("PopOnCue", "buffer, start, end")
 
@@ -30,6 +30,13 @@ class PreCaption:
         self.nodes = []
         self.style = {}
         self.layout_info = None
+        """
+        start
+        end
+        node1 (position, style, text) 1 or more
+        node2 (position, layout, text) 1 or more
+        
+        """
 
     def to_real_caption(self):
         return Caption(
@@ -208,7 +215,6 @@ class CaptionCreator:
         """
         if node_buffer.is_empty():
             return
-
         caption = PreCaption()
         caption.start = start
         caption.end = end
@@ -218,12 +224,15 @@ class CaptionCreator:
             # skip empty elements
             if instruction.is_empty():
                 continue
-
             elif instruction.requires_repositioning():
-                caption = PreCaption()
-                caption.start = start
-                caption.end = end
-                self._still_editing.append(caption)
+                layout_info = _get_layout_from_tuple(instruction.position)
+                caption.nodes.append(
+                    CaptionNode.create_repositioning(
+                        instruction.text,
+                        layout_info=layout_info),
+                )
+                # caption.layout_info = layout_info
+                print("create repositioning", instruction.text, "at", instruction.position)
 
             # handle line breaks
             elif instruction.is_explicit_break():
@@ -255,10 +264,10 @@ class CaptionCreator:
                 layout_info = _get_layout_from_tuple(instruction.position)
                 caption.nodes.append(
                     CaptionNode.create_text(
-                        instruction.text, layout_info=layout_info),
+                        instruction.text,
+                        layout_info=layout_info),
                 )
                 caption.layout_info = layout_info
-
         self._collection.extend(self._still_editing)
 
     def get_all(self):
@@ -305,44 +314,48 @@ class InstructionNodeCreator:
         current_position = self._position_tracer.get_current_position()
 
         # get or create a usable node
-        if (self._collection and self._collection[-1].is_text_node()
-                and not self._position_tracer.is_repositioning_required()):
+        if self._collection and self._collection[-1].is_text_node():
             node = self._collection[-1]
         else:
             # create first node
             node = _InstructionNode(position=current_position)
             self._collection.append(node)
-
-        # if offset command add spaces
-        if self._position_tracer._spaces_to_add:
-            node = _InstructionNode.create_text(
-                current_position,
-                " " * self._position_tracer._spaces_to_add
-            )
-            self._collection.append(node)
-            self._position_tracer._spaces_to_add = 0
         node.add_chars(*chars)
+        self._position_tracer._last_char_position += len(chars)
+        print(chars)
+        print("current_position", current_position)
+        print(self._position_tracer._last_char_position)
 
-    def interpret_command(self, command):
-        """Creates instruction node for the command
-
-        :type command: str
-        """
-        self._update_positioning(command)
-        text = COMMANDS.get(command, '')
-        current_position = self._position_tracer.get_current_position()
-
-        # if a command sets text to something else than italic is having an open
-        # italics tag, it should close it to reset the text style
-        # doing this first so it close the tag in current line
-
+    def has_open_italics_tag(self):
+        if not self._collection:
+            return False
         has_open_italics_tag = False
         for node in self._collection[::-1]:
             if node.is_italics_node():
                 if node.sets_italics_on():
                     has_open_italics_tag = True
                 break
-        if command in not_italics_commands and has_open_italics_tag:
+        return has_open_italics_tag
+
+    def interpret_command(self, command):
+        """Creates instruction node for the command
+        :type command: str
+        """
+        self._update_positioning(command)
+        text = COMMANDS.get(command, '')
+        current_position = self._position_tracer.get_current_position()
+        spaces = self._position_tracer._spaces_to_add
+
+        # if a command sets text to something else than italic is having an open
+        # italics tag, it should close it to reset the text style
+        # doing this first so it close the tag in current line
+        has_close_condition = (
+                command in NOT_ITALICS_COMMANDS and
+                self.has_open_italics_tag() and
+                command not in PAC_TAB_OFFSET_COMMANDS
+        )
+
+        if has_close_condition:
             self._collection.append(
                 _InstructionNode.create_italics_style(
                     self._position_tracer.get_current_position(),
@@ -354,15 +367,29 @@ class InstructionNodeCreator:
         if self._position_tracer.is_linebreak_required():
             self._collection.append(_InstructionNode.create_break(
                 position=current_position))
+            if self._position_tracer._spaces_to_add > 0:
+                self._collection.append(
+                    _InstructionNode.create_repositioning_command(
+                        spaces=spaces,
+                        position=current_position
+                    )
+                )
+                self._position_tracer._spaces_to_add = 0
+                self._position_tracer._last_char_position += spaces
+                self._position_tracer.acknowledge_position_changed()
             self._position_tracer.acknowledge_linebreak_consumed()
 
         # add repositioning instruction node
         if self._position_tracer.is_repositioning_required():
-            self._collection.append(
-                _InstructionNode.create_repositioning_command(
-                    current_position
+            if spaces > 0:
+                self._collection.append(
+                    _InstructionNode.create_repositioning_command(
+                        spaces=spaces,
+                        position=current_position
+                    )
                 )
-            )
+                self._position_tracer._spaces_to_add = 0
+            self._position_tracer._last_char_position += spaces
             self._position_tracer.acknowledge_position_changed()
 
         # add italic open/closed italics nodes
@@ -377,20 +404,23 @@ class InstructionNodeCreator:
                     _InstructionNode.create_italics_style(
                         self._position_tracer.get_current_position(),
                         turn_on=False
-                    )
-                )
+                    ))
+        print(self._collection)
+        print("last char", self._position_tracer._last_char_position)
 
     def _update_positioning(self, command):
         """Sets the positioning information to use for the next nodes
 
         :type command: str
         """
+        prev_positioning = self._position_tracer.get_current_position()
         if command in PAC_TAB_OFFSET_COMMANDS:
             tab_offset = PAC_TAB_OFFSET_COMMANDS[command]
-            prev_positioning = self._position_tracer.default
-            positioning = (prev_positioning[0],
-                           prev_positioning[1] + tab_offset)
-            self._position_tracer._spaces_to_add = tab_offset
+            positioning = (
+                prev_positioning[0],
+                self._position_tracer._last_char_position + tab_offset
+            )
+
         else:
             first, second = command[:2], command[2:]
 
@@ -398,10 +428,16 @@ class InstructionNodeCreator:
                 positioning = PAC_BYTES_TO_POSITIONING_MAP[first][second]
             except KeyError:
                 return
+        if command in ["9420", "942c"]:
+            self._position_tracer._last_char_position = 0
+            self._position_tracer._spaces_to_add = 0
         self._position_tracer.update_positioning(positioning)
 
+    # def __iter__(self):
+    #     return iter(_format_italics(self._collection))
+
     def __iter__(self):
-        return iter(_format_italics(self._collection))
+        return iter(self._collection)
 
     @classmethod
     def from_list(cls, stash_list, position_tracker):
@@ -527,6 +563,12 @@ class _InstructionNode:
         """
         return self._type == self.TEXT
 
+    def is_repositioning_node(self):
+        """
+        :rtype: bool
+        """
+        return self._type == self.CHANGE_POSITION
+
     def is_empty(self):
         """
         :rtype: bool
@@ -614,13 +656,16 @@ class _InstructionNode:
         )
 
     @classmethod
-    def create_repositioning_command(cls, position=None):
+    def create_repositioning_command(cls, spaces=0, position=None):
         """Create node interpretable as a command to change the current
         position
-
+        :spaces - number of spaces to add to create the new position
         :type position:
         """
-        return cls(type_=cls.CHANGE_POSITION, position=position)
+        return cls(
+            type_=cls.CHANGE_POSITION,
+            text=" " * spaces,
+            position=position)
 
     def __repr__(self):         # pragma: no cover
         if self._type == self.BREAK:
@@ -880,4 +925,5 @@ def _ensure_final_italics_node_closes(collection):
                 turn_on=False
             )
         )
+
     return new_collection

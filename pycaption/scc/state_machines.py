@@ -13,10 +13,7 @@ class _PositioningTracker:
         self._positions = [positioning]
         self._break_required = False
         self._repositioning_required = False
-        # Since the actual column is not applied when encountering a line break
-        # this attribute is used to store it and determine by comparison if the
-        # next positioning is actually a Tab Offset
-        self._last_column = None
+        self._last_char_position = 0
         self._spaces_to_add = 0
 
     def update_positioning(self, positioning):
@@ -27,24 +24,31 @@ class _PositioningTracker:
         :type positioning: tuple[int]
         :param positioning: a tuple (row, col)
         """
-        current = self._positions[-1]
-
-        if not current:
+        previous = self._positions[-1]
+        if not previous:
             if positioning:
                 # Set the positioning for the first time
                 self._positions = [positioning]
             return
 
-        row, col = current
+        previous_row, previous_column = previous
         new_row, new_col = positioning
-
-        if new_row == row + 1:
-            self._positions.append((new_row, new_col))
+        print("previous", previous)
+        print("positioning", positioning)
+        if new_row == previous_row + 1:
             self._break_required = True
             self._spaces_to_add = new_col
+            self._last_char_position = new_col
+            print("break", new_col, self._last_char_position)
         else:
-            self._positions = [positioning]
             self._repositioning_required = True
+            self._spaces_to_add = new_col - self._last_char_position
+            print("repo", new_col, self._last_char_position)
+
+        self._positions = [positioning]
+        if new_row == previous_row and new_col < self._last_char_position:
+            raise ValueError(
+                f"We cannot go back positioning from {self._last_char_position} to  {new_col}")
 
     def get_current_position(self):
         """Returns the current usable position
