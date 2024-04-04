@@ -1,11 +1,5 @@
 include pycaption/english.pickle
-include pycaption/NotoSansDisplay-Regular.ttf
-include pycaption/NotoSansDisplay-Regular-note.ttf
-include pycaption/NotoSansArabic-Regular.ttf
-include pycaption/NotoSansCJKsc-Regular.otf
-include pycaption/NotoSansCJKtc-Regular.otf
-include pycaption/NotoSansCJKjp-Regular.otf
-include pycaption/NotoSansCJKkr-Regular.otf
-include pycaption/NotoSansDisplay-RegularAndArabic.ttf
+include pycaption/*.ttf
+include pycaption/*.otf
 recursive-exclude tests *
 include README.rst requirements.txt
