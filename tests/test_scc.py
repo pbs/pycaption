@@ -248,8 +248,6 @@ class TestSCCReader(ReaderTestingMixIn):
         with pytest.raises(CaptionLineLengthError) as exc_info:
             SCCReader().read(sample_scc_with_line_too_long)
 
-        print(exc_info.value.args[0])
-
         assert exc_info.value.args[0].startswith(
             "32 character limit for caption cue in scc file.")
         str_to_check = ("around 00:00:05.900 - was Cal l l l l l l l l l l l l l l l l l l l l l l l l l l l l "

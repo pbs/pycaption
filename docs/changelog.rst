@@ -1,5 +1,13 @@
 Changelog
 ---------
+2.2.6
+^^^^^
+- Pass the caption cue time with all error messages.
+
+2.2.5
+^^^^^
+- Yanked.
+
 2.2.4
 ^^^^^
 - Skip duplicated extended characters.
