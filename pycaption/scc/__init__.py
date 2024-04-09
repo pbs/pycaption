@@ -81,11 +81,11 @@ http://www.theneitherworld.com/mcpoodle/SCC_TOOLS/DOCS/SCC_FORMAT.HTML
 import math
 import re
 import textwrap
-from collections import deque
+from collections import deque, defaultdict
 from copy import deepcopy
 
 from pycaption.base import (
-    BaseReader, BaseWriter, CaptionSet, CaptionNode,
+    BaseReader, BaseWriter, CaptionSet
 )
 from pycaption.exceptions import CaptionReadNoCaptions, InvalidInputError, \
     CaptionReadTimingError, CaptionLineLengthError
@@ -232,16 +232,24 @@ class SCCReader(BaseReader):
         captions = CaptionSet({lang: self.caption_stash.get_all()})
 
         # check captions for incorrect lengths
-        lines = []
+        lines_too_long = defaultdict(list)
         for caption in self.caption_stash._collection:
+            caption_start = caption.to_real_caption().format_start()
             caption_text = "".join(caption.to_real_caption().get_text_nodes())
-            lines.extend(caption_text.split("\n"))
-        lines_too_long = [line for line in lines if len(line) > 32]
+            text_too_long = [line for line in caption_text.split("\n") if len(line) > 32]
+            if caption_start in lines_too_long:
+                lines_too_long[caption_start] = text_too_long
+            else:
+                lines_too_long[caption_start].extend(text_too_long)
 
-        if bool(lines_too_long):
-            msg = ""
-            for line in lines_too_long:
-                msg += line + f" - Length { len(line)}" + "\n"
+        msg = ""
+        if bool(lines_too_long.keys()):
+            for key in lines_too_long:
+                if lines_too_long[key]:
+                    msg += f"around {key} - "
+                    for line in lines_too_long[key]:
+                        msg += line + f" - Length { len(line)}" + "\n"
+        if len(msg):
             raise CaptionLineLengthError(
                 f"32 character limit for caption cue in scc file.\n"
                 f"Lines longer than 32:\n"

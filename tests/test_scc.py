@@ -250,8 +250,9 @@ class TestSCCReader(ReaderTestingMixIn):
 
         assert exc_info.value.args[0].startswith(
             "32 character limit for caption cue in scc file.")
-        assert ("was Cal l l l l l l l l l l l l l l l l l l l l l l l l l l l l Denison, a friend - Length 81"
-                in exc_info.value.args[0].split("\n"))
+        str_to_check = ("around 00:00:05.900 - was Cal l l l l l l l l l l l l l l l l l l l l l l l l l l l l "
+                        "Denison, a friend - Length 81")
+        assert str_to_check in exc_info.value.args[0].split("\n")
 
 
 class TestCoverageOnly:
