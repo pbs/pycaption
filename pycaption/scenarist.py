@@ -95,10 +95,10 @@ class ScenaristDVDWriter(BaseWriter):
         Language.get('ru'): {'fontfile': f"{os.path.dirname(__file__)}/NotoSansDisplay-Regular-Note-Math.ttf",
                              'align': 'left'},
         Language.get('ar'): {'fontfile': f"{os.path.dirname(__file__)}/NotoSansDisplay-RegularAndArabic.ttf", 'align': 'right'},
-        Language.get('ja-JP'): {'fontfile': f"{os.path.dirname(__file__)}/NotoSansCJKjp-Regular.otf", 'align': 'left'},
-        Language.get('zh-TW'): {'fontfile': f"{os.path.dirname(__file__)}/NotoSansCJKtc-Regular.otf", 'align': 'left'},
-        Language.get('zh-CN'): {'fontfile': f"{os.path.dirname(__file__)}/NotoSansCJKsc-Regular.otf", 'align': 'left'},
-        Language.get('ko-KR'): {'fontfile': f"{os.path.dirname(__file__)}/NotoSansCJKkr-Regular.otf", 'align': 'left'},
+        Language.get('ja-JP'): {'fontfile': f"{os.path.dirname(__file__)}/NotoSansJP-Regular+Math.ttf", 'align': 'left'},
+        Language.get('zh-TW'): {'fontfile': f"{os.path.dirname(__file__)}/NotoSansTC-Regular+Math.ttf", 'align': 'left'},
+        Language.get('zh-CN'): {'fontfile': f"{os.path.dirname(__file__)}/NotoSansSC-Regular+Math.ttf", 'align': 'left'},
+        Language.get('ko-KR'): {'fontfile': f"{os.path.dirname(__file__)}/NotoSansKR-Regular+Mat.ttf", 'align': 'left'},
     }
 
     def __init__(self, relativize=True, video_width=720, video_height=480, fit_to_screen=True, tape_type='NON_DROP',

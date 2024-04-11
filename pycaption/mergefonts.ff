@@ -1,0 +1,13 @@
+#!/usr/local/bin/fontforge
+Open($1)
+SelectAll()
+Generate("1.ttf")
+Close()
+Open($2)
+SelectAll()
+Generate("2.ttf")
+Close()
+Open("1.ttf")
+MergeFonts("2.ttf")
+Generate($3)
+Close()
