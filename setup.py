@@ -24,7 +24,7 @@ transcript_dependencies = [
 
 setup(
     name='pycaption',
-    version='2.2.6.dev3',
+    version='2.2.7',
     description='Closed caption converter',
     long_description=open(README_PATH).read(),
     author='Joe Norton',
