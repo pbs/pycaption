@@ -8,7 +8,8 @@ from ..geometry import (
 )
 from .constants import (
     PAC_BYTES_TO_POSITIONING_MAP, COMMANDS, PAC_TAB_OFFSET_COMMANDS,
-    MICROSECONDS_PER_CODEWORD, INCONVERTIBLE_TO_ASCII_EXTENDED_CHARS_ASSOCIATION
+    MICROSECONDS_PER_CODEWORD, INCONVERTIBLE_TO_ASCII_EXTENDED_CHARS_ASSOCIATION,
+    MID_ROW_CODES
 )
 
 PopOnCue = collections.namedtuple("PopOnCue", "buffer, start, end")
@@ -254,7 +255,7 @@ class CaptionCreator:
                 layout_info = _get_layout_from_tuple(instruction.position)
                 caption.nodes.append(
                     CaptionNode.create_text(
-                        instruction.get_text(), layout_info=layout_info),
+                        instruction.text, layout_info=layout_info),
                 )
                 caption.layout_info = layout_info
 
@@ -345,6 +346,12 @@ class InstructionNodeCreator:
         self._update_positioning(command)
 
         text = COMMANDS.get(command, '')
+
+        if command in MID_ROW_CODES:
+            for node in self._collection[::-1]:
+                if node.is_text_node():
+                    node.text += ' '
+                    break
 
         if 'italic' in text:
             if 'end' not in text:

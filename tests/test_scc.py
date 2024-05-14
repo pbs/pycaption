@@ -206,10 +206,10 @@ class TestSCCReader(ReaderTestingMixIn):
 
     def test_skip_duplicate_tab_offset(self, sample_scc_duplicate_tab_offset):
         expected_lines = [
-            '[Radio reporter]',
-            'The I-10 Santa Monica Freeway',
+            '[Radio reporter] ',
+            'The I-10 Santa Monica Freeway ',
             'westbound is jammed,',
-            'due to a three-car accident',
+            'due to a three-car accident ',
             'blocking lanes 1 and 2',
         ]
 

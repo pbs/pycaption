@@ -1,5 +1,9 @@
 Changelog
 ---------
+2.2.7
+^^^^^
+- The cursor moves automatically one column to the right after each character or Mid-Row Code received.
+
 2.2.6
 ^^^^^
 - Pass the caption cue time with all error messages.
