@@ -8,7 +8,7 @@ from ..geometry import (
 )
 from .constants import (
     PAC_BYTES_TO_POSITIONING_MAP, COMMANDS, PAC_TAB_OFFSET_COMMANDS,
-    MICROSECONDS_PER_CODEWORD, INCONVERTIBLE_TO_ASCII_EXTENDED_CHARS_ASSOCIATION,
+    MICROSECONDS_PER_CODEWORD, BACKGROUND_COLOR_CODES,
     MID_ROW_CODES
 )
 
@@ -335,23 +335,41 @@ class InstructionNodeCreator:
 
         node.add_chars(*chars)
 
-    def interpret_command(self, command):
+    def interpret_command(self, command, mode=None):
         """Given a command determines whether to turn italics on or off,
         or to set the positioning
 
         This is mostly used to convert from the legacy-style commands
 
         :type command: str
+        :type mode: pop or roll or paint
         """
         self._update_positioning(command)
 
         text = COMMANDS.get(command, '')
 
+        if command == "94a1" and mode in ["roll", "paint"]:
+            self.handle_backspace()
+
+        if command in BACKGROUND_COLOR_CODES:
+            # Since these codes are optional, they must be preceded
+            # with the space character (20h),
+            # which will be deleted when the code is applied.
+            if self._collection[-1].text[-1].isspace():
+                self._collection[-1].text = self._collection[-1].text[:-1]
+
+        # mid row code that is not first code of the line
+        # (previous node is not a break node)
+        # fixes OCTO-11022
         if command in MID_ROW_CODES:
-            for node in self._collection[::-1]:
-                if node.is_text_node():
-                    node.text += ' '
-                    break
+            not_after_break = (
+                len(self._collection) > 1 and self._collection[-2].is_explicit_break()
+            )
+            if not_after_break:
+                for node in self._collection[::-1]:
+                    if node.is_text_node():
+                        node.text += ' '
+                        break
 
         if 'italic' in text:
             if 'end' not in text:
@@ -419,33 +437,24 @@ class InstructionNodeCreator:
 
         return instance
 
-    def remove_ascii_duplicate(self, accented_character):
+    def handle_backspace(self):
         """
-        Characters from the Extended Characters list are usually preceded by
-        their ASCII substitute, in case the decoder is not able to display
-        the special character.
-
-        This is used to remove the substitute character in order to avoid
-        displaying both.
-
-        :type accented_character: str
+        Move cursor back one position and delete that character
         """
-        is_text_node = (
-                self._collection and
-                self._collection[-1].is_text_node() and
-                self._collection[-1].text
-                )
-        if is_text_node:
-            try:
-                ascii_char = [
-                    unicodedata.normalize('NFD', accented_character)
-                    .encode('ascii', 'strict').decode("utf-8")
-                ]
-            except (UnicodeEncodeError, UnicodeDecodeError):
-                ascii_char = INCONVERTIBLE_TO_ASCII_EXTENDED_CHARS_ASSOCIATION.get(accented_character)
+        node = self.get_previous_text_node()
+        # in case of no previous text nodes or
+        # if the backspace is required after the first char in text
+        # do nothing
+        if node is None or len(node.text) == 1:
+            return
+        # otherwise do backspace by deleting the last char
+        node.text = node.text[:-1]
 
-            if ascii_char and self._collection[-1].text[-1] in ascii_char:
-                self._collection[-1].text = self._collection[-1].text[:-1]
+    def get_previous_text_node(self):
+        for node in self._collection[::-1]:
+            if node.is_text_node() and node.text:
+                return node
+        return None
 
 
 def _get_layout_from_tuple(position_tuple):

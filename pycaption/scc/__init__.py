@@ -347,7 +347,7 @@ class SCCReader(BaseReader):
         # same as the first.
         # Also like codes, Special Characters are always doubled up,
         # with only one member of each pair being displayed.
-        if word in COMMANDS or _is_pac_command(word) or word in SPECIAL_CHARS or word in EXTENDED_CHARS:
+        if word in COMMANDS or _is_pac_command(word) or word in SPECIAL_CHARS:
             if word == self.last_command:
                 self.last_command = ''
                 return True
@@ -370,7 +370,14 @@ class SCCReader(BaseReader):
         self.buffer.add_chars(SPECIAL_CHARS[word])
 
     def _translate_extended_char(self, word):
-        self.buffer.remove_ascii_duplicate(EXTENDED_CHARS[word])
+        """
+        Each of the 64 Extended Characters incorporates an automatic BS.
+        When an Extended Character is received, the cursor moves to the
+        left one column position (unless the Extended Character is the first
+        character on a row), erasing any character which may be in that location,
+        then displays the Extended Character.
+        """
+        self.buffer.handle_backspace()
 
         # add to buffer
         self.buffer.add_chars(EXTENDED_CHARS[word])
@@ -444,7 +451,10 @@ class SCCReader(BaseReader):
 
         # If command is not one of the aforementioned, add it to buffer
         else:
-            self.buffer.interpret_command(word)
+            self.buffer.interpret_command(
+                command=word,
+                mode=self.buffer_dict.active_key
+            )
 
     def _translate_characters(self, word):
         # split word into the 2 bytes
