@@ -9,7 +9,7 @@ from ..geometry import (
 from .constants import (
     PAC_BYTES_TO_POSITIONING_MAP, COMMANDS, PAC_TAB_OFFSET_COMMANDS,
     MICROSECONDS_PER_CODEWORD, BACKGROUND_COLOR_CODES,
-    MID_ROW_CODES
+    MID_ROW_CODES, EXTENDED_CHARS, SPECIAL_CHARS
 )
 
 PopOnCue = collections.namedtuple("PopOnCue", "buffer, start, end")
@@ -348,20 +348,24 @@ class InstructionNodeCreator:
 
         text = COMMANDS.get(command, '')
 
-        if command == "94a1" and mode in ["roll", "paint"]:
-            self.handle_backspace()
+        if command == "94a1":
+            self.handle_backspace("94a1")
 
         if command in BACKGROUND_COLOR_CODES:
             # Since these codes are optional, they must be preceded
             # with the space character (20h),
             # which will be deleted when the code is applied.
-            if self._collection[-1].text[-1].isspace():
+            # ex: 2080 97ad 94a1
+            if (
+                    self._collection[-1].is_text_node() and
+                    self._collection[-1].text[-1].isspace()
+            ):
                 self._collection[-1].text = self._collection[-1].text[:-1]
 
-        # mid row code that is not first code of the line
+        # mid row code that is not first code on the line
         # (previous node is not a break node)
         # fixes OCTO-11022
-        if command in MID_ROW_CODES:
+        if command.lower() in MID_ROW_CODES:
             not_after_break = (
                 len(self._collection) > 1 and self._collection[-2].is_explicit_break()
             )
@@ -437,18 +441,26 @@ class InstructionNodeCreator:
 
         return instance
 
-    def handle_backspace(self):
+    def handle_backspace(self, word):
         """
         Move cursor back one position and delete that character
         """
         node = self.get_previous_text_node()
         # in case of no previous text nodes or
-        # if the backspace is required after the first char in text
+        # if the backspace is required while no character
         # do nothing
-        if node is None or len(node.text) == 1:
+        if node is None:
             return
-        # otherwise do backspace by deleting the last char
-        node.text = node.text[:-1]
+        last_char = node.text[-1]
+        delete_previous_condition = (
+            (word in SPECIAL_CHARS and last_char not in SPECIAL_CHARS.values()) or
+            (word in EXTENDED_CHARS and last_char not in EXTENDED_CHARS.values()) or
+            word == "94a1"
+        )
+        # in case of special / extended char, perform backspace
+        # only if the previous character in not also special / extended
+        if delete_previous_condition:
+            node.text = node.text[:-1]
 
     def get_previous_text_node(self):
         for node in self._collection[::-1]:
