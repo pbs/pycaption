@@ -204,10 +204,10 @@ class TestSCCReader(ReaderTestingMixIn):
 
     def test_skip_duplicate_tab_offset(self, sample_scc_duplicate_tab_offset):
         expected_lines = [
-            '[Radio reporter]',
+            '[Radio reporter] ',
             'The I-10 Santa Monica Freeway ',
             'westbound is jammed,',
-            'due to a three-car accident',
+            'due to a three-car accident ',
             'blocking lanes 1 and 2'
         ]
 
@@ -218,6 +218,7 @@ class TestSCCReader(ReaderTestingMixIn):
             for node in cap_.nodes
             if node.type_ == CaptionNode.TEXT
         ]
+
         assert expected_lines == actual_lines
 
     def test_skip_duplicate_special_characters(
@@ -383,6 +384,9 @@ class TestInterpretableNodeCreator:
         # 4. to get new opening italic nodes after changing position, if 3
         # happened
         # 5. to get a final italic closing node, if one is needed
+        # 9120 and 91ae are mid row codes and will add a space
+        # 9120 at the start of the following text node
+        # 91ae to the end of the previous text node
         node_creator.interpret_command('9470')  # row 15, col 0
         node_creator.interpret_command('9120')  # italics off
         node_creator.interpret_command('9120')  # italics off
@@ -401,7 +405,7 @@ class TestInterpretableNodeCreator:
         node_creator.add_chars('b')
         node_creator.interpret_command('91ae')  # italics ON again
         node_creator.add_chars('b')
-        node_creator.interpret_command('9120')  # italics OFF
+        node_creator.interpret_command('9120')  # italics OFF adds space
         node_creator.interpret_command('9120')  # italics OFF
 
         node_creator.interpret_command('1570')  # row 6 col 0
@@ -420,32 +424,35 @@ class TestInterpretableNodeCreator:
         result = list(node_creator)
 
         assert result[0].is_text_node()
-        assert result[1].requires_repositioning()
-        assert result[2].is_italics_node()
-        assert result[2].sets_italics_on()
+        assert result[1].is_text_node()
+        assert result[2].requires_repositioning()
 
-        assert result[3].is_text_node()
+        assert result[3].is_italics_node()
+        assert result[3].sets_italics_on()
         assert result[4].is_text_node()
-        assert result[5].is_text_node()
+        assert result[5].sets_italics_off()
+        assert result[6].is_text_node()
 
-        assert result[6].is_italics_node()
-        assert result[6].sets_italics_off()
+        assert result[7].is_text_node()
+        assert result[8].sets_italics_on()
 
-        assert result[7].requires_repositioning()
-        assert result[8].is_text_node()
+        assert result[9].is_text_node()
+        assert result[10].is_text_node()
 
-        assert result[9].requires_repositioning()
-        assert result[10].is_italics_node()
-        assert result[10].sets_italics_on()
-
-        assert result[11].is_text_node()
-        assert result[12].is_explicit_break()
+        assert result[11].sets_italics_off()
+        assert result[12].is_text_node()
         assert result[13].is_text_node()
-        assert result[14].is_explicit_break()
+        assert result[14].requires_repositioning()
         assert result[15].is_text_node()
 
-        assert result[16].is_italics_node()
-        assert result[16].sets_italics_off()
+        assert result[16].requires_repositioning()
+        assert result[17].sets_italics_on()
+        assert result[18].is_text_node()
+        assert result[19].is_explicit_break()
+        assert result[20].is_text_node()
+        assert result[21].is_explicit_break()
+        assert result[22].is_text_node()
+        assert result[23].sets_italics_off()
 
 
 class CaptionDummy:

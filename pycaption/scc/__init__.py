@@ -310,13 +310,18 @@ class SCCReader(BaseReader):
 
         word_list = parts[0][2].split(' ')
         pacs_are_doubled = len(word_list) > 1 and word_list[0] == word_list[1]
-        for word in word_list:
+        for idx, word in enumerate(word_list):
             # ignore empty results or invalid commands
             word = word.strip()
+            previous_is_pac = idx > 0 and _is_pac_command(word_list[idx-1])
             if len(word) == 4:
-                self._translate_word(word, pacs_are_doubled)
+                self._translate_word(
+                    word=word,
+                    previous_is_pac=previous_is_pac,
+                    pacs_are_doubled=pacs_are_doubled
+                )
 
-    def _translate_word(self, word, pacs_are_doubled):
+    def _translate_word(self, word, previous_is_pac, pacs_are_doubled):
         if self._handle_double_command(word, pacs_are_doubled):
             # count frames for timing
             self.time_translator.increment_frames()
@@ -325,7 +330,7 @@ class SCCReader(BaseReader):
         # TODO - check that all the positioning commands are here, or use
         # some other strategy to determine if the word is a command.
         if word in COMMANDS or _is_pac_command(word):
-            self._translate_command(word)
+            self._translate_command(word=word, previous_is_pac=previous_is_pac)
 
         # second, check if word is a special character
         elif word in SPECIAL_CHARS:
@@ -390,7 +395,7 @@ class SCCReader(BaseReader):
         # add to buffer
         self.buffer.add_chars(EXTENDED_CHARS[word])
 
-    def _translate_command(self, word):
+    def _translate_command(self, word, previous_is_pac):
         # if command is pop_up
         if word == '9420':
             self.buffer_dict.set_active('pop')
@@ -461,7 +466,7 @@ class SCCReader(BaseReader):
         else:
             self.buffer.interpret_command(
                 command=word,
-                mode=self.buffer_dict.active_key
+                previous_is_pac=previous_is_pac
             )
 
     def _translate_characters(self, word):

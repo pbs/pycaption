@@ -288,6 +288,8 @@ class InstructionNodeCreator:
         else:
             self._collection = collection
 
+        self.last_style = None
+
         self._position_tracer = position_tracker
 
     def is_empty(self):
@@ -335,7 +337,7 @@ class InstructionNodeCreator:
 
         node.add_chars(*chars)
 
-    def interpret_command(self, command, mode=None):
+    def interpret_command(self, command, previous_is_pac=None):
         """Given a command determines whether to turn italics on or off,
         or to set the positioning
 
@@ -362,25 +364,13 @@ class InstructionNodeCreator:
             ):
                 self._collection[-1].text = self._collection[-1].text[:-1]
 
-        # mid row code that is not first code on the line
-        # (previous node is not a break node)
-        # fixes OCTO-11022
-        if command.lower() in MID_ROW_CODES:
-            not_after_break = (
-                len(self._collection) > 1 and self._collection[-2].is_explicit_break()
-            )
-            if not_after_break:
-                for node in self._collection[::-1]:
-                    if node.is_text_node():
-                        node.text += ' '
-                        break
-
         if 'italic' in text:
             if 'end' not in text:
                 self._collection.append(
                     _InstructionNode.create_italics_style(
                         self._position_tracer.get_current_position())
                 )
+                self.last_style = "italics on"
             else:
                 self._collection.append(
                     _InstructionNode.create_italics_style(
@@ -388,6 +378,19 @@ class InstructionNodeCreator:
                         turn_on=False
                     )
                 )
+                self.last_style = "italics off"
+
+        # mid row code that is not first code on the line
+        # (previous node is not a break node)
+        # fixes OCTO-11022
+        if command in MID_ROW_CODES and not previous_is_pac:
+            if self.last_style == "italics off":
+                self.add_chars(' ')
+            else:
+                for node in self._collection[::-1]:
+                    if node.is_text_node() and node.text:
+                        node.text += ' '
+                        break
 
     def _update_positioning(self, command):
         """Sets the positioning information to use for the next nodes
