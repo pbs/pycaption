@@ -308,15 +308,21 @@ class SCCReader(BaseReader):
 
         self.time_translator.start_at(parts[0][0])
 
-        # loop through each word
-        for word in parts[0][2].split(' '):
+        word_list = parts[0][2].split(' ')
+        pacs_are_doubled = len(word_list) > 1 and word_list[0] == word_list[1]
+        for idx, word in enumerate(word_list):
             # ignore empty results or invalid commands
             word = word.strip()
+            previous_is_pac = idx > 0 and _is_pac_command(word_list[idx-1])
             if len(word) == 4:
-                self._translate_word(word)
+                self._translate_word(
+                    word=word,
+                    previous_is_pac=previous_is_pac,
+                    pacs_are_doubled=pacs_are_doubled
+                )
 
-    def _translate_word(self, word):
-        if self._handle_double_command(word):
+    def _translate_word(self, word, previous_is_pac, pacs_are_doubled):
+        if self._handle_double_command(word, pacs_are_doubled):
             # count frames for timing
             self.time_translator.increment_frames()
             return
@@ -324,7 +330,7 @@ class SCCReader(BaseReader):
         # TODO - check that all the positioning commands are here, or use
         # some other strategy to determine if the word is a command.
         if word in COMMANDS or _is_pac_command(word):
-            self._translate_command(word)
+            self._translate_command(word=word, previous_is_pac=previous_is_pac)
 
         # second, check if word is a special character
         elif word in SPECIAL_CHARS:
@@ -340,42 +346,56 @@ class SCCReader(BaseReader):
         # count frames for timing only after processing a command
         self.time_translator.increment_frames()
 
-    def _handle_double_command(self, word):
+    def _handle_double_command(self, word, pacs_are_doubled):
         # If the caption is to be broadcast, each of the commands are doubled
         # up for redundancy in case the signal is garbled in transmission.
         # The decoder is programmed to ignore a second command when it is the
         # same as the first.
-        # Also like codes, Special Characters are always doubled up,
+        # If we have doubled commands we're skipping also
+        # doubled special characters and doubled extended characters
         # with only one member of each pair being displayed.
-        if word in COMMANDS or _is_pac_command(word) or word in SPECIAL_CHARS or word in EXTENDED_CHARS:
-            if word == self.last_command:
-                self.last_command = ''
-                return True
+        actionable_commands = {
+            key: COMMANDS[key] for key in COMMANDS.keys() if key != "94a1"
+        }
+        doubled_types = word in actionable_commands or _is_pac_command(word)
+        if pacs_are_doubled:
+            doubled_types = doubled_types or word in SPECIAL_CHARS or word in EXTENDED_CHARS
+
+        if doubled_types and word == self.last_command:
+            return True
             # Fix for the <position> <tab offset> <position> <tab offset>
             # repetition
-            elif _is_pac_command(word) and word in self.last_command:
-                self.last_command = ''
+        elif _is_pac_command(word) and word in self.last_command:
+            self.last_command = ''
+            return True
+        elif word in PAC_TAB_OFFSET_COMMANDS:
+            if _is_pac_command(self.last_command):
+                self.last_command += f" {word}"
+                return False
+            else:
                 return True
-            elif word in PAC_TAB_OFFSET_COMMANDS:
-                if _is_pac_command(self.last_command):
-                    self.last_command += f" {word}"
-                    return False
-                else:
-                    return True
 
         self.last_command = word
         return False
 
     def _translate_special_char(self, word):
+        self.buffer.handle_backspace(word)
+        # add to buffer
         self.buffer.add_chars(SPECIAL_CHARS[word])
 
     def _translate_extended_char(self, word):
-        self.buffer.remove_ascii_duplicate(EXTENDED_CHARS[word])
-
+        """
+        Each of the 64 Extended Characters incorporates an automatic BS.
+        When an Extended Character is received, the cursor moves to the
+        left one column position (unless the Extended Character is the first
+        character on a row), erasing any character which may be in that location,
+        then displays the Extended Character.
+        """
+        self.buffer.handle_backspace(word)
         # add to buffer
         self.buffer.add_chars(EXTENDED_CHARS[word])
 
-    def _translate_command(self, word):
+    def _translate_command(self, word, previous_is_pac):
         # if command is pop_up
         if word == '9420':
             self.buffer_dict.set_active('pop')
@@ -444,7 +464,10 @@ class SCCReader(BaseReader):
 
         # If command is not one of the aforementioned, add it to buffer
         else:
-            self.buffer.interpret_command(word)
+            self.buffer.interpret_command(
+                command=word,
+                previous_is_pac=previous_is_pac
+            )
 
     def _translate_characters(self, word):
         # split word into the 2 bytes

@@ -1,5 +1,15 @@
 Changelog
 ---------
+2.2.8
+^^^^^
+- Honor backspaces on captions in scc files
+- When mid-row codes which are preceded by a PAC command don't add spaces
+- Mid row codes which don't follow after a PAC and don't have a style reset command before
+will add a space to the end of the previous text node
+- Mid row codes which don't follow after a PAC and have a style reset command before
+will add a space to the beginning of the next text node
+- Background color codes to delete the space in front
+
 2.2.7
 ^^^^^
 - The cursor moves automatically one column to the right after each character or Mid-Row Code received.
