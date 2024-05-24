@@ -322,6 +322,10 @@ class SCCReader(BaseReader):
                 )
 
     def _translate_word(self, word, previous_is_pac, pacs_are_doubled):
+        """
+        skip 94a1 if pacs_are_doubled
+        """
+
         if self._handle_double_command(word, pacs_are_doubled):
             # count frames for timing
             self.time_translator.increment_frames()
@@ -354,10 +358,7 @@ class SCCReader(BaseReader):
         # If we have doubled commands we're skipping also
         # doubled special characters and doubled extended characters
         # with only one member of each pair being displayed.
-        actionable_commands = {
-            key: COMMANDS[key] for key in COMMANDS.keys() if key != "94a1"
-        }
-        doubled_types = word in actionable_commands or _is_pac_command(word)
+        doubled_types = word in COMMANDS or _is_pac_command(word)
         if pacs_are_doubled:
             doubled_types = doubled_types or word in SPECIAL_CHARS or word in EXTENDED_CHARS
 

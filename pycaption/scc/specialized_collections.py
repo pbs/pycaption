@@ -344,7 +344,7 @@ class InstructionNodeCreator:
         This is mostly used to convert from the legacy-style commands
 
         :type command: str
-        :type mode: pop or roll or paint
+        :type previous_is_pac: previous command code is for a PAC command
         """
         self._update_positioning(command)
 
@@ -383,6 +383,8 @@ class InstructionNodeCreator:
         # mid row code that is not first code on the line
         # (previous node is not a break node)
         # fixes OCTO-11022
+        """
+        add tab offset"""
         if command in MID_ROW_CODES and not previous_is_pac:
             if self.last_style == "italics off":
                 self.add_chars(' ')
