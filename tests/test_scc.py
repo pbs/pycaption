@@ -223,11 +223,10 @@ class TestSCCReader(ReaderTestingMixIn):
     def test_skip_duplicate_special_characters(
             self, sample_scc_duplicate_special_characters):
         expected_lines = [
-            '®°½¿™¢£♪à èâêîôû',
+            '®®°°½½¿¿™™¢¢££♪♪àà  èèââêêîîôôûû',
             '®°½¿™¢£♪à èâêîôû',
             '®°AA½¿™¢£♪à èâêAAîôû'
         ]
-
         caption_set = SCCReader().read(sample_scc_duplicate_special_characters)
         actual_lines = [
             node.content
@@ -278,7 +277,7 @@ class TestCoverageOnly:
             'HELPING THE LOCAL NEIGHBORHOODS',
             'AND IMPROVING THE LIVES OF ALL',
             'WE SERVE.',
-            '®°½',
+            '®°½½',
             'ABû',
             'ÁÉÓ¡',
             "WHERE YOU'RE STANDING NOW,",

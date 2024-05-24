@@ -1,5 +1,4 @@
 import collections
-import unicodedata
 
 from ..base import CaptionList, Caption, CaptionNode
 from ..geometry import (
@@ -9,7 +8,7 @@ from ..geometry import (
 from .constants import (
     PAC_BYTES_TO_POSITIONING_MAP, COMMANDS, PAC_TAB_OFFSET_COMMANDS,
     MICROSECONDS_PER_CODEWORD, BACKGROUND_COLOR_CODES,
-    MID_ROW_CODES, EXTENDED_CHARS, SPECIAL_CHARS
+    MID_ROW_CODES, EXTENDED_CHARS
 )
 
 PopOnCue = collections.namedtuple("PopOnCue", "buffer, start, end")
