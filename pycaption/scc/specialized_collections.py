@@ -382,9 +382,6 @@ class InstructionNodeCreator:
 
         # mid row code that is not first code on the line
         # (previous node is not a break node)
-        # fixes OCTO-11022
-        """
-        add tab offset"""
         if command in MID_ROW_CODES and not previous_is_pac:
             if self.last_style == "italics off":
                 self.add_chars(' ')
