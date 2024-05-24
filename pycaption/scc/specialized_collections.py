@@ -337,14 +337,15 @@ class InstructionNodeCreator:
 
         node.add_chars(*chars)
 
-    def interpret_command(self, command, previous_is_pac=None):
+    def interpret_command(self, command, previous_is_pac_or_tab=False):
         """Given a command determines whether to turn italics on or off,
         or to set the positioning
 
         This is mostly used to convert from the legacy-style commands
 
         :type command: str
-        :type previous_is_pac: previous command code is for a PAC command
+        :type previous_is_pac_or_tab: previous command code is for a PAC command
+        or a PAC_TAB_OFFSET_COMMANDS
         """
         self._update_positioning(command)
 
@@ -382,7 +383,7 @@ class InstructionNodeCreator:
 
         # mid row code that is not first code on the line
         # (previous node is not a break node)
-        if command in MID_ROW_CODES and not previous_is_pac:
+        if command in MID_ROW_CODES and not previous_is_pac_or_tab:
             if self.last_style == "italics off":
                 self.add_chars(' ')
             else:
@@ -455,12 +456,11 @@ class InstructionNodeCreator:
             return
         last_char = node.text[-1]
         delete_previous_condition = (
-            (word in SPECIAL_CHARS and last_char not in SPECIAL_CHARS.values()) or
             (word in EXTENDED_CHARS and last_char not in EXTENDED_CHARS.values()) or
             word == "94a1"
         )
-        # in case of special / extended char, perform backspace
-        # only if the previous character in not also special / extended
+        # in case extended char, perform backspace
+        # only if the previous character in not also extended
         if delete_previous_condition:
             node.text = node.text[:-1]
 

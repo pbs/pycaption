@@ -204,10 +204,10 @@ class TestSCCReader(ReaderTestingMixIn):
 
     def test_skip_duplicate_tab_offset(self, sample_scc_duplicate_tab_offset):
         expected_lines = [
-            '[Radio reporter] ',
-            'The I-10 Santa Monica Freeway ',
+            '[Radio reporter]',
+            'The I-10 Santa Monica Freeway',
             'westbound is jammed,',
-            'due to a three-car accident ',
+            'due to a three-car accident',
             'blocking lanes 1 and 2'
         ]
 
@@ -218,15 +218,14 @@ class TestSCCReader(ReaderTestingMixIn):
             for node in cap_.nodes
             if node.type_ == CaptionNode.TEXT
         ]
-
         assert expected_lines == actual_lines
 
     def test_skip_duplicate_special_characters(
             self, sample_scc_duplicate_special_characters):
         expected_lines = [
-            '®°½¿™¢£♪à èâêîôû',   # double commands so we skip one
-            '®°½¿™¢£♪à èâêîôû',   # no double command, nothing skipped equal with above
-            '®°A½¿™¢£♪à èâêAîôû'  # no skips but a couple of normal chars "c1c1" = AA
+            '®°½¿™¢£♪à èâêîôû',
+            '®°½¿™¢£♪à èâêîôû',
+            '®°AA½¿™¢£♪à èâêAAîôû'
         ]
 
         caption_set = SCCReader().read(sample_scc_duplicate_special_characters)
@@ -274,21 +273,21 @@ class TestCoverageOnly:
         actual_texts = [cap_.nodes[0].content for cap_ in captions]
         expected_texts = [
             '>>> HI.',
-             "I'M KEVIN CUNNING AND AT",
-             "INVESTOR'S BANK WE BELIEVE IN",
-             'HELPING THE LOCAL NEIGHBORHOODS',
-             'AND IMPROVING THE LIVES OF ALL',
-             'WE SERVE.',
-             '®°½',
-             'Aû',
-             'ÁÉÓ¡',
-             "WHERE YOU'RE STANDING NOW,",
-             "LOOKING OUT THERE, THAT'S AL",
-             'THE CROWD.',
-             '>> IT WAS GOOD TO BE IN TH',
-             "And restore Iowa's land, water",
-             'And wildlife.',
-             '>> Bike Iowa, your source for'
+            "I'M KEVIN CUNNING AND AT",
+            "INVESTOR'S BANK WE BELIEVE IN",
+            'HELPING THE LOCAL NEIGHBORHOODS',
+            'AND IMPROVING THE LIVES OF ALL',
+            'WE SERVE.',
+            '®°½',
+            'ABû',
+            'ÁÉÓ¡',
+            "WHERE YOU'RE STANDING NOW,",
+            "LOOKING OUT THERE, THAT'S AL",
+            'THE CROWD.',
+            '>> IT WAS GOOD TO BE IN TH',
+            "And restore Iowa's land, water",
+            'And wildlife.',
+            '>> Bike Iowa, your source for'
         ]
         assert expected_texts == actual_texts
 
