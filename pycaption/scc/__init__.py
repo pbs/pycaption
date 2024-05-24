@@ -322,10 +322,6 @@ class SCCReader(BaseReader):
                 )
 
     def _translate_word(self, word, previous_is_pac, pacs_are_doubled):
-        """
-        skip 94a1 if pacs_are_doubled
-        """
-
         if self._handle_double_command(word, pacs_are_doubled):
             # count frames for timing
             self.time_translator.increment_frames()
