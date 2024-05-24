@@ -164,6 +164,7 @@ class SCCReader(BaseReader):
         )
 
         self.last_command = ''
+        self.cue = []
 
         self.buffer_dict = NotifyingDict()
 
@@ -222,6 +223,7 @@ class SCCReader(BaseReader):
         self.time_translator.offset = offset * 1000000
         # split lines
         lines = content.splitlines()
+
 
         # loop through each line except the first
         for line in lines[1:]:
@@ -307,15 +309,25 @@ class SCCReader(BaseReader):
         parts = r.findall(line.lower())
 
         self.time_translator.start_at(parts[0][0])
-
+        cue_starters = ['9425', '9426', '94a7', '9429', '9420']
         word_list = parts[0][2].split(' ')
-        pacs_are_doubled = len(word_list) > 1 and word_list[0] == word_list[1]
+        line_starts_a_cue = any(word in cue_starters for word in word_list)
         for idx, word in enumerate(word_list):
             # ignore empty results or invalid commands
             word = word.strip()
-            previous_is_pac_or_tab = idx > 0 and (
-                _is_pac_command(word_list[idx-1]) or word_list[idx-1] in PAC_TAB_OFFSET_COMMANDS
+            # if line_starts_a_cue:
+            if word in cue_starters:
+                if len(word_list) > 0 and word_list[idx] == word_list[idx-1]:
+                    self.cue.append(word)
+                else:
+                    self.cue = [word]
+            else:
+                self.cue.append(word)
+
+            previous_is_pac_or_tab = len(self.cue) > 1 and (
+                    _is_pac_command(word_list[idx - 1]) or word_list[idx - 1] in PAC_TAB_OFFSET_COMMANDS
             )
+            pacs_are_doubled = len(self.cue) > 1 and self.cue[0] == self.cue[1]
             if len(word) == 4:
                 self._translate_word(
                     word=word,
@@ -356,9 +368,10 @@ class SCCReader(BaseReader):
         # If we have doubled commands we're skipping also
         # doubled special characters and doubled extended characters
         # with only one member of each pair being displayed.
-        doubled_types = word in COMMANDS or _is_pac_command(word)
+
+        doubled_types = word != "94a1" and word in COMMANDS or _is_pac_command(word)
         if pacs_are_doubled:
-            doubled_types = doubled_types or word in SPECIAL_CHARS or word in EXTENDED_CHARS
+            doubled_types = doubled_types or word in SPECIAL_CHARS or word in EXTENDED_CHARS or word == "94a1"
 
         if doubled_types and word == self.last_command:
             self.last_command = ''
