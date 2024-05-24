@@ -311,7 +311,6 @@ class SCCReader(BaseReader):
         self.time_translator.start_at(parts[0][0])
         cue_starters = ['9425', '9426', '94a7', '9429', '9420']
         word_list = parts[0][2].split(' ')
-        line_starts_a_cue = any(word in cue_starters for word in word_list)
         for idx, word in enumerate(word_list):
             # ignore empty results or invalid commands
             word = word.strip()
