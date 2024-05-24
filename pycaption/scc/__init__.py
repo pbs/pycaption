@@ -361,6 +361,7 @@ class SCCReader(BaseReader):
             doubled_types = doubled_types or word in SPECIAL_CHARS or word in EXTENDED_CHARS
 
         if doubled_types and word == self.last_command:
+            self.last_command = ''
             return True
             # Fix for the <position> <tab offset> <position> <tab offset>
             # repetition

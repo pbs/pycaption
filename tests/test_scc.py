@@ -77,10 +77,10 @@ class TestSCCReader(ReaderTestingMixIn):
             ((40.0, UnitEnum.PERCENT), (53.0, UnitEnum.PERCENT)),
             ((70.0, UnitEnum.PERCENT), (17.0, UnitEnum.PERCENT)),
             ((20.0, UnitEnum.PERCENT), (35.0, UnitEnum.PERCENT)),
-            ((25.0, UnitEnum.PERCENT), (83.0, UnitEnum.PERCENT)),
+            ((20.0, UnitEnum.PERCENT), (83.0, UnitEnum.PERCENT)),
             ((70.0, UnitEnum.PERCENT), (11.0, UnitEnum.PERCENT)),
             ((40.0, UnitEnum.PERCENT), (41.0, UnitEnum.PERCENT)),
-            ((25.0, UnitEnum.PERCENT), (71.0, UnitEnum.PERCENT))
+            ((20.0, UnitEnum.PERCENT), (71.0, UnitEnum.PERCENT))
         ]
         actual_positioning = [
             caption_.layout_info.origin.serialized()
