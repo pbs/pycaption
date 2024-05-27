@@ -1,9 +1,13 @@
 Changelog
 ---------
-2.2.10
-^^^^^
+2.2.11
+^^^^^^
 - A space should not be placed before a mid row code if it follows a PAC command or a Tab Offset
 - The backspace command should be treated like other commands and duplicates should be skipped if PAC commands are duplicated
+
+2.2.10
+^^^^^
+- Yanked.
 
 2.2.9
 ^^^^^
