@@ -1058,3 +1058,5 @@ BACKGROUND_COLOR_CODES = [
     "10a7", "10a8", "1029", "102a", "10ab", "102c", "10ad",
     "10ae", "102f", "97ad"
 ]
+
+CUE_STARTING_COMMAND = ['9425', '9426', '94a7', '9429', '9420']

@@ -94,7 +94,7 @@ from .constants import (
     MICROSECONDS_PER_CODEWORD, CHARACTER_TO_CODE,
     SPECIAL_OR_EXTENDED_CHAR_TO_CODE, PAC_BYTES_TO_POSITIONING_MAP,
     PAC_HIGH_BYTE_BY_ROW, PAC_LOW_BYTE_BY_ROW_RESTRICTED,
-    PAC_TAB_OFFSET_COMMANDS,
+    PAC_TAB_OFFSET_COMMANDS, CUE_STARTING_COMMAND
 )
 from .specialized_collections import (  # noqa: F401
     TimingCorrectingCaptionList, NotifyingDict, CaptionCreator,
@@ -355,16 +355,15 @@ class SCCReader(BaseReader):
         # If we have doubled commands we're skipping also
         # doubled special characters and doubled extended characters
         # with only one member of each pair being displayed.
-        cue_starter_commands = ['9425', '9426', '94a7', '9429', '9420']
         doubled_types = word != "94a1" and word in COMMANDS or _is_pac_command(word)
         if self.double_starter:
             doubled_types = doubled_types or word in EXTENDED_CHARS or word == "94a1"
 
-        if word in cue_starter_commands and word != self.last_command:
+        if word in CUE_STARTING_COMMAND and word != self.last_command:
             self.double_starter = False
 
         if doubled_types and word == self.last_command:
-            if word in cue_starter_commands:
+            if word in CUE_STARTING_COMMAND:
                 self.double_starter = True
             self.last_command = ''
             return True
