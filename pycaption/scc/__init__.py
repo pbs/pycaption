@@ -164,7 +164,7 @@ class SCCReader(BaseReader):
         )
 
         self.last_command = ''
-        self.double_starter = None
+        self.double_starter = False
 
         self.buffer_dict = NotifyingDict()
 
@@ -320,11 +320,10 @@ class SCCReader(BaseReader):
                 self._translate_word(
                     word=word,
                     previous_is_pac_or_tab=previous_is_pac_or_tab,
-                    pacs_are_doubled=self.double_starter
                 )
 
-    def _translate_word(self, word, previous_is_pac_or_tab, pacs_are_doubled):
-        if self._handle_double_command(word, pacs_are_doubled):
+    def _translate_word(self, word, previous_is_pac_or_tab):
+        if self._handle_double_command(word):
             # count frames for timing
             self.time_translator.increment_frames()
             return
@@ -348,7 +347,7 @@ class SCCReader(BaseReader):
         # count frames for timing only after processing a command
         self.time_translator.increment_frames()
 
-    def _handle_double_command(self, word, pacs_are_doubled):
+    def _handle_double_command(self, word):
         # If the caption is to be broadcast, each of the commands are doubled
         # up for redundancy in case the signal is garbled in transmission.
         # The decoder is programmed to ignore a second command when it is the
@@ -358,7 +357,7 @@ class SCCReader(BaseReader):
         # with only one member of each pair being displayed.
         cue_starter_commands = ['9425', '9426', '94a7', '9429', '9420']
         doubled_types = word != "94a1" and word in COMMANDS or _is_pac_command(word)
-        if pacs_are_doubled:
+        if self.double_starter:
             doubled_types = doubled_types or word in EXTENDED_CHARS or word == "94a1"
 
         if word in cue_starter_commands and word != self.last_command:
