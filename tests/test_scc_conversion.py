@@ -48,6 +48,11 @@ class TestSCCtoDFXP:
 
         dfxp = DFXPWriter().write(caption_set)
 
+        print("================")
+        print("================")
+        print("================")
+        print(dfxp)
+
         assert dfxp == sample_dfxp_with_properly_closing_spans_output
 
     def test_dfxp_is_valid_xml_when_scc_source_has_ampersand_character(

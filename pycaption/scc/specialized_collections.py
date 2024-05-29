@@ -254,7 +254,10 @@ class CaptionCreator:
                 layout_info = _get_layout_from_tuple(instruction.position)
                 caption.nodes.append(
                     CaptionNode.create_text(
-                        instruction.text, layout_info=layout_info),
+                        text=instruction.text,
+                        layout_info=layout_info,
+                        position=instruction.position
+                    )
                 )
                 caption.layout_info = layout_info
 
@@ -365,6 +368,10 @@ class InstructionNodeCreator:
                 self._collection[-1].text = self._collection[-1].text[:-1]
 
         if 'italic' in text:
+            if self._position_tracer.is_linebreak_required():
+                self._collection.append(_InstructionNode.create_break(
+                    position=self._position_tracer.get_current_position()))
+                self._position_tracer.acknowledge_linebreak_consumed()
             if 'end' not in text:
                 self._collection.append(
                     _InstructionNode.create_italics_style(

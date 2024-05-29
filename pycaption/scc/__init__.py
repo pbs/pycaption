@@ -355,9 +355,10 @@ class SCCReader(BaseReader):
         # If we have doubled commands we're skipping also
         # doubled special characters and doubled extended characters
         # with only one member of each pair being displayed.
+
         doubled_types = word != "94a1" and word in COMMANDS or _is_pac_command(word)
         if self.double_starter:
-            doubled_types = doubled_types or word in EXTENDED_CHARS or word == "94a1"
+            doubled_types = doubled_types or word in EXTENDED_CHARS or word == "94a1" or word in SPECIAL_CHARS
 
         if word in CUE_STARTING_COMMAND and word != self.last_command:
             self.double_starter = False
