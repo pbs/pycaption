@@ -4,6 +4,8 @@ Changelog
 ^^^^^^
 - A space should not be placed before a mid row code if it follows a PAC command or a Tab Offset
 - The backspace command should be treated like other commands and duplicates should be skipped if PAC commands are duplicated
+- Prevent webvtt writer from creating a new cue in case of line break
+- In case of style setting PAC which also breaks the line, we add the break first, then the style tag
 
 2.2.10
 ^^^^^
