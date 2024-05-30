@@ -227,7 +227,6 @@ class TestSCCReader(ReaderTestingMixIn):
             '®°½¿™¢£♪à èâêîôû',
             '®°AA½¿™¢£♪à èâêAAîôû'
         ]
-
         caption_set = SCCReader().read(sample_scc_duplicate_special_characters)
         actual_lines = [
             node.content
@@ -279,6 +278,7 @@ class TestCoverageOnly:
             'AND IMPROVING THE LIVES OF ALL',
             'WE SERVE.',
             '®°½',
+            '®°½½',
             'ABû',
             'ÁÉÓ¡',
             "WHERE YOU'RE STANDING NOW,",
@@ -323,8 +323,8 @@ class TestCoverageOnly:
 
         assert expected_text_lines == text_lines
 
-    def test_freeze_semicolon_spec_time(self, sample_scc_roll_up_ru2):
-        scc1 = SCCReader().read(sample_scc_roll_up_ru2)
+    def test_freeze_semicolon_spec_time(self, sample_scc_roll_up_ru3):
+        scc1 = SCCReader().read(sample_scc_roll_up_ru3)
         captions = scc1.get_captions('en-US')
         expected_timings = [
             (733333.3333333333, 2766666.6666666665),
@@ -346,7 +346,6 @@ class TestCoverageOnly:
         ]
 
         actual_timings = [(c_.start, c_.end) for c_ in captions]
-
         assert expected_timings == actual_timings
 
     def test_freeze_colon_spec_time(self, sample_scc_pop_on):

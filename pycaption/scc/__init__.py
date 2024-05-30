@@ -94,7 +94,7 @@ from .constants import (
     MICROSECONDS_PER_CODEWORD, CHARACTER_TO_CODE,
     SPECIAL_OR_EXTENDED_CHAR_TO_CODE, PAC_BYTES_TO_POSITIONING_MAP,
     PAC_HIGH_BYTE_BY_ROW, PAC_LOW_BYTE_BY_ROW_RESTRICTED,
-    PAC_TAB_OFFSET_COMMANDS,
+    PAC_TAB_OFFSET_COMMANDS, CUE_STARTING_COMMAND
 )
 from .specialized_collections import (  # noqa: F401
     TimingCorrectingCaptionList, NotifyingDict, CaptionCreator,
@@ -164,6 +164,7 @@ class SCCReader(BaseReader):
         )
 
         self.last_command = ''
+        self.double_starter = False
 
         self.buffer_dict = NotifyingDict()
 
@@ -222,6 +223,7 @@ class SCCReader(BaseReader):
         self.time_translator.offset = offset * 1000000
         # split lines
         lines = content.splitlines()
+
 
         # loop through each line except the first
         for line in lines[1:]:
@@ -307,24 +309,21 @@ class SCCReader(BaseReader):
         parts = r.findall(line.lower())
 
         self.time_translator.start_at(parts[0][0])
-
         word_list = parts[0][2].split(' ')
-        pacs_are_doubled = len(word_list) > 1 and word_list[0] == word_list[1]
+
         for idx, word in enumerate(word_list):
-            # ignore empty results or invalid commands
             word = word.strip()
-            previous_is_pac_or_tab = idx > 0 and (
-                _is_pac_command(word_list[idx-1]) or word_list[idx-1] in PAC_TAB_OFFSET_COMMANDS
+            previous_is_pac_or_tab = len(word_list) > 1 and (
+                    _is_pac_command(word_list[idx - 1]) or word_list[idx - 1] in PAC_TAB_OFFSET_COMMANDS
             )
             if len(word) == 4:
                 self._translate_word(
                     word=word,
                     previous_is_pac_or_tab=previous_is_pac_or_tab,
-                    pacs_are_doubled=pacs_are_doubled
                 )
 
-    def _translate_word(self, word, previous_is_pac_or_tab, pacs_are_doubled):
-        if self._handle_double_command(word, pacs_are_doubled):
+    def _translate_word(self, word, previous_is_pac_or_tab):
+        if self._handle_double_command(word):
             # count frames for timing
             self.time_translator.increment_frames()
             return
@@ -348,7 +347,7 @@ class SCCReader(BaseReader):
         # count frames for timing only after processing a command
         self.time_translator.increment_frames()
 
-    def _handle_double_command(self, word, pacs_are_doubled):
+    def _handle_double_command(self, word):
         # If the caption is to be broadcast, each of the commands are doubled
         # up for redundancy in case the signal is garbled in transmission.
         # The decoder is programmed to ignore a second command when it is the
@@ -356,11 +355,17 @@ class SCCReader(BaseReader):
         # If we have doubled commands we're skipping also
         # doubled special characters and doubled extended characters
         # with only one member of each pair being displayed.
-        doubled_types = word in COMMANDS or _is_pac_command(word)
-        if pacs_are_doubled:
-            doubled_types = doubled_types or word in SPECIAL_CHARS or word in EXTENDED_CHARS
+
+        doubled_types = word != "94a1" and word in COMMANDS or _is_pac_command(word)
+        if self.double_starter:
+            doubled_types = doubled_types or word in EXTENDED_CHARS or word == "94a1" or word in SPECIAL_CHARS
+
+        if word in CUE_STARTING_COMMAND and word != self.last_command:
+            self.double_starter = False
 
         if doubled_types and word == self.last_command:
+            if word in CUE_STARTING_COMMAND:
+                self.double_starter = True
             self.last_command = ''
             return True
             # Fix for the <position> <tab offset> <position> <tab offset>

@@ -1,5 +1,4 @@
 import collections
-import unicodedata
 
 from ..base import CaptionList, Caption, CaptionNode
 from ..geometry import (
@@ -9,7 +8,7 @@ from ..geometry import (
 from .constants import (
     PAC_BYTES_TO_POSITIONING_MAP, COMMANDS, PAC_TAB_OFFSET_COMMANDS,
     MICROSECONDS_PER_CODEWORD, BACKGROUND_COLOR_CODES,
-    MID_ROW_CODES, EXTENDED_CHARS, SPECIAL_CHARS
+    MID_ROW_CODES, EXTENDED_CHARS
 )
 
 PopOnCue = collections.namedtuple("PopOnCue", "buffer, start, end")
@@ -255,7 +254,10 @@ class CaptionCreator:
                 layout_info = _get_layout_from_tuple(instruction.position)
                 caption.nodes.append(
                     CaptionNode.create_text(
-                        instruction.text, layout_info=layout_info),
+                        text=instruction.text,
+                        layout_info=layout_info,
+                        position=instruction.position
+                    )
                 )
                 caption.layout_info = layout_info
 
@@ -366,6 +368,10 @@ class InstructionNodeCreator:
                 self._collection[-1].text = self._collection[-1].text[:-1]
 
         if 'italic' in text:
+            if self._position_tracer.is_linebreak_required():
+                self._collection.append(_InstructionNode.create_break(
+                    position=self._position_tracer.get_current_position()))
+                self._position_tracer.acknowledge_linebreak_consumed()
             if 'end' not in text:
                 self._collection.append(
                     _InstructionNode.create_italics_style(
