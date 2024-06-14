@@ -24,7 +24,7 @@ from tests.fixtures.dfxp import (  # noqa: F401
     sample_dfxp_invalid_positioning_value_template,
     sample_dfxp_multiple_captions_with_the_same_timing,
     sample_dfxp_with_ampersand_character, sample_dfxp_with_nested_spans,
-    dfxp_style_region_align_conflict, dfxp_with_concurrent_captions,
+    dfxp_style_region_align_conflict, dfxp_with_concurrent_captions, sample_dfxp_framerate
 )
 from tests.fixtures.microdvd import (  # noqa: F401
     sample_microdvd, sample_microdvd_2,
