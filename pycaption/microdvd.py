@@ -1,14 +1,10 @@
 import re
 from copy import deepcopy
 
-from .base import (
-    BaseReader, BaseWriter, CaptionSet, CaptionList, Caption, CaptionNode,
-    DEFAULT_LANGUAGE_CODE,
-)
-from .exceptions import (
-    CaptionReadNoCaptions, CaptionReadSyntaxError, CaptionReadTimingError,
-    InvalidInputError,
-)
+from .base import (DEFAULT_LANGUAGE_CODE, BaseReader, BaseWriter, Caption,
+                   CaptionList, CaptionNode, CaptionSet)
+from .exceptions import (CaptionReadNoCaptions, CaptionReadSyntaxError,
+                         CaptionReadTimingError, InvalidInputError)
 
 
 class MicroDVDReader(BaseReader):
@@ -17,7 +13,7 @@ class MicroDVDReader(BaseReader):
 
     def read(self, content, lang=DEFAULT_LANGUAGE_CODE):
         if not isinstance(content, str):
-            raise InvalidInputError('The content is not a unicode string.')
+            raise InvalidInputError("The content is not a unicode string.")
 
         lines = content.splitlines()
         captions = CaptionList()
@@ -28,26 +24,24 @@ class MicroDVDReader(BaseReader):
 
             m = re.match(r"{(\d+)}{(\d+)}(.*)", line)
             if not m:
-                raise CaptionReadSyntaxError(
-                    "Line does not match expected format")
+                raise CaptionReadSyntaxError("Line does not match expected format")
 
             start, end, txt = m.groups()
 
-            if start == '0' and end == '0':
+            if start == "0" and end == "0":
                 try:
                     fps = float(txt)
                     continue
                 except ValueError:
-                    raise CaptionReadTimingError(
-                        'FPS information is not provided')
+                    raise CaptionReadTimingError("FPS information is not provided")
 
             caption_start = self._framestomicro(int(start), fps)
             caption_end = self._framestomicro(int(end), fps)
             nodes = []
 
-            for line in txt.split('|'):
+            for line in txt.split("|"):
                 # skip extra blank lines
-                if line != '':
+                if line != "":
                     nodes.append(CaptionNode.create_text(line))
                     nodes.append(CaptionNode.create_break())
 
@@ -67,7 +61,7 @@ class MicroDVDReader(BaseReader):
         return caption_set
 
     def _framestomicro(self, framenum, fps=25.0):
-        return int(framenum / fps * (10 ** 6))
+        return int(framenum / fps * (10**6))
 
 
 class MicroDVDWriter(BaseWriter):
@@ -77,34 +71,32 @@ class MicroDVDWriter(BaseWriter):
         captions = []
 
         for lang in caption_set.get_languages():
-            captions.append(
-                self._recreate_lang(caption_set.get_captions(lang))
-            )
+            captions.append(self._recreate_lang(caption_set.get_captions(lang)))
 
-        return ''.join(captions)
+        return "".join(captions)
 
     def _microtoframes(self, micro, fps=25.0):
-        return int(micro * fps / (10 ** 6))
+        return int(micro * fps / (10**6))
 
     def _recreate_lang(self, captions):
-        sub = ''
+        sub = ""
 
         for caption in captions:
             start = self._microtoframes(caption.start)
             end = self._microtoframes(caption.end)
-            sub += f'{{{start}}}{{{end}}}'
+            sub += f"{{{start}}}{{{end}}}"
 
-            new_content = ''
+            new_content = ""
             for node in caption.nodes:
                 new_content = self._recreate_line(new_content, node)
 
             # Eliminate excessive line breaks
-            new_content = new_content.strip() + '\n'
-            while '\n\n' in new_content:
-                new_content = new_content.replace('\n\n', '\n')
+            new_content = new_content.strip() + "\n"
+            while "\n\n" in new_content:
+                new_content = new_content.replace("\n\n", "\n")
             # Break unnecessary on last line
-            while '|\n' in new_content:
-                new_content = new_content.replace('|\n', '\n')
+            while "|\n" in new_content:
+                new_content = new_content.replace("|\n", "\n")
 
             sub += new_content
 
@@ -114,6 +106,6 @@ class MicroDVDWriter(BaseWriter):
         if line.type_ == CaptionNode.TEXT:
             return sub + line.content
         elif line.type_ == CaptionNode.BREAK:
-            return sub + '|'
+            return sub + "|"
         else:
             return sub

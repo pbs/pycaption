@@ -319,7 +319,7 @@ WEBVTT
 
 21:30.000 --> 21:34.000 align:left position:20% line:83% size:70%
 aa
-bb
+  bb
 """
 
 

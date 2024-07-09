@@ -1,9 +1,7 @@
 import pytest
 
-from pycaption import (
-    SCCReader, SCCWriter, SRTReader, SRTWriter, DFXPWriter, WebVTTWriter,
-)
-
+from pycaption import (DFXPWriter, SCCReader, SCCWriter, SRTReader, SRTWriter,
+                       WebVTTWriter)
 from tests.mixins import CaptionSetTestingMixIn
 
 # This is quite fuzzy at the moment.
@@ -31,17 +29,19 @@ class TestSRTtoSCCtoSRT(CaptionSetTestingMixIn):
 
 
 class TestSCCtoDFXP:
-    def test_scc_to_dfxp(self, sample_dfxp_from_scc_output,
-                         sample_scc_multiple_positioning):
+    def test_scc_to_dfxp(
+        self, sample_dfxp_from_scc_output, sample_scc_multiple_positioning
+    ):
         caption_set = SCCReader().read(sample_scc_multiple_positioning)
-        dfxp = DFXPWriter(
-            relativize=False, fit_to_screen=False).write(caption_set)
+        dfxp = DFXPWriter(relativize=False, fit_to_screen=False).write(caption_set)
 
         assert sample_dfxp_from_scc_output == dfxp
 
     def test_dfxp_is_valid_xml_when_scc_source_has_weird_italic_commands(
-            self, sample_dfxp_with_properly_closing_spans_output,
-            sample_scc_created_dfxp_with_wrongly_closing_spans):
+        self,
+        sample_dfxp_with_properly_closing_spans_output,
+        sample_scc_created_dfxp_with_wrongly_closing_spans,
+    ):
         caption_set = SCCReader().read(
             sample_scc_created_dfxp_with_wrongly_closing_spans
         )
@@ -51,8 +51,8 @@ class TestSCCtoDFXP:
         assert dfxp == sample_dfxp_with_properly_closing_spans_output
 
     def test_dfxp_is_valid_xml_when_scc_source_has_ampersand_character(
-            self, sample_dfxp_with_ampersand_character,
-            sample_scc_with_ampersand_character):
+        self, sample_dfxp_with_ampersand_character, sample_scc_with_ampersand_character
+    ):
         caption_set = SCCReader().read(sample_scc_with_ampersand_character)
 
         dfxp = DFXPWriter().write(caption_set)
@@ -62,10 +62,11 @@ class TestSCCtoDFXP:
 
 class TestSCCToWebVTT:
     def test_webvtt_newlines_are_properly_rendered(
-            self, sample_webvtt_from_scc_properly_writes_newlines_output,
-            scc_that_generates_webvtt_with_proper_newlines):
-        caption_set = SCCReader().read(
-            scc_that_generates_webvtt_with_proper_newlines)
+        self,
+        sample_webvtt_from_scc_properly_writes_newlines_output,
+        scc_that_generates_webvtt_with_proper_newlines,
+    ):
+        caption_set = SCCReader().read(scc_that_generates_webvtt_with_proper_newlines)
         webvtt = WebVTTWriter().write(caption_set)
 
         assert webvtt == sample_webvtt_from_scc_properly_writes_newlines_output

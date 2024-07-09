@@ -1,7 +1,7 @@
 import pytest
 
 from pycaption import CaptionReadSyntaxError
-from pycaption.geometry import Size, Point, Stretch, Padding, UnitEnum, Layout
+from pycaption.geometry import Layout, Padding, Point, Size, Stretch, UnitEnum
 
 
 class TestIsValidGeometryObject:
@@ -78,8 +78,7 @@ class TestIsRelative:
 
         padding_abs = Padding(size_px, size_px2, size_px3, size_px4)
         padding_mix = Padding(size_px, size_px2, size_px3, size_percent)
-        padding_rel = Padding(
-            size_percent, size_percent2, size_percent3, size_percent4)
+        padding_rel = Padding(size_percent, size_percent2, size_percent3, size_percent4)
 
         assert not padding_abs.is_relative()
         assert not padding_mix.is_relative()
@@ -100,23 +99,11 @@ class TestIsRelative:
         stretch_abs = Stretch(size_px, size_px2)
         stretch_rel = Stretch(size_percent, size_percent2)
 
-        layout_abs = Layout(
-            origin=point_abs,
-            extent=stretch_abs,
-            padding=None
-        )
+        layout_abs = Layout(origin=point_abs, extent=stretch_abs, padding=None)
 
-        layout_mix = Layout(
-            origin=point_abs,
-            extent=stretch_rel,
-            padding=None
-        )
+        layout_mix = Layout(origin=point_abs, extent=stretch_rel, padding=None)
 
-        layout_rel = Layout(
-            origin=point_rel,
-            extent=stretch_rel,
-            padding=None
-        )
+        layout_rel = Layout(origin=point_rel, extent=stretch_rel, padding=None)
 
         assert empty_layout.is_relative()
         assert not layout_abs.is_relative()
@@ -125,17 +112,24 @@ class TestIsRelative:
 
 
 class TestSize:
-    @pytest.mark.parametrize('string, value, unit', [
-        ('1px', 1.0, UnitEnum.PIXEL), ('2.3em', 2.3, UnitEnum.EM),
-        ('12.34%', 12.34, UnitEnum.PERCENT), ('1.234c', 1.234, UnitEnum.CELL),
-        ('10pt', 10.0, UnitEnum.PT), ('0', 0.0, UnitEnum.PIXEL)])
+    @pytest.mark.parametrize(
+        "string, value, unit",
+        [
+            ("1px", 1.0, UnitEnum.PIXEL),
+            ("2.3em", 2.3, UnitEnum.EM),
+            ("12.34%", 12.34, UnitEnum.PERCENT),
+            ("1.234c", 1.234, UnitEnum.CELL),
+            ("10pt", 10.0, UnitEnum.PT),
+            ("0", 0.0, UnitEnum.PIXEL),
+        ],
+    )
     def test_valid_size_from_string(self, string, value, unit):
         size = Size.from_string(string)
 
         assert size.value == value
         assert size.unit == unit
 
-    @pytest.mark.parametrize('string', ['10', '11,1px', '12xx', '%', 'o1pt'])
+    @pytest.mark.parametrize("string", ["10", "11,1px", "12xx", "%", "o1pt"])
     def test_invalid_size_from_string(self, string):
         with pytest.raises(CaptionReadSyntaxError) as exc_info:
             Size.from_string(string)

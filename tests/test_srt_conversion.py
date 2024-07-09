@@ -1,9 +1,7 @@
 import re
 
-from pycaption import (
-    DFXPReader, SAMIReader, SRTReader, SRTWriter, WebVTTReader,
-)
-
+from pycaption import (DFXPReader, SAMIReader, SRTReader, SRTWriter,
+                       WebVTTReader)
 from tests.mixins import SRTTestingMixIn
 
 
@@ -19,8 +17,9 @@ class TestDFXPtoSRT(SRTTestingMixIn):
         assert isinstance(results, str)
         self.assert_srt_equals(sample_srt, results)
 
-    def test_dfxp_empty_cue_to_srt(self, sample_srt_empty_cue_output,
-                                   sample_dfxp_empty_cue):
+    def test_dfxp_empty_cue_to_srt(
+        self, sample_srt_empty_cue_output, sample_dfxp_empty_cue
+    ):
         caption_set = self.reader.read(sample_dfxp_empty_cue)
         results = self.writer.write(caption_set)
 

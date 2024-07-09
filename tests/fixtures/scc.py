@@ -349,6 +349,23 @@ Scenarist_SCC V1.0
 
 
 @pytest.fixture(scope="session")
+def sample_scc_eoc_first_command_paint():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:00;84    9429
+
+00:00:02;00    73e9 e329 
+
+00:00:06;01    942c
+
+00:24:55;14    9420 94ae 9470 97a2 a875 7062 e561 f420 f2ef e36b 206d 7573 e9e3 2980 942f
+
+00:25:00;00    942c
+"""
+
+
+@pytest.fixture(scope="session")
 def sample_scc_with_extended_characters():
     return """\
 Scenarist_SCC V1.0

@@ -5,6 +5,7 @@ class _PositioningTracker:
     """Helps determine the positioning of a node, having kept track of
     positioning-related commands.
     """
+
     def __init__(self, positioning=None):
         """
         :param positioning: positioning information (row, column)
@@ -64,9 +65,7 @@ class _PositioningTracker:
         :raise: CaptionReadSyntaxError
         """
         if not any(self._positions):
-            raise CaptionReadSyntaxError(
-                'No Preamble Address Code [PAC] was provided'
-            )
+            raise CaptionReadSyntaxError("No Preamble Address Code [PAC] was provided")
         else:
             return self._positions[0]
 
@@ -97,6 +96,7 @@ class DefaultProvidingPositionTracker(_PositioningTracker):
     """A _PositioningTracker that provides if needed a default value (14, 0), or
     uses the last positioning value set anywhere in the document
     """
+
     default = (14, 0)
 
     def __init__(self, positioning=None, default=None):

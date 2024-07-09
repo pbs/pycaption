@@ -7,10 +7,11 @@ CONVENTIONS:
   responsible for the recalculation should return a new object with the
   necessary modifications.
 """
+
 import re
 from enum import Enum
 
-from .exceptions import RelativizationError, CaptionReadSyntaxError
+from .exceptions import CaptionReadSyntaxError, RelativizationError
 
 
 class UnitEnum(Enum):
@@ -22,11 +23,12 @@ class UnitEnum(Enum):
         if unit == UnitEnum.CELL :
             ...
     """
-    PIXEL = 'px'
-    EM = 'em'
-    PERCENT = '%'
-    CELL = 'c'
-    PT = 'pt'
+
+    PIXEL = "px"
+    EM = "em"
+    PERCENT = "%"
+    CELL = "c"
+    PT = "pt"
 
 
 class VerticalAlignmentEnum(Enum):
@@ -37,18 +39,20 @@ class VerticalAlignmentEnum(Enum):
         if alignment == VerticalAlignmentEnum.BOTTOM:
             ...
     """
-    TOP = 'top'
-    CENTER = 'center'
-    BOTTOM = 'bottom'
+
+    TOP = "top"
+    CENTER = "center"
+    BOTTOM = "bottom"
 
 
 class HorizontalAlignmentEnum(Enum):
     """Enumeration object specifying the horizontal alignment preferences"""
-    LEFT = 'left'
-    CENTER = 'center'
-    RIGHT = 'right'
-    START = 'start'
-    END = 'end'
+
+    LEFT = "left"
+    CENTER = "center"
+    RIGHT = "right"
+    START = "start"
+    END = "end"
 
 
 class Alignment:
@@ -63,11 +67,7 @@ class Alignment:
         self.vertical = vertical
 
     def __hash__(self):
-        return hash(
-            hash(self.horizontal) * 83
-            + hash(self.vertical) * 89
-            + 97
-        )
+        return hash(hash(self.horizontal) * 83 + hash(self.vertical) * 89 + 97)
 
     def __eq__(self, other):
         return (
@@ -85,27 +85,26 @@ class Alignment:
         return self.horizontal, self.vertical
 
     @classmethod
-    def from_horizontal_and_vertical_align(cls, text_align=None,
-                                           display_align=None):
+    def from_horizontal_and_vertical_align(cls, text_align=None, display_align=None):
         horizontal_obj = None
         vertical_obj = None
 
-        if text_align == 'left':
+        if text_align == "left":
             horizontal_obj = HorizontalAlignmentEnum.LEFT
-        if text_align == 'start':
+        if text_align == "start":
             horizontal_obj = HorizontalAlignmentEnum.START
-        if text_align == 'center':
+        if text_align == "center":
             horizontal_obj = HorizontalAlignmentEnum.CENTER
-        if text_align == 'right':
+        if text_align == "right":
             horizontal_obj = HorizontalAlignmentEnum.RIGHT
-        if text_align == 'end':
+        if text_align == "end":
             horizontal_obj = HorizontalAlignmentEnum.END
 
-        if display_align == 'before':
+        if display_align == "before":
             vertical_obj = VerticalAlignmentEnum.TOP
-        if display_align == 'center':
+        if display_align == "center":
             vertical_obj = VerticalAlignmentEnum.CENTER
-        if display_align == 'after':
+        if display_align == "after":
             vertical_obj = VerticalAlignmentEnum.BOTTOM
 
         if not any([horizontal_obj, vertical_obj]):
@@ -125,7 +124,7 @@ class TwoDimensionalObject:
 
         :type attribute: str
         """
-        horizontal, vertical = attribute.split(' ')
+        horizontal, vertical = attribute.split(" ")
         horizontal = Size.from_string(horizontal)
         vertical = Size.from_string(vertical)
 
@@ -146,8 +145,9 @@ class Stretch(TwoDimensionalObject):
         """
         for parameter in [horizontal, vertical]:
             if not isinstance(parameter, Size):
-                raise ValueError("Stretch must be initialized with two valid "
-                                 "Size objects.")
+                raise ValueError(
+                    "Stretch must be initialized with two valid " "Size objects."
+                )
         self.horizontal = horizontal
         self.vertical = vertical
 
@@ -158,18 +158,17 @@ class Stretch(TwoDimensionalObject):
         :return: True/False
         """
         return (
-            self.horizontal.unit == measure_unit
-            and self.vertical.unit == measure_unit
+            self.horizontal.unit == measure_unit and self.vertical.unit == measure_unit
         )
 
     def __repr__(self):
-        return f'<Stretch ({self.horizontal}, {self.vertical})>'
+        return f"<Stretch ({self.horizontal}, {self.vertical})>"
 
     def serialized(self):
         """Returns a tuple of the useful attributes of this object"""
         return (
             None if not self.horizontal else self.horizontal.serialized(),
-            None if not self.vertical else self.vertical.serialized()
+            None if not self.vertical else self.vertical.serialized(),
         )
 
     def __eq__(self, other):
@@ -181,20 +180,16 @@ class Stretch(TwoDimensionalObject):
         )
 
     def __hash__(self):
-        return hash(
-            hash(self.horizontal) * 59
-            + hash(self.vertical) * 61
-            + 67
-        )
+        return hash(hash(self.horizontal) * 59 + hash(self.vertical) * 61 + 67)
 
     def __bool__(self):
         return True if self.horizontal or self.vertical else False
 
     def to_xml_attribute(self, **kwargs):
         """Returns a string representation of this object as an xml attribute"""
-        return '{horizontal} {vertical}'.format(
+        return "{horizontal} {vertical}".format(
             horizontal=self.horizontal.to_xml_attribute(),
-            vertical=self.vertical.to_xml_attribute()
+            vertical=self.vertical.to_xml_attribute(),
         )
 
     def is_relative(self):
@@ -215,7 +210,7 @@ class Stretch(TwoDimensionalObject):
         """
         return Stretch(
             self.horizontal.as_percentage_of(video_width=video_width),
-            self.vertical.as_percentage_of(video_height=video_height)
+            self.vertical.as_percentage_of(video_height=video_height),
         )
 
 
@@ -256,7 +251,7 @@ class Region:
     @property
     def extent(self):
         """How wide this rectangle stretches (horizontally and vertically)"""
-        if hasattr(self, '_extent'):
+        if hasattr(self, "_extent"):
             return self._extent
         else:
             return self._p1 - self._p2
@@ -264,7 +259,7 @@ class Region:
     @property
     def origin(self):
         """Out of its 4 points, returns the one closest to the origin"""
-        if hasattr(self, '_origin'):
+        if hasattr(self, "_origin"):
             return self._origin
         else:
             return Point.align_from_origin(self._p1, self._p2)[0]
@@ -274,7 +269,7 @@ class Region:
     @property
     def lower_right_point(self):
         """The point furthest from the origin from the rectangle's 4 points"""
-        if hasattr(self, '_p2'):
+        if hasattr(self, "_p2"):
             return Point.align_from_origin(self._p1, self._p2)[1]
         else:
             return self.origin.add_extent(self.extent)
@@ -288,11 +283,7 @@ class Region:
         )
 
     def __hash__(self):
-        return hash(
-            hash(self.origin) * 71
-            + hash(self.extent) * 73
-            + 79
-        )
+        return hash(hash(self.origin) * 71 + hash(self.extent) * 73 + 79)
 
 
 class Point(TwoDimensionalObject):
@@ -305,14 +296,14 @@ class Point(TwoDimensionalObject):
         """
         for parameter in [x, y]:
             if not isinstance(parameter, Size):
-                raise ValueError("Point must be initialized with two valid "
-                                 "Size objects.")
+                raise ValueError(
+                    "Point must be initialized with two valid " "Size objects."
+                )
         self.x = x
         self.y = y
 
     def __sub__(self, other):
-        """Returns an Stretch object, if the other point's units are compatible
-        """
+        """Returns an Stretch object, if the other point's units are compatible"""
         return Stretch(abs(self.x - other.x), abs(self.y - other.y))
 
     def add_stretch(self, stretch):
@@ -339,7 +330,7 @@ class Point(TwoDimensionalObject):
         """
         return Point(
             self.x.as_percentage_of(video_width=video_width),
-            self.y.as_percentage_of(video_height=video_height)
+            self.y.as_percentage_of(video_height=video_height),
         )
 
     @classmethod
@@ -355,17 +346,19 @@ class Point(TwoDimensionalObject):
         if p1.x >= p2.x and p1.y >= p2.y:
             return p2
         else:
-            return (Point(min(p1.x, p2.x), min(p1.y, p2.y)),
-                    Point(max(p1.x, p2.x), max(p1.y, p2.y)))
+            return (
+                Point(min(p1.x, p2.x), min(p1.y, p2.y)),
+                Point(max(p1.x, p2.x), max(p1.y, p2.y)),
+            )
 
     def __repr__(self):
-        return f'<Point ({self.x}, {self.y})>'
+        return f"<Point ({self.x}, {self.y})>"
 
     def serialized(self):
         """Returns the "useful" values of this object."""
         return (
             None if not self.x else self.x.serialized(),
-            None if not self.y else self.y.serialized()
+            None if not self.y else self.y.serialized(),
         )
 
     def __eq__(self, other):
@@ -377,18 +370,14 @@ class Point(TwoDimensionalObject):
         )
 
     def __hash__(self):
-        return hash(
-            hash(self.x) * 51
-            + hash(self.y) * 53
-            + 57
-        )
+        return hash(hash(self.x) * 51 + hash(self.y) * 53 + 57)
 
     def __bool__(self):
         return True if self.x or self.y else False
 
     def to_xml_attribute(self, **kwargs):
         """Returns a string representation of this object as an xml attribute"""
-        return f'{self.x.to_xml_attribute()} {self.y.to_xml_attribute()}'
+        return f"{self.x.to_xml_attribute()} {self.y.to_xml_attribute()}"
 
 
 class Size:
@@ -455,12 +444,13 @@ class Size:
         # The input must be valid so that any conversion can be done
         if not (video_width or video_height):
             raise RelativizationError(
-                "At least one of video width or height"
-                " must be given as a reference")
+                "At least one of video width or height" " must be given as a reference"
+            )
         elif video_width and video_height:
             raise RelativizationError(
                 "Only one of video width or height can be given as reference"
-                " per value being converted")
+                " per value being converted"
+            )
 
         if unit == UnitEnum.EM:
             # TODO: Implement proper conversion of em in function of font-size
@@ -504,13 +494,15 @@ class Size:
         """
         size_pattern = re.compile(
             r"^(((?P<value>\d+(\.\d+)?)(?P<unit>"
-            fr"{'|'.join([unit.value for unit in UnitEnum])}))|0)$")
+            rf"{'|'.join([unit.value for unit in UnitEnum])}))|0)$"
+        )
         match = size_pattern.search(string)
         if not match:
             raise CaptionReadSyntaxError(
                 f"Invalid size: {string}. Please make sure the provided value "
                 "is a number followed by one of the supported units: "
-                f"{', '.join([unit.value for unit in UnitEnum])}.")
+                f"{', '.join([unit.value for unit in UnitEnum])}."
+            )
         unit = match.group("unit")
         if unit:
             value = match.group("value")
@@ -520,19 +512,18 @@ class Size:
             return cls(match.group(0), UnitEnum.PIXEL)
 
     def __repr__(self):
-        return f'<Size ({self.value} {self.unit.value})>'
+        return f"<Size ({self.value} {self.unit.value})>"
 
     def __str__(self):
         value = round(self.value, 2)
         if value.is_integer():
             s = f"{int(value)}"
         else:
-            s = f"{value:.2f}".rstrip('0').rstrip('.')
+            s = f"{value:.2f}".rstrip("0").rstrip(".")
         return f"{s}{self.unit.value}"
 
     def to_xml_attribute(self, **kwargs):
-        """Returns a string representation of this object, as an xml attribute
-        """
+        """Returns a string representation of this object, as an xml attribute"""
         return str(self)
 
     def serialized(self):
@@ -548,11 +539,7 @@ class Size:
         )
 
     def __hash__(self):
-        return hash(
-            hash(self.value) * 41
-            + hash(self.unit) * 43
-            + 47
-        )
+        return hash(hash(self.value) * 41 + hash(self.unit) * 43 + 47)
 
     def __bool__(self):
         return self.unit in UnitEnum and self.value is not None
@@ -579,7 +566,7 @@ class Padding:
         self.start = start  # left
         self.end = end  # right
 
-        for attr in ['before', 'after', 'start', 'end']:
+        for attr in ["before", "after", "start", "end"]:
             # Ensure that a Padding object always explicitly defines all
             # four possible paddings
             if not isinstance(getattr(self, attr), Size):
@@ -600,7 +587,7 @@ class Padding:
         :param attribute: a string like object, representing a dfxp attr. value
         :return: a Padding object
         """
-        values_list = attribute.split(' ')
+        values_list = attribute.split(" ")
         sizes = []
 
         for value in values_list:
@@ -615,11 +602,13 @@ class Padding:
         elif len(sizes) == 4:
             return cls(sizes[0], sizes[2], sizes[3], sizes[1])
         else:
-            raise ValueError(f'The provided value "{attribute}" could not be '
-                             "parsed into the a padding. Check out "
-                             "http://www.w3.org/TR/ttaf1-dfxp/"
-                             "#style-attribute-padding for the definition "
-                             "and examples")
+            raise ValueError(
+                f'The provided value "{attribute}" could not be '
+                "parsed into the a padding. Check out "
+                "http://www.w3.org/TR/ttaf1-dfxp/"
+                "#style-attribute-padding for the definition "
+                "and examples"
+            )
 
     def __repr__(self):
         return (
@@ -633,7 +622,7 @@ class Padding:
             None if not self.before else self.before.serialized(),
             None if not self.after else self.after.serialized(),
             None if not self.start else self.start.serialized(),
-            None if not self.end else self.end.serialized()
+            None if not self.end else self.end.serialized(),
         )
 
     def __eq__(self, other):
@@ -656,8 +645,8 @@ class Padding:
         )
 
     def to_xml_attribute(
-            self, attribute_order=('before', 'end', 'after', 'start'),
-            **kwargs):
+        self, attribute_order=("before", "end", "after", "start"), **kwargs
+    ):
         """Returns a string representation of this object as an xml attribute
 
         TODO - should extend the attribute_order tuple to contain 4 tuples,
@@ -671,22 +660,21 @@ class Padding:
             string_list = []
             for attrib in attribute_order:
                 if hasattr(self, attrib):
-                    string_list.append(
-                        getattr(self, attrib).to_xml_attribute())
+                    string_list.append(getattr(self, attrib).to_xml_attribute())
         except AttributeError:
             # A Padding object with attributes set to None is considered
             # invalid. All four possible paddings must be set. If one of them
             # is not, this error is raised.
             raise ValueError("The attribute order specified is invalid.")
 
-        return ' '.join(string_list)
+        return " ".join(string_list)
 
     def as_percentage_of(self, video_width, video_height):
         return Padding(
             self.before.as_percentage_of(video_height=video_height),
             self.after.as_percentage_of(video_height=video_height),
             self.start.as_percentage_of(video_width=video_width),
-            self.end.as_percentage_of(video_width=video_width)
+            self.end.as_percentage_of(video_width=video_width),
         )
 
     def is_relative(self):
@@ -710,8 +698,15 @@ class Layout:
      specific for each caption type.
     """
 
-    def __init__(self, origin=None, extent=None, padding=None, alignment=None,
-                 webvtt_positioning=None, inherit_from=None):
+    def __init__(
+        self,
+        origin=None,
+        extent=None,
+        padding=None,
+        alignment=None,
+        webvtt_positioning=None,
+        inherit_from=None,
+    ):
         """
         :type origin: Point
         :param origin: The point on the screen which is the top left vertex
@@ -745,16 +740,21 @@ class Layout:
         self.webvtt_positioning = webvtt_positioning
 
         if inherit_from:
-            for attr_name in ['origin', 'extent', 'padding', 'alignment']:
+            for attr_name in ["origin", "extent", "padding", "alignment"]:
                 attr = getattr(self, attr_name)
                 if not attr:
                     setattr(self, attr_name, getattr(inherit_from, attr_name))
 
     def __bool__(self):
-        return any([
-            self.origin, self.extent, self.padding, self.alignment,
-            self.webvtt_positioning
-        ])
+        return any(
+            [
+                self.origin,
+                self.extent,
+                self.padding,
+                self.alignment,
+                self.webvtt_positioning,
+            ]
+        )
 
     def __repr__(self):
         return (
@@ -768,7 +768,7 @@ class Layout:
             None if not self.origin else self.origin.serialized(),
             None if not self.extent else self.extent.serialized(),
             None if not self.padding else self.padding.serialized(),
-            None if not self.alignment else self.alignment.serialized()
+            None if not self.alignment else self.alignment.serialized(),
         )
 
     def __eq__(self, other):
@@ -807,16 +807,15 @@ class Layout:
         return is_relative
 
     def as_percentage_of(self, video_width, video_height):
-        params = {'alignment': self.alignment}
+        params = {"alignment": self.alignment}
         # We don't need to preserve webvtt_positioning on Layout
         # transformations because, if it is set, the WebVTT writer
         # returns as soon as it's found and the transformations are
         # never triggered.
-        for attr_name in ['origin', 'extent', 'padding']:
+        for attr_name in ["origin", "extent", "padding"]:
             attr = getattr(self, attr_name)
             if attr:
-                params[attr_name] = attr.as_percentage_of(video_width,
-                                                          video_height)
+                params[attr_name] = attr.as_percentage_of(video_width, video_height)
         return Layout(**params)
 
     def fit_to_screen(self):
@@ -853,8 +852,10 @@ class Layout:
                     found_absolute_unit = True
 
                 if found_absolute_unit:
-                    raise ValueError("Units must be relativized before extent "
-                                     "can be calculated based on origin.")
+                    raise ValueError(
+                        "Units must be relativized before extent "
+                        "can be calculated based on origin."
+                    )
 
                 new_horizontal = self.extent.horizontal
                 new_vertical = self.extent.vertical
@@ -871,7 +872,7 @@ class Layout:
                 origin=self.origin,
                 extent=new_extent,
                 padding=self.padding,
-                alignment=self.alignment
+                alignment=self.alignment,
                 # We don't need to preserve webvtt_positioning on Layout
                 # transformations because, if it is set, the WebVTT writer
                 # returns as soon as it's found and the transformations are
