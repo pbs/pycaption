@@ -1,4 +1,4 @@
-from pycaption.scc.constants import CHARACTERS, SPECIAL_CHARS, EXTENDED_CHARS
+from pycaption.scc.constants import CHARACTERS, EXTENDED_CHARS, SPECIAL_CHARS
 
 ALL_CHARACTERS = {**CHARACTERS, **SPECIAL_CHARS, **EXTENDED_CHARS}
 COMMAND_LABELS = {
@@ -542,11 +542,11 @@ COMMAND_LABELS = {
     "912f": "Italics Underline",
     "94a8": "Flash ON",
     "9423": "Alarm Off",
-    "94a2": "Alarm On"
+    "94a2": "Alarm On",
 }
 
 
-def translate_scc(scc_content, brackets='[]'):
+def translate_scc(scc_content, brackets="[]"):
     """
     Replaces hexadecimal words with their meaning
 
@@ -561,7 +561,7 @@ def translate_scc(scc_content, brackets='[]'):
     :return: Translated SCC captions
     :rtype: str
     """
-    opening_bracket, closing_bracket = brackets if brackets else ('', '')
+    opening_bracket, closing_bracket = brackets if brackets else ("", "")
     scc_elements = set(scc_content.split())
     for elem in scc_elements:
         name = COMMAND_LABELS.get(elem, ALL_CHARACTERS.get(elem))
@@ -573,5 +573,6 @@ def translate_scc(scc_content, brackets='[]'):
                 name = f"{char1}{char2}"
         if name:
             scc_content = scc_content.replace(
-                elem, f"{opening_bracket}{name}{closing_bracket}")
+                elem, f"{opening_bracket}{name}{closing_bracket}"
+            )
     return scc_content

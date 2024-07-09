@@ -1,6 +1,6 @@
 import pytest
 
-from pycaption import SRTReader, CaptionReadNoCaptions
+from pycaption import CaptionReadNoCaptions, SRTReader
 from tests.mixins import ReaderTestingMixIn
 
 
@@ -49,26 +49,25 @@ class TestSRTReader(ReaderTestingMixIn):
     def test_empty_file(self, sample_srt_empty):
         with pytest.raises(CaptionReadNoCaptions) as exc_info:
             self.reader.read(sample_srt_empty)
-        assert exc_info.value.args[0] == 'empty caption file'
+        assert exc_info.value.args[0] == "empty caption file"
 
     def test_extra_empty_line(self, sample_srt_blank_lines):
         captions = self.reader.read(sample_srt_blank_lines)
         paragraphs = captions.get_captions("en-US")
 
         assert 2 == len(paragraphs)
-        assert '\n' not in paragraphs[0].get_text()
-        assert '\n' not in paragraphs[1].get_text()
+        assert "\n" not in paragraphs[0].get_text()
+        assert "\n" not in paragraphs[1].get_text()
 
     def test_extra_trailing_empty_line(self, sample_srt_trailing_blanks):
         captions = self.reader.read(sample_srt_trailing_blanks)
         paragraphs = captions.get_captions("en-US")
 
         assert 2 == len(paragraphs)
-        assert '\n' not in paragraphs[0].get_text()
-        assert '\n' not in paragraphs[1].get_text()
+        assert "\n" not in paragraphs[0].get_text()
+        assert "\n" not in paragraphs[1].get_text()
 
-    def test_timestamps_without_micro(
-            self, sample_srt_timestamps_without_microseconds):
+    def test_timestamps_without_micro(self, sample_srt_timestamps_without_microseconds):
         captions = self.reader.read(sample_srt_timestamps_without_microseconds)
         first_paragraph = captions.get_captions("en-US")[0]
 

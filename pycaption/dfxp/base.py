@@ -4,26 +4,25 @@ from xml.sax.saxutils import escape
 
 from bs4 import BeautifulSoup, NavigableString
 
-from ..base import (
-    BaseReader, BaseWriter, CaptionSet, CaptionList, Caption, CaptionNode,
-    DEFAULT_LANGUAGE_CODE,
-)
-from ..exceptions import (
-    CaptionReadNoCaptions, CaptionReadSyntaxError, InvalidInputError,
-    CaptionReadTimingError,
-)
-from ..geometry import (
-    Point, Stretch, UnitEnum, Padding, VerticalAlignmentEnum,
-    HorizontalAlignmentEnum, Alignment, Layout,
-)
+from ..base import (DEFAULT_LANGUAGE_CODE, BaseReader, BaseWriter, Caption,
+                    CaptionList, CaptionNode, CaptionSet)
+from ..exceptions import (CaptionReadNoCaptions, CaptionReadSyntaxError,
+                          CaptionReadTimingError, InvalidInputError)
+from ..geometry import (Alignment, HorizontalAlignmentEnum, Layout, Padding,
+                        Point, Stretch, UnitEnum, VerticalAlignmentEnum)
 from ..utils import is_leaf
 
 __all__ = [
-    'DFXP_BASE_MARKUP', 'DFXP_DEFAULT_STYLE', 'DFXP_DEFAULT_STYLE_ID',
-    'DFXP_DEFAULT_REGION_ID', 'DFXPReader', 'DFXPWriter', 'DFXP_DEFAULT_REGION'
+    "DFXP_BASE_MARKUP",
+    "DFXP_DEFAULT_STYLE",
+    "DFXP_DEFAULT_STYLE_ID",
+    "DFXP_DEFAULT_REGION_ID",
+    "DFXPReader",
+    "DFXPWriter",
+    "DFXP_DEFAULT_REGION",
 ]
 
-DFXP_BASE_MARKUP = '''
+DFXP_BASE_MARKUP = """
 <tt xmlns="http://www.w3.org/ns/ttml"
     xmlns:tts="http://www.w3.org/ns/ttml#styling">
     <head>
@@ -32,36 +31,35 @@ DFXP_BASE_MARKUP = '''
     </head>
     <body/>
 </tt>
-'''
+"""
 
 DFXP_DEFAULT_STYLE = {
-    'color': 'white',
-    'font-family': 'monospace',
-    'font-size': '1c',
+    "color": "white",
+    "font-family": "monospace",
+    "font-size": "1c",
 }
 
 DFXP_DEFAULT_REGION = Layout(
-    alignment=Alignment(
-        HorizontalAlignmentEnum.START, VerticalAlignmentEnum.BOTTOM)
+    alignment=Alignment(HorizontalAlignmentEnum.START, VerticalAlignmentEnum.BOTTOM)
 )
 
-DFXP_DEFAULT_STYLE_ID = 'default'
-DFXP_DEFAULT_REGION_ID = 'bottom'
+DFXP_DEFAULT_STYLE_ID = "default"
+DFXP_DEFAULT_REGION_ID = "bottom"
 
 CLOCK_TIME_PATTERN = (
-    r'(?P<clock_time>(?P<hours>\d+):(?P<minutes>\d{2}):(?P<seconds>\d{2})'
-    r'(:(?P<frames>\d{2})|\.(?P<sub_frames>\d+))?)'
+    r"(?P<clock_time>(?P<hours>\d+):(?P<minutes>\d{2}):(?P<seconds>\d{2})"
+    r"(:(?P<frames>\d{2})|\.(?P<sub_frames>\d+))?)"
 )
-OFFSET_TIME_PATTERN = (r'(?P<offset_time>(?P<time_count>\d+(\.\d+)?)'
-                       r'(?P<metric>h|m|s|ms|f|t))')
-TIME_EXPRESSION_PATTERN = re.compile(
-    fr'^({CLOCK_TIME_PATTERN}|{OFFSET_TIME_PATTERN})$')
+OFFSET_TIME_PATTERN = (
+    r"(?P<offset_time>(?P<time_count>\d+(\.\d+)?)" r"(?P<metric>h|m|s|ms|f|t))"
+)
+TIME_EXPRESSION_PATTERN = re.compile(rf"^({CLOCK_TIME_PATTERN}|{OFFSET_TIME_PATTERN})$")
 
 MICROSECONDS_PER_UNIT = {
     "hours": 3600000000,
     "minutes": 60000000,
     "seconds": 1000000,
-    "milliseconds": 1000
+    "milliseconds": 1000,
 }
 
 DFXP_DEFAULT_LANGUAGE_CODE = "en"
@@ -78,43 +76,41 @@ class DFXPReader(BaseReader):
         that permits use of attributes in the TT Style Namespace; however,
         this attribute applies as a style property only to those element types
         indicated in the following table."""
-        self.read_invalid_positioning = (
-            kw.get('read_invalid_positioning', False))
+        self.read_invalid_positioning = kw.get("read_invalid_positioning", False)
         self.nodes = []
 
     def detect(self, content):
-        if '</tt>' in content.lower():
+        if "</tt>" in content.lower():
             return True
         else:
             return False
 
     def read(self, content):
         if not isinstance(content, str):
-            raise InvalidInputError('The content is not a unicode string.')
+            raise InvalidInputError("The content is not a unicode string.")
 
         dfxp_document = self._get_dfxp_parser_class()(
-            content, read_invalid_positioning=
-            self.read_invalid_positioning)
+            content, read_invalid_positioning=self.read_invalid_positioning
+        )
 
         caption_dict = {}
         style_dict = {}
 
-        default_language = dfxp_document.tt.attrs.get('xml:lang',
-                                                      DEFAULT_LANGUAGE_CODE)
+        default_language = dfxp_document.tt.attrs.get("xml:lang", DEFAULT_LANGUAGE_CODE)
 
         # Each div represents all the captions for a single language.
-        for div in dfxp_document.find_all('div'):
-            lang = div.attrs.get('xml:lang', default_language)
+        for div in dfxp_document.find_all("div"):
+            lang = div.attrs.get("xml:lang", default_language)
 
             caption_dict[lang] = self._convert_div_to_caption_list(div)
 
-        for style in dfxp_document.find_all('style'):
-            id_ = style.attrs.get('xml:id') or style.attrs.get('id')
+        for style in dfxp_document.find_all("style"):
+            id_ = style.attrs.get("xml:id") or style.attrs.get("id")
             if id_:
                 # Don't create document styles for those styles that are
                 # descendants of <region> tags. See link:
                 # http://www.w3.org/TR/ttaf1-dfxp/#styling-vocabulary-style
-                if 'region' not in [parent_.name for parent_ in style.parents]:
+                if "region" not in [parent_.name for parent_ in style.parents]:
                     style_dict[id_] = self._convert_style(style)
 
         caption_set = CaptionSet(caption_dict, styles=style_dict)
@@ -131,9 +127,12 @@ class DFXPReader(BaseReader):
 
     def _convert_div_to_caption_list(self, div):
         return CaptionList(
-            [self._convert_p_tag_to_caption(p_tag)
-             for p_tag in div.find_all('p') if p_tag.get_text().strip()],
-            div.layout_info
+            [
+                self._convert_p_tag_to_caption(p_tag)
+                for p_tag in div.find_all("p")
+                if p_tag.get_text().strip()
+            ],
+            div.layout_info,
         )
 
     def _convert_p_tag_to_caption(self, p_tag):
@@ -144,27 +143,27 @@ class DFXPReader(BaseReader):
 
         if len(self.nodes) > 0:
             return Caption(
-                start, end, self.nodes, style=styles,
-                layout_info=p_tag.layout_info)
+                start, end, self.nodes, style=styles, layout_info=p_tag.layout_info
+            )
         return None
 
     def _find_and_convert_times(self, p_tag):
-        begin = p_tag.get('begin')
+        begin = p_tag.get("begin")
         if not begin:
-            raise CaptionReadTimingError(
-                f'Missing begin time on line {p_tag}.')
+            raise CaptionReadTimingError(f"Missing begin time on line {p_tag}.")
 
-        end = p_tag.get('end')
-        dur = p_tag.get('dur')
+        end = p_tag.get("end")
+        dur = p_tag.get("dur")
         if not end and not dur:
             raise CaptionReadTimingError(
-                f'Missing end time or duration on line {p_tag}.')
+                f"Missing end time or duration on line {p_tag}."
+            )
 
         start = self._convert_timestamp_to_microseconds(begin)
         if end:
-            end = self._convert_timestamp_to_microseconds(p_tag['end'])
+            end = self._convert_timestamp_to_microseconds(p_tag["end"])
         else:
-            dur = self._convert_timestamp_to_microseconds(p_tag['dur'])
+            dur = self._convert_timestamp_to_microseconds(p_tag["dur"])
             end = start + dur
 
         return start, end
@@ -173,32 +172,41 @@ class DFXPReader(BaseReader):
         match = TIME_EXPRESSION_PATTERN.search(stamp)
         if not match:
             raise CaptionReadTimingError(
-                f'Invalid timestamp: {stamp}. Accepted formats: hh:mm:ss / '
-                'hh:mm:ss:ff / hh:mm:ss.sub-frames / time_count h|m|s|ms|f.')
-        if match.group('clock_time'):
+                f"Invalid timestamp: {stamp}. Accepted formats: hh:mm:ss / "
+                "hh:mm:ss:ff / hh:mm:ss.sub-frames / time_count h|m|s|ms|f."
+            )
+        if match.group("clock_time"):
             return self._convert_clock_time_to_microseconds(match)
         else:
             return self._convert_time_count_to_microseconds(match)
 
     @staticmethod
     def _convert_clock_time_to_microseconds(clock_time_match):
-        microseconds = int(clock_time_match.group('hours')) * \
-                       MICROSECONDS_PER_UNIT["hours"]
-        microseconds += int(clock_time_match.group('minutes')) * \
-                        MICROSECONDS_PER_UNIT["minutes"]
-        microseconds += int(clock_time_match.group('seconds')) * \
-                        MICROSECONDS_PER_UNIT["seconds"]
-        if clock_time_match.group('sub_frames'):
-            microseconds += int(clock_time_match.group('sub_frames').ljust(
-                3, '0')) * MICROSECONDS_PER_UNIT["milliseconds"]
-        elif clock_time_match.group('frames'):
-            microseconds += int(clock_time_match.group('frames')) / 30 * \
-                            MICROSECONDS_PER_UNIT["seconds"]
+        microseconds = (
+            int(clock_time_match.group("hours")) * MICROSECONDS_PER_UNIT["hours"]
+        )
+        microseconds += (
+            int(clock_time_match.group("minutes")) * MICROSECONDS_PER_UNIT["minutes"]
+        )
+        microseconds += (
+            int(clock_time_match.group("seconds")) * MICROSECONDS_PER_UNIT["seconds"]
+        )
+        if clock_time_match.group("sub_frames"):
+            microseconds += (
+                int(clock_time_match.group("sub_frames").ljust(3, "0"))
+                * MICROSECONDS_PER_UNIT["milliseconds"]
+            )
+        elif clock_time_match.group("frames"):
+            microseconds += (
+                int(clock_time_match.group("frames"))
+                / 30
+                * MICROSECONDS_PER_UNIT["seconds"]
+            )
         return int(microseconds)
 
     @staticmethod
     def _convert_time_count_to_microseconds(time_count_match):
-        value = float(time_count_match.group('time_count'))
+        value = float(time_count_match.group("time_count"))
         metric = time_count_match.group("metric")
         if metric == "h":
             microseconds = value * MICROSECONDS_PER_UNIT["hours"]
@@ -211,8 +219,9 @@ class DFXPReader(BaseReader):
         elif metric == "f":
             microseconds = value / 30 * MICROSECONDS_PER_UNIT["seconds"]
         elif metric == "t":
-            raise NotImplementedError("The tick metric for time count is "
-                                      "not currently implemented.")
+            raise NotImplementedError(
+                "The tick metric for time count is " "not currently implemented."
+            )
         return int(microseconds)
 
     def _convert_tag_to_node(self, tag):
@@ -228,15 +237,13 @@ class DFXPReader(BaseReader):
                 # unicode string with xml entities already converted to unicode
                 # characters.
                 tag_text = result.groups()[0]
-                node = CaptionNode.create_text(
-                    tag_text, layout_info=tag.layout_info)
+                node = CaptionNode.create_text(tag_text, layout_info=tag.layout_info)
                 self.nodes.append(node)
         # convert line breaks
-        elif tag.name == 'br':
-            self.nodes.append(
-                CaptionNode.create_break(layout_info=tag.layout_info))
+        elif tag.name == "br":
+            self.nodes.append(CaptionNode.create_break(layout_info=tag.layout_info))
         # convert italics
-        elif tag.name == 'span':
+        elif tag.name == "span":
             # convert span
             self._convert_span_to_nodes(tag)
         else:
@@ -251,9 +258,8 @@ class DFXPReader(BaseReader):
         # TODO - this is an obvious very old bug. args will be a dictionary.
         # but since nobody complained, I'll leave it like that.
         # Happy investigating!
-        if args != '':
-            node = CaptionNode.create_style(
-                True, args, layout_info=tag.layout_info)
+        if args != "":
+            node = CaptionNode.create_style(True, args, layout_info=tag.layout_info)
             node.start = True
             node.content = args
             self.nodes.append(node)
@@ -261,8 +267,7 @@ class DFXPReader(BaseReader):
             # recursively call function for any children elements
             for a in tag.contents:
                 self._convert_tag_to_node(a)
-            node = CaptionNode.create_style(
-                False, args, layout_info=tag.layout_info)
+            node = CaptionNode.create_style(False, args, layout_info=tag.layout_info)
             node.start = False
             node.content = args
             self.nodes.append(node)
@@ -288,37 +293,37 @@ class DFXPReader(BaseReader):
         for arg in dfxp_attrs:
             if arg.lower() == "style":
                 # Support multiple classes per tag
-                attrs['classes'] = dfxp_attrs[arg].strip().split(' ')
+                attrs["classes"] = dfxp_attrs[arg].strip().split(" ")
                 # Save old class attribute for compatibility
-                attrs['class'] = dfxp_attrs[arg]
+                attrs["class"] = dfxp_attrs[arg]
             elif arg.lower() == "tts:fontstyle" and dfxp_attrs[arg] == "italic":
-                attrs['italics'] = True
+                attrs["italics"] = True
             elif arg.lower() == "tts:fontweight" and dfxp_attrs[arg] == "bold":
-                attrs['bold'] = True
-            elif (arg.lower() == "tts:textdecoration"
-                  and "underline" in dfxp_attrs[arg].strip().split(" ")):
-                attrs['underline'] = True
+                attrs["bold"] = True
+            elif arg.lower() == "tts:textdecoration" and "underline" in dfxp_attrs[
+                arg
+            ].strip().split(" "):
+                attrs["underline"] = True
             elif arg.lower() == "tts:textalign":
-                attrs['text-align'] = dfxp_attrs[arg]
+                attrs["text-align"] = dfxp_attrs[arg]
             elif arg.lower() == "tts:fontfamily":
-                attrs['font-family'] = dfxp_attrs[arg]
+                attrs["font-family"] = dfxp_attrs[arg]
             elif arg.lower() == "tts:fontsize":
-                attrs['font-size'] = dfxp_attrs[arg]
+                attrs["font-size"] = dfxp_attrs[arg]
             elif arg.lower() == "tts:color":
-                attrs['color'] = dfxp_attrs[arg]
+                attrs["color"] = dfxp_attrs[arg]
         return attrs
 
 
 class DFXPWriter(BaseWriter):
     def __init__(self, *args, **kwargs):
-        self.write_inline_positioning = kwargs.pop(
-            'write_inline_positioning', False)
+        self.write_inline_positioning = kwargs.pop("write_inline_positioning", False)
         self.p_style = False
         self.open_span = False
         self.region_creator = None
         super().__init__(*args, **kwargs)
 
-    def write(self, caption_set, force=''):
+    def write(self, caption_set, force=""):
         """Converts a CaptionSet into an equivalent corresponding DFXP file
 
         :type caption_set: pycaption.base.CaptionSet
@@ -327,14 +332,14 @@ class DFXPWriter(BaseWriter):
 
         :rtype: str
         """
-        dfxp = BeautifulSoup(DFXP_BASE_MARKUP, 'lxml-xml')
+        dfxp = BeautifulSoup(DFXP_BASE_MARKUP, "lxml-xml")
 
         langs = caption_set.get_languages()
         if force in langs:
             langs = [force]
-            dfxp.find('tt')['xml:lang'] = force
+            dfxp.find("tt")["xml:lang"] = force
         else:
-            dfxp.find('tt')['xml:lang'] = DFXP_DEFAULT_LANGUAGE_CODE
+            dfxp.find("tt")["xml:lang"] = DFXP_DEFAULT_LANGUAGE_CODE
 
         caption_set = deepcopy(caption_set)
 
@@ -343,10 +348,12 @@ class DFXPWriter(BaseWriter):
         for lang in langs:
             for caption in caption_set.get_captions(lang):
                 caption.layout_info = self._relativize_and_fit_to_screen(
-                    caption.layout_info)
+                    caption.layout_info
+                )
                 for node in caption.nodes:
                     node.layout_info = self._relativize_and_fit_to_screen(
-                        node.layout_info)
+                        node.layout_info
+                    )
 
         # Create the styles in the <styling> section, or a default style.
         for style_id, style in caption_set.get_styles():
@@ -354,27 +361,28 @@ class DFXPWriter(BaseWriter):
                 dfxp = self._recreate_styling_tag(style_id, style, dfxp)
         if not caption_set.get_styles():
             dfxp = self._recreate_styling_tag(
-                DFXP_DEFAULT_STYLE_ID, DFXP_DEFAULT_STYLE, dfxp)
+                DFXP_DEFAULT_STYLE_ID, DFXP_DEFAULT_STYLE, dfxp
+            )
 
-        self.region_creator = self._get_region_creator_class()(
-            dfxp, caption_set)
+        self.region_creator = self._get_region_creator_class()(dfxp, caption_set)
         self.region_creator.create_document_regions()
 
-        body = dfxp.find('body')
+        body = dfxp.find("body")
 
         for lang in langs:
-            div = dfxp.new_tag('div')
-            div['xml:lang'] = lang
+            div = dfxp.new_tag("div")
+            div["xml:lang"] = lang
             self._assign_positioning_data(div, lang, caption_set)
 
             for caption in caption_set.get_captions(lang):
                 if caption.style:
                     caption_style = caption.style
                 else:
-                    caption_style = {'class': DFXP_DEFAULT_STYLE_ID}
+                    caption_style = {"class": DFXP_DEFAULT_STYLE_ID}
 
                 p = self._recreate_p_tag(
-                    caption, caption_style, dfxp, caption_set, lang)
+                    caption, caption_style, dfxp, caption_set, lang
+                )
                 self._assign_positioning_data(p, lang, caption_set, caption)
                 div.append(p)
 
@@ -388,8 +396,9 @@ class DFXPWriter(BaseWriter):
         """Hook method for providing a custom RegionCreator"""
         return RegionCreator
 
-    def _assign_positioning_data(self, tag, lang, caption_set=None,
-                                 caption=None, caption_node=None):
+    def _assign_positioning_data(
+        self, tag, lang, caption_set=None, caption=None, caption_node=None
+    ):
         """Modifies the current tag, assigning it the 'region' attribute.
 
         :param tag: the BeautifulSoup tag to be modified
@@ -401,10 +410,11 @@ class DFXPWriter(BaseWriter):
         :type caption_node: CaptionNode
         """
         assigned_id, attribs = self.region_creator.get_positioning_info(
-            lang, caption_set, caption, caption_node)
+            lang, caption_set, caption, caption_node
+        )
 
         if assigned_id:
-            tag['region'] = assigned_id
+            tag["region"] = assigned_id
 
             # Write non-standard positioning information
             if self.write_inline_positioning:
@@ -412,84 +422,81 @@ class DFXPWriter(BaseWriter):
 
     def _recreate_styling_tag(self, style, content, dfxp):
         # TODO - should be drastically simplified: if attributes : append
-        dfxp_style = dfxp.new_tag('style')
-        dfxp_style.attrs.update({'xml:id': style})
+        dfxp_style = dfxp.new_tag("style")
+        dfxp_style.attrs.update({"xml:id": style})
 
         attributes = _recreate_style(content, dfxp)
         dfxp_style.attrs.update(attributes)
 
-        new_tag = dfxp.new_tag('style')
-        new_tag.attrs.update({'xml:id': style})
+        new_tag = dfxp.new_tag("style")
+        new_tag.attrs.update({"xml:id": style})
         if dfxp_style != new_tag:
-            dfxp.find('styling').append(dfxp_style)
+            dfxp.find("styling").append(dfxp_style)
 
         return dfxp
 
-    def _recreate_p_tag(self, caption, caption_style, dfxp, caption_set=None,
-                        lang=None):
+    def _recreate_p_tag(
+        self, caption, caption_style, dfxp, caption_set=None, lang=None
+    ):
         start = caption.format_start()
         end = caption.format_end()
         p = dfxp.new_tag("p", begin=start, end=end)
         p.string = self._recreate_text(caption, dfxp, caption_set, lang)
 
         if dfxp.find("style", {"xml:id": "p"}):
-            p['style'] = 'p'
+            p["style"] = "p"
 
         p.attrs.update(_recreate_style(caption_style, dfxp))
 
         return p
 
     def _recreate_text(self, caption, dfxp, caption_set=None, lang=None):
-        line = ''
+        line = ""
 
         for node in caption.nodes:
             if node.type_ == CaptionNode.TEXT:
                 line += self._encode(node.content)
 
             elif node.type_ == CaptionNode.BREAK:
-                line = line.rstrip() + '<br/>\n    '
+                line = line.rstrip() + "<br/>\n    "
 
             elif node.type_ == CaptionNode.STYLE:
-                line = self._recreate_span(
-                    line, node, dfxp, caption_set, caption, lang)
+                line = self._recreate_span(line, node, dfxp, caption_set, caption, lang)
 
         return line.rstrip()
 
-    def _recreate_span(self, line, node, dfxp, caption_set=None, caption=None,
-                       lang=None):
+    def _recreate_span(
+        self, line, node, dfxp, caption_set=None, caption=None, lang=None
+    ):
         # TODO - This method seriously has to go away!
         # Because of the CaptionNode.STYLE nodes, tree-like structures are
         # are really hard to build, and proper xml elements can't be added.
         # We are left with creating tags manually, which is hard to understand
         # and harder to maintain
         if node.start:
-            styles = ''
+            styles = ""
 
             content_with_style = _recreate_style(node.content, dfxp)
             for style, value in list(content_with_style.items()):
                 styles += f' {style}="{value}"'
             if node.layout_info:
-                region_id, region_attribs = (
-                    self.region_creator.get_positioning_info(
-                        lang, caption_set, caption, node
-                    ))
+                region_id, region_attribs = self.region_creator.get_positioning_info(
+                    lang, caption_set, caption, node
+                )
                 styles += f' region="{region_id}"'
                 if self.write_inline_positioning:
-                    styles += ' ' + ' '.join(
-                        [
-                            f'{k_}="{v_}"'
-                            for k_, v_ in list(region_attribs.items())
-                        ]
+                    styles += " " + " ".join(
+                        [f'{k_}="{v_}"' for k_, v_ in list(region_attribs.items())]
                     )
 
             if styles:
                 if self.open_span:
-                    line = line.rstrip() + '</span> '
-                line += f'<span{styles}>'
+                    line = line.rstrip() + "</span> "
+                line += f"<span{styles}>"
                 self.open_span = True
 
         elif self.open_span:
-            line = line.rstrip() + '</span> '
+            line = line.rstrip() + "</span> "
             self.open_span = False
 
         return line
@@ -518,13 +525,21 @@ class LayoutAwareDFXPParser(BeautifulSoup):
     features we support, it was easier to use pre-order and it seems to have
     been enough. It should be clarified whether this is ok or not.
     """
+
     # A lot of elements will have no positioning info. Use this flyweight
     # to save memory
     NO_POSITIONING_INFO = None
 
-    def __init__(self, markup="", features="html.parser", builder=None,
-                 parse_only=None, from_encoding=None,
-                 read_invalid_positioning=False, **kwargs):
+    def __init__(
+        self,
+        markup="",
+        features="html.parser",
+        builder=None,
+        parse_only=None,
+        from_encoding=None,
+        read_invalid_positioning=False,
+        **kwargs,
+    ):
         """The `features` param determines the parser to be used. The parsers
         are usually html parsers, some more forgiving than others, and as such
         they do stuff very differently especially for xml files. We chose this
@@ -558,12 +573,11 @@ class LayoutAwareDFXPParser(BeautifulSoup):
         # Work around for lack of '&apos;' support in html.parser
         markup = markup.replace("&apos;", "'")
 
-        super().__init__(
-            markup, features, builder, parse_only, from_encoding, **kwargs)
+        super().__init__(markup, features, builder, parse_only, from_encoding, **kwargs)
 
         self.read_invalid_positioning = read_invalid_positioning
 
-        for div in self.find_all('div'):
+        for div in self.find_all("div"):
             self._pre_order_visit(div)
 
     def _pre_order_visit(self, element, inherit_from=None):
@@ -585,8 +599,7 @@ class LayoutAwareDFXPParser(BeautifulSoup):
             # TODO - this looks highly cachable. If it turns out too much
             # memory is being taken up by the caption set, cache this with a
             # WeakValueDict
-            layout_info = (
-                self._extract_positioning_information(region_id, element))
+            layout_info = self._extract_positioning_information(region_id, element)
             element.layout_info = layout_info
             for child in element.contents:
                 self._pre_order_visit(child, inherit_from=layout_info)
@@ -597,7 +610,7 @@ class LayoutAwareDFXPParser(BeautifulSoup):
         region_id = None
         parent = element.parent
         while parent:
-            region_id = parent.get('region')
+            region_id = parent.get("region")
             if region_id:
                 break
             parent = parent.parent
@@ -616,9 +629,7 @@ class LayoutAwareDFXPParser(BeautifulSoup):
             return None
 
         region_id = None
-        child_region_ids = {
-            child.get('region') for child in element.findChildren()
-        }
+        child_region_ids = {child.get("region") for child in element.findChildren()}
         if len(child_region_ids) > 1:
             raise LookupError
         if len(child_region_ids) == 1:
@@ -641,8 +652,8 @@ class LayoutAwareDFXPParser(BeautifulSoup):
         # element could be a NavigableString. Those are dumb.
         region_id = None
 
-        if hasattr(element, 'get'):
-            region_id = element.get('region')
+        if hasattr(element, "get"):
+            region_id = element.get("region")
 
         if not region_id:
             region_id = cls._get_region_from_ancestors(element)
@@ -669,7 +680,7 @@ class LayoutAwareDFXPParser(BeautifulSoup):
         region_tag = None
 
         if region_id is not None:
-            region_tag = self.find('region', {'xml:id': region_id})
+            region_tag = self.find("region", {"xml:id": region_id})
 
         region_scraper = self._get_layout_info_scraper_class()(self, region_tag)
 
@@ -707,13 +718,12 @@ class LayoutInfoScraper:
         :param region: the region tag
         """
         self.region = region
-        self._styling_section = document.findChild('styling')
+        self._styling_section = document.findChild("styling")
         if region:
-            self.region_styles = self._get_style_sources(
-                self._styling_section, region)
+            self.region_styles = self._get_style_sources(self._styling_section, region)
         else:
             self.region_styles = []
-        self.root_element = document.find('tt')
+        self.root_element = document.find("tt")
 
     @classmethod
     def _get_style_sources(cls, styling_section, element):
@@ -736,7 +746,7 @@ class LayoutInfoScraper:
         styling
         """
         # If we're analyzing a NavigableString, just quit
-        if not hasattr(element, 'findAll'):
+        if not hasattr(element, "findAll"):
             return ()
 
         nested_styles = []
@@ -747,19 +757,19 @@ class LayoutInfoScraper:
         # if the parent is a <div> tag. Technically, this step shouldn't be
         # skipped, but it would make the reader read in O(n^2) (half an hour
         # for 1500 timed captions)
-        if element.name not in ('div', 'body', 'tt'):
+        if element.name not in ("div", "body", "tt"):
             for style in element.contents:
-                if getattr(style, 'name', None) == 'style':
+                if getattr(style, "name", None) == "style":
                     nested_styles.extend(
                         cls._get_style_reference_chain(style, styling_section)
                     )
 
-        referenced_style_id = element.get('style')
+        referenced_style_id = element.get("style")
 
         referenced_styles = []
         if referenced_style_id and styling_section:
             referenced_style = styling_section.findChild(
-                'style', {'xml:id': referenced_style_id}
+                "style", {"xml:id": referenced_style_id}
             )
 
             referenced_styles = cls._get_style_reference_chain(
@@ -786,12 +796,10 @@ class LayoutInfoScraper:
         if not styling_tag:
             return result
 
-        reference = style.get('style')
+        reference = style.get("style")
 
         if reference:
-            referenced_styles = styling_tag.findChildren(
-                'style', {'xml:id': reference}
-            )
+            referenced_styles = styling_tag.findChildren("style", {"xml:id": reference})
 
             if len(referenced_styles) == 1:
                 return result + cls._get_style_reference_chain(
@@ -827,47 +835,49 @@ class LayoutInfoScraper:
         """
         usable_elem = element if even_invalid else None
 
-        origin = self._find_attribute(
-            usable_elem, 'tts:origin', Point.from_xml_attribute, ['auto']
-        ) or DFXP_DEFAULT_REGION.origin
+        origin = (
+            self._find_attribute(
+                usable_elem, "tts:origin", Point.from_xml_attribute, ["auto"]
+            )
+            or DFXP_DEFAULT_REGION.origin
+        )
 
         extent = self._find_attribute(
-            usable_elem, 'tts:extent', Stretch.from_xml_attribute, ['auto'])
+            usable_elem, "tts:extent", Stretch.from_xml_attribute, ["auto"]
+        )
 
         if not extent:
             extent = self._find_root_extent() or DFXP_DEFAULT_REGION.extent
 
-        padding = self._find_attribute(
-            usable_elem, 'tts:padding', Padding.from_xml_attribute
-        ) or DFXP_DEFAULT_REGION.padding
+        padding = (
+            self._find_attribute(usable_elem, "tts:padding", Padding.from_xml_attribute)
+            or DFXP_DEFAULT_REGION.padding
+        )
 
         # tts:textAlign is a special attribute, which can not be ignored when
         # specified on the element itself (only <p> nodes matter)
         # On elements like <span> it is also read, because this was legacy
         # behavior.
-        if getattr(element, 'name', None) in ('span', 'p'):
+        if getattr(element, "name", None) in ("span", "p"):
             text_align_source = element
         else:
             text_align_source = None
 
-        text_align = (
-                self._find_attribute(text_align_source, 'tts:textAlign')
-                or _create_external_horizontal_alignment(
+        text_align = self._find_attribute(
+            text_align_source, "tts:textAlign"
+        ) or _create_external_horizontal_alignment(
             DFXP_DEFAULT_REGION.alignment.horizontal
         )
-        )
-        display_align = (
-                self._find_attribute(usable_elem, 'tts:displayAlign')
-                or _create_external_vertical_alignment(
-            DFXP_DEFAULT_REGION.alignment.vertical
-        )
-        )
+        display_align = self._find_attribute(
+            usable_elem, "tts:displayAlign"
+        ) or _create_external_vertical_alignment(DFXP_DEFAULT_REGION.alignment.vertical)
         alignment = _create_internal_alignment(text_align, display_align)
 
         return origin, extent, padding, alignment
 
-    def _find_attribute_on_element_or_styles(self, attribute_name, element,
-                                             factory, ignore, ignorecase):
+    def _find_attribute_on_element_or_styles(
+        self, attribute_name, element, factory, ignore, ignorecase
+    ):
         """Look up the given attribute on the element, and all the styles
         referenced by it.
 
@@ -886,8 +896,7 @@ class LayoutInfoScraper:
         )
         if value is None:
             # Does a referenced style of the element have it?
-            for style in self._get_style_sources(
-                    self._styling_section, element):
+            for style in self._get_style_sources(self._styling_section, element):
                 value = _get_object_from_attribute(
                     style, attribute_name, factory, ignore, ignorecase
                 )
@@ -895,8 +904,9 @@ class LayoutInfoScraper:
                     break
         return value
 
-    def _find_attribute(self, element, attribute_name, factory=lambda x: x,
-                        ignore=(), ignorecase=True):
+    def _find_attribute(
+        self, element, attribute_name, factory=lambda x: x, ignore=(), ignorecase=True
+    ):
         """Try to find the `attribute_name` specified on the element, all its
         parents and all their styles (and referenced styles).
 
@@ -918,7 +928,8 @@ class LayoutInfoScraper:
         # Does the element itself have it inline, or any of its styles?
         if element:
             value = self._find_attribute_on_element_or_styles(
-                attribute_name, element, factory, ignore, ignorecase)
+                attribute_name, element, factory, ignore, ignorecase
+            )
 
             if value is None:
                 # Do any of the element's parents have the attribute?
@@ -952,7 +963,7 @@ class LayoutInfoScraper:
         if extent is None:
             root = self.root_element
             extent = _get_object_from_attribute(
-                root, 'tts:extent', Stretch.from_xml_attribute
+                root, "tts:extent", Stretch.from_xml_attribute
             )
 
             if extent is not None:
@@ -1047,15 +1058,18 @@ class RegionCreator:
         :rtype: dict
         """
         region_map = {}
-        layout_section = dfxp.find('layout')
+        layout_section = dfxp.find("layout")
 
         for region_spec in unique_layouts:
             if (
-                    region_spec.origin or region_spec.extent
-                    or region_spec.padding or region_spec.alignment):
-                new_region = dfxp.new_tag('region')
+                region_spec.origin
+                or region_spec.extent
+                or region_spec.padding
+                or region_spec.alignment
+            ):
+                new_region = dfxp.new_tag("region")
                 new_id = id_factory()
-                new_region['xml:id'] = new_id
+                new_region["xml:id"] = new_id
 
                 region_map[region_spec] = new_id
                 region_attribs = _convert_layout_to_attributes(region_spec)
@@ -1071,29 +1085,31 @@ class RegionCreator:
         """
         # Creates the default region
         default_region_map = self._create_unique_regions(
-            [DFXP_DEFAULT_REGION],
-            self._dfxp, lambda: DFXP_DEFAULT_REGION_ID
+            [DFXP_DEFAULT_REGION], self._dfxp, lambda: DFXP_DEFAULT_REGION_ID
         )
         unique_regions = self._collect_unique_regions(
-            self._caption_set, DFXP_DEFAULT_REGION)
+            self._caption_set, DFXP_DEFAULT_REGION
+        )
 
         # Create the document specified regions
         self._region_map = self._create_unique_regions(
-            unique_regions, self._dfxp, self._get_new_id)
+            unique_regions, self._dfxp, self._get_new_id
+        )
 
         self._region_map.update(default_region_map)
 
-    def _get_new_id(self, prefix='r'):
+    def _get_new_id(self, prefix="r"):
         """Return new, unique ids (use an internal counter).
 
         :type prefix: str
         """
-        new_id = f'{prefix}{self._id_seed}'
+        new_id = f"{prefix}{self._id_seed}"
         self._id_seed += 1
         return new_id
 
     def get_positioning_info(
-            self, lang, caption_set=None, caption=None, caption_node=None):
+        self, lang, caption_set=None, caption=None, caption_node=None
+    ):
         """For the given element will return a valid region ID, used for
         assigning to the element, and a dict containing the positioning
         attributes of that region (useful for inline non-standard positioning)
@@ -1147,37 +1163,37 @@ class RegionCreator:
 
     def cleanup_regions(self):
         """Remove the unused regions from the output file"""
-        layout_tag = self._dfxp.find('layout')
+        layout_tag = self._dfxp.find("layout")
         if not layout_tag:
             return
 
-        regions = layout_tag.findChildren('region')
+        regions = layout_tag.findChildren("region")
         if not regions:
             return
 
         for region in regions:
-            if region.attrs.get('xml:id') not in self._assigned_region_ids:
+            if region.attrs.get("xml:id") not in self._assigned_region_ids:
                 region.extract()
 
 
 def _recreate_style(content, dfxp):
     dfxp_style = {}
 
-    if 'class' in content:
-        if dfxp.find("style", {"xml:id": content['class']}):
-            dfxp_style['style'] = content['class']
-    if 'text-align' in content:
-        dfxp_style['tts:textAlign'] = content['text-align']
-    if 'italics' in content:
-        dfxp_style['tts:fontStyle'] = 'italic'
-    if 'font-family' in content:
-        dfxp_style['tts:fontFamily'] = content['font-family']
-    if 'font-size' in content:
-        dfxp_style['tts:fontSize'] = content['font-size']
-    if 'color' in content:
-        dfxp_style['tts:color'] = content['color']
-    if 'display-align' in content:
-        dfxp_style['tts:displayAlign'] = content['display-align']
+    if "class" in content:
+        if dfxp.find("style", {"xml:id": content["class"]}):
+            dfxp_style["style"] = content["class"]
+    if "text-align" in content:
+        dfxp_style["tts:textAlign"] = content["text-align"]
+    if "italics" in content:
+        dfxp_style["tts:fontStyle"] = "italic"
+    if "font-family" in content:
+        dfxp_style["tts:fontFamily"] = content["font-family"]
+    if "font-size" in content:
+        dfxp_style["tts:fontSize"] = content["font-size"]
+    if "color" in content:
+        dfxp_style["tts:color"] = content["color"]
+    if "display-align" in content:
+        dfxp_style["tts:displayAlign"] = content["display-align"]
 
     return dfxp_style
 
@@ -1204,8 +1220,7 @@ def _create_internal_alignment(text_align, display_align):
     if not (text_align or display_align):
         return None
 
-    return Alignment.from_horizontal_and_vertical_align(
-        text_align, display_align)
+    return Alignment.from_horizontal_and_vertical_align(text_align, display_align)
 
 
 def _create_external_horizontal_alignment(horizontal_component):
@@ -1218,15 +1233,15 @@ def _create_external_horizontal_alignment(horizontal_component):
     result = None
 
     if horizontal_component == HorizontalAlignmentEnum.LEFT:
-        result = 'left'
+        result = "left"
     if horizontal_component == HorizontalAlignmentEnum.CENTER:
-        result = 'center'
+        result = "center"
     if horizontal_component == HorizontalAlignmentEnum.RIGHT:
-        result = 'right'
+        result = "right"
     if horizontal_component == HorizontalAlignmentEnum.START:
-        result = 'start'
+        result = "start"
     if horizontal_component == HorizontalAlignmentEnum.END:
-        result = 'end'
+        result = "end"
 
     return result
 
@@ -1241,11 +1256,11 @@ def _create_external_vertical_alignment(vertical_component):
     result = None
 
     if vertical_component == VerticalAlignmentEnum.TOP:
-        result = 'before'
+        result = "before"
     if vertical_component == VerticalAlignmentEnum.CENTER:
-        result = 'center'
+        result = "center"
     if vertical_component == VerticalAlignmentEnum.BOTTOM:
-        result = 'after'
+        result = "after"
 
     return result
 
@@ -1265,21 +1280,20 @@ def _create_external_alignment(alignment):
     if not (alignment.horizontal or alignment.vertical):
         return result
 
-    horizontal_alignment = _create_external_horizontal_alignment(
-        alignment.horizontal)
+    horizontal_alignment = _create_external_horizontal_alignment(alignment.horizontal)
     if horizontal_alignment:
-        result['tts:textAlign'] = horizontal_alignment
+        result["tts:textAlign"] = horizontal_alignment
 
-    vertical_alignment = _create_external_vertical_alignment(
-        alignment.vertical)
+    vertical_alignment = _create_external_vertical_alignment(alignment.vertical)
     if vertical_alignment:
-        result['tts:displayAlign'] = vertical_alignment
+        result["tts:displayAlign"] = vertical_alignment
 
     return result
 
 
-def _get_object_from_attribute(tag, attr_name, factory,
-                               ignore_vals=(), ignorecase=True):
+def _get_object_from_attribute(
+    tag, attr_name, factory, ignore_vals=(), ignorecase=True
+):
     """For the xml `tag`, tries to retrieve the attribute `attr_name` and
     pass that to the factory in order to get a result. If the value of the
     attribute is in the `ignore_vals` iterable, returns None.
@@ -1291,7 +1305,7 @@ def _get_object_from_attribute(tag, attr_name, factory,
     :param ignore_vals: iterable of attribute values to ignore
     :raise CaptionReadSyntaxError: if the attribute has some crazy value
     """
-    if not hasattr(tag, 'has_attr'):
+    if not hasattr(tag, "has_attr"):
         return
 
     attr_value = None
@@ -1329,13 +1343,13 @@ def _convert_layout_to_attributes(layout):
         return _create_external_alignment(DFXP_DEFAULT_REGION.alignment)
 
     if layout.origin:
-        result['tts:origin'] = layout.origin.to_xml_attribute()
+        result["tts:origin"] = layout.origin.to_xml_attribute()
 
     if layout.extent:
-        result['tts:extent'] = layout.extent.to_xml_attribute()
+        result["tts:extent"] = layout.extent.to_xml_attribute()
 
     if layout.padding:
-        result['tts:padding'] = layout.padding.to_xml_attribute()
+        result["tts:padding"] = layout.padding.to_xml_attribute()
 
     if layout.alignment:
         result.update(_create_external_alignment(layout.alignment))

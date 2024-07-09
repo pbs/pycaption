@@ -19,8 +19,8 @@ class ReaderTestingMixIn:
 
     def test_reader_only_supports_unicode_input(self):
         with pytest.raises(InvalidInputError) as exc_info:
-            self.reader.read(b'')
-        assert exc_info.value.args[0] == 'The content is not a unicode string.'
+            self.reader.read(b"")
+        assert exc_info.value.args[0] == "The content is not a unicode string."
 
 
 class WebVTTTestingMixIn:
@@ -60,8 +60,7 @@ class SRTTestingMixIn:
 
 
 class CaptionSetTestingMixIn:
-    def assert_captionset_almost_equals(self, first, second,
-                                        tolerance_microseconds):
+    def assert_captionset_almost_equals(self, first, second, tolerance_microseconds):
         """
         Assert that two caption sets have equal text except for newlines,
         and differences in timing that are less than tolerance_microseconds.
@@ -72,7 +71,7 @@ class CaptionSetTestingMixIn:
 
         def get_text_for_caption(caption):
             text = caption.get_text()
-            text = re.sub(r'\s+', ' ', text)
+            text = re.sub(r"\s+", " ", text)
 
             return text
 
@@ -105,26 +104,26 @@ class DFXPTestingMixIn:
     """
 
     def _remove_styling(self, soup):
-        for style in soup('styling'):
+        for style in soup("styling"):
             style.clear()
 
-        for paragraph in soup('p'):
-            if 'style' in paragraph.attrs:
-                del paragraph.attrs['style']
+        for paragraph in soup("p"):
+            if "style" in paragraph.attrs:
+                del paragraph.attrs["style"]
 
     def _remove_spans(self, soup):
-        for span in soup('span'):
+        for span in soup("span"):
             span.unwrap()
 
     def _trim_text(self, soup):
-        for paragraph in soup('p'):
+        for paragraph in soup("p"):
             paragraph.string = paragraph.text.strip()
 
-    def assert_dfxp_equals(self, first, second,
-                           ignore_styling=False,
-                           ignore_spans=False):
-        first_soup = BeautifulSoup(first, 'lxml')
-        second_soup = BeautifulSoup(second, 'lxml')
+    def assert_dfxp_equals(
+        self, first, second, ignore_styling=False, ignore_spans=False
+    ):
+        first_soup = BeautifulSoup(first, "lxml")
+        second_soup = BeautifulSoup(second, "lxml")
 
         if ignore_styling:
             self._remove_styling(first_soup)
@@ -147,13 +146,13 @@ class SAMITestingMixIn:
 
     def _extract_sami_captions(self, soup):
         return tuple(
-            (caption.attrs['start'], caption.p.text.strip())
-            for caption in soup.select('sync')
+            (caption.attrs["start"], caption.p.text.strip())
+            for caption in soup.select("sync")
         )
 
     def assert_sami_captions_equal(self, first, second):
-        first_soup = BeautifulSoup(first, 'lxml')
-        second_soup = BeautifulSoup(second, 'lxml')
+        first_soup = BeautifulSoup(first, "lxml")
+        second_soup = BeautifulSoup(second, "lxml")
 
         first_items = self._extract_sami_captions(first_soup)
         second_items = self._extract_sami_captions(second_soup)

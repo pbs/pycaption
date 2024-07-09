@@ -1,5 +1,4 @@
 from pycaption import MicroDVDReader, MicroDVDWriter, SAMIReader
-
 from tests.mixins import MicroDVDTestingMixIn
 
 

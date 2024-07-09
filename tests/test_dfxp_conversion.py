@@ -1,15 +1,14 @@
 from bs4 import BeautifulSoup
 
-from pycaption import (
-    DFXPReader, SAMIReader, SRTReader, DFXPWriter, WebVTTWriter, MicroDVDWriter,
-)
+from pycaption import (DFXPReader, DFXPWriter, MicroDVDWriter, SAMIReader,
+                       SRTReader, WebVTTWriter)
+from pycaption.dfxp.base import (DFXP_DEFAULT_REGION, DFXP_DEFAULT_REGION_ID,
+                                 DFXP_DEFAULT_STYLE, DFXP_DEFAULT_STYLE_ID,
+                                 _convert_layout_to_attributes,
+                                 _recreate_style)
 from pycaption.dfxp.extras import LegacyDFXPWriter
-from pycaption.dfxp.base import (
-    DFXP_DEFAULT_STYLE, DFXP_DEFAULT_STYLE_ID, DFXP_DEFAULT_REGION,
-    DFXP_DEFAULT_REGION_ID, _recreate_style, _convert_layout_to_attributes
-)
 
-from .mixins import DFXPTestingMixIn, WebVTTTestingMixIn, MicroDVDTestingMixIn
+from .mixins import DFXPTestingMixIn, MicroDVDTestingMixIn, WebVTTTestingMixIn
 
 # Arbitrary values used to test relativization
 VIDEO_WIDTH = 640
@@ -24,8 +23,7 @@ class TestDFXPtoDFXP(DFXPTestingMixIn):
         assert isinstance(results, str)
         self.assert_dfxp_equals(sample_dfxp_output, results)
 
-    def test_empty_cue(self, sample_dfxp_empty_cue_output,
-                       sample_dfxp_empty_cue):
+    def test_empty_cue(self, sample_dfxp_empty_cue_output, sample_dfxp_empty_cue):
         caption_set = DFXPReader().read(sample_dfxp_empty_cue)
         results = DFXPWriter().write(caption_set)
 
@@ -36,10 +34,10 @@ class TestDFXPtoDFXP(DFXPTestingMixIn):
         result = DFXPWriter().write(caption_set)
 
         default_style = _recreate_style(DFXP_DEFAULT_STYLE, None)
-        default_style['xml:id'] = DFXP_DEFAULT_STYLE_ID
+        default_style["xml:id"] = DFXP_DEFAULT_STYLE_ID
 
-        soup = BeautifulSoup(result, 'lxml-xml')
-        style = soup.find('style', {'xml:id': DFXP_DEFAULT_STYLE_ID})
+        soup = BeautifulSoup(result, "lxml-xml")
+        style = soup.find("style", {"xml:id": DFXP_DEFAULT_STYLE_ID})
 
         assert style
         assert style.attrs == default_style
@@ -48,46 +46,47 @@ class TestDFXPtoDFXP(DFXPTestingMixIn):
         caption_set = DFXPReader().read(sample_dfxp_default_styling_p_tags)
         result = DFXPWriter().write(caption_set)
 
-        soup = BeautifulSoup(result, 'lxml')
+        soup = BeautifulSoup(result, "lxml")
 
-        for p in soup.find_all('p'):
-            assert p.attrs.get('style') == 'p'
+        for p in soup.find_all("p"):
+            assert p.attrs.get("style") == "p"
 
     def test_default_region_tag(self, sample_dfxp):
         caption_set = DFXPReader().read(sample_dfxp)
         result = DFXPWriter().write(caption_set)
 
-        soup = BeautifulSoup(result, 'lxml-xml')
-        region = soup.find('region', {'xml:id': DFXP_DEFAULT_REGION_ID})
+        soup = BeautifulSoup(result, "lxml-xml")
+        region = soup.find("region", {"xml:id": DFXP_DEFAULT_REGION_ID})
 
         default_region = _convert_layout_to_attributes(DFXP_DEFAULT_REGION)
-        default_region['xml:id'] = DFXP_DEFAULT_REGION_ID
+        default_region["xml:id"] = DFXP_DEFAULT_REGION_ID
 
         assert region
-        assert region.attrs['xml:id'] == DFXP_DEFAULT_REGION_ID
+        assert region.attrs["xml:id"] == DFXP_DEFAULT_REGION_ID
         assert region.attrs == default_region
 
     def test_default_region_p_tags(self, sample_dfxp):
         caption_set = DFXPReader().read(sample_dfxp)
         result = DFXPWriter().write(caption_set)
 
-        soup = BeautifulSoup(result, 'lxml')
+        soup = BeautifulSoup(result, "lxml")
 
-        for p in soup.find_all('p'):
-            assert p.attrs.get('region') == DFXP_DEFAULT_REGION_ID
+        for p in soup.find_all("p"):
+            assert p.attrs.get("region") == DFXP_DEFAULT_REGION_ID
 
     def test_correct_region_attributes_are_recreated(
-            self, sample_dfxp_multiple_regions_output,
-            sample_dfxp_multiple_regions_input):
+        self, sample_dfxp_multiple_regions_output, sample_dfxp_multiple_regions_input
+    ):
         caption_set = DFXPReader().read(sample_dfxp_multiple_regions_input)
-        result = DFXPWriter(
-            relativize=False, fit_to_screen=False).write(caption_set)
+        result = DFXPWriter(relativize=False, fit_to_screen=False).write(caption_set)
 
         self.assert_dfxp_equals(result, sample_dfxp_multiple_regions_output)
 
     def test_incorrectly_specified_positioning_is_explicitly_accepted(
-            self, sample_dfxp_invalid_but_supported_positioning_output,
-            sample_dfxp_invalid_but_supported_positioning_input):
+        self,
+        sample_dfxp_invalid_but_supported_positioning_output,
+        sample_dfxp_invalid_but_supported_positioning_input,
+    ):
         # The arguments used here illustrate how we will try to read
         # and write incorrectly specified positioning information.
         # By incorrect, I mean the specs say that those attributes should be
@@ -96,41 +95,43 @@ class TestDFXPtoDFXP(DFXPTestingMixIn):
             sample_dfxp_invalid_but_supported_positioning_input
         )
         result = DFXPWriter(
-            relativize=False,
-            fit_to_screen=False,
-            write_inline_positioning=True).write(caption_set)
+            relativize=False, fit_to_screen=False, write_inline_positioning=True
+        ).write(caption_set)
 
         self.assert_dfxp_equals(
             result, sample_dfxp_invalid_but_supported_positioning_output
         )
 
     def test_dont_create_style_tags_with_no_id(
-            self, sample_dfxp_style_tag_with_no_xml_id_output,
-            sample_dfxp_style_tag_with_no_xml_id_input):
+        self,
+        sample_dfxp_style_tag_with_no_xml_id_output,
+        sample_dfxp_style_tag_with_no_xml_id_input,
+    ):
         # The <style> tags can have no 'xml:id' attribute. Previously, in this
         # case, the style was copied to the output file, with the 'xml:id'
         # property declared, but no value assigned to it. Since such a style
         # can not be referred anyway, and <style> elements, children of
         # <region> tags shouldn't be referred to anyway, we don't include
         # these styles in the output file
-        caption_set = DFXPReader().read(
-            sample_dfxp_style_tag_with_no_xml_id_input)
+        caption_set = DFXPReader().read(sample_dfxp_style_tag_with_no_xml_id_input)
         result = DFXPWriter().write(caption_set)
 
         assert result == sample_dfxp_style_tag_with_no_xml_id_output
 
-    def test_is_relativized(self, sample_dfxp_with_relativized_positioning,
-                            sample_dfxp_with_positioning):
+    def test_is_relativized(
+        self, sample_dfxp_with_relativized_positioning, sample_dfxp_with_positioning
+    ):
         # Absolute positioning settings (e.g. px) are converted to percentages
         caption_set = DFXPReader().read(sample_dfxp_with_positioning)
-        result = DFXPWriter(
-            video_width=VIDEO_WIDTH, video_height=VIDEO_HEIGHT
-        ).write(caption_set)
+        result = DFXPWriter(video_width=VIDEO_WIDTH, video_height=VIDEO_HEIGHT).write(
+            caption_set
+        )
 
         assert result == sample_dfxp_with_relativized_positioning
 
-    def test_fit_to_screen(self, sample_dfxp_long_cue_fit_to_screen,
-                           sample_dfxp_long_cue):
+    def test_fit_to_screen(
+        self, sample_dfxp_long_cue_fit_to_screen, sample_dfxp_long_cue
+    ):
         # Check if caption width and height are is explicitly set and
         # recalculate it if necessary. This prevents long captions from being
         # cut out of the screen.
@@ -139,14 +140,13 @@ class TestDFXPtoDFXP(DFXPTestingMixIn):
 
         assert result == sample_dfxp_long_cue_fit_to_screen
 
-    def test_proper_xml_entity_escaping(
-            self, sample_dfxp_with_escaped_apostrophe):
+    def test_proper_xml_entity_escaping(self, sample_dfxp_with_escaped_apostrophe):
         caption_set = DFXPReader().read(sample_dfxp_with_escaped_apostrophe)
-        cue_text = caption_set.get_captions('en-US')[0].nodes[0].content
+        cue_text = caption_set.get_captions("en-US")[0].nodes[0].content
 
-        assert cue_text == "<< \"Andy's Caf\xe9 & Restaurant\" this way"
+        assert cue_text == '<< "Andy\'s Caf\xe9 & Restaurant" this way'
         result = DFXPWriter().write(caption_set)
-        assert "&lt;&lt; \"Andy's Café &amp; Restaurant\" this way" in result
+        assert '&lt;&lt; "Andy\'s Café &amp; Restaurant" this way' in result
 
 
 class TestDFXPtoWebVTT(WebVTTTestingMixIn):
@@ -157,16 +157,18 @@ class TestDFXPtoWebVTT(WebVTTTestingMixIn):
         assert isinstance(results, str)
         self.assert_webvtt_equals(sample_webvtt_from_dfxp, results)
 
-    def test_inline_style_conversion(self, sample_webvtt_from_dfxp_with_style,
-                                     sample_dfxp_with_inline_style):
+    def test_inline_style_conversion(
+        self, sample_webvtt_from_dfxp_with_style, sample_dfxp_with_inline_style
+    ):
         caption_set = DFXPReader().read(sample_dfxp_with_inline_style)
         results = WebVTTWriter().write(caption_set)
 
         assert isinstance(results, str)
         self.assert_webvtt_equals(sample_webvtt_from_dfxp_with_style, results)
 
-    def test_defined_style_conversion(self, sample_webvtt_from_dfxp_with_style,
-                                      sample_dfxp_with_defined_style):
+    def test_defined_style_conversion(
+        self, sample_webvtt_from_dfxp_with_style, sample_dfxp_with_defined_style
+    ):
         caption_set = DFXPReader().read(sample_dfxp_with_defined_style)
         results = WebVTTWriter().write(caption_set)
 
@@ -174,8 +176,8 @@ class TestDFXPtoWebVTT(WebVTTTestingMixIn):
         self.assert_webvtt_equals(sample_webvtt_from_dfxp_with_style, results)
 
     def test_inherited_style_conversion(
-            self, sample_webvtt_from_dfxp_with_style,
-            sample_dfxp_with_inherited_style):
+        self, sample_webvtt_from_dfxp_with_style, sample_dfxp_with_inherited_style
+    ):
         caption_set = DFXPReader().read(sample_dfxp_with_inherited_style)
         results = WebVTTWriter().write(caption_set)
 
@@ -183,8 +185,10 @@ class TestDFXPtoWebVTT(WebVTTTestingMixIn):
         self.assert_webvtt_equals(sample_webvtt_from_dfxp_with_style, results)
 
     def test_positioning_conversion(
-            self, sample_webvtt_from_dfxp_with_positioning_and_style,
-            sample_dfxp_with_positioning):
+        self,
+        sample_webvtt_from_dfxp_with_positioning_and_style,
+        sample_dfxp_with_positioning,
+    ):
         caption_set = DFXPReader().read(sample_dfxp_with_positioning)
         results = WebVTTWriter(
             video_width=VIDEO_WIDTH, video_height=VIDEO_HEIGHT
@@ -196,15 +200,16 @@ class TestDFXPtoWebVTT(WebVTTTestingMixIn):
         )
 
     def test_add_explicit_size(
-            self, sample_webvtt_output_long_cue, sample_dfxp_long_cue):
+        self, sample_webvtt_output_long_cue, sample_dfxp_long_cue
+    ):
         caption_set = DFXPReader().read(sample_dfxp_long_cue)
         results = WebVTTWriter().write(caption_set)
 
         assert sample_webvtt_output_long_cue == results
 
     def test_preserve_proper_alignment(
-            self, webvtt_from_dfxp_with_conflicting_align,
-            dfxp_style_region_align_conflict):
+        self, webvtt_from_dfxp_with_conflicting_align, dfxp_style_region_align_conflict
+    ):
         # This failed at one point when the CaptionSet had node breaks with
         # different positioning. It was fixed both at the DFXPReader AND the
         # WebVTTWriter.
@@ -213,23 +218,24 @@ class TestDFXPtoWebVTT(WebVTTTestingMixIn):
 
         assert webvtt_from_dfxp_with_conflicting_align == results
 
-    def test_empty_cue(self, sample_webvtt_empty_cue_output,
-                       sample_dfxp_empty_cue):
+    def test_empty_cue(self, sample_webvtt_empty_cue_output, sample_dfxp_empty_cue):
         caption_set = DFXPReader().read(sample_dfxp_empty_cue)
         results = WebVTTWriter().write(caption_set)
 
         self.assert_webvtt_equals(sample_webvtt_empty_cue_output, results)
 
     def test_input_inline_positioning_output_default_alignment_is_start(
-            self, sample_dfxp_invalid_but_supported_positioning_input):
-        caption_set = DFXPReader(read_invalid_positioning=True) \
-            .read(sample_dfxp_invalid_but_supported_positioning_input)
-        results = WebVTTWriter(video_width=640, video_height=360) \
-            .write(caption_set)
-        start_align_count = results.count('align:start')
+        self, sample_dfxp_invalid_but_supported_positioning_input
+    ):
+        caption_set = DFXPReader(read_invalid_positioning=True).read(
+            sample_dfxp_invalid_but_supported_positioning_input
+        )
+        results = WebVTTWriter(video_width=640, video_height=360).write(caption_set)
+        start_align_count = results.count("align:start")
 
-        assert start_align_count == 3, \
-            f"{3 - start_align_count} default alignment(s) missing."
+        assert (
+            start_align_count == 3
+        ), f"{3 - start_align_count} default alignment(s) missing."
 
 
 class TestDFXPtoMicroDVD(MicroDVDTestingMixIn):
@@ -241,7 +247,8 @@ class TestDFXPtoMicroDVD(MicroDVDTestingMixIn):
         self.assert_microdvd_equals(sample_microdvd_2, results)
 
     def test_dfxp_empty_cue_to_microdvd(
-            self, sample_microdvd_empty_cue_output, sample_dfxp_empty_cue):
+        self, sample_microdvd_empty_cue_output, sample_dfxp_empty_cue
+    ):
         caption_set = DFXPReader().read(sample_dfxp_empty_cue)
         results = MicroDVDWriter().write(caption_set)
 
@@ -249,8 +256,9 @@ class TestDFXPtoMicroDVD(MicroDVDTestingMixIn):
 
 
 class TestLegacyDFXP:
-    def test_legacy_convert(self, sample_dfxp_for_legacy_writer_output,
-                            sample_dfxp_for_legacy_writer_input):
+    def test_legacy_convert(
+        self, sample_dfxp_for_legacy_writer_output, sample_dfxp_for_legacy_writer_input
+    ):
         caption_set = DFXPReader(read_invalid_positioning=True).read(
             sample_dfxp_for_legacy_writer_input
         )
@@ -262,70 +270,59 @@ class TestLegacyDFXP:
 
 class TestSAMItoDFXP(DFXPTestingMixIn):
     def test_sami_to_dfxp_conversion(
-            self, sample_dfxp_from_sami_with_positioning, sample_sami):
+        self, sample_dfxp_from_sami_with_positioning, sample_sami
+    ):
         caption_set = SAMIReader().read(sample_sami)
-        results = DFXPWriter(relativize=False,
-                             fit_to_screen=False).write(caption_set)
+        results = DFXPWriter(relativize=False, fit_to_screen=False).write(caption_set)
 
         assert isinstance(results, str)
         self.assert_dfxp_equals(sample_dfxp_from_sami_with_positioning, results)
 
-    def test_sami_to_dfxp_with_margin(self, sample_dfxp_from_sami_with_margins,
-                                      sample_sami_partial_margins):
+    def test_sami_to_dfxp_with_margin(
+        self, sample_dfxp_from_sami_with_margins, sample_sami_partial_margins
+    ):
         caption_set = SAMIReader().read(sample_sami_partial_margins)
-        results = DFXPWriter(
-            relativize=False, fit_to_screen=False).write(caption_set)
+        results = DFXPWriter(relativize=False, fit_to_screen=False).write(caption_set)
 
         self.assert_dfxp_equals(sample_dfxp_from_sami_with_margins, results)
 
     def test_sami_to_dfxp_with_margin_for_language(
-            self, sample_dfxp_from_sami_with_lang_margins,
-            sample_sami_lang_margin):
+        self, sample_dfxp_from_sami_with_lang_margins, sample_sami_lang_margin
+    ):
         caption_set = SAMIReader().read(sample_sami_lang_margin)
-        results = DFXPWriter(
-            relativize=False, fit_to_screen=False).write(caption_set)
+        results = DFXPWriter(relativize=False, fit_to_screen=False).write(caption_set)
 
-        self.assert_dfxp_equals(
-            sample_dfxp_from_sami_with_lang_margins,
-            results
-        )
+        self.assert_dfxp_equals(sample_dfxp_from_sami_with_lang_margins, results)
 
-    def test_sami_to_dfxp_with_span(self, sample_dfxp_from_sami_with_span,
-                                    sample_sami_with_span):
+    def test_sami_to_dfxp_with_span(
+        self, sample_dfxp_from_sami_with_span, sample_sami_with_span
+    ):
         caption_set = SAMIReader().read(sample_sami_with_span)
-        results = DFXPWriter(
-            relativize=False, fit_to_screen=False).write(caption_set)
+        results = DFXPWriter(relativize=False, fit_to_screen=False).write(caption_set)
 
         self.assert_dfxp_equals(sample_dfxp_from_sami_with_span, results)
 
     def test_sami_to_dfxp_with_bad_span_align(
-            self, sample_dfxp_from_sami_with_bad_span_align,
-            sample_sami_with_bad_span_align):
+        self, sample_dfxp_from_sami_with_bad_span_align, sample_sami_with_bad_span_align
+    ):
         caption_set = SAMIReader().read(sample_sami_with_bad_span_align)
-        results = DFXPWriter(
-            relativize=False, fit_to_screen=False).write(caption_set)
+        results = DFXPWriter(relativize=False, fit_to_screen=False).write(caption_set)
 
-        self.assert_dfxp_equals(
-            sample_dfxp_from_sami_with_bad_span_align,
-            results
-        )
+        self.assert_dfxp_equals(sample_dfxp_from_sami_with_bad_span_align, results)
 
     def test_sami_to_dfxp_ignores_multiple_span_aligns(
-            self, sample_dfxp_from_sami_with_bad_span_align,
-            sample_sami_with_multiple_span_aligns):
+        self,
+        sample_dfxp_from_sami_with_bad_span_align,
+        sample_sami_with_multiple_span_aligns,
+    ):
         caption_set = SAMIReader().read(sample_sami_with_multiple_span_aligns)
-        results = DFXPWriter(
-            relativize=False, fit_to_screen=False).write(caption_set)
+        results = DFXPWriter(relativize=False, fit_to_screen=False).write(caption_set)
 
-        self.assert_dfxp_equals(
-            sample_dfxp_from_sami_with_bad_span_align,
-            results
-        )
+        self.assert_dfxp_equals(sample_dfxp_from_sami_with_bad_span_align, results)
 
     def test_sami_to_dfxp_xml_output(self, sample_sami_syntax_error):
         captions = SAMIReader().read(sample_sami_syntax_error)
-        results = DFXPWriter(relativize=False,
-                             fit_to_screen=False).write(captions)
+        results = DFXPWriter(relativize=False, fit_to_screen=False).write(captions)
 
         assert isinstance(results, str)
         assert 'xmlns="http://www.w3.org/ns/ttml"' in results
@@ -339,6 +336,5 @@ class TestSRTtoDFXP(DFXPTestingMixIn):
 
         assert isinstance(results, str)
         self.assert_dfxp_equals(
-            sample_dfxp, results,
-            ignore_styling=True, ignore_spans=True
+            sample_dfxp, results, ignore_styling=True, ignore_spans=True
         )

@@ -1,22 +1,21 @@
 from copy import deepcopy
 
-from .base import (
-    BaseReader, BaseWriter, CaptionSet, CaptionList, Caption, CaptionNode,
-)
+from .base import (BaseReader, BaseWriter, Caption, CaptionList, CaptionNode,
+                   CaptionSet)
 from .exceptions import CaptionReadNoCaptions, InvalidInputError
 
 
 class SRTReader(BaseReader):
     def detect(self, content):
         lines = content.splitlines()
-        if lines[0].isdigit() and '-->' in lines[1]:
+        if lines[0].isdigit() and "-->" in lines[1]:
             return True
         else:
             return False
 
-    def read(self, content, lang='en-US'):
+    def read(self, content, lang="en-US"):
         if not isinstance(content, str):
-            raise InvalidInputError('The content is not a unicode string.')
+            raise InvalidInputError("The content is not a unicode string.")
 
         lines = content.splitlines()
         start_line = 0
@@ -28,15 +27,15 @@ class SRTReader(BaseReader):
 
             end_line = self._find_text_line(start_line, lines)
 
-            timing = lines[start_line + 1].split('-->')
-            start = self._srttomicro(timing[0].strip(' \r\n'))
-            end = self._srttomicro(timing[1].strip(' \r\n'))
+            timing = lines[start_line + 1].split("-->")
+            start = self._srttomicro(timing[0].strip(" \r\n"))
+            end = self._srttomicro(timing[1].strip(" \r\n"))
 
             nodes = []
 
-            for line in lines[start_line + 2:end_line - 1]:
+            for line in lines[start_line + 2 : end_line - 1]:
                 # skip extra blank lines
-                if not nodes or line != '':
+                if not nodes or line != "":
                     nodes.append(CaptionNode.create_text(line))
                     nodes.append(CaptionNode.create_break())
 
@@ -56,14 +55,16 @@ class SRTReader(BaseReader):
         return caption_set
 
     def _srttomicro(self, stamp):
-        timesplit = stamp.split(':')
-        if ',' not in timesplit[2]:
-            timesplit[2] += ',000'
-        secsplit = timesplit[2].split(',')
-        microseconds = (int(timesplit[0]) * 3600000000
-                        + int(timesplit[1]) * 60000000
-                        + int(secsplit[0]) * 1000000
-                        + int(secsplit[1]) * 1000)
+        timesplit = stamp.split(":")
+        if "," not in timesplit[2]:
+            timesplit[2] += ",000"
+        secsplit = timesplit[2].split(",")
+        microseconds = (
+            int(timesplit[0]) * 3600000000
+            + int(timesplit[1]) * 60000000
+            + int(secsplit[0]) * 1000000
+            + int(secsplit[1]) * 1000
+        )
 
         return microseconds
 
@@ -89,11 +90,9 @@ class SRTWriter(BaseWriter):
         srt_captions = []
 
         for lang in caption_set.get_languages():
-            srt_captions.append(
-                self._recreate_lang(caption_set.get_captions(lang))
-            )
+            srt_captions.append(self._recreate_lang(caption_set.get_captions(lang)))
 
-        caption_content = 'MULTI-LANGUAGE SRT\n'.join(srt_captions)
+        caption_content = "MULTI-LANGUAGE SRT\n".join(srt_captions)
         return caption_content
 
     def _recreate_lang(self, captions):
@@ -106,30 +105,35 @@ class SRTWriter(BaseWriter):
         for caption in captions[1:]:
             # Merge if the timestamp is the same as last caption
             if (caption.start, caption.end) == (
-                    merged_captions[-1].start, merged_captions[-1].end):
+                merged_captions[-1].start,
+                merged_captions[-1].end,
+            ):
                 merged_captions[-1] = Caption(
                     start=caption.start,
                     end=caption.end,
-                    nodes=(merged_captions[-1].nodes
-                           + [CaptionNode.create_break()]
-                           + caption.nodes))
+                    nodes=(
+                        merged_captions[-1].nodes
+                        + [CaptionNode.create_break()]
+                        + caption.nodes
+                    ),
+                )
             else:
                 # Different timestamp, end of merging, append new caption
                 merged_captions.append(caption)
         captions = merged_captions
 
-        srt = ''
+        srt = ""
         count = 1
 
         for caption in captions:
-            srt += f'{count}\n'
+            srt += f"{count}\n"
 
-            start = caption.format_start(msec_separator=',')
-            end = caption.format_end(msec_separator=',')
+            start = caption.format_start(msec_separator=",")
+            end = caption.format_end(msec_separator=",")
 
-            srt += f'{start[:12]} --> {end[:12]}\n'
+            srt += f"{start[:12]} --> {end[:12]}\n"
 
-            new_content = ''
+            new_content = ""
             for node in caption.nodes:
                 new_content = self._recreate_line(new_content, node)
 
@@ -143,8 +147,8 @@ class SRTWriter(BaseWriter):
 
     def _recreate_line(self, srt, line):
         if line.type_ == CaptionNode.TEXT:
-            return srt + f'{line.content} '
+            return srt + f"{line.content} "
         elif line.type_ == CaptionNode.BREAK:
-            return srt + '\n'
+            return srt + "\n"
         else:
             return srt
