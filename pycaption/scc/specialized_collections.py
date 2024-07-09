@@ -291,6 +291,9 @@ class InstructionNodeCreator:
             self._collection = collection
 
         self.last_style = None
+        self.spaces_to_add = 0
+        self.has_text = False
+        self.text_length = 0
 
         self._position_tracer = position_tracker
 
@@ -338,9 +341,11 @@ class InstructionNodeCreator:
             self._position_tracer.acknowledge_position_changed()
 
         node.add_chars(*chars)
+        self.has_text = True
 
     def interpret_command(self, command, previous_is_pac_or_tab=False):
-        """Given a command determines whether to turn italics on or off,
+        """
+        Given a command determines whether to turn italics on or off,
         or to set the positioning
 
         This is mostly used to convert from the legacy-style commands
@@ -348,6 +353,27 @@ class InstructionNodeCreator:
         :type command: str
         :type previous_is_pac_or_tab: previous command code is for a PAC command
         or a PAC_TAB_OFFSET_COMMANDS
+
+        Command can be:
+            - PAC - sets position for next text node
+            - PAC commands which also change text style for the next text node
+            - Tab offset - adds 1,2 or 3 spaces
+            - backspace 94a1 - Move cursor back one position and delete that character
+            - background color codes - Since these codes are optional, they must be preceded
+                with the space character (20h), which will be deleted when the code is applied.
+            - mid-row codes - used to change background color and style mid-row
+
+            Rules:
+            - For PACS which also sets a style: first do the positioning then add the style tag
+            - A pac can't set a position which has a column lower than the last character column
+                - Can't set (14, 0) for example if we already have text on row 14
+            - mid-row codes - if the previous command is PAC or TAB OFFSET, add a space as follows:
+                - if code is after a closed style tag, add space to the beginning of the next text node
+                - if code is after an open style tag, add space to the end of previous text node
+            - background color codes will delete the space character (20h), in case there is one in front
+            - tab offsets will add spaces after the last text node
+            - Style setting commands - if there's another style open, it will add a close style tag
+                before opening the new one (reset style)
         """
         self._update_positioning(command)
 
@@ -355,6 +381,11 @@ class InstructionNodeCreator:
 
         if command == "94a1":
             self.handle_backspace("94a1")
+
+        if command in PAC_TAB_OFFSET_COMMANDS and self.has_text:
+            # if there's a text node to add spaces to
+            self.add_chars(" " * self.spaces_to_add)
+            self.spaces_to_add = 0
 
         if command in BACKGROUND_COLOR_CODES:
             # Since these codes are optional, they must be preceded
@@ -387,7 +418,7 @@ class InstructionNodeCreator:
                 )
                 self.last_style = "italics off"
 
-        # mid row code that is not first code on the line
+        # mid-row code that is not first code on the line
         # (previous node is not a break node)
         if command in MID_ROW_CODES and not previous_is_pac_or_tab:
             if self.last_style == "italics off":
@@ -408,6 +439,7 @@ class InstructionNodeCreator:
             prev_positioning = self._position_tracer.default
             positioning = (prev_positioning[0],
                            prev_positioning[1] + tab_offset)
+            self.spaces_to_add = tab_offset
         else:
             first, second = command[:2], command[2:]
 

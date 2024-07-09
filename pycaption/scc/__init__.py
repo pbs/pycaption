@@ -224,7 +224,6 @@ class SCCReader(BaseReader):
         # split lines
         lines = content.splitlines()
 
-
         # loop through each line except the first
         for line in lines[1:]:
             self._translate_line(line)
@@ -311,6 +310,22 @@ class SCCReader(BaseReader):
         self.time_translator.start_at(parts[0][0])
         word_list = parts[0][2].split(' ')
 
+        last_code = word_list[-1]
+        first_code = word_list[0]
+        first_code_is_text = first_code[:2] in CHARACTERS and first_code[2:] in CHARACTERS
+
+        # in case we're in roll-on mode and the line starts with text and
+        # the line doesn't change mode to pop-on
+        # we print the characters to a new line by inserting 94ad at the start
+        if self.buffer_dict.active_key != "paint" and first_code_is_text:
+            # if line starts with characters and we're not in paint or roll
+            # mode, we skip this line
+            return
+        elif self.buffer_dict.active_key == "paint" and first_code_is_text:
+            if last_code == "942f":
+                # skip if pop termination
+                return
+
         for idx, word in enumerate(word_list):
             word = word.strip()
             previous_is_pac_or_tab = len(word_list) > 1 and (
@@ -356,12 +371,13 @@ class SCCReader(BaseReader):
         # doubled special characters and doubled extended characters
         # with only one member of each pair being displayed.
 
-        doubled_types = word != "94a1" and word in COMMANDS or _is_pac_command(word)
-        if self.double_starter:
-            doubled_types = doubled_types or word in EXTENDED_CHARS or word == "94a1" or word in SPECIAL_CHARS
-
         if word in CUE_STARTING_COMMAND and word != self.last_command:
             self.double_starter = False
+
+        doubled_types = word != "94a1" and word in COMMANDS or _is_pac_command(word)
+        if self.double_starter:
+            # in case the cue starting command is doubled, skip also extended chars, backspace and special chars
+            doubled_types = doubled_types or word in EXTENDED_CHARS or word == "94a1" or word in SPECIAL_CHARS
 
         if doubled_types and word == self.last_command:
             if word in CUE_STARTING_COMMAND:

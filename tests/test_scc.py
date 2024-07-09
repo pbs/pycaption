@@ -198,16 +198,18 @@ class TestSCCReader(ReaderTestingMixIn):
         caption_set = SCCReader().read(sample_scc_with_extended_characters)
         captions = caption_set.get_captions('en-US')
         assert captions[0].nodes[0].content == 'MÄRTHA:'
-        expected_result = ['JUNIOR: ¡Yum!', None, 'Ya me siento mucho mejor.']
+        expected_result = ['JUNIOR: ¡Yum!', None, '   Ya me siento mucho mejor.']
         content = [node.content for node in captions[1].nodes]
         assert all(result in expected_result for result in content)
 
     def test_skip_duplicate_tab_offset(self, sample_scc_duplicate_tab_offset):
         expected_lines = [
             '[Radio reporter]',
+            ' ',
             'The I-10 Santa Monica Freeway',
-            'westbound is jammed,',
+            ' ', 'westbound is jammed,',
             'due to a three-car accident',
+            '  ',
             'blocking lanes 1 and 2'
         ]
 
@@ -296,20 +298,20 @@ class TestCoverageOnly:
         # ensure the paint on lines are not repeated
         expected_text_lines = [
             "(Client's Voice)",
-            'Remember that degree',
-            'you got in taxation?',
+            '  Remember that degree',
+            '  you got in taxation?',
             '(Danny)',
-            "Of course you don't",
-            "because you didn't!",
+            "  Of course you don't",
+            "  because you didn't!",
             "Your job isn't doing hard",
-            'work...',
+            '   work...',
             "...it's making them do hard",
-            'work...',
+            '  work...',
             '...and getting paid for it.',
             '(VO)',
-            'Snap and sort your expenses to',
-            'save over $4,600 at tax time.',
-            'QUICKBOOKS. BACKING YOU.',
+            ' Snap and sort your expenses to',
+            ' save over $4,600 at tax time.',
+            'QUICKBOOKS. BACKING YOU.'
         ]
 
         captions = SCCReader().read(sample_scc_multiple_formats) \
@@ -583,9 +585,19 @@ class TestTimingCorrectingCaptionList:
         assert last_caption.end == last_caption.start + 4 * 1000 * 1000
 
     def test_eoc_first_command(self, sample_scc_eoc_first_command):
-        # TODO First caption should be ignored because it doesn't start with
-        #  a pop/roll/paint on command
+        # caption should be ignored in case  it doesn't start with
+        # a cue starting command on command in roll / pop modes
         caption_set = SCCReader().read(sample_scc_eoc_first_command)
+
+        # just one caption, first EOC disappears
+        num_captions = len(caption_set.get_captions('en-US'))
+
+        assert num_captions == 1
+
+    def test_eoc_first_command_paint_mode(self, sample_scc_eoc_first_command_paint):
+        # caption should not be ignored in case  it doesn't start with
+        # a cue starting command on in paint mode
+        caption_set = SCCReader().read(sample_scc_eoc_first_command_paint)
 
         # just one caption, first EOC disappears
         num_captions = len(caption_set.get_captions('en-US'))

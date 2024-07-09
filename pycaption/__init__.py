@@ -34,6 +34,9 @@ def detect_format(caps):
 
     :returns: the reader class for the detected format.
     """
+    if not len(caps):
+        raise CaptionReadNoCaptions("Empty caption file")
+
     for reader in SUPPORTED_READERS:
         if reader().detect(caps):
             return reader
