@@ -2,6 +2,12 @@ Changelog
 ---------
 2.2.11
 ^^^^^^
+- Mid-row codes only add spaces if there isn't one before
+- Remove spaces to the end of the lines
+- CaptionLineLengthError is now raised if the cursor goes after column 32 instead of string length over 32
+
+2.2.11
+^^^^^^
 - A space should not be placed before a mid row code if it follows a PAC command or a Tab Offset
 - The backspace command should be treated like other commands and duplicates should be skipped if PAC commands are duplicated
 - Prevent webvtt writer from creating a new cue in case of line break
