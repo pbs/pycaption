@@ -427,6 +427,11 @@ class InstructionNodeCreator:
                 # need to reset _cursor_position to previous PAC which breaks the line
                 self._cursor_position = self._position_tracer.default[1]
 
+        # if command in PAC_TAB_OFFSET_COMMANDS:
+        #     self.add_chars(
+        #         " " * PAC_TAB_OFFSET_COMMANDS[command]
+        #     )
+
     def _update_positioning(self, command):
         """Sets the positioning information to use for the next nodes
 
@@ -723,13 +728,15 @@ def _format_italics(collection):
     # remove spaces to the end of the lines
     for idx, node in enumerate(collection):
         if (
-            idx > 1
+            idx > 0
             and node._type == _InstructionNode.BREAK
             and collection[idx - 1].is_text_node()
             and collection[idx - 1].text
         ):
             collection[idx - 1].text = collection[idx - 1].text.rstrip()
-
+    # handle last node
+    if collection[-1].is_text_node():
+        collection[-1].text = collection[-1].text.rstrip()
     return new_collection
 
 

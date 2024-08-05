@@ -64,7 +64,7 @@ from tests.fixtures.scc import (  # noqa: F401
     sample_scc_special_and_extended_characters, sample_scc_mid_row_before_text,
     sample_scc_mid_row_following_text_no_text_before_italics_off,
     sample_scc_mid_row_following_text_no_text_before_italics_on,
-    sample_scc_mid_row_with_space_before
+    sample_scc_mid_row_with_space_before, sample_scc_with_spaces_at_eol
 )
 from tests.fixtures.srt import (  # noqa: F401
     sample_srt, sample_srt_ascii, sample_srt_numeric, sample_srt_empty,

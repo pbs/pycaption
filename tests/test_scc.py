@@ -328,9 +328,20 @@ class TestSCCReader(ReaderTestingMixIn):
             self, sample_scc_mid_row_with_space_before):
         # if mid-row code following a text node that ends in space
         # no additional space will be added
-        expected_lines = ['AB ', 'AB']  
+        expected_lines = ['AB ', 'AB']
         # no additional space added (will not be 'AB  ')
         caption_set = SCCReader().read(sample_scc_mid_row_with_space_before)
+        actual_lines = [
+            node.content
+            for cap_ in caption_set.get_captions("en-US")
+            for node in cap_.nodes
+            if node.type_ == CaptionNode.TEXT
+        ]
+        assert expected_lines == actual_lines
+
+    def test_removing_spaces_at_end_of_lines(self, sample_scc_with_spaces_at_eol):
+        expected_lines = ['AB', 'AB', 'AB']
+        caption_set = SCCReader().read(sample_scc_with_spaces_at_eol)
         actual_lines = [
             node.content
             for cap_ in caption_set.get_captions("en-US")

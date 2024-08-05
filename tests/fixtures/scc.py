@@ -525,3 +525,12 @@ Scenarist_SCC V1.0
 00:00:01:24	9420 91d0 c180 c220 91ae c1c2 942f
 
 """
+
+@pytest.fixture(scope="session")
+def sample_scc_with_spaces_at_eol():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01:24	9420 91d0 c180 c220 91e0 c1c2 2020 2080 92c2 c1c2 2080 942f
+
+"""
