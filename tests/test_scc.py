@@ -276,6 +276,69 @@ class TestSCCReader(ReaderTestingMixIn):
         assert "around 00:00:05.900" in exc_info.value.args[0].split("\n")[2]
         assert str_to_check in exc_info.value.args[0].split("\n")[2]
 
+    def test_mid_row_codes_not_adding_space_before_text(
+            self, sample_scc_mid_row_before_text):
+        # if mid-row code is before any text in the cue, no space
+        # should be added
+        expected_lines = ['AB AB']  # no space before first A
+        caption_set = SCCReader().read(sample_scc_mid_row_before_text)
+        actual_lines = [
+            node.content
+            for cap_ in caption_set.get_captions("en-US")
+            for node in cap_.nodes
+            if node.type_ == CaptionNode.TEXT
+        ]
+        assert expected_lines == actual_lines
+
+    def test_mid_row_codes_adding_space_after_text_if_there_is_none_closing_style(
+            self, sample_scc_mid_row_following_text_no_text_before_italics_off):
+        # if there's no space in between text nodes it should add one
+        # since 9120 is closing italics, the space will be added before
+        # second text node
+        expected_lines = ['AB', ' AB']
+        caption_set = SCCReader().read(
+            sample_scc_mid_row_following_text_no_text_before_italics_off
+        )
+        actual_lines = [
+            node.content
+            for cap_ in caption_set.get_captions("en-US")
+            for node in cap_.nodes
+            if node.type_ == CaptionNode.TEXT
+        ]
+        assert expected_lines == actual_lines
+
+    def test_mid_row_codes_adding_space_after_text_if_there_is_none_opening_style(
+            self, sample_scc_mid_row_following_text_no_text_before_italics_on):
+        # if there's no space in between text nodes it should add one
+        # since 91ae is opening italics, the space will be added at the end
+        # of the first text node
+        expected_lines = ['AB ', 'AB']
+        caption_set = SCCReader().read(
+            sample_scc_mid_row_following_text_no_text_before_italics_on
+        )
+        actual_lines = [
+            node.content
+            for cap_ in caption_set.get_captions("en-US")
+            for node in cap_.nodes
+            if node.type_ == CaptionNode.TEXT
+        ]
+        assert expected_lines == actual_lines
+
+    def test_mid_row_codes_not_adding_space_if_there_is_one_before(
+            self, sample_scc_mid_row_with_space_before):
+        # if mid-row code following a text node that ends in space
+        # no additional space will be added
+        expected_lines = ['AB ', 'AB']  
+        # no additional space added (will not be 'AB  ')
+        caption_set = SCCReader().read(sample_scc_mid_row_with_space_before)
+        actual_lines = [
+            node.content
+            for cap_ in caption_set.get_captions("en-US")
+            for node in cap_.nodes
+            if node.type_ == CaptionNode.TEXT
+        ]
+        assert expected_lines == actual_lines
+
 
 class TestCoverageOnly:
     """In order to refactor safely, we need coverage of 95% or more.

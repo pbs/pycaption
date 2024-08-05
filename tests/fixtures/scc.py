@@ -485,3 +485,43 @@ Scenarist_SCC V1.0
 
 00:00:08;58	9420 9452 4920 ea75 73f4 20f7 616e f4e5 6420 ef6e e520 7368 eff7 2c80 94f2 ea75 73f4 20f4 ef20 6861 76e5 2061 7320 6120 ece9 f4f4 ece5 942c 8080 8080 942f
 """
+
+
+@pytest.fixture(scope="session")
+def sample_scc_mid_row_before_text():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01:24	9420 91d0 9120 c1c2 20c1 c280 942f
+    
+"""
+
+
+@pytest.fixture(scope="session")
+def sample_scc_mid_row_following_text_no_text_before_italics_off():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01:24	9420 91d0 9120 c1c2 9120 c1c2 942f
+
+"""
+
+
+@pytest.fixture(scope="session")
+def sample_scc_mid_row_following_text_no_text_before_italics_on():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01:24	9420 91d0 c1c2 91ae c1c2 942f
+
+"""
+
+
+@pytest.fixture(scope="session")
+def sample_scc_mid_row_with_space_before():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01:24	9420 91d0 c180 c220 91ae c1c2 942f
+
+"""
