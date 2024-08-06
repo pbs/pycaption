@@ -1,5 +1,4 @@
 import collections
-import unicodedata
 
 from ..base import CaptionList, Caption, CaptionNode
 from ..geometry import (
@@ -8,7 +7,8 @@ from ..geometry import (
 )
 from .constants import (
     PAC_BYTES_TO_POSITIONING_MAP, COMMANDS, PAC_TAB_OFFSET_COMMANDS,
-    MICROSECONDS_PER_CODEWORD, INCONVERTIBLE_TO_ASCII_EXTENDED_CHARS_ASSOCIATION
+    MICROSECONDS_PER_CODEWORD, BACKGROUND_COLOR_CODES,
+    MID_ROW_CODES, EXTENDED_CHARS
 )
 
 PopOnCue = collections.namedtuple("PopOnCue", "buffer, start, end")
@@ -254,7 +254,10 @@ class CaptionCreator:
                 layout_info = _get_layout_from_tuple(instruction.position)
                 caption.nodes.append(
                     CaptionNode.create_text(
-                        instruction.get_text(), layout_info=layout_info),
+                        text=instruction.text,
+                        layout_info=layout_info,
+                        position=instruction.position
+                    )
                 )
                 caption.layout_info = layout_info
 
@@ -286,6 +289,8 @@ class InstructionNodeCreator:
             self._collection = []
         else:
             self._collection = collection
+
+        self.last_style = None
 
         self._position_tracer = position_tracker
 
@@ -334,24 +339,45 @@ class InstructionNodeCreator:
 
         node.add_chars(*chars)
 
-    def interpret_command(self, command):
+    def interpret_command(self, command, previous_is_pac_or_tab=False):
         """Given a command determines whether to turn italics on or off,
         or to set the positioning
 
         This is mostly used to convert from the legacy-style commands
 
         :type command: str
+        :type previous_is_pac_or_tab: previous command code is for a PAC command
+        or a PAC_TAB_OFFSET_COMMANDS
         """
         self._update_positioning(command)
 
         text = COMMANDS.get(command, '')
 
+        if command == "94a1":
+            self.handle_backspace("94a1")
+
+        if command in BACKGROUND_COLOR_CODES:
+            # Since these codes are optional, they must be preceded
+            # with the space character (20h),
+            # which will be deleted when the code is applied.
+            # ex: 2080 97ad 94a1
+            if (
+                    self._collection[-1].is_text_node() and
+                    self._collection[-1].text[-1].isspace()
+            ):
+                self._collection[-1].text = self._collection[-1].text[:-1]
+
         if 'italic' in text:
+            if self._position_tracer.is_linebreak_required():
+                self._collection.append(_InstructionNode.create_break(
+                    position=self._position_tracer.get_current_position()))
+                self._position_tracer.acknowledge_linebreak_consumed()
             if 'end' not in text:
                 self._collection.append(
                     _InstructionNode.create_italics_style(
                         self._position_tracer.get_current_position())
                 )
+                self.last_style = "italics on"
             else:
                 self._collection.append(
                     _InstructionNode.create_italics_style(
@@ -359,6 +385,18 @@ class InstructionNodeCreator:
                         turn_on=False
                     )
                 )
+                self.last_style = "italics off"
+
+        # mid row code that is not first code on the line
+        # (previous node is not a break node)
+        if command in MID_ROW_CODES and not previous_is_pac_or_tab:
+            if self.last_style == "italics off":
+                self.add_chars(' ')
+            else:
+                for node in self._collection[::-1]:
+                    if node.is_text_node() and node.text:
+                        node.text += ' '
+                        break
 
     def _update_positioning(self, command):
         """Sets the positioning information to use for the next nodes
@@ -412,34 +450,31 @@ class InstructionNodeCreator:
 
         return instance
 
-    def remove_ascii_duplicate(self, accented_character):
+    def handle_backspace(self, word):
         """
-        Characters from the Extended Characters list are usually preceded by
-        their ASCII substitute, in case the decoder is not able to display
-        the special character.
-
-        This is used to remove the substitute character in order to avoid
-        displaying both.
-
-        :type accented_character: str
+        Move cursor back one position and delete that character
         """
-        is_text_node = (
-                self._collection and
-                self._collection[-1].is_text_node() and
-                self._collection[-1].text
-                )
-        if is_text_node:
-            try:
-                ascii_char = unicodedata.normalize('NFD', accented_character) \
-                    .encode('ascii', 'strict').decode("utf-8")
-            except (UnicodeEncodeError, UnicodeDecodeError):
-                ascii_char = INCONVERTIBLE_TO_ASCII_EXTENDED_CHARS_ASSOCIATION[
-                    accented_character
-                ]
+        node = self.get_previous_text_node()
+        # in case of no previous text nodes or
+        # if the backspace is required while no character
+        # do nothing
+        if node is None:
+            return
+        last_char = node.text[-1]
+        delete_previous_condition = (
+            (word in EXTENDED_CHARS and last_char not in EXTENDED_CHARS.values()) or
+            word == "94a1"
+        )
+        # in case extended char, perform backspace
+        # only if the previous character in not also extended
+        if delete_previous_condition:
+            node.text = node.text[:-1]
 
-            if ascii_char and self._collection[-1].text[-1] == ascii_char:
-                self._collection[-1].text = self._collection[-1].text[:-1]
-
+    def get_previous_text_node(self):
+        for node in self._collection[::-1]:
+            if node.is_text_node() and node.text:
+                return node
+        return None
 
 
 def _get_layout_from_tuple(position_tuple):

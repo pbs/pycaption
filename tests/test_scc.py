@@ -22,15 +22,20 @@ class TestSCCReader(ReaderTestingMixIn):
     def test_positive_answer_for_detection(self, sample_scc_pop_on):
         super().assert_positive_answer_for_detection(sample_scc_pop_on)
 
-    @pytest.mark.parametrize('different_sample', [
-        pytest.lazy_fixture('sample_dfxp'),
-        pytest.lazy_fixture('sample_microdvd'),
-        pytest.lazy_fixture('sample_sami'),
-        pytest.lazy_fixture('sample_srt'),
-        pytest.lazy_fixture('sample_webvtt')
-    ])
-    def test_negative_answer_for_detection(self, different_sample):
-        super().assert_negative_answer_for_detection(different_sample)
+    def test_negative_answer_for_detection_dfxp(self, sample_dfxp):
+        super().assert_negative_answer_for_detection(sample_dfxp)
+
+    def test_negative_answer_for_detection_microdvd(self, sample_microdvd):
+        super().assert_negative_answer_for_detection(sample_microdvd)
+
+    def test_negative_answer_for_detection_sami(self, sample_sami):
+        super().assert_negative_answer_for_detection(sample_sami)
+
+    def test_negative_answer_for_detection_srt(self, sample_srt):
+        super().assert_negative_answer_for_detection(sample_srt)
+
+    def test_negative_answer_for_detection_webvtt(self, sample_webvtt):
+        super().assert_negative_answer_for_detection(sample_webvtt)
 
     def test_caption_length(self, sample_scc_pop_on):
         captions = SCCReader().read(sample_scc_pop_on)
@@ -77,12 +82,10 @@ class TestSCCReader(ReaderTestingMixIn):
             ((40.0, UnitEnum.PERCENT), (41.0, UnitEnum.PERCENT)),
             ((20.0, UnitEnum.PERCENT), (71.0, UnitEnum.PERCENT))
         ]
-
         actual_positioning = [
             caption_.layout_info.origin.serialized()
             for caption_ in captions.get_captions('en-US')
         ]
-
         assert expected_positioning == actual_positioning
 
     def test_tab_offset(self, sample_scc_tab_offset):
@@ -205,7 +208,7 @@ class TestSCCReader(ReaderTestingMixIn):
             'The I-10 Santa Monica Freeway',
             'westbound is jammed,',
             'due to a three-car accident',
-            'blocking lanes 1 and 2',
+            'blocking lanes 1 and 2'
         ]
 
         caption_set = SCCReader().read(sample_scc_duplicate_tab_offset)
@@ -215,13 +218,15 @@ class TestSCCReader(ReaderTestingMixIn):
             for node in cap_.nodes
             if node.type_ == CaptionNode.TEXT
         ]
-
         assert expected_lines == actual_lines
 
     def test_skip_duplicate_special_characters(
             self, sample_scc_duplicate_special_characters):
-        expected_lines = ['®°½¿™¢£♪à èâêîôû', '®°½¿™¢£♪à èâêîôû']
-
+        expected_lines = [
+            '®°½¿™¢£♪à èâêîôû',
+            '®°½¿™¢£♪à èâêîôû',
+            '®°AA½¿™¢£♪à èâêAAîôû'
+        ]
         caption_set = SCCReader().read(sample_scc_duplicate_special_characters)
         actual_lines = [
             node.content
@@ -229,7 +234,6 @@ class TestSCCReader(ReaderTestingMixIn):
             for node in cap_.nodes
             if node.type_ == CaptionNode.TEXT
         ]
-
         assert expected_lines == actual_lines
 
     def test_flashing_cue(self, sample_scc_flashing_cue):
@@ -245,8 +249,9 @@ class TestSCCReader(ReaderTestingMixIn):
 
         assert exc_info.value.args[0].startswith(
             "32 character limit for caption cue in scc file.")
-        assert ("was Cal l l l l l l l l l l l l l l l l l l l l l l l l l l l l Denison, a friend - Length 81"
-                in exc_info.value.args[0].split("\n"))
+        str_to_check = ("around 00:00:05.900 - was Cal l l l l l l l l l l l l l l l l l l l l l l l l l l l l "
+                        "Denison, a friend - Length 81")
+        assert str_to_check in exc_info.value.args[0].split("\n")
 
 
 class TestCoverageOnly:
@@ -273,15 +278,16 @@ class TestCoverageOnly:
             'AND IMPROVING THE LIVES OF ALL',
             'WE SERVE.',
             '®°½',
+            '®°½½',
             'ABû',
-            'ÁÁÉÓ¡',
+            'ÁÉÓ¡',
             "WHERE YOU'RE STANDING NOW,",
             "LOOKING OUT THERE, THAT'S AL",
             'THE CROWD.',
             '>> IT WAS GOOD TO BE IN TH',
             "And restore Iowa's land, water",
             'And wildlife.',
-            '>> Bike Iowa, your source for',
+            '>> Bike Iowa, your source for'
         ]
         assert expected_texts == actual_texts
 
@@ -317,8 +323,8 @@ class TestCoverageOnly:
 
         assert expected_text_lines == text_lines
 
-    def test_freeze_semicolon_spec_time(self, sample_scc_roll_up_ru2):
-        scc1 = SCCReader().read(sample_scc_roll_up_ru2)
+    def test_freeze_semicolon_spec_time(self, sample_scc_roll_up_ru3):
+        scc1 = SCCReader().read(sample_scc_roll_up_ru3)
         captions = scc1.get_captions('en-US')
         expected_timings = [
             (733333.3333333333, 2766666.6666666665),
@@ -340,7 +346,6 @@ class TestCoverageOnly:
         ]
 
         actual_timings = [(c_.start, c_.end) for c_ in captions]
-
         assert expected_timings == actual_timings
 
     def test_freeze_colon_spec_time(self, sample_scc_pop_on):
@@ -377,6 +382,9 @@ class TestInterpretableNodeCreator:
         # 4. to get new opening italic nodes after changing position, if 3
         # happened
         # 5. to get a final italic closing node, if one is needed
+        # 9120 and 91ae are mid row codes and will add a space
+        # 9120 at the start of the following text node
+        # 91ae to the end of the previous text node
         node_creator.interpret_command('9470')  # row 15, col 0
         node_creator.interpret_command('9120')  # italics off
         node_creator.interpret_command('9120')  # italics off
@@ -395,7 +403,7 @@ class TestInterpretableNodeCreator:
         node_creator.add_chars('b')
         node_creator.interpret_command('91ae')  # italics ON again
         node_creator.add_chars('b')
-        node_creator.interpret_command('9120')  # italics OFF
+        node_creator.interpret_command('9120')  # italics OFF adds space
         node_creator.interpret_command('9120')  # italics OFF
 
         node_creator.interpret_command('1570')  # row 6 col 0
@@ -414,32 +422,35 @@ class TestInterpretableNodeCreator:
         result = list(node_creator)
 
         assert result[0].is_text_node()
-        assert result[1].requires_repositioning()
-        assert result[2].is_italics_node()
-        assert result[2].sets_italics_on()
+        assert result[1].is_text_node()
+        assert result[2].requires_repositioning()
 
-        assert result[3].is_text_node()
+        assert result[3].is_italics_node()
+        assert result[3].sets_italics_on()
         assert result[4].is_text_node()
-        assert result[5].is_text_node()
+        assert result[5].sets_italics_off()
+        assert result[6].is_text_node()
 
-        assert result[6].is_italics_node()
-        assert result[6].sets_italics_off()
+        assert result[7].is_text_node()
+        assert result[8].sets_italics_on()
 
-        assert result[7].requires_repositioning()
-        assert result[8].is_text_node()
+        assert result[9].is_text_node()
+        assert result[10].is_text_node()
 
-        assert result[9].requires_repositioning()
-        assert result[10].is_italics_node()
-        assert result[10].sets_italics_on()
-
-        assert result[11].is_text_node()
-        assert result[12].is_explicit_break()
+        assert result[11].sets_italics_off()
+        assert result[12].is_text_node()
         assert result[13].is_text_node()
-        assert result[14].is_explicit_break()
+        assert result[14].requires_repositioning()
         assert result[15].is_text_node()
 
-        assert result[16].is_italics_node()
-        assert result[16].sets_italics_off()
+        assert result[16].requires_repositioning()
+        assert result[17].sets_italics_on()
+        assert result[18].is_text_node()
+        assert result[19].is_explicit_break()
+        assert result[20].is_text_node()
+        assert result[21].is_explicit_break()
+        assert result[22].is_text_node()
+        assert result[23].sets_italics_off()
 
 
 class CaptionDummy:

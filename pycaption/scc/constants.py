@@ -1,5 +1,4 @@
 from itertools import product
-from collections import defaultdict
 
 COMMANDS = {
     '9420': '',
@@ -990,60 +989,74 @@ HEADER = 'Scenarist_SCC V1.0'
 # taken from
 # http://www.theneitherworld.com/mcpoodle/SCC_TOOLS/DOCS/CC_CHARS.HTML
 INCONVERTIBLE_TO_ASCII_EXTENDED_CHARS_ASSOCIATION = {
-    '¡': "!",   # inverted exclamation mark
-     '¤': "C",  # currency
-     '¥': "Y",  # yen
-     '¦': "-",  # broken bar
-     '©': "c",  # copyright sign
-     '«': '"',  # left pointing double angle quotation mark
-     '»': '"',  # right pointing double angle quotation mark
-     'À': "A",
-     'Á': "A",
-     'Â': "A",
-     'Ã': "A",
-     'Ä': "A",
-     'Å': "A",
-     'Ç': "C",
-     'È': "E",
-     'É': "E",
-     'Ê': "E",
-     'Ë': "E",
-     'Ì': "I",
-     'Í': "I",
-     'Î': "I",
-     'Ï': "I",
-     'Ò': "O",
-     'Ó': "O",
-     'Ô': ")",
-     'Õ': "O",
-     'Ö': "O",
-     'Ø': "O",
-     'Ù': "U",
-     'Ú': "U",
-     'Û': "U",
-     'Ü': "U",
-     'ß': "s",
-     'ã': "a",
-     'ä': "a",
-     'å': "a",
-     'ë': "e",
-     'ì': "i",
-     'ï': "i",
-     'ò': "o",
-     'õ': "o",
-     'ö': "o",
-     'ø': "o",
-     'ù': "u",
-     'ü': "u",
-     '—': "-",  # em dash
-     '‘': "'",
-     '’': "'",
-     '“': '"',
-     '”': '"',
-     '•': ".",
-     '℠': "s",
-     '┌': "+",
-     '┐': "+",
-     '└': "+",
-     '┘': "+"
+    '¡': ["!", "i"],   # inverted exclamation mark
+     '¤': ["C"],  # currency
+     '¥': ["Y"],  # yen
+     '¦': ["-"],  # broken bar
+     '©': ["c"],  # copyright sign
+     '«': ['"'],  # left pointing double angle quotation mark
+     '»': ['"'],  # right pointing double angle quotation mark
+     'À': ["A"],
+     'Á': ["A"],
+     'Â': ["A"],
+     'Ã': ["A"],
+     'Ä': ["A"],
+     'Å': ["A"],
+     'Ç': ["C"],
+     'È': ["E"],
+     'É': ["E"],
+     'Ê': ["E"],
+     'Ë': ["E"],
+     'Ì': ["I"],
+     'Í': ["I"],
+     'Î': ["I"],
+     'Ï': ["I"],
+     'Ò': ["O"],
+     'Ó': ["O"],
+     'Ô': [")"],
+     'Õ': ["O"],
+     'Ö': ["O"],
+     'Ø': ["O"],
+     'Ù': ["U"],
+     'Ú': ["U"],
+     'Û': ["U"],
+     'Ü': ["U"],
+     'ß': ["s"],
+     'ã': ["a"],
+     'ä': ["a"],
+     'å': ["a"],
+     'ë': ["e"],
+     'ì': ["i"],
+     'ï': ["i"],
+     'ò': ["o"],
+     'õ': ["o"],
+     'ö': ["o"],
+     'ø': ["o"],
+     'ù': ["u"],
+     'ü': ["u"],
+     '—': ["-"],  # em dash
+     '‘': ["'"],
+     '’': ["'"],
+     '“': ['"'],
+     '”': ['"'],
+     '•': ["."],
+     '℠': ["s"],
+     '┌': ["+"],
+     '┐': ["+"],
+     '└': ["+"],
+     '┘': ["+"]
 }
+
+MID_ROW_CODES = [
+    "9120", "91a1", "91a2", "9123", "91a4", "9125", "9126",
+    "91a7", "91a8", "9129", "912a", "91ab", "912c", "91ad",
+    "97ae", "972f", "91ae", "912f", "94a8"
+]
+
+BACKGROUND_COLOR_CODES = [
+    "1020", "10a1", "10a2", "1023", "10a4", "1025", "1026",
+    "10a7", "10a8", "1029", "102a", "10ab", "102c", "10ad",
+    "10ae", "102f", "97ad"
+]
+
+CUE_STARTING_COMMAND = ['9425', '9426', '94a7', '9429', '9420']

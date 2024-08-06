@@ -10,7 +10,7 @@ from .scc.translator import translate_scc
 from .transcript import TranscriptWriter
 from .webvtt import WebVTTReader, WebVTTWriter
 from .exceptions import (
-    CaptionReadError, CaptionReadNoCaptions, CaptionReadSyntaxError,
+    CaptionReadError, CaptionReadNoCaptions, CaptionReadSyntaxError, CaptionLineLengthError
 )
 
 

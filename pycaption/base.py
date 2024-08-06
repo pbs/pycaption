@@ -114,13 +114,16 @@ class CaptionNode:
     STYLE = 2
     BREAK = 3
 
-    def __init__(self, type_, layout_info=None, content=None, start=None):
+    def __init__(
+            self, type_, layout_info=None, content=None, start=None, position=None
+    ):
         """
         :type type_: int
         :type layout_info: Layout
         """
         self.type_ = type_
         self.content = content
+        self.position = position
 
         # Boolean. Marks the beginning/ end of a Style node.
         self.start = start
@@ -139,19 +142,24 @@ class CaptionNode:
             raise RuntimeError(f'Unknown node type: {t}')
 
     @staticmethod
-    def create_text(text, layout_info=None):
+    def create_text(text, layout_info=None, position=None):
         return CaptionNode(
-            CaptionNode.TEXT, layout_info=layout_info, content=text)
+            type_=CaptionNode.TEXT, layout_info=layout_info,
+            position=position, content=text
+        )
 
     @staticmethod
     def create_style(start, content, layout_info=None):
         return CaptionNode(
-            CaptionNode.STYLE, layout_info=layout_info, content=content,
+            type_=CaptionNode.STYLE, layout_info=layout_info, content=content,
             start=start)
 
     @staticmethod
-    def create_break(layout_info=None):
-        return CaptionNode(CaptionNode.BREAK, layout_info=layout_info)
+    def create_break(layout_info=None, content=None):
+        return CaptionNode(
+            type_=CaptionNode.BREAK, layout_info=layout_info,
+            content=content
+        )
 
 
 class Caption:

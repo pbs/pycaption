@@ -1,5 +1,48 @@
 Changelog
 ---------
+2.2.11
+^^^^^^
+- A space should not be placed before a mid row code if it follows a PAC command or a Tab Offset
+- The backspace command should be treated like other commands and duplicates should be skipped if PAC commands are duplicated
+- Prevent webvtt writer from creating a new cue in case of line break
+- In case of style setting PAC which also breaks the line, we add the break first, then the style tag
+
+2.2.10
+^^^^^
+- Yanked.
+
+2.2.9
+^^^^^
+- Yanked.
+
+2.2.8
+^^^^^
+- Honor backspaces on captions in scc files
+- When mid-row codes which are preceded by a PAC command don't add spaces
+- Mid row codes which don't follow after a PAC and don't have a style reset command before will add a space to the end of the previous text node
+- Mid row codes which don't follow after a PAC and have a style reset command before will add a space to the beginning of the next text node
+- Background color codes to delete the space in front
+
+2.2.7
+^^^^^
+- The cursor moves automatically one column to the right after each character or Mid-Row Code received.
+
+2.2.6
+^^^^^
+- Pass the caption cue time with all error messages.
+
+2.2.5
+^^^^^
+- Yanked.
+
+2.2.4
+^^^^^
+- Skip duplicated extended characters.
+
+2.2.3
+^^^^^
+- Add new substitute character to ignore before extended character in SCC input files
+
 2.2.2
 ^^^^^
 - Remove support for Python 3.6 & 3.7

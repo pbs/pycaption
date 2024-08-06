@@ -394,6 +394,7 @@ class WebVTTWriter(BaseWriter):
             return []
 
         current_layout = None
+        current_node = None
 
         # A list with layout groups. Since WebVTT only support positioning
         # for different cues, each layout group has to be represented in a
@@ -402,17 +403,24 @@ class WebVTTWriter(BaseWriter):
         # A properly encoded WebVTT string (plain unicode must be properly
         # escaped before being appended to this string)
         s = ''
+        row, column, prev_row, prev_column = 0, 0, 0, 0
         for i, node in enumerate(nodes):
             if node.type_ == CaptionNode.TEXT:
                 if s and current_layout and node.layout_info != current_layout:
                     # If the positioning changes from one text node to
                     # another, a new WebVTT cue has to be created.
-                    layout_groups.append((s, current_layout))
-                    s = ''
+                    row, column = node.position if node.position else (0, 0)
+                    prev_row, prev_column = current_node.position if current_node.position else (0, 0)
+                    if row == prev_row + 1:
+                        s += '\n'
+                    else:
+                        layout_groups.append((s, current_layout))
+                        s = ''
                 # ATTENTION: This is where the plain unicode node content is
                 # finally encoded as WebVTT.
                 s += self._encode_illegal_characters(node.content) or '&nbsp;'
                 current_layout = node.layout_info
+                current_node = node
             elif node.type_ == CaptionNode.STYLE:
                 resulting_style = self._calculate_resulting_style(
                     node.content, caption_set

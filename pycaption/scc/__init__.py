@@ -81,11 +81,11 @@ http://www.theneitherworld.com/mcpoodle/SCC_TOOLS/DOCS/SCC_FORMAT.HTML
 import math
 import re
 import textwrap
-from collections import deque
+from collections import deque, defaultdict
 from copy import deepcopy
 
 from pycaption.base import (
-    BaseReader, BaseWriter, CaptionSet, CaptionNode,
+    BaseReader, BaseWriter, CaptionSet
 )
 from pycaption.exceptions import CaptionReadNoCaptions, InvalidInputError, \
     CaptionReadTimingError, CaptionLineLengthError
@@ -94,7 +94,7 @@ from .constants import (
     MICROSECONDS_PER_CODEWORD, CHARACTER_TO_CODE,
     SPECIAL_OR_EXTENDED_CHAR_TO_CODE, PAC_BYTES_TO_POSITIONING_MAP,
     PAC_HIGH_BYTE_BY_ROW, PAC_LOW_BYTE_BY_ROW_RESTRICTED,
-    PAC_TAB_OFFSET_COMMANDS,
+    PAC_TAB_OFFSET_COMMANDS, CUE_STARTING_COMMAND
 )
 from .specialized_collections import (  # noqa: F401
     TimingCorrectingCaptionList, NotifyingDict, CaptionCreator,
@@ -164,6 +164,7 @@ class SCCReader(BaseReader):
         )
 
         self.last_command = ''
+        self.double_starter = False
 
         self.buffer_dict = NotifyingDict()
 
@@ -223,6 +224,7 @@ class SCCReader(BaseReader):
         # split lines
         lines = content.splitlines()
 
+
         # loop through each line except the first
         for line in lines[1:]:
             self._translate_line(line)
@@ -232,16 +234,24 @@ class SCCReader(BaseReader):
         captions = CaptionSet({lang: self.caption_stash.get_all()})
 
         # check captions for incorrect lengths
-        lines = []
+        lines_too_long = defaultdict(list)
         for caption in self.caption_stash._collection:
+            caption_start = caption.to_real_caption().format_start()
             caption_text = "".join(caption.to_real_caption().get_text_nodes())
-            lines.extend(caption_text.split("\n"))
-        lines_too_long = [line for line in lines if len(line) > 32]
+            text_too_long = [line for line in caption_text.split("\n") if len(line) > 32]
+            if caption_start in lines_too_long:
+                lines_too_long[caption_start] = text_too_long
+            else:
+                lines_too_long[caption_start].extend(text_too_long)
 
-        if bool(lines_too_long):
-            msg = ""
-            for line in lines_too_long:
-                msg += line + f" - Length { len(line)}" + "\n"
+        msg = ""
+        if bool(lines_too_long.keys()):
+            for key in lines_too_long:
+                if lines_too_long[key]:
+                    msg += f"around {key} - "
+                    for line in lines_too_long[key]:
+                        msg += line + f" - Length { len(line)}" + "\n"
+        if len(msg):
             raise CaptionLineLengthError(
                 f"32 character limit for caption cue in scc file.\n"
                 f"Lines longer than 32:\n"
@@ -299,15 +309,20 @@ class SCCReader(BaseReader):
         parts = r.findall(line.lower())
 
         self.time_translator.start_at(parts[0][0])
+        word_list = parts[0][2].split(' ')
 
-        # loop through each word
-        for word in parts[0][2].split(' '):
-            # ignore empty results or invalid commands
+        for idx, word in enumerate(word_list):
             word = word.strip()
+            previous_is_pac_or_tab = len(word_list) > 1 and (
+                    _is_pac_command(word_list[idx - 1]) or word_list[idx - 1] in PAC_TAB_OFFSET_COMMANDS
+            )
             if len(word) == 4:
-                self._translate_word(word)
+                self._translate_word(
+                    word=word,
+                    previous_is_pac_or_tab=previous_is_pac_or_tab,
+                )
 
-    def _translate_word(self, word):
+    def _translate_word(self, word, previous_is_pac_or_tab):
         if self._handle_double_command(word):
             # count frames for timing
             self.time_translator.increment_frames()
@@ -316,7 +331,7 @@ class SCCReader(BaseReader):
         # TODO - check that all the positioning commands are here, or use
         # some other strategy to determine if the word is a command.
         if word in COMMANDS or _is_pac_command(word):
-            self._translate_command(word)
+            self._translate_command(word=word, previous_is_pac_or_tab=previous_is_pac_or_tab)
 
         # second, check if word is a special character
         elif word in SPECIAL_CHARS:
@@ -337,23 +352,33 @@ class SCCReader(BaseReader):
         # up for redundancy in case the signal is garbled in transmission.
         # The decoder is programmed to ignore a second command when it is the
         # same as the first.
-        # Also like codes, Special Characters are always doubled up,
+        # If we have doubled commands we're skipping also
+        # doubled special characters and doubled extended characters
         # with only one member of each pair being displayed.
-        if word in COMMANDS or _is_pac_command(word) or word in SPECIAL_CHARS:
-            if word == self.last_command:
-                self.last_command = ''
-                return True
+
+        doubled_types = word != "94a1" and word in COMMANDS or _is_pac_command(word)
+        if self.double_starter:
+            doubled_types = doubled_types or word in EXTENDED_CHARS or word == "94a1" or word in SPECIAL_CHARS
+
+        if word in CUE_STARTING_COMMAND and word != self.last_command:
+            self.double_starter = False
+
+        if doubled_types and word == self.last_command:
+            if word in CUE_STARTING_COMMAND:
+                self.double_starter = True
+            self.last_command = ''
+            return True
             # Fix for the <position> <tab offset> <position> <tab offset>
             # repetition
-            elif _is_pac_command(word) and word in self.last_command:
-                self.last_command = ''
+        elif _is_pac_command(word) and word in self.last_command:
+            self.last_command = ''
+            return True
+        elif word in PAC_TAB_OFFSET_COMMANDS:
+            if _is_pac_command(self.last_command):
+                self.last_command += f" {word}"
+                return False
+            else:
                 return True
-            elif word in PAC_TAB_OFFSET_COMMANDS:
-                if _is_pac_command(self.last_command):
-                    self.last_command += f" {word}"
-                    return False
-                else:
-                    return True
 
         self.last_command = word
         return False
@@ -362,12 +387,18 @@ class SCCReader(BaseReader):
         self.buffer.add_chars(SPECIAL_CHARS[word])
 
     def _translate_extended_char(self, word):
-        self.buffer.remove_ascii_duplicate(EXTENDED_CHARS[word])
-
+        """
+        Each of the 64 Extended Characters incorporates an automatic BS.
+        When an Extended Character is received, the cursor moves to the
+        left one column position (unless the Extended Character is the first
+        character on a row), erasing any character which may be in that location,
+        then displays the Extended Character.
+        """
+        self.buffer.handle_backspace(word)
         # add to buffer
         self.buffer.add_chars(EXTENDED_CHARS[word])
 
-    def _translate_command(self, word):
+    def _translate_command(self, word, previous_is_pac_or_tab):
         # if command is pop_up
         if word == '9420':
             self.buffer_dict.set_active('pop')
@@ -436,7 +467,10 @@ class SCCReader(BaseReader):
 
         # If command is not one of the aforementioned, add it to buffer
         else:
-            self.buffer.interpret_command(word)
+            self.buffer.interpret_command(
+                command=word,
+                previous_is_pac_or_tab=previous_is_pac_or_tab
+            )
 
     def _translate_characters(self, word):
         # split word into the 2 bytes
