@@ -540,6 +540,36 @@ class TestInterpretableNodeCreator:
         assert result[16].is_text_node()
         assert result[17].sets_italics_off()
 
+    def test_cursor_placement(self):
+        node_creator = InstructionNodeCreator(
+            position_tracker=(DefaultProvidingPositionTracker())
+        )
+        node_creator.interpret_command("9420")
+        node_creator.interpret_command("91df")  # row 01, column 28,
+        assert node_creator._cursor_position == 28
+        # check that it keeps the column of the last pac
+        # before text
+        node_creator.interpret_command("9152")  # row 01, column 04
+        assert node_creator._cursor_position == 4
+        node_creator.add_chars("foo")
+        assert node_creator._cursor_position == 7  # 4 + len(foo)
+        # check on break
+        node_creator.interpret_command("91f2")  # row 02, column 04
+        # it should be 4
+        assert node_creator._cursor_position == 4
+        # check mid-row codes with open italics
+        node_creator.interpret_command("91ae")
+        node_creator.add_chars("bar")
+        # starts at 4, adds "bar" no space after "foo" so it should
+        # add a space and move to 4 + 3 + 1 = 8
+        assert node_creator._cursor_position == 8
+        # check mid-row codes with closed italics
+        node_creator.add_chars("baz")
+        node_creator.interpret_command("9120")
+        node_creator.add_chars("spam")
+        # should be 8 + len("baz") + one space + len(spam) = 16
+        assert node_creator._cursor_position == 16
+
 
 class CaptionDummy:
     """Mock for pycaption.base.Caption"""

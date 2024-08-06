@@ -427,11 +427,6 @@ class InstructionNodeCreator:
                 # need to reset _cursor_position to previous PAC which breaks the line
                 self._cursor_position = self._position_tracer.default[1]
 
-        # if command in PAC_TAB_OFFSET_COMMANDS:
-        #     self.add_chars(
-        #         " " * PAC_TAB_OFFSET_COMMANDS[command]
-        #     )
-
     def _update_positioning(self, command):
         """Sets the positioning information to use for the next nodes
 

@@ -1,10 +1,11 @@
 Changelog
 ---------
-2.2.11
+2.2.12
 ^^^^^^
 - Mid-row codes only add spaces if there isn't one before
 - Remove spaces to the end of the lines
 - CaptionLineLengthError is now raised if the cursor goes after column 32 instead of string length over 32
+- Close italics on receiving another style setting command.
 
 2.2.11
 ^^^^^^
