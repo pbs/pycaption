@@ -1,7 +1,5 @@
 import collections
 
-from pycaption.exceptions import CaptionLineLengthError
-
 from ..base import Caption, CaptionList, CaptionNode
 from ..geometry import (
     Alignment,
@@ -20,6 +18,10 @@ from .constants import (
     MID_ROW_CODES,
     PAC_BYTES_TO_POSITIONING_MAP,
     PAC_TAB_OFFSET_COMMANDS,
+    ITALICS_COMMANDS,
+    UNDERLINE_COMMANDS,
+    PLAIN_TEXT_COMMANDS,
+    STYLE_SETTING_COMMANDS
 )
 
 PopOnCue = collections.namedtuple("PopOnCue", "buffer, start, end")
@@ -307,7 +309,7 @@ class InstructionNodeCreator:
         else:
             self._collection = collection
 
-        self.last_style = None
+        self.last_style = None  # can be italic on or italic off as we only support italics
         self._cursor_position = 0
 
         self._position_tracer = position_tracker
@@ -361,6 +363,17 @@ class InstructionNodeCreator:
         node.add_chars(*chars)
         self._cursor_position += len("".join(chars))
 
+    @staticmethod
+    def get_style_for_command(command):
+        if command in ITALICS_COMMANDS:
+            return "italic"
+        elif command in UNDERLINE_COMMANDS:
+            return "underline"
+        else:
+            # as we only check STYLE_SETTING_COMMANDS,
+            # only remaining possibility is plain text
+            return "plaintext"
+
     def interpret_command(self, command):
         """Given a command determines whether to turn italics on or off,
         or to set the positioning
@@ -389,43 +402,64 @@ class InstructionNodeCreator:
             ):
                 self._collection[-1].text = self._collection[-1].text[:-1]
 
-        if "italic" in text:
+        if command in STYLE_SETTING_COMMANDS:
             current_position = self._position_tracer.get_current_position()
-            if self._position_tracer.is_linebreak_required():
-                self._collection.append(
-                    _InstructionNode.create_break(position=current_position)
-                )
-                self._position_tracer.acknowledge_linebreak_consumed()
-            if "end" not in text:
-                self._collection.append(
-                    _InstructionNode.create_italics_style(current_position)
-                )
-                self.last_style = "italics on"
-            else:
-                self._collection.append(
-                    _InstructionNode.create_italics_style(
-                        self._position_tracer.get_current_position(), turn_on=False
+            # which style is command setting
+            command_style = self.get_style_for_command(command)
+            if command_style == "italic":
+                if self.last_style is None or self.last_style == "italics off":
+                    #  if we don't have any style yet, or we have a closed italics tag
+                    #  it should open italic tag
+                    #  if break is required, break then add style tag
+                    if self._position_tracer.is_linebreak_required():
+                        self._collection.append(
+                            _InstructionNode.create_break(position=current_position)
+                        )
+                        self._position_tracer.acknowledge_linebreak_consumed()
+                    self._collection.append(
+                        _InstructionNode.create_italics_style(current_position)
                     )
-                )
-                self.last_style = "italics off"
+                    self.last_style = "italics on"
+            else:
+                # command sets a different style (underline, plain)
+                # so we need to close italics if we have an open italics tag
+                # otherwise we ignore it
+                # if break is required,add style tag then break
+                if self.last_style == "italics on":
+                    self._collection.append(
+                        _InstructionNode.create_italics_style(
+                            self._position_tracer.get_current_position(), turn_on=False
+                        )
+                    )
+                    self.last_style = "italics off"
+                    if self._position_tracer.is_linebreak_required():
+                        self._collection.append(
+                            _InstructionNode.create_break(position=current_position)
+                        )
+                        self._position_tracer.acknowledge_linebreak_consumed()
 
         #  handle mid-row codes that follows a text node
-        prev_node = self.get_previous_text_node()
-        if command in MID_ROW_CODES:
-            if prev_node and not prev_node.text[-1].isspace():
-                if self.last_style == "italics off":
-                    # need to open italics tag, add a space
-                    # to the beginning of the next text node
-                    self.add_chars(" ")
-                elif self.last_style == "italics on":
-                    # need to close italics tag, add a space
-                    # to the end of the previous text node
-                    prev_node.text = prev_node.text + " "
-                    self._cursor_position += 1
-            elif self._position_tracer.is_linebreak_required():
-                # mid-row after break
-                # need to reset _cursor_position to previous PAC which breaks the line
-                self._cursor_position = self._position_tracer.default[1]
+        prev_text_node = self.get_previous_text_node()
+        prev_node_is_break = prev_text_node is not None and any(
+            x.is_explicit_break() for x in self._collection[self._collection.index(prev_text_node):]
+        )
+        if (
+                command in MID_ROW_CODES and
+                prev_text_node and not
+                prev_node_is_break and not
+                prev_text_node.text[-1].isspace() and
+                command not in PAC_TAB_OFFSET_COMMANDS
+        ):
+            if self.last_style == "italics off":
+                # need to open italics tag, add a space
+                # to the beginning of the next text node
+                self.add_chars(" ")
+            else:
+                # italics on
+                # need to close italics tag, add a space
+                # to the end of the previous text node
+                prev_text_node.text = prev_text_node.text + " "
+                self._cursor_position += 1
 
     def _update_positioning(self, command):
         """Sets the positioning information to use for the next nodes
@@ -734,7 +768,6 @@ def _format_italics(collection):
         collection[-1].text = collection[-1].text.rstrip()
     return new_collection
 
-
 def _remove_noop_on_off_italics(collection):
     """Return an equivalent list to `collection`. It removes the italics node
      pairs that don't surround text nodes, if those nodes are in the order:
@@ -861,7 +894,8 @@ def _skip_redundant_italics_nodes(collection):
         if node.is_italics_node():
             if state is None:
                 state = node.sets_italics_on()
-                new_collection.append(node)
+                if node.sets_italics_on():
+                    new_collection.append(node)
                 continue
             # skip the nodes that are like the previous
             if node.sets_italics_on() is state:
@@ -887,7 +921,7 @@ def _close_italics_before_repositioning(collection):
     italics_on = False
     last_italics_on_node = None
 
-    for idx, node in enumerate(collection):
+    for node in collection:
         if node.is_italics_node() and node.sets_italics_on():
             italics_on = True
             last_italics_on_node = node
@@ -908,6 +942,7 @@ def _close_italics_before_repositioning(collection):
                 _InstructionNode.create_italics_style(position=node.position)
             )
             continue
+
         new_collection.append(node)
 
     return new_collection
