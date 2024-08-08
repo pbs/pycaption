@@ -774,6 +774,7 @@ class TestInterpretableNodeCreator:
         node_creator = InstructionNodeCreator(
             position_tracker=(DefaultProvidingPositionTracker())
         )
+
         node_creator._collection.append(
             _InstructionNode.create_italics_style(
                 position_tracker, turn_on=False
@@ -809,6 +810,118 @@ class TestInterpretableNodeCreator:
         assert len(new_collection) == 2
         assert new_collection[-1].sets_italics_on()
         assert new_collection[-2].text == "foo"
+
+        # test with same style
+        node_creator = InstructionNodeCreator(
+            position_tracker=(DefaultProvidingPositionTracker())
+        )
+        node_creator._collection.append(
+            _InstructionNode.create_italics_style(
+                position_tracker, turn_on=True
+            )
+        )
+        node_creator.add_chars('f', 'o', 'o')
+        node_creator._collection.append(
+            _InstructionNode.create_italics_style(
+                position_tracker, turn_on=True
+            )
+        )
+        node_creator._collection.append(
+            _InstructionNode.create_italics_style(
+                position_tracker, turn_on=True
+            )
+        )
+        node_creator._collection.append(
+            _InstructionNode.create_italics_style(
+                position_tracker, turn_on=False
+            )
+        )
+        node_creator._collection.append(
+            _InstructionNode.create_italics_style(
+                position_tracker, turn_on=False
+            )
+        )
+        node_creator._collection.append(
+            _InstructionNode.create_italics_style(
+                position_tracker, turn_on=True
+            )
+        )
+        new_collection = _skip_redundant_italics_nodes(node_creator._collection)
+        # should open italics once, write foo, close italics once then re-open italics
+        assert len(new_collection) == 4
+        assert new_collection[-1].sets_italics_on()
+        assert new_collection[-2].sets_italics_off()
+        assert new_collection[-3].text == "foo"
+        assert new_collection[-4].sets_italics_on()
+
+    def test_close_italics_before_repositioning(self):
+        from pycaption.scc.specialized_collections import (
+            _InstructionNode, _close_italics_before_repositioning
+        )
+        position_tracker = DefaultProvidingPositionTracker().default
+        node_creator = InstructionNodeCreator(
+            position_tracker=(DefaultProvidingPositionTracker())
+        )
+
+        # set italics
+        node_creator._collection.append(
+            _InstructionNode.create_italics_style(
+                position_tracker, turn_on=True
+            )
+        )
+        node_creator.add_chars('f', 'o', 'o')
+        # reposition
+        node_creator._collection.append(
+            _InstructionNode.create_repositioning_command(position_tracker)
+        )
+        node_creator.add_chars('b', 'a', 'r')
+
+        new_collection = _close_italics_before_repositioning(node_creator._collection)
+        assert new_collection[0].sets_italics_on()
+        assert new_collection[1].text == "foo"
+        assert new_collection[2].sets_italics_off()
+        assert new_collection[3].requires_repositioning()
+        assert new_collection[4].sets_italics_on()
+        assert new_collection[5].text == "bar"
+
+    def test_ensure_final_italics_node_closes(self):
+        from pycaption.scc.specialized_collections import (
+            _InstructionNode, _ensure_final_italics_node_closes
+        )
+        position_tracker = DefaultProvidingPositionTracker().default
+        node_creator = InstructionNodeCreator(
+            position_tracker=(DefaultProvidingPositionTracker())
+        )
+
+        # set italics
+        node_creator._collection.append(
+            _InstructionNode.create_italics_style(
+                position_tracker, turn_on=True
+            )
+        )
+        node_creator.add_chars('f', 'o', 'o')
+        node_creator._collection.append(
+            _InstructionNode.create_repositioning_command(position_tracker)
+        )
+        new_collection = _ensure_final_italics_node_closes(node_creator._collection)
+
+        # it should close italics at the end
+        assert new_collection[-1].sets_italics_off()
+
+        # let's add some breaks
+        node_creator._collection.append(
+            _InstructionNode.create_break(position=position_tracker)
+        )
+        node_creator.add_chars('b', 'a', 'r')
+        node_creator._collection.append(
+            _InstructionNode.create_break(position=position_tracker)
+        )
+        node_creator.add_chars('b', 'a', 'z')
+        new_collection = _ensure_final_italics_node_closes(node_creator._collection)
+        # it should close italics at the end
+        assert new_collection[-1].sets_italics_off()
+
+
 
 
 class CaptionDummy:

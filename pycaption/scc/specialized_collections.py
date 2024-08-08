@@ -768,6 +768,7 @@ def _format_italics(collection):
         collection[-1].text = collection[-1].text.rstrip()
     return new_collection
 
+
 def _remove_noop_on_off_italics(collection):
     """Return an equivalent list to `collection`. It removes the italics node
      pairs that don't surround text nodes, if those nodes are in the order:
