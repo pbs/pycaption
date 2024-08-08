@@ -1,5 +1,5 @@
 #!/bin/bash
-DOCKER_CMD="docker-compose -p pycaption"
+DOCKER_CMD="docker compose -p pycaption"
 
 SERVICE="test_py312"
 
