@@ -3,7 +3,7 @@ Changelog
 2.2.12
 ^^^^^^
 - Mid-row codes only add spaces only if there isn't one before and it
-- Mid-row codes only add spaces only if the previous command ois not break
+- Mid-row codes only add spaces only if the previous command is not break
 - Remove spaces to the end of the lines
 - CaptionLineLengthError is now raised if the cursor goes after column 32 instead of string length over 32
 - Close italics on receiving another style setting command.

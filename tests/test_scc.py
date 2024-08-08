@@ -607,7 +607,7 @@ class TestInterpretableNodeCreator:
         node_creator.add_chars("aaa ")
         node_creator.interpret_command("91ae")
         node_creator.add_chars("bbb")
-        # 15 + 4 + 3 = 23
+        # 15 + 4 + 3 = 22
         assert node_creator._cursor_position == 22
         # break again
         node_creator.interpret_command("9254")  # row 03, column 08
@@ -920,8 +920,6 @@ class TestInterpretableNodeCreator:
         new_collection = _ensure_final_italics_node_closes(node_creator._collection)
         # it should close italics at the end
         assert new_collection[-1].sets_italics_off()
-
-
 
 
 class CaptionDummy:
