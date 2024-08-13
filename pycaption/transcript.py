@@ -4,6 +4,7 @@ try:
     import nltk.data
 except ModuleNotFoundError:
     nltk = None
+
 from pycaption.base import BaseWriter, CaptionNode
 
 
