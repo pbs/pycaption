@@ -19,7 +19,7 @@ dev_dependencies = [
 ]
 
 transcript_dependencies = [
-    'nltk'
+    'nltk==3.8.0'
 ]
 
 setup(
