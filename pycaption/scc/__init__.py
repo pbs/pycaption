@@ -248,8 +248,8 @@ class SCCReader(BaseReader):
                         msg += line + f" - Length { len(line)}" + "\n"
         if len(msg):
             raise CaptionLineLengthError(
-                f"32 character limit for caption cue in scc file.\n"
-                f"Lines longer than 32:\n"
+                f"Cursor goes over column 32 for caption cue in scc file.\n"
+                f"Affected lines:\n"
                 f"{msg}"
             )
 
