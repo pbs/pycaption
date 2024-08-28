@@ -267,7 +267,7 @@ class TestSCCReader(ReaderTestingMixIn):
             SCCReader().read(sample_scc_with_line_too_long)
 
         assert exc_info.value.args[0].startswith(
-            "32 character limit for caption cue in scc file."
+            "Cursor goes over column 32 for caption cue in scc file."
         )
         str_to_check = (
             "was Cal l l l l l l l l l l l l l l l l l l l l l l l l l l l l "
