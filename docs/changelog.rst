@@ -1,5 +1,9 @@
 Changelog
 ---------
+2.2.12
+^^^^^^
+- Pinned nltk version to 3.8.0
+
 2.2.11
 ^^^^^^
 - A space should not be placed before a mid row code if it follows a PAC command or a Tab Offset
