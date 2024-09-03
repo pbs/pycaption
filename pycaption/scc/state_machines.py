@@ -11,7 +11,7 @@ class _PositioningTracker:
         :type positioning: tuple[int]
         """
         self._positions = [positioning]
-        self._break_required = False
+        self._breaks_required = 0
         self._repositioning_required = False
         # Since the actual column is not applied when encountering a line break
         # this attribute is used to store it and determine by comparison if the
@@ -35,18 +35,18 @@ class _PositioningTracker:
             return
 
         row, col = current
-        if self._break_required:
+        if self._breaks_required:
             col = self._last_column
         new_row, new_col = positioning
         is_tab_offset = new_row == row and col + 1 <= new_col <= col + 3
 
         # One line below will be treated as line break, not repositioning
-        if new_row == row + 1:
+        if new_row > row:
             self._positions.append((new_row, col))
-            self._break_required = True
+            self._breaks_required = new_row - row
             self._last_column = new_col
         # Tab offsets after line breaks will be ignored to avoid repositioning
-        elif self._break_required and is_tab_offset:
+        elif self._breaks_required and is_tab_offset:
             return
         else:
             # Reset the "current" position altogether.
@@ -86,11 +86,11 @@ class _PositioningTracker:
         """If the current position is simply one line below the previous.
         :rtype: bool
         """
-        return self._break_required
+        return self._breaks_required > 0
 
     def acknowledge_linebreak_consumed(self):
         """Call to acknowledge that the line required was consumed"""
-        self._break_required = False
+        self._breaks_required = 0
 
 
 class DefaultProvidingPositionTracker(_PositioningTracker):

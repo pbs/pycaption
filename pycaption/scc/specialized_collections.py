@@ -310,8 +310,6 @@ class InstructionNodeCreator:
             self._collection = collection
 
         self.last_style = None  # can be italic on or italic off as we only support italics
-        self._cursor_position = 0
-
         self._position_tracer = position_tracker
 
     def is_empty(self):
@@ -342,14 +340,17 @@ class InstructionNodeCreator:
 
         # handle a simple line break
         if self._position_tracer.is_linebreak_required():
-            # must insert a line break here
-            self._collection.append(
-                _InstructionNode.create_break(position=current_position)
-            )
+            for _ in range(self._position_tracer._breaks_required):
+                self._collection.append(
+                    _InstructionNode.create_break(position=current_position)
+                )
+            self._position_tracer.acknowledge_linebreak_consumed()
             node = _InstructionNode.create_text(current_position)
             self._collection.append(node)
-            self._cursor_position = self._position_tracer._last_column
-            self._position_tracer.acknowledge_linebreak_consumed()
+            if self._position_tracer.is_repositioning_required():
+                # it means we have a reposition command which was not followed by
+                # any text, so we just ignore it and break
+                self._position_tracer.acknowledge_position_changed()
 
         # handle completely new positioning
         elif self._position_tracer.is_repositioning_required():
@@ -361,7 +362,6 @@ class InstructionNodeCreator:
             self._position_tracer.acknowledge_position_changed()
 
         node.add_chars(*chars)
-        self._cursor_position += len("".join(chars))
 
     @staticmethod
     def get_style_for_command(command):
@@ -384,8 +384,6 @@ class InstructionNodeCreator:
         or a PAC_TAB_OFFSET_COMMANDS
         """
         self._update_positioning(command)
-
-        text = COMMANDS.get(command, "")
 
         if command == "94a1":
             self.handle_backspace("94a1")
@@ -412,9 +410,10 @@ class InstructionNodeCreator:
                     #  it should open italic tag
                     #  if break is required, break then add style tag
                     if self._position_tracer.is_linebreak_required():
-                        self._collection.append(
-                            _InstructionNode.create_break(position=current_position)
-                        )
+                        for _ in range(self._position_tracer._breaks_required):
+                            self._collection.append(
+                                _InstructionNode.create_break(position=current_position)
+                            )
                         self._position_tracer.acknowledge_linebreak_consumed()
                     self._collection.append(
                         _InstructionNode.create_italics_style(current_position)
@@ -433,9 +432,10 @@ class InstructionNodeCreator:
                     )
                     self.last_style = "italics off"
                     if self._position_tracer.is_linebreak_required():
-                        self._collection.append(
-                            _InstructionNode.create_break(position=current_position)
-                        )
+                        for _ in range(self._position_tracer._breaks_required):
+                            self._collection.append(
+                                _InstructionNode.create_break(position=current_position)
+                            )
                         self._position_tracer.acknowledge_linebreak_consumed()
 
         #  handle mid-row codes that follows a text node
@@ -459,7 +459,6 @@ class InstructionNodeCreator:
                 # need to close italics tag, add a space
                 # to the end of the previous text node
                 prev_text_node.text = prev_text_node.text + " "
-                self._cursor_position += 1
 
     def _update_positioning(self, command):
         """Sets the positioning information to use for the next nodes
@@ -470,7 +469,6 @@ class InstructionNodeCreator:
         if command in PAC_TAB_OFFSET_COMMANDS:
             tab_offset = PAC_TAB_OFFSET_COMMANDS[command]
             positioning = (prev_positioning[0], prev_positioning[1] + tab_offset)
-            self._cursor_position += tab_offset
         else:
             first, second = command[:2], command[2:]
             try:
@@ -479,7 +477,6 @@ class InstructionNodeCreator:
             except KeyError:
                 # if not PAC or OFFSET we're not changing position
                 return
-            self._cursor_position = positioning[1]
         self._position_tracer.update_positioning(positioning)
 
     def __iter__(self):
@@ -533,7 +530,6 @@ class InstructionNodeCreator:
         # only if the previous character in not also extended
         if delete_previous_condition:
             node.text = node.text[:-1]
-        self._cursor_position -= 1
 
     def get_previous_text_node(self):
         for node in self._collection[::-1]:

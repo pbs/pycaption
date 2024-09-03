@@ -70,17 +70,16 @@ class TestSCCReader(ReaderTestingMixIn):
         expected_positioning = [
             ((10.0, UnitEnum.PERCENT), (77.0, UnitEnum.PERCENT)),
             ((40.0, UnitEnum.PERCENT), (5.0, UnitEnum.PERCENT)),
-            ((70.0, UnitEnum.PERCENT), (23.0, UnitEnum.PERCENT)),
-            ((20.0, UnitEnum.PERCENT), (47.0, UnitEnum.PERCENT)),
-            ((20.0, UnitEnum.PERCENT), (89.0, UnitEnum.PERCENT)),
+            ((40.0, UnitEnum.PERCENT), (5.0, UnitEnum.PERCENT)),
+            ((40.0, UnitEnum.PERCENT), (5.0, UnitEnum.PERCENT)),
             ((40.0, UnitEnum.PERCENT), (53.0, UnitEnum.PERCENT)),
             ((70.0, UnitEnum.PERCENT), (17.0, UnitEnum.PERCENT)),
-            ((20.0, UnitEnum.PERCENT), (35.0, UnitEnum.PERCENT)),
-            ((20.0, UnitEnum.PERCENT), (83.0, UnitEnum.PERCENT)),
+            ((70.0, UnitEnum.PERCENT), (17.0, UnitEnum.PERCENT)),
+            ((70.0, UnitEnum.PERCENT), (17.0, UnitEnum.PERCENT)),
             ((70.0, UnitEnum.PERCENT), (11.0, UnitEnum.PERCENT)),
-            ((40.0, UnitEnum.PERCENT), (41.0, UnitEnum.PERCENT)),
-            ((20.0, UnitEnum.PERCENT), (71.0, UnitEnum.PERCENT)),
+            ((70.0, UnitEnum.PERCENT), (11.0, UnitEnum.PERCENT))
         ]
+
         actual_positioning = [
             caption_.layout_info.origin.serialized()
             for caption_ in captions.get_captions("en-US")
@@ -267,11 +266,11 @@ class TestSCCReader(ReaderTestingMixIn):
             SCCReader().read(sample_scc_with_line_too_long)
 
         assert exc_info.value.args[0].startswith(
-            "Cursor goes over column 32 for caption cue in scc file."
+            "32 character limit for caption cue in scc file."
         )
         str_to_check = (
             "was Cal l l l l l l l l l l l l l l l l l l l l l l l l l l l l "
-            "Denison, a friend - Length 84"
+            "Denison, a friend - Length 81"
         )
         assert "around 00:00:05.900" in exc_info.value.args[0].split("\n")[2]
         assert str_to_check in exc_info.value.args[0].split("\n")[2]
@@ -577,68 +576,6 @@ class TestInterpretableNodeCreator:
         assert result[12].is_text_node()
         assert result[13].is_explicit_break()
         assert result[14].is_text_node()
-
-    @staticmethod
-    def check_cursor_placement(node_creator):
-        node_creator.interpret_command("91df")  # row 01, column 28,
-        assert node_creator._cursor_position == 28
-        # check that it keeps the column of the last pac
-        # before text
-        node_creator.interpret_command("9152")  # row 01, column 04
-        assert node_creator._cursor_position == 4
-        node_creator.add_chars("foo")
-        assert node_creator._cursor_position == 7  # 4 + len(foo)
-        # check on break
-        node_creator.interpret_command("91f2")  # row 02, column 04
-        # it should be 4
-        assert node_creator._cursor_position == 4
-        # check mid-row codes with open italics
-        node_creator.interpret_command("91ae")
-        node_creator.add_chars("bar")
-        # writing "foo" then breaks to row 2, col 4 then writes "bar"
-        # starts at (2, 4) and because it follows a break it should not add space
-        assert node_creator._cursor_position == 7
-        # check mid-row codes with closed italics
-        node_creator.add_chars("baz")
-        node_creator.interpret_command("9120")
-        node_creator.add_chars("spam")
-        # should be 7 + len("baz") + one space + len(spam) = 15
-        assert node_creator._cursor_position == 15
-        node_creator.add_chars("aaa ")
-        node_creator.interpret_command("91ae")
-        node_creator.add_chars("bbb")
-        # 15 + 4 + 3 = 22
-        assert node_creator._cursor_position == 22
-        # break again
-        node_creator.interpret_command("9254")  # row 03, column 08
-        assert node_creator._cursor_position == 8
-        node_creator.interpret_command("91ae")
-        node_creator.add_chars("ccc")
-        # should start at 8, not adding space as it has a break in front
-        # should be 8 + len(ccc) = 11
-        assert node_creator._cursor_position == 11
-
-    def test_cursor_placement(self):
-        #  pop-on caption
-        node_creator = InstructionNodeCreator(
-            position_tracker=(DefaultProvidingPositionTracker())
-        )
-        node_creator.interpret_command("9420")
-        self.check_cursor_placement(node_creator=node_creator)
-
-        #  roll-on caption
-        node_creator = InstructionNodeCreator(
-            position_tracker=(DefaultProvidingPositionTracker())
-        )
-        node_creator.interpret_command("9425")
-        self.check_cursor_placement(node_creator=node_creator)
-
-        #  paint caption
-        node_creator = InstructionNodeCreator(
-            position_tracker=(DefaultProvidingPositionTracker())
-        )
-        node_creator.interpret_command("9429")
-        self.check_cursor_placement(node_creator=node_creator)
 
     @staticmethod
     def check_closing_italics_closing_on_style_change(node_creator):

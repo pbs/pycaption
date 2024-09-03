@@ -1,14 +1,19 @@
 Changelog
 ---------
-2.2.12
+2.2.13
 ^^^^^^
 - Mid-row codes only add spaces only if there isn't one before
 - Mid-row codes only add spaces only if affects the text in the same row (not adding if after previous text follows break or breaks)
 - Remove spaces to the end of the lines
-- CaptionLineLengthError is now raised if the cursor goes after column 32 instead of string length over 32
 - Change error message for the 32 character limit.
 - Close italics on receiving another style setting command.
 - Throw an CaptionReadNoCaptions error in case of empty input file are provided
+- Properly add breaks (it was only for jumps to next row). Now it adds as many breaks as the difference between row numbers.
+- Ignore repositioning commands which are not followed by any text before breaks.
+
+2.2.12
+^^^^^^
+- Pinned nltk to 3.8.0
 
 2.2.11
 ^^^^^^

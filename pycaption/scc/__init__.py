@@ -233,11 +233,14 @@ class SCCReader(BaseReader):
 
         # check captions for incorrect lengths
         lines_too_long = defaultdict(list)
-
         for caption in self.caption_stash._collection:
-            line_length = self.get_scc_line_line_length(caption.to_real_caption())
-            if line_length:
-                lines_too_long.update(line_length)
+            caption_start = caption.to_real_caption().format_start()
+            caption_text = "".join(caption.to_real_caption().get_text_nodes())
+            text_too_long = [line for line in caption_text.split("\n") if len(line) > 32]
+            if caption_start in lines_too_long:
+                lines_too_long[caption_start] = text_too_long
+            else:
+                lines_too_long[caption_start].extend(text_too_long)
 
         msg = ""
         if bool(lines_too_long.keys()):
@@ -248,8 +251,8 @@ class SCCReader(BaseReader):
                         msg += line + f" - Length { len(line)}" + "\n"
         if len(msg):
             raise CaptionLineLengthError(
-                f"Cursor goes over column 32 for caption cue in scc file.\n"
-                f"Affected lines:\n"
+                f"32 character limit for caption cue in scc file.\n"
+                f"Lines longer than 32:\n"
                 f"{msg}"
             )
 
@@ -512,22 +515,6 @@ class SCCReader(BaseReader):
     def _pop_on(self, end=0):
         pop_on_cue = self.pop_ons_queue.pop()
         self.caption_stash.create_and_store(pop_on_cue.buffer, pop_on_cue.start, end)
-
-    @staticmethod
-    def get_scc_line_line_length(caption):
-        long_line = defaultdict(list)
-        caption_start = caption.format_start()
-        text_nodes = [node for node in caption.nodes if node.type_ == CaptionNode.TEXT]
-        if not text_nodes:
-            return None
-        start_writing_at = text_nodes[0].position[1]
-        caption_text = "".join(caption.get_text_nodes())
-        if start_writing_at:
-            caption_text = " " * start_writing_at + caption_text
-        long_line[caption_start] = [
-            line for line in caption_text.split("\n") if len(line) > 32
-        ]
-        return long_line if len(long_line[caption_start]) else None
 
 
 class SCCWriter(BaseWriter):
