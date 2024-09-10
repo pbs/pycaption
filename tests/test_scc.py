@@ -2,11 +2,12 @@ import pytest
 
 from pycaption import CaptionNode, CaptionReadNoCaptions, SCCReader
 from pycaption.exceptions import CaptionLineLengthError, CaptionReadTimingError
-from pycaption.geometry import (HorizontalAlignmentEnum, UnitEnum,
-                                VerticalAlignmentEnum)
+from pycaption.geometry import HorizontalAlignmentEnum, UnitEnum, VerticalAlignmentEnum
 from pycaption.scc.constants import MICROSECONDS_PER_CODEWORD
-from pycaption.scc.specialized_collections import (InstructionNodeCreator,
-                                                   TimingCorrectingCaptionList)
+from pycaption.scc.specialized_collections import (
+    InstructionNodeCreator,
+    TimingCorrectingCaptionList,
+)
 from pycaption.scc.state_machines import DefaultProvidingPositionTracker
 from tests.mixins import ReaderTestingMixIn
 
@@ -70,14 +71,16 @@ class TestSCCReader(ReaderTestingMixIn):
         expected_positioning = [
             ((10.0, UnitEnum.PERCENT), (77.0, UnitEnum.PERCENT)),
             ((40.0, UnitEnum.PERCENT), (5.0, UnitEnum.PERCENT)),
-            ((40.0, UnitEnum.PERCENT), (5.0, UnitEnum.PERCENT)),
-            ((40.0, UnitEnum.PERCENT), (5.0, UnitEnum.PERCENT)),
+            ((70.0, UnitEnum.PERCENT), (23.0, UnitEnum.PERCENT)),
+            ((20.0, UnitEnum.PERCENT), (47.0, UnitEnum.PERCENT)),
+            ((20.0, UnitEnum.PERCENT), (89.0, UnitEnum.PERCENT)),
             ((40.0, UnitEnum.PERCENT), (53.0, UnitEnum.PERCENT)),
             ((70.0, UnitEnum.PERCENT), (17.0, UnitEnum.PERCENT)),
-            ((70.0, UnitEnum.PERCENT), (17.0, UnitEnum.PERCENT)),
-            ((70.0, UnitEnum.PERCENT), (17.0, UnitEnum.PERCENT)),
+            ((20.0, UnitEnum.PERCENT), (35.0, UnitEnum.PERCENT)),
+            ((20.0, UnitEnum.PERCENT), (83.0, UnitEnum.PERCENT)),
             ((70.0, UnitEnum.PERCENT), (11.0, UnitEnum.PERCENT)),
-            ((70.0, UnitEnum.PERCENT), (11.0, UnitEnum.PERCENT))
+            ((40.0, UnitEnum.PERCENT), (41.0, UnitEnum.PERCENT)),
+            ((20.0, UnitEnum.PERCENT), (71.0, UnitEnum.PERCENT)),
         ]
 
         actual_positioning = [
@@ -276,18 +279,18 @@ class TestSCCReader(ReaderTestingMixIn):
         assert str_to_check in exc_info.value.args[0].split("\n")[2]
 
     def test_mid_row_codes_not_adding_space_before_text(
-            self,
-            sample_scc_mid_row_before_text_pop,
-            sample_scc_mid_row_before_text_roll,
-            sample_scc_mid_row_before_text_paint
+        self,
+        sample_scc_mid_row_before_text_pop,
+        sample_scc_mid_row_before_text_roll,
+        sample_scc_mid_row_before_text_paint,
     ):
         # if mid-row code is before any text in the cue, no space
         # should be added
-        expected_lines = ['AB AB']  # no space before first A
+        expected_lines = ["AB AB"]  # no space before first A
         for caption in [
             sample_scc_mid_row_before_text_pop,
             sample_scc_mid_row_before_text_roll,
-            sample_scc_mid_row_before_text_paint
+            sample_scc_mid_row_before_text_paint,
         ]:
             caption_set = SCCReader().read(caption)
             actual_lines = [
@@ -299,19 +302,19 @@ class TestSCCReader(ReaderTestingMixIn):
             assert expected_lines == actual_lines
 
     def test_mid_row_codes_adding_space_after_text_if_there_is_none_closing_style(
-            self,
-            sample_scc_mid_row_following_text_no_text_before_italics_off_pop,
-            sample_scc_mid_row_following_text_no_text_before_italics_off_roll,
-            sample_scc_mid_row_following_text_no_text_before_italics_off_paint
+        self,
+        sample_scc_mid_row_following_text_no_text_before_italics_off_pop,
+        sample_scc_mid_row_following_text_no_text_before_italics_off_roll,
+        sample_scc_mid_row_following_text_no_text_before_italics_off_paint,
     ):
         # if there's no space in between text nodes it should add one
         # since 9120 is closing italics, the space will be added before
         # second text node
-        expected_lines = ['AB', ' AB']
+        expected_lines = ["AB", " AB"]
         for caption in [
             sample_scc_mid_row_following_text_no_text_before_italics_off_pop,
             sample_scc_mid_row_following_text_no_text_before_italics_off_roll,
-            sample_scc_mid_row_following_text_no_text_before_italics_off_paint
+            sample_scc_mid_row_following_text_no_text_before_italics_off_paint,
         ]:
             caption_set = SCCReader().read(caption)
             actual_lines = [
@@ -323,19 +326,19 @@ class TestSCCReader(ReaderTestingMixIn):
             assert expected_lines == actual_lines
 
     def test_mid_row_codes_adding_space_after_text_if_there_is_none_opening_style(
-            self,
-            sample_scc_mid_row_following_text_no_text_before_italics_on_pop,
-            sample_scc_mid_row_following_text_no_text_before_italics_on_roll,
-            sample_scc_mid_row_following_text_no_text_before_italics_on_paint
+        self,
+        sample_scc_mid_row_following_text_no_text_before_italics_on_pop,
+        sample_scc_mid_row_following_text_no_text_before_italics_on_roll,
+        sample_scc_mid_row_following_text_no_text_before_italics_on_paint,
     ):
         # if there's no space in between text nodes it should add one
         # since 91ae is opening italics, the space will be added at the end
         # of the first text node
-        expected_lines = ['AB ', 'AB']
+        expected_lines = ["AB ", "AB"]
         for caption in [
             sample_scc_mid_row_following_text_no_text_before_italics_on_pop,
             sample_scc_mid_row_following_text_no_text_before_italics_on_roll,
-            sample_scc_mid_row_following_text_no_text_before_italics_on_paint
+            sample_scc_mid_row_following_text_no_text_before_italics_on_paint,
         ]:
             caption_set = SCCReader().read(caption)
             actual_lines = [
@@ -347,18 +350,18 @@ class TestSCCReader(ReaderTestingMixIn):
             assert expected_lines == actual_lines
 
     def test_mid_row_codes_not_adding_space_if_there_is_one_before(
-            self,
-            sample_scc_mid_row_with_space_before_pop,
-            sample_scc_mid_row_with_space_before_roll,
-            sample_scc_mid_row_with_space_before_paint
+        self,
+        sample_scc_mid_row_with_space_before_pop,
+        sample_scc_mid_row_with_space_before_roll,
+        sample_scc_mid_row_with_space_before_paint,
     ):
         # if mid-row code following a text node that ends in space
         # no additional space will be added
-        expected_lines = ['AB ', 'AB']
-        for caption in[
+        expected_lines = ["AB ", "AB"]
+        for caption in [
             sample_scc_mid_row_with_space_before_pop,
             sample_scc_mid_row_with_space_before_roll,
-            sample_scc_mid_row_with_space_before_paint
+            sample_scc_mid_row_with_space_before_paint,
         ]:
             # no additional space added (will not be 'AB  ')
             caption_set = SCCReader().read(caption)
@@ -371,16 +374,16 @@ class TestSCCReader(ReaderTestingMixIn):
             assert expected_lines == actual_lines
 
     def test_removing_spaces_at_end_of_lines(
-            self,
-            sample_scc_with_spaces_at_eol_pop,
-            sample_scc_with_spaces_at_eol_roll,
-            sample_scc_with_spaces_at_eol_paint
+        self,
+        sample_scc_with_spaces_at_eol_pop,
+        sample_scc_with_spaces_at_eol_roll,
+        sample_scc_with_spaces_at_eol_paint,
     ):
-        expected_lines = ['AB', 'AB', 'AB']
+        expected_lines = ["AB", "AB", "AB"]
         for caption in [
             sample_scc_with_spaces_at_eol_pop,
             sample_scc_with_spaces_at_eol_roll,
-            sample_scc_with_spaces_at_eol_paint
+            sample_scc_with_spaces_at_eol_paint,
         ]:
             caption_set = SCCReader().read(caption)
             actual_lines = [
@@ -582,11 +585,13 @@ class TestInterpretableNodeCreator:
         node_creator.interpret_command("9140")  # row 01, col 0 plaintext
         node_creator.interpret_command("9120")  # plaintext = italics off
         node_creator.interpret_command("9120")  # plaintext = italics off
-        assert len(node_creator._collection) == 0  # </i></i> will get cleaned by format_italics
+        assert (
+            len(node_creator._collection) == 0
+        )  # </i></i> will get cleaned by format_italics
         node_creator.interpret_command("91ce")  # row 01, col 0 italics
         assert len(node_creator._collection) == 1
         assert node_creator._collection[0].sets_italics_on()
-        node_creator.add_chars("a", 'b')  # write ab
+        node_creator.add_chars("a", "b")  # write ab
         assert node_creator.last_style == "italics on"
         assert node_creator._collection[-1].is_text_node()
         assert node_creator._collection[-1].text == "ab"
@@ -597,18 +602,18 @@ class TestInterpretableNodeCreator:
         assert node_creator._collection[-1].text == " "
         node_creator.interpret_command("91ae")  # italics again
         # it should re-open italics
-        node_creator.add_chars("c", 'd')
+        node_creator.add_chars("c", "d")
         assert node_creator.last_style == "italics on"
         assert node_creator._collection[-1].text == "cd"
         #  let's break the line now, and keep the style
         node_creator.interpret_command("916e")  # row 02, column 00 with italics
-        node_creator.add_chars("e", 'f')
+        node_creator.add_chars("e", "f")
         assert node_creator.last_style == "italics on"
         assert node_creator._collection[-1].text == "ef"
         #  let's break the line now, but change the style this time
         #  it should close italics then break
         node_creator.interpret_command("9252")  # row 03, column 04 with plaintext
-        node_creator.add_chars("g", 'h')
+        node_creator.add_chars("g", "h")
         assert node_creator.last_style == "italics off"
         assert node_creator._collection[-1].text == "gh"
         # check that we have a closed italic before break
@@ -650,24 +655,22 @@ class TestInterpretableNodeCreator:
 
     def test_remove_noon_off_on_italics(self):
         from pycaption.scc.specialized_collections import (
-            _InstructionNode, _remove_noon_off_on_italics
+            _InstructionNode,
+            _remove_noon_off_on_italics,
         )
+
         position_tracker = DefaultProvidingPositionTracker().default
         node_creator = InstructionNodeCreator(
             position_tracker=(DefaultProvidingPositionTracker())
         )
         node_creator.interpret_command("9420")
         node_creator.interpret_command("9140")  # row 01, col 0 plaintext
-        node_creator.add_chars('a', 'b')
+        node_creator.add_chars("a", "b")
         node_creator._collection.append(
-            _InstructionNode.create_italics_style(
-                position_tracker, turn_on=False
-            )
+            _InstructionNode.create_italics_style(position_tracker, turn_on=False)
         )
         node_creator._collection.append(
-            _InstructionNode.create_italics_style(
-                position_tracker, turn_on=True
-            )
+            _InstructionNode.create_italics_style(position_tracker, turn_on=True)
         )
         # last two nodes should be </i><i>
         assert node_creator._collection[-2].sets_italics_off()
@@ -682,15 +685,11 @@ class TestInterpretableNodeCreator:
 
         # check if there's text in between close/open italics
         node_creator._collection.append(
-            _InstructionNode.create_italics_style(
-                position_tracker, turn_on=False
-            )
+            _InstructionNode.create_italics_style(position_tracker, turn_on=False)
         )
-        node_creator.add_chars('c', 'd')
+        node_creator.add_chars("c", "d")
         node_creator._collection.append(
-            _InstructionNode.create_italics_style(
-                position_tracker, turn_on=True
-            )
+            _InstructionNode.create_italics_style(position_tracker, turn_on=True)
         )
 
         assert node_creator._collection[-3].sets_italics_off()
@@ -705,22 +704,20 @@ class TestInterpretableNodeCreator:
 
     def test_skip_redundant_italics_nodes(self):
         from pycaption.scc.specialized_collections import (
-            _InstructionNode, _skip_redundant_italics_nodes
+            _InstructionNode,
+            _skip_redundant_italics_nodes,
         )
+
         position_tracker = DefaultProvidingPositionTracker().default
         node_creator = InstructionNodeCreator(
             position_tracker=(DefaultProvidingPositionTracker())
         )
 
         node_creator._collection.append(
-            _InstructionNode.create_italics_style(
-                position_tracker, turn_on=False
-            )
+            _InstructionNode.create_italics_style(position_tracker, turn_on=False)
         )
         node_creator._collection.append(
-            _InstructionNode.create_italics_style(
-                position_tracker, turn_on=True
-            )
+            _InstructionNode.create_italics_style(position_tracker, turn_on=True)
         )
         new_collection = _skip_redundant_italics_nodes(node_creator._collection)
         # should remove italics off
@@ -732,15 +729,11 @@ class TestInterpretableNodeCreator:
             position_tracker=(DefaultProvidingPositionTracker())
         )
         node_creator._collection.append(
-            _InstructionNode.create_italics_style(
-                position_tracker, turn_on=False
-            )
+            _InstructionNode.create_italics_style(position_tracker, turn_on=False)
         )
-        node_creator.add_chars('f', 'o', 'o')
+        node_creator.add_chars("f", "o", "o")
         node_creator._collection.append(
-            _InstructionNode.create_italics_style(
-                position_tracker, turn_on=True
-            )
+            _InstructionNode.create_italics_style(position_tracker, turn_on=True)
         )
         new_collection = _skip_redundant_italics_nodes(node_creator._collection)
         # should remove italics off
@@ -753,35 +746,23 @@ class TestInterpretableNodeCreator:
             position_tracker=(DefaultProvidingPositionTracker())
         )
         node_creator._collection.append(
-            _InstructionNode.create_italics_style(
-                position_tracker, turn_on=True
-            )
+            _InstructionNode.create_italics_style(position_tracker, turn_on=True)
         )
-        node_creator.add_chars('f', 'o', 'o')
+        node_creator.add_chars("f", "o", "o")
         node_creator._collection.append(
-            _InstructionNode.create_italics_style(
-                position_tracker, turn_on=True
-            )
+            _InstructionNode.create_italics_style(position_tracker, turn_on=True)
         )
         node_creator._collection.append(
-            _InstructionNode.create_italics_style(
-                position_tracker, turn_on=True
-            )
+            _InstructionNode.create_italics_style(position_tracker, turn_on=True)
         )
         node_creator._collection.append(
-            _InstructionNode.create_italics_style(
-                position_tracker, turn_on=False
-            )
+            _InstructionNode.create_italics_style(position_tracker, turn_on=False)
         )
         node_creator._collection.append(
-            _InstructionNode.create_italics_style(
-                position_tracker, turn_on=False
-            )
+            _InstructionNode.create_italics_style(position_tracker, turn_on=False)
         )
         node_creator._collection.append(
-            _InstructionNode.create_italics_style(
-                position_tracker, turn_on=True
-            )
+            _InstructionNode.create_italics_style(position_tracker, turn_on=True)
         )
         new_collection = _skip_redundant_italics_nodes(node_creator._collection)
         # should open italics once, write foo, close italics once then re-open italics
@@ -793,8 +774,10 @@ class TestInterpretableNodeCreator:
 
     def test_close_italics_before_repositioning(self):
         from pycaption.scc.specialized_collections import (
-            _InstructionNode, _close_italics_before_repositioning
+            _close_italics_before_repositioning,
+            _InstructionNode,
         )
+
         position_tracker = DefaultProvidingPositionTracker().default
         node_creator = InstructionNodeCreator(
             position_tracker=(DefaultProvidingPositionTracker())
@@ -802,16 +785,14 @@ class TestInterpretableNodeCreator:
 
         # set italics
         node_creator._collection.append(
-            _InstructionNode.create_italics_style(
-                position_tracker, turn_on=True
-            )
+            _InstructionNode.create_italics_style(position_tracker, turn_on=True)
         )
-        node_creator.add_chars('f', 'o', 'o')
+        node_creator.add_chars("f", "o", "o")
         # reposition
         node_creator._collection.append(
             _InstructionNode.create_repositioning_command(position_tracker)
         )
-        node_creator.add_chars('b', 'a', 'r')
+        node_creator.add_chars("b", "a", "r")
 
         new_collection = _close_italics_before_repositioning(node_creator._collection)
         assert new_collection[0].sets_italics_on()
@@ -823,8 +804,10 @@ class TestInterpretableNodeCreator:
 
     def test_ensure_final_italics_node_closes(self):
         from pycaption.scc.specialized_collections import (
-            _InstructionNode, _ensure_final_italics_node_closes
+            _ensure_final_italics_node_closes,
+            _InstructionNode,
         )
+
         position_tracker = DefaultProvidingPositionTracker().default
         node_creator = InstructionNodeCreator(
             position_tracker=(DefaultProvidingPositionTracker())
@@ -832,11 +815,9 @@ class TestInterpretableNodeCreator:
 
         # set italics
         node_creator._collection.append(
-            _InstructionNode.create_italics_style(
-                position_tracker, turn_on=True
-            )
+            _InstructionNode.create_italics_style(position_tracker, turn_on=True)
         )
-        node_creator.add_chars('f', 'o', 'o')
+        node_creator.add_chars("f", "o", "o")
         node_creator._collection.append(
             _InstructionNode.create_repositioning_command(position_tracker)
         )
@@ -849,11 +830,11 @@ class TestInterpretableNodeCreator:
         node_creator._collection.append(
             _InstructionNode.create_break(position=position_tracker)
         )
-        node_creator.add_chars('b', 'a', 'r')
+        node_creator.add_chars("b", "a", "r")
         node_creator._collection.append(
             _InstructionNode.create_break(position=position_tracker)
         )
-        node_creator.add_chars('b', 'a', 'z')
+        node_creator.add_chars("b", "a", "z")
         new_collection = _ensure_final_italics_node_closes(node_creator._collection)
         # it should close italics at the end
         assert new_collection[-1].sets_italics_off()

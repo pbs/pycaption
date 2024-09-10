@@ -5,13 +5,14 @@ class _PositioningTracker:
     """Helps determine the positioning of a node, having kept track of
     positioning-related commands.
     """
+
     def __init__(self, positioning=None):
         """
         :param positioning: positioning information (row, column)
         :type positioning: tuple[int]
         """
         self._positions = [positioning]
-        self._breaks_required = 0
+        self._break_required = False
         self._repositioning_required = False
         # Since the actual column is not applied when encountering a line break
         # this attribute is used to store it and determine by comparison if the
@@ -35,18 +36,18 @@ class _PositioningTracker:
             return
 
         row, col = current
-        if self._breaks_required:
+        if self._break_required:
             col = self._last_column
         new_row, new_col = positioning
         is_tab_offset = new_row == row and col + 1 <= new_col <= col + 3
 
         # One line below will be treated as line break, not repositioning
-        if new_row > row:
+        if new_row == row + 1:
             self._positions.append((new_row, col))
-            self._breaks_required = new_row - row
+            self._break_required = 1
             self._last_column = new_col
         # Tab offsets after line breaks will be ignored to avoid repositioning
-        elif self._breaks_required and is_tab_offset:
+        elif self._break_required and is_tab_offset:
             return
         else:
             # Reset the "current" position altogether.
@@ -64,9 +65,7 @@ class _PositioningTracker:
         :raise: CaptionReadSyntaxError
         """
         if not any(self._positions):
-            raise CaptionReadSyntaxError(
-                'No Preamble Address Code [PAC] was provided'
-            )
+            raise CaptionReadSyntaxError("No Preamble Address Code [PAC] was provided")
         else:
             return self._positions[0]
 
@@ -86,17 +85,18 @@ class _PositioningTracker:
         """If the current position is simply one line below the previous.
         :rtype: bool
         """
-        return self._breaks_required > 0
+        return self._break_required
 
     def acknowledge_linebreak_consumed(self):
         """Call to acknowledge that the line required was consumed"""
-        self._breaks_required = 0
+        self._break_required = False
 
 
 class DefaultProvidingPositionTracker(_PositioningTracker):
     """A _PositioningTracker that provides if needed a default value (14, 0), or
     uses the last positioning value set anywhere in the document
     """
+
     default = (14, 0)
 
     def __init__(self, positioning=None, default=None):

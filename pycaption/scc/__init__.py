@@ -85,20 +85,35 @@ from collections import defaultdict, deque
 from copy import deepcopy
 
 from pycaption.base import BaseReader, BaseWriter, CaptionNode, CaptionSet
-from pycaption.exceptions import (CaptionLineLengthError,
-                                  CaptionReadNoCaptions,
-                                  CaptionReadTimingError, InvalidInputError)
+from pycaption.exceptions import (
+    CaptionLineLengthError,
+    CaptionReadNoCaptions,
+    CaptionReadTimingError,
+    InvalidInputError,
+)
 
-from .constants import (CHARACTER_TO_CODE, CHARACTERS, COMMANDS,
-                        CUE_STARTING_COMMAND, EXTENDED_CHARS, HEADER,
-                        MICROSECONDS_PER_CODEWORD,
-                        PAC_BYTES_TO_POSITIONING_MAP, PAC_HIGH_BYTE_BY_ROW,
-                        PAC_LOW_BYTE_BY_ROW_RESTRICTED,
-                        PAC_TAB_OFFSET_COMMANDS, SPECIAL_CHARS,
-                        SPECIAL_OR_EXTENDED_CHAR_TO_CODE)
+from .constants import (
+    CHARACTER_TO_CODE,
+    CHARACTERS,
+    COMMANDS,
+    CUE_STARTING_COMMAND,
+    EXTENDED_CHARS,
+    HEADER,
+    MICROSECONDS_PER_CODEWORD,
+    PAC_BYTES_TO_POSITIONING_MAP,
+    PAC_HIGH_BYTE_BY_ROW,
+    PAC_LOW_BYTE_BY_ROW_RESTRICTED,
+    PAC_TAB_OFFSET_COMMANDS,
+    SPECIAL_CHARS,
+    SPECIAL_OR_EXTENDED_CHAR_TO_CODE,
+)
 from .specialized_collections import CaptionCreator  # noqa: F401
-from .specialized_collections import (InstructionNodeCreator, NotifyingDict,
-                                      PopOnCue, TimingCorrectingCaptionList)
+from .specialized_collections import (
+    InstructionNodeCreator,
+    NotifyingDict,
+    PopOnCue,
+    TimingCorrectingCaptionList,
+)
 from .state_machines import DefaultProvidingPositionTracker
 
 
@@ -236,7 +251,9 @@ class SCCReader(BaseReader):
         for caption in self.caption_stash._collection:
             caption_start = caption.to_real_caption().format_start()
             caption_text = "".join(caption.to_real_caption().get_text_nodes())
-            text_too_long = [line for line in caption_text.split("\n") if len(line) > 32]
+            text_too_long = [
+                line for line in caption_text.split("\n") if len(line) > 32
+            ]
             if caption_start in lines_too_long:
                 lines_too_long[caption_start] = text_too_long
             else:
@@ -313,9 +330,10 @@ class SCCReader(BaseReader):
         for idx, word in enumerate(word_list):
             word = word.strip()
             if len(word) == 4:
-                self._translate_word(word=word)
+                next_command = word_list[idx + 1] if idx + 1 < len(word_list) else None
+                self._translate_word(word=word, next_command=next_command)
 
-    def _translate_word(self, word):
+    def _translate_word(self, word, next_command=None):
         if self._handle_double_command(word):
             # count frames for timing
             self.time_translator.increment_frames()
@@ -324,7 +342,7 @@ class SCCReader(BaseReader):
         # TODO - check that all the positioning commands are here, or use
         # some other strategy to determine if the word is a command.
         if word in COMMANDS or _is_pac_command(word):
-            self._translate_command(word=word)
+            self._translate_command(word=word, next_command=next_command)
 
         # second, check if word is a special character
         elif word in SPECIAL_CHARS:
@@ -396,7 +414,7 @@ class SCCReader(BaseReader):
         # add to buffer
         self.buffer.add_chars(EXTENDED_CHARS[word])
 
-    def _translate_command(self, word):
+    def _translate_command(self, word, next_command=None):
         # if command is pop_up
         if word == "9420":
             self.buffer_dict.set_active("pop")
@@ -462,7 +480,7 @@ class SCCReader(BaseReader):
 
         # If command is not one of the aforementioned, add it to buffer
         else:
-            self.buffer.interpret_command(command=word)
+            self.buffer.interpret_command(command=word, next_command=next_command)
 
     def _translate_characters(self, word):
         # split word into the 2 bytes

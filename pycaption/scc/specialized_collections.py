@@ -14,14 +14,14 @@ from .constants import (
     BACKGROUND_COLOR_CODES,
     COMMANDS,
     EXTENDED_CHARS,
+    ITALICS_COMMANDS,
     MICROSECONDS_PER_CODEWORD,
     MID_ROW_CODES,
     PAC_BYTES_TO_POSITIONING_MAP,
     PAC_TAB_OFFSET_COMMANDS,
-    ITALICS_COMMANDS,
-    UNDERLINE_COMMANDS,
     PLAIN_TEXT_COMMANDS,
-    STYLE_SETTING_COMMANDS
+    STYLE_SETTING_COMMANDS,
+    UNDERLINE_COMMANDS,
 )
 
 PopOnCue = collections.namedtuple("PopOnCue", "buffer, start, end")
@@ -309,7 +309,9 @@ class InstructionNodeCreator:
         else:
             self._collection = collection
 
-        self.last_style = None  # can be italic on or italic off as we only support italics
+        self.last_style = (
+            None  # can be italic on or italic off as we only support italics
+        )
         self._position_tracer = position_tracker
 
     def is_empty(self):
@@ -340,10 +342,9 @@ class InstructionNodeCreator:
 
         # handle a simple line break
         if self._position_tracer.is_linebreak_required():
-            for _ in range(self._position_tracer._breaks_required):
-                self._collection.append(
-                    _InstructionNode.create_break(position=current_position)
-                )
+            self._collection.append(
+                _InstructionNode.create_break(position=current_position)
+            )
             self._position_tracer.acknowledge_linebreak_consumed()
             node = _InstructionNode.create_text(current_position)
             self._collection.append(node)
@@ -374,7 +375,7 @@ class InstructionNodeCreator:
             # only remaining possibility is plain text
             return "plaintext"
 
-    def interpret_command(self, command):
+    def interpret_command(self, command, next_command=None):
         """Given a command determines whether to turn italics on or off,
         or to set the positioning
 
@@ -382,6 +383,7 @@ class InstructionNodeCreator:
 
         :type command: str
         or a PAC_TAB_OFFSET_COMMANDS
+        :type next_command: the command that follows next
         """
         self._update_positioning(command)
 
@@ -394,7 +396,7 @@ class InstructionNodeCreator:
             # which will be deleted when the code is applied.
             # ex: 2080 97ad 94a1
             if (
-                len(self._collection) > 1
+                len(self._collection) > 0
                 and self._collection[-1].is_text_node()
                 and self._collection[-1].text[-1].isspace()
             ):
@@ -410,10 +412,9 @@ class InstructionNodeCreator:
                     #  it should open italic tag
                     #  if break is required, break then add style tag
                     if self._position_tracer.is_linebreak_required():
-                        for _ in range(self._position_tracer._breaks_required):
-                            self._collection.append(
-                                _InstructionNode.create_break(position=current_position)
-                            )
+                        self._collection.append(
+                            _InstructionNode.create_break(position=current_position)
+                        )
                         self._position_tracer.acknowledge_linebreak_consumed()
                     self._collection.append(
                         _InstructionNode.create_italics_style(current_position)
@@ -432,23 +433,28 @@ class InstructionNodeCreator:
                     )
                     self.last_style = "italics off"
                     if self._position_tracer.is_linebreak_required():
-                        for _ in range(self._position_tracer._breaks_required):
-                            self._collection.append(
-                                _InstructionNode.create_break(position=current_position)
-                            )
+                        self._collection.append(
+                            _InstructionNode.create_break(position=current_position)
+                        )
                         self._position_tracer.acknowledge_linebreak_consumed()
 
         #  handle mid-row codes that follows a text node
+        #  don't add space if the next command adds one of
+        #  ['.', '!', '?', ',']
+        punctuation = ["ae", "a1", "bf", "2c"]
+        next_is_punctuation = next_command and next_command[:2] in punctuation
         prev_text_node = self.get_previous_text_node()
         prev_node_is_break = prev_text_node is not None and any(
-            x.is_explicit_break() for x in self._collection[self._collection.index(prev_text_node):]
+            x.is_explicit_break()
+            for x in self._collection[self._collection.index(prev_text_node) :]
         )
         if (
-                command in MID_ROW_CODES and
-                prev_text_node and not
-                prev_node_is_break and not
-                prev_text_node.text[-1].isspace() and
-                command not in PAC_TAB_OFFSET_COMMANDS
+            command in MID_ROW_CODES
+            and prev_text_node
+            and not prev_node_is_break
+            and not prev_text_node.text[-1].isspace()
+            and command not in PAC_TAB_OFFSET_COMMANDS
+            and not next_is_punctuation
         ):
             if self.last_style == "italics off":
                 # need to open italics tag, add a space
@@ -465,8 +471,8 @@ class InstructionNodeCreator:
 
         :type command: str
         """
-        prev_positioning = self._position_tracer.default
         if command in PAC_TAB_OFFSET_COMMANDS:
+            prev_positioning = self._position_tracer.default
             tab_offset = PAC_TAB_OFFSET_COMMANDS[command]
             positioning = (prev_positioning[0], prev_positioning[1] + tab_offset)
         else:
@@ -751,6 +757,12 @@ def _format_italics(collection):
     new_collection = _remove_noop_italics(new_collection)
 
     # remove spaces to the end of the lines
+    new_collection = _remove_spaces_at_end_of_the_line(new_collection)
+
+    return new_collection
+
+
+def _remove_spaces_at_end_of_the_line(collection: list[_InstructionNode]):
     for idx, node in enumerate(collection):
         if (
             idx > 0
@@ -762,7 +774,7 @@ def _format_italics(collection):
     # handle last node
     if collection[-1].is_text_node():
         collection[-1].text = collection[-1].text.rstrip()
-    return new_collection
+    return collection
 
 
 def _remove_noop_on_off_italics(collection):

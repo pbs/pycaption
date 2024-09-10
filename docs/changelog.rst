@@ -2,14 +2,14 @@ Changelog
 ---------
 2.2.13
 ^^^^^^
-- Mid-row codes only add spaces only if there isn't one before
-- Mid-row codes only add spaces only if affects the text in the same row (not adding if after previous text follows break or breaks)
-- Remove spaces to the end of the lines
-- Change error message for the 32 character limit.
+- Mid-row codes only add spaces only if there isn't one before.
+- Mid-row codes add spaces only if affects the text in the same row (not adding if it follows break or PACS).
+- Remove spaces to the end of the lines.
 - Close italics on receiving another style setting command.
 - Throw an CaptionReadNoCaptions error in case of empty input file are provided
-- Properly add breaks (it was only for jumps to next row). Now it adds as many breaks as the difference between row numbers.
 - Ignore repositioning commands which are not followed by any text before breaks.
+- Mid-row codes will not add the space if is in front of punctuation.
+- Fix a bug with background codes when InstructionNodeCreator collection is empty.
 
 2.2.12
 ^^^^^^
