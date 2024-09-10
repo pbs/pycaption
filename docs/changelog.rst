@@ -10,6 +10,7 @@ Changelog
 - Ignore repositioning commands which are not followed by any text before breaks.
 - Mid-row codes will not add the space if is in front of punctuation.
 - Fix a bug with background codes when InstructionNodeCreator collection is empty.
+- Fix a bug WebVTT writer adding double line breaks.
 
 2.2.12
 ^^^^^^
