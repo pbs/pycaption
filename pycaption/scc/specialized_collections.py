@@ -762,7 +762,7 @@ def _format_italics(collection):
     return new_collection
 
 
-def _remove_spaces_at_end_of_the_line(collection: list[_InstructionNode]):
+def _remove_spaces_at_end_of_the_line(collection):
     for idx, node in enumerate(collection):
         if (
             idx > 0
