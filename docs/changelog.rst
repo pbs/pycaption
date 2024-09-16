@@ -6,7 +6,7 @@ Changelog
 - Mid-row codes add spaces only if they affect the text in the same row (not adding if it follows break or PACS).
 - Remove spaces to the end of the lines.
 - Close italics on receiving another style setting command.
-- Throw an CaptionReadNoCaptions error in case of empty input file are provided.
+- Throw an CaptionReadNoCaptions error in case of an empty input file is provided.
 - Ignore repositioning commands which are not followed by any text before breaks.
 - Mid-row codes will not add the space if it is in front of punctuation.
 - Fix a bug with background codes when the InstructionNodeCreator collection is empty.
