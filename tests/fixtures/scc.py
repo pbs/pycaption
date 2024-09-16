@@ -6,19 +6,19 @@ def sample_scc_created_dfxp_with_wrongly_closing_spans():
     return """\
 Scenarist_SCC V1.0
 
-00:01:28;09 9420 942f 94ae 9420 9452 8080 e3e3 e3e3 e3e3 9470 8080 e3a1 e3a1
+00:01:28;09 9420 94ae 9420 9452 8080 e3e3 e3e3 e3e3 9470 8080 e3a1 e3a1 942f
 
 00:01:31;10 9420 942f 94ae
 
-00:01:31;18 9420 9454 6262 6262 9458 8080 91ae e3e3 e3e3 9470 8080 6262 6161
+00:01:31;18 9420 9454 6262 6262 9458 8080 91ae e3e3 e3e3 9470 8080 6262 6161 942f
 
 00:01:35;18 9420 942f 94ae
 
 00:01:40;25 942c
 
-00:01:51;18 9420 9452 8080 6161 94da 8080 91ae 6262 9470 8080 e3e3
+00:01:51;18 9420 9452 8080 6161 94da 8080 91ae 6262 9470 8080 e3e3 942f
 
-00:01:55;22 9420 942f 6162 e364 94f4 8080 6162 e364
+00:01:55;22 9420 6162 e364 94f4 8080 6162 e364 942f
 
 00:01:59;14 9420 942f 94ae
 """
@@ -81,7 +81,7 @@ def sample_scc_pop_on():
 def sample_scc_multiple_positioning():
     return """Scenarist_SCC V1.0
 
-00:00:00:16 94ae 94ae 9420 9420 1370 1370 6162 6162 91d6 91d6 e364 e364 927c 927c e5e6 e5e6 942c 942c 942f 942f
+00:00:00:16 94ae 94ae 9420 9420 1370 1370 6162 6162 91d6 91d6 e364 e364 92fd 92fd e5e6 e5e6 942c 942c 942f 942f
 
 00:00:02:16 94ae 94ae 9420 9420 16f2 16f2 6768 6768 9752 9752 e9ea e9ea 97f2 97f2 6bec 6bec 942c 942c 942f 942f
 
@@ -484,4 +484,154 @@ Scenarist_SCC V1.0
 00:00:06;57	9420 94e0 c16e 6420 68e5 2073 61e9 642c 2049 20e3 616e 2064 ef20 6120 54d6 2073 68ef f7ae 942c 8080 8080 942f
 
 00:00:08;58	9420 9452 4920 ea75 73f4 20f7 616e f4e5 6420 ef6e e520 7368 eff7 2c80 94f2 ea75 73f4 20f4 ef20 6861 76e5 2061 7320 6120 ece9 f4f4 ece5 942c 8080 8080 942f
+"""
+
+
+@pytest.fixture(scope="function")
+def sample_scc_mid_row_before_text_pop():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01:24	9420 91d0 9120 c1c2 20c1 c280 942f
+    
+"""
+
+
+@pytest.fixture(scope="function")
+def sample_scc_mid_row_before_text_roll():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01:24	9425 91d0 9120 c1c2 20c1 c280
+
+"""
+
+
+@pytest.fixture(scope="session")
+def sample_scc_mid_row_before_text_paint():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01:24	9429 91d0 9120 c1c2 20c1 c280
+
+"""
+
+
+@pytest.fixture(scope="session")
+def sample_scc_mid_row_following_text_no_text_before_italics_off_pop():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01:24	9420 91ce 91ab 91ae c1c2 9120 c1c2 942f
+
+"""
+
+
+@pytest.fixture(scope="session")
+def sample_scc_mid_row_following_text_no_text_before_italics_off_roll():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01:24	9425 91ce 91ab 91ae c1c2 9120 c1c2 
+
+"""
+
+
+@pytest.fixture(scope="session")
+def sample_scc_mid_row_following_text_no_text_before_italics_off_paint():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01:24	9429 91ce 91ab 91ae c1c2 9120 c1c2 
+
+"""
+
+
+@pytest.fixture(scope="session")
+def sample_scc_mid_row_following_text_no_text_before_italics_on_pop():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01:24	9420 91d0 c1c2 91ae c1c2 942f
+
+"""
+
+
+@pytest.fixture(scope="session")
+def sample_scc_mid_row_following_text_no_text_before_italics_on_roll():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01:24	9425 91d0 c1c2 91ae c1c2 
+
+"""
+
+
+@pytest.fixture(scope="session")
+def sample_scc_mid_row_following_text_no_text_before_italics_on_paint():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01:24	9429 91d0 c1c2 91ae c1c2 
+
+"""
+
+
+@pytest.fixture(scope="session")
+def sample_scc_mid_row_with_space_before_pop():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01:24	9420 91d0 c180 c220 91ae c1c2 942f
+
+"""
+
+
+@pytest.fixture(scope="session")
+def sample_scc_mid_row_with_space_before_roll():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01:24	9425 91d0 c180 c220 91ae c1c2
+
+"""
+
+
+@pytest.fixture(scope="session")
+def sample_scc_mid_row_with_space_before_paint():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01:24	9429 91d0 c180 c220 91ae c1c2
+
+"""
+
+
+@pytest.fixture(scope="session")
+def sample_scc_with_spaces_at_eol_pop():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01:24	9420 91d0 c180 c220 91e0 c1c2 2020 2080 92c2 c1c2 2080 942f
+
+"""
+
+
+@pytest.fixture(scope="session")
+def sample_scc_with_spaces_at_eol_roll():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01:24	9425 91d0 c180 c220 91e0 c1c2 2020 2080 92c2 c1c2 2080
+
+"""
+
+
+@pytest.fixture(scope="session")
+def sample_scc_with_spaces_at_eol_paint():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01:24	9429 91d0 c180 c220 91e0 c1c2 2020 2080 92c2 c1c2 2080
+
 """

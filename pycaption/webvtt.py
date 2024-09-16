@@ -3,11 +3,11 @@ import re
 import sys
 from copy import deepcopy
 
-from .base import (
-    BaseReader, BaseWriter, CaptionSet, CaptionList, Caption, CaptionNode,
-)
+from .base import BaseReader, BaseWriter, Caption, CaptionList, CaptionNode, CaptionSet
 from .exceptions import (
-    CaptionReadError, CaptionReadSyntaxError, CaptionReadNoCaptions,
+    CaptionReadError,
+    CaptionReadNoCaptions,
+    CaptionReadSyntaxError,
     InvalidInputError,
 )
 from .geometry import HorizontalAlignmentEnum, Layout
@@ -15,22 +15,22 @@ from .geometry import HorizontalAlignmentEnum, Layout
 # A WebVTT timing line has both start/end times and layout related settings
 # (referred to as 'cue settings' in the documentation)
 # The following pattern captures [start], [end] and [cue settings] if existent
-TIMING_LINE_PATTERN = re.compile(r'^(\S+)\s+-->\s+(\S+)(?:\s+(.*?))?\s*$')
-TIMESTAMP_PATTERN = re.compile(r'^(\d+):(\d{2})(:\d{2})?\.(\d{3})')
-VOICE_SPAN_PATTERN = re.compile('<v(\\.\\w+)* ([^>]*)>')
+TIMING_LINE_PATTERN = re.compile(r"^(\S+)\s+-->\s+(\S+)(?:\s+(.*?))?\s*$")
+TIMESTAMP_PATTERN = re.compile(r"^(\d+):(\d{2})(:\d{2})?\.(\d{3})")
+VOICE_SPAN_PATTERN = re.compile("<v(\\.\\w+)* ([^>]*)>")
 OTHER_SPAN_PATTERN = re.compile(
-    r'</?([cibuv]|ruby|rt|lang|(\d+):(\d{2})(:\d{2})?\.(\d{3})).*?>'
+    r"</?([cibuv]|ruby|rt|lang|(\d+):(\d{2})(:\d{2})?\.(\d{3})).*?>"
 )  # These WebVTT tags are stripped off the cues on conversion
 
 WEBVTT_VERSION_OF = {
-    HorizontalAlignmentEnum.LEFT: 'left',
-    HorizontalAlignmentEnum.CENTER: 'center',
-    HorizontalAlignmentEnum.RIGHT: 'right',
-    HorizontalAlignmentEnum.START: 'start',
-    HorizontalAlignmentEnum.END: 'end'
+    HorizontalAlignmentEnum.LEFT: "left",
+    HorizontalAlignmentEnum.CENTER: "center",
+    HorizontalAlignmentEnum.RIGHT: "right",
+    HorizontalAlignmentEnum.START: "start",
+    HorizontalAlignmentEnum.END: "end",
 }
 
-DEFAULT_ALIGN = 'start'
+DEFAULT_ALIGN = "start"
 
 
 def microseconds(h, m, s, f):
@@ -42,7 +42,9 @@ def microseconds(h, m, s, f):
 
 
 class WebVTTReader(BaseReader):
-    def __init__(self, ignore_timing_errors=True, time_shift_milliseconds=0, *args, **kwargs):
+    def __init__(
+        self, ignore_timing_errors=True, time_shift_milliseconds=0, *args, **kwargs
+    ):
         """
         :param ignore_timing_errors: Whether to ignore timing checks
         :type ignore_timing_errors: bool
@@ -53,11 +55,11 @@ class WebVTTReader(BaseReader):
         self.time_shift_microseconds = time_shift_milliseconds * 1000
 
     def detect(self, content):
-        return 'WEBVTT' in content
+        return "WEBVTT" in content
 
-    def read(self, content, lang='en-US'):
+    def read(self, content, lang="en-US"):
         if not isinstance(content, str):
-            raise InvalidInputError('The content is not a unicode string.')
+            raise InvalidInputError("The content is not a unicode string.")
 
         caption_set = CaptionSet({lang: self._parse(content.splitlines())})
 
@@ -76,31 +78,30 @@ class WebVTTReader(BaseReader):
 
         for i, line in enumerate(lines):
 
-            if '-->' in line:
+            if "-->" in line:
                 found_timing = True
                 timing_line = i
                 last_start_time = captions[-1].start if captions else 0
                 try:
                     start, end, layout_info = self._parse_timing_line(
-                        line, last_start_time)
+                        line, last_start_time
+                    )
                 except CaptionReadError as e:
-                    new_msg = f'{e.args[0]} (line {timing_line})'
+                    new_msg = f"{e.args[0]} (line {timing_line})"
                     tb = sys.exc_info()[2]
                     raise type(e)(new_msg).with_traceback(tb) from None
 
-            elif '' == line:
+            elif "" == line:
                 if found_timing and nodes:
                     found_timing = False
-                    caption = Caption(
-                        start, end, nodes, layout_info=layout_info)
+                    caption = Caption(start, end, nodes, layout_info=layout_info)
                     captions.append(caption)
                     nodes = []
             else:
                 if found_timing:
                     if nodes:
                         nodes.append(CaptionNode.create_break())
-                    nodes.append(CaptionNode.create_text(
-                        self._decode(line)))
+                    nodes.append(CaptionNode.create_text(self._decode(line)))
                 else:
                     # it's a comment or some metadata; ignore it
                     pass
@@ -113,21 +114,21 @@ class WebVTTReader(BaseReader):
         return captions
 
     def _remove_styles(self, line):
-        partial_result = VOICE_SPAN_PATTERN.sub('\\2: ', line)
-        return OTHER_SPAN_PATTERN.sub('', partial_result)
+        partial_result = VOICE_SPAN_PATTERN.sub("\\2: ", line)
+        return OTHER_SPAN_PATTERN.sub("", partial_result)
 
     def _validate_timings(self, start, end, last_start_time):
         if start is None:
-            raise CaptionReadSyntaxError('Invalid cue start timestamp.')
+            raise CaptionReadSyntaxError("Invalid cue start timestamp.")
         if end is None:
-            raise CaptionReadSyntaxError('Invalid cue end timestamp.')
+            raise CaptionReadSyntaxError("Invalid cue end timestamp.")
         if start > end:
-            raise CaptionReadError(
-                'End timestamp is not greater than start timestamp.')
+            raise CaptionReadError("End timestamp is not greater than start timestamp.")
         if start < last_start_time:
             raise CaptionReadError(
-                'Start timestamp is not greater than or equal'
-                'to start timestamp of previous cue.')
+                "Start timestamp is not greater than or equal"
+                "to start timestamp of previous cue."
+            )
 
     def _parse_timing_line(self, line, last_start_time):
         """
@@ -135,7 +136,7 @@ class WebVTTReader(BaseReader):
         """
         m = TIMING_LINE_PATTERN.search(line)
         if not m:
-            raise CaptionReadSyntaxError('Invalid timing format.')
+            raise CaptionReadSyntaxError("Invalid timing format.")
 
         start = self._parse_timestamp(m.group(1)) + self.time_shift_microseconds
         end = self._parse_timestamp(m.group(2)) + self.time_shift_microseconds
@@ -157,7 +158,7 @@ class WebVTTReader(BaseReader):
         """
         m = TIMESTAMP_PATTERN.search(timestamp)
         if not m:
-            raise CaptionReadSyntaxError('Invalid timing format.')
+            raise CaptionReadSyntaxError("Invalid timing format.")
 
         m = m.groups()
 
@@ -175,23 +176,23 @@ class WebVTTReader(BaseReader):
         """
         s = s.strip()
         # Covert voice span
-        s = VOICE_SPAN_PATTERN.sub('\\2: ', s)
+        s = VOICE_SPAN_PATTERN.sub("\\2: ", s)
         # TODO: Add support for other WebVTT tags. For now just strip them
         # off the text.
-        s = OTHER_SPAN_PATTERN.sub('', s)
+        s = OTHER_SPAN_PATTERN.sub("", s)
         # Replace WebVTT special XML codes with plain unicode values
-        s = s.replace('&lt;', '<')
-        s = s.replace('&gt;', '>')
-        s = s.replace('&lrm;', '\u200e')
-        s = s.replace('&rlm;', '\u200f')
-        s = s.replace('&nbsp;', '\u00a0')
+        s = s.replace("&lt;", "<")
+        s = s.replace("&gt;", ">")
+        s = s.replace("&lrm;", "\u200e")
+        s = s.replace("&rlm;", "\u200f")
+        s = s.replace("&nbsp;", "\u00a0")
         # Must do ampersand last
-        s = s.replace('&amp;', '&')
+        s = s.replace("&amp;", "&")
         return s
 
 
 class WebVTTWriter(BaseWriter):
-    HEADER = 'WEBVTT\n\n'
+    HEADER = "WEBVTT\n\n"
     global_layout = None
     video_width = None
     video_height = None
@@ -219,9 +220,9 @@ class WebVTTWriter(BaseWriter):
 
         captions = caption_set.get_captions(lang)
 
-        return output + '\n'.join(
-            [self._convert_caption(caption_set, caption)
-             for caption in captions])
+        return output + "\n".join(
+            [self._convert_caption(caption_set, caption) for caption in captions]
+        )
 
     def _timestamp(self, ts):
         td = datetime.timedelta(microseconds=ts)
@@ -234,23 +235,23 @@ class WebVTTWriter(BaseWriter):
 
     @staticmethod
     def _convert_style_to_text_tag(style):
-        if style == 'italics':
-            return ['<i>', '</i>']
-        elif style == 'underline':
-            return ['<u>', '</u>']
-        elif style == 'bold':
-            return ['<b>', '</b>']
+        if style == "italics":
+            return ["<i>", "</i>"]
+        elif style == "underline":
+            return ["<u>", "</u>"]
+        elif style == "bold":
+            return ["<b>", "</b>"]
         else:
-            return ['', '']
+            return ["", ""]
 
     def _calculate_resulting_style(self, style, caption_set):
         resulting_style = {}
 
         style_classes = []
-        if 'classes' in style:
-            style_classes = style['classes']
-        elif 'class' in style:
-            style_classes = [style['class']]
+        if "classes" in style:
+            style_classes = style["classes"]
+        elif "class" in style:
+            style_classes = [style["class"]]
 
         for style_class in style_classes:
             sub_style = caption_set.get_style(style_class).copy()
@@ -271,11 +272,11 @@ class WebVTTWriter(BaseWriter):
 
         start = self._timestamp(caption.start)
         end = self._timestamp(caption.end)
-        timespan = f'{start} --> {end}'
+        timespan = f"{start} --> {end}"
 
-        output = ''
+        output = ""
 
-        cue_style_tags = ['', '']
+        cue_style_tags = ["", ""]
 
         # Text styling
         style = self._calculate_resulting_style(caption.style, caption_set)
@@ -289,8 +290,8 @@ class WebVTTWriter(BaseWriter):
             if not layout:
                 layout = caption.layout_info or self.global_layout
             cue_settings = self._convert_positioning(layout)
-            output += timespan + cue_settings + '\n'
-            output += cue_style_tags[0] + cue_text + cue_style_tags[1] + '\n'
+            output += timespan + cue_settings + "\n"
+            output += cue_style_tags[0] + cue_text + cue_style_tags[1] + "\n"
 
         return output
 
@@ -301,12 +302,12 @@ class WebVTTWriter(BaseWriter):
         :rtype: str
         """
         if not layout:
-            return ''
+            return ""
 
         # If it's converting from WebVTT to WebVTT, keep positioning info
         # unchanged
         if layout.webvtt_positioning:
-            return f' {layout.webvtt_positioning}'
+            return f" {layout.webvtt_positioning}"
 
         left_offset = None
         top_offset = None
@@ -320,15 +321,14 @@ class WebVTTWriter(BaseWriter):
                 # There are absolute positioning values for this cue but the
                 # Writer is explicitly configured not to do any relativization.
                 # Ignore all positioning for this cue.
-                return ''
+                return ""
 
         # Ensure that all positioning values are measured using percentage.
         # This may raise an exception if layout.is_relative() == False
         # If you want to avoid it, you have to turn off relativization by
         # initializing this Writer with relativize=False.
         if not already_relative:
-            layout = layout.as_percentage_of(
-                self.video_width, self.video_height)
+            layout = layout.as_percentage_of(self.video_width, self.video_height)
 
         # Ensure that when there's a left offset the caption is not pushed out
         # of the screen. If the execution got this far it means origin and
@@ -366,13 +366,13 @@ class WebVTTWriter(BaseWriter):
 
         if layout.alignment:
             alignment = WEBVTT_VERSION_OF.get(
-                layout.alignment.horizontal, DEFAULT_ALIGN)
+                layout.alignment.horizontal, DEFAULT_ALIGN
+            )
         else:
             alignment = DEFAULT_ALIGN
-        cue_settings = ''
+        cue_settings = ""
 
-        if alignment and \
-                alignment != WEBVTT_VERSION_OF[HorizontalAlignmentEnum.CENTER]:
+        if alignment and alignment != WEBVTT_VERSION_OF[HorizontalAlignmentEnum.CENTER]:
             # Not sure why this condition was here, maybe because center
             # alignment is applied automatically without needing to specify it
             cue_settings += f" align:{alignment}"
@@ -402,23 +402,22 @@ class WebVTTWriter(BaseWriter):
         layout_groups = []
         # A properly encoded WebVTT string (plain unicode must be properly
         # escaped before being appended to this string)
-        s = ''
-        row, column, prev_row, prev_column = 0, 0, 0, 0
+        s = ""
         for i, node in enumerate(nodes):
             if node.type_ == CaptionNode.TEXT:
                 if s and current_layout and node.layout_info != current_layout:
                     # If the positioning changes from one text node to
                     # another, a new WebVTT cue has to be created.
                     row, column = node.position if node.position else (0, 0)
-                    prev_row, prev_column = current_node.position if current_node.position else (0, 0)
-                    if row == prev_row + 1:
-                        s += '\n'
-                    else:
+                    prev_row, prev_column = (
+                        current_node.position if current_node.position else (0, 0)
+                    )
+                    if row != prev_row + 1:
                         layout_groups.append((s, current_layout))
-                        s = ''
+                        s = ""
                 # ATTENTION: This is where the plain unicode node content is
                 # finally encoded as WebVTT.
-                s += self._encode_illegal_characters(node.content) or '&nbsp;'
+                s += self._encode_illegal_characters(node.content) or "&nbsp;"
                 current_layout = node.layout_info
                 current_node = node
             elif node.type_ == CaptionNode.STYLE:
@@ -426,7 +425,7 @@ class WebVTTWriter(BaseWriter):
                     node.content, caption_set
                 )
 
-                styles = ['italics', 'underline', 'bold']
+                styles = ["italics", "underline", "bold"]
                 if not node.start:
                     styles.reverse()
 
@@ -442,10 +441,10 @@ class WebVTTWriter(BaseWriter):
                 # "Style node"
             elif node.type_ == CaptionNode.BREAK:
                 if i > 0 and nodes[i - 1].type_ != CaptionNode.TEXT:
-                    s += '&nbsp;'
+                    s += "&nbsp;"
                 if i == 0:  # cue text starts with a break
-                    s += '&nbsp;'
-                s += '\n'
+                    s += "&nbsp;"
+                s += "\n"
 
         if s:
             layout_groups.append((s, current_layout))
@@ -458,12 +457,12 @@ class WebVTTWriter(BaseWriter):
             - http://dev.w3.org/html5/webvtt/#dfn-webvtt-cue-text-span
         :type s: str
         """
-        s = s.replace('&', '&amp;')
-        s = s.replace('<', '&lt;')
+        s = s.replace("&", "&amp;")
+        s = s.replace("<", "&lt;")
 
         # The substring "-->" is also not allowed according to this:
         #   - http://dev.w3.org/html5/webvtt/#dfn-webvtt-cue-block
-        s = s.replace('-->', '--&gt;')
+        s = s.replace("-->", "--&gt;")
 
         # The following characters have escaping codes for some reason, but
         # they're not illegal, so for now I'll leave this commented out so that
