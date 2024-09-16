@@ -1,8 +1,20 @@
 Changelog
 ---------
+2.2.13
+^^^^^^
+- Mid-row codes only add spaces only if there isn't one before.
+- Mid-row codes add spaces only if they affect the text in the same row (not adding if it follows break or PACS).
+- Remove spaces to the end of the lines.
+- Close italics on receiving another style setting command.
+- Throw an CaptionReadNoCaptions error in case of empty input file are provided.
+- Ignore repositioning commands which are not followed by any text before breaks.
+- Mid-row codes will not add the space if it is in front of punctuation.
+- Fix a bug with background codes when the InstructionNodeCreator collection is empty.
+- Fix a bug WebVTT writer adding double line breaks.
+
 2.2.12
 ^^^^^^
-- Pinned nltk version to 3.8.0
+- Pinned nltk to 3.8.0
 
 2.2.11
 ^^^^^^
