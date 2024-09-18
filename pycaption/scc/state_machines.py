@@ -48,6 +48,9 @@ class _PositioningTracker:
         # Tab offsets after line breaks will be ignored to avoid repositioning
         elif self._break_required and is_tab_offset:
             return
+        # force not to reposition on the same coordinates
+        elif positioning == current:
+            return
         else:
             # Reset the "current" position altogether.
             self._positions = [positioning]
