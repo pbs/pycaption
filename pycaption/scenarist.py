@@ -99,6 +99,7 @@ class ScenaristDVDWriter(BaseWriter):
         Language.get('zh-TW'): {'fontfile': f"{os.path.dirname(__file__)}/NotoSansTC+Math-Regular.ttf", 'align': 'left'},
         Language.get('zh-CN'): {'fontfile': f"{os.path.dirname(__file__)}/NotoSansSC+Math-Regular.ttf", 'align': 'left'},
         Language.get('ko-KR'): {'fontfile': f"{os.path.dirname(__file__)}/NotoSansKR+Math-Regular.ttf", 'align': 'left'},
+        Language.get('th-TH'): {'fontfile': f"{os.path.dirname(__file__)}/NotoSansThaiLooped-Regular.ttf", 'align': 'left'},
     }
 
     def __init__(self, relativize=True, video_width=720, video_height=480, fit_to_screen=True, tape_type='NON_DROP',

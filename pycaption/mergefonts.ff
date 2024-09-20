@@ -1,4 +1,6 @@
 #!/usr/local/bin/fontforge
+# usage:
+# fontforge -script mergefonts.ff <primary font> NotoSansDisplay-Regular-Note-Math.ttf <output font>
 Open($1)
 SelectAll()
 Generate("1.ttf")
