@@ -424,7 +424,7 @@ class InstructionNodeCreator:
                 # command sets a different style (underline, plain)
                 # so we need to close italics if we have an open italics tag
                 # otherwise we ignore it
-                # if break is required,add style tag then break
+                # if break is required, add style tag then break
                 if self.last_style == "italics on":
                     self._collection.append(
                         _InstructionNode.create_italics_style(
@@ -446,7 +446,7 @@ class InstructionNodeCreator:
         prev_text_node = self.get_previous_text_node()
         prev_node_is_break = prev_text_node is not None and any(
             x.is_explicit_break()
-            for x in self._collection[self._collection.index(prev_text_node) :]
+            for x in self._collection[self._collection.index(prev_text_node):]
         )
         if (
             command in MID_ROW_CODES
@@ -471,10 +471,12 @@ class InstructionNodeCreator:
 
         :type command: str
         """
+        is_offset = False
         if command in PAC_TAB_OFFSET_COMMANDS:
             prev_positioning = self._position_tracer.default
             tab_offset = PAC_TAB_OFFSET_COMMANDS[command]
             positioning = (prev_positioning[0], prev_positioning[1] + tab_offset)
+            is_offset = True
         else:
             first, second = command[:2], command[2:]
             try:
@@ -483,10 +485,24 @@ class InstructionNodeCreator:
             except KeyError:
                 # if not PAC or OFFSET we're not changing position
                 return
-        self._position_tracer.update_positioning(positioning)
+        offset_after_break = is_offset and self.has_break_before(self._collection)
+        if not offset_after_break:
+            # Tab offsets after line breaks will be ignored to avoid repositioning
+            self._position_tracer.update_positioning(positioning)
 
     def __iter__(self):
         return iter(_format_italics(self._collection))
+
+    @staticmethod
+    def has_break_before(collection):
+        if len(collection) == 0:
+            return False
+        for element in collection[::-1]:
+            if element._type == 0:
+                return False
+            elif element._type == 1:
+                return True
+        return False
 
     @classmethod
     def from_list(cls, stash_list, position_tracker):

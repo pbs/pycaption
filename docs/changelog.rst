@@ -1,5 +1,13 @@
 Changelog
 ---------
+2.2.15
+^^^^^^
+- Prevent creating a repositioning command to the same coordinates.
+
+2.2.14
+^^^^^^
+- Fix an issue with WebVTT writer text positioning on break inside a cue.
+
 2.2.13
 ^^^^^^
 - Mid-row codes only add spaces only if there isn't one before.

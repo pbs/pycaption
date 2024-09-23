@@ -42,11 +42,14 @@ class _PositioningTracker:
         is_tab_offset = new_row == row and col + 1 <= new_col <= col + 3
         # One line below will be treated as line break, not repositioning
         if new_row == row + 1:
-            self._positions.append((new_row, new_col))
+            self._positions.append((new_row, col))
             self._break_required = True
             self._last_column = new_col
         # Tab offsets after line breaks will be ignored to avoid repositioning
         elif self._break_required and is_tab_offset:
+            return
+        # force not to reposition on the same coordinates
+        elif positioning == current:
             return
         else:
             # Reset the "current" position altogether.
