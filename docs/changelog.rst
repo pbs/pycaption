@@ -1,5 +1,9 @@
 Changelog
 ---------
+2.2.15
+^^^^^^
+- Always skip doubled special characters, not just in case the cue starters are doubled.
+
 2.2.14
 ^^^^^^
 - Fix an issue with WebVTT writer text positioning on break inside a cue.

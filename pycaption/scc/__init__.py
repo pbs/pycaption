@@ -367,13 +367,12 @@ class SCCReader(BaseReader):
         # doubled special characters and doubled extended characters
         # with only one member of each pair being displayed.
 
-        doubled_types = word != "94a1" and word in COMMANDS or _is_pac_command(word)
+        doubled_types = (word != "94a1" and word in COMMANDS) or _is_pac_command(word) or word in SPECIAL_CHARS
         if self.double_starter:
             doubled_types = (
                 doubled_types
                 or word in EXTENDED_CHARS
                 or word == "94a1"
-                or word in SPECIAL_CHARS
             )
 
         if word in CUE_STARTING_COMMAND and word != self.last_command:
