@@ -988,7 +988,7 @@ HEADER = 'Scenarist_SCC V1.0'
 
 # taken from
 # http://www.theneitherworld.com/mcpoodle/SCC_TOOLS/DOCS/CC_CHARS.HTML
-INCONVERTIBLE_TO_ASCII_EXTENDED_CHARS_ASSOCIATION = {
+SUBSTITUTE_CHARACTERS = {
     '¡': ["!", "i"],   # inverted exclamation mark
      '¤': ["C"],  # currency
      '¥': ["Y"],  # yen

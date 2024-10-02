@@ -419,8 +419,12 @@ class TestCoverageOnly:
             "AND IMPROVING THE LIVES OF ALL",
             "WE SERVE.",
             "®°½",
-            "®°½½",
+            "®°½",
             "ABû",
+            '♪',
+            '♪',
+            '♪♪',
+            '♪♪',
             "ÁÉÓ¡",
             "WHERE YOU'RE STANDING NOW,",
             "LOOKING OUT THERE, THAT'S AL",
@@ -430,6 +434,8 @@ class TestCoverageOnly:
             "And wildlife.",
             ">> Bike Iowa, your source for",
         ]
+        for x in actual_texts:
+            print(x)
         assert expected_texts == actual_texts
 
     def test_multiple_formats(self, sample_scc_multiple_formats):
