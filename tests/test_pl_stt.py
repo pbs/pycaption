@@ -8,7 +8,6 @@ from tests.samples.pl_stt import (
     SAMPLE_PL_STT,
     SAMPLE_PL_STT_NO_HEADER,
     SAMPLE_PL_STT_BAD_HEADER_1,
-    SAMPLE_PL_STT_BAD_HEADER_2,
 )
 
 
@@ -50,7 +49,3 @@ class PLSTTReaderTestCase(unittest.TestCase):
 
     def test_bad_header_1(self):
         self.assertRaises(InvalidInputError, self.reader.read, SAMPLE_PL_STT_BAD_HEADER_1)
-        self.assertRaises(InvalidInputError, self.reader.read, SAMPLE_PL_STT_BAD_HEADER_2)
-
-    def test_bad_header_2(self):
-        self.assertRaises(InvalidInputError, self.reader.read, SAMPLE_PL_STT_BAD_HEADER_2)
