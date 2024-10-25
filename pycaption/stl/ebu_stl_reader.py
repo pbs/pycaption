@@ -238,7 +238,7 @@ class iso6937(codecs.Codec):
         return output, len(input)
 
     def search(name):
-        if name in ("iso6937", "iso_6937-2"):
+        if name in ("iso6937", "iso_6937-2", "iso_6937_2"):
             return codecs.CodecInfo(
                 name="iso_6937-2",
                 encode=iso6937().encode,
