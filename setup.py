@@ -8,7 +8,9 @@ README_PATH = os.path.join(
 with open('requirements.txt') as f:
     requirements = f.read().splitlines()
 install_requires = [req for req in requirements if not req.startswith('git+')]
-dependency_links = [req for req in requirements if req.startswith('git+')]
+install_requires += [req.split('#egg=')[1] + ' @ ' + req for req in requirements if req.startswith('git+')]
+
+print(install_requires)
 
 setup(
     name='pycaption',
@@ -19,9 +21,6 @@ setup(
     author_email='sebastian.annies@castlabs.com',
     url='https://github.com/castlabs/pycaption',
     install_requires=install_requires,
-    extras_require = {
-        'striprtf': [req for req in requirements if req.startswith('git+')]
-    },
     packages=find_packages(),
     include_package_data=True,
     classifiers=[
