@@ -237,15 +237,19 @@ class iso6937(codecs.Codec):
                 state = None
         return output, len(input)
 
-    def search(self, name):
+    def search(name):
         if name in ("iso6937", "iso_6937-2"):
-            return codecs.CodecInfo(self.encode, self.decode, name="iso_6937-2")
+            return codecs.CodecInfo(
+                name="iso_6937-2",
+                encode=iso6937().encode,
+                decode=iso6937().decode,
+            )
 
     def encode(self, input, errors="strict"):
         pass
 
 
-codecs.register(iso6937().search)
+codecs.register(iso6937.search)
 
 
 class STLReader(BaseReader):
