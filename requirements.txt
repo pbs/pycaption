@@ -6,3 +6,4 @@ fonttools~=4.33.3
 langcodes~=3.3.0
 arabic-reshaper==3.0.0
 python-bidi==0.4.2
+git+https://github.com/castlabs/striprtf.git@4d2a1fb9b1437fe068bdc3ffb1c87f0a4fe5d373#egg=striprtf

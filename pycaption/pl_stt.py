@@ -1,3 +1,4 @@
+from striprtf import striprtf
 from .base import BaseReader, CaptionSet, CaptionList, Caption, CaptionNode
 from .exceptions import CaptionReadNoCaptions, InvalidInputError
 
@@ -39,6 +40,8 @@ class PLSTTReader(BaseReader):
         return sub_start, sub_end, sub_text
 
     def detect(self, content):
+        if content.startswith(u'{\\rtf1'):
+            content = striprtf.rtf_to_text(content)
         if self._get_header(content) and self._get_body(content):
             return True
         else:
@@ -59,6 +62,8 @@ class PLSTTReader(BaseReader):
     def read(self, content, lang="en-US"):
         if type(content) != str:
             raise InvalidInputError("The content is not a unicode string.")
+        if content.startswith(u'{\\rtf1'):
+            content = striprtf.rtf_to_text(content)
 
         try:
             header = self._get_header(content)
