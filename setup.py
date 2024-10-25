@@ -19,7 +19,9 @@ setup(
     author_email='sebastian.annies@castlabs.com',
     url='https://github.com/castlabs/pycaption',
     install_requires=install_requires,
-    dependency_links=dependency_links,
+    extras_require = {
+        'striprtf': [req for req in requirements if req.startswith('git+')]
+    },
     packages=find_packages(),
     include_package_data=True,
     classifiers=[
