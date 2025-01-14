@@ -7,7 +7,7 @@ py-caption
 to read content into a CaptionSet object, and then use one of the Writers to
 output the CaptionSet into captions of your desired format.
 
-Tested with Python versions 3.6, 3.7, 3.8, 3.9, 3.10 and 3.11.
+Tested with Python versions 3.8, 3.9, 3.10, 3.11 and 3.12.
 (for Python 2 use pycaption < 1.0.0)
 
 For details, see the `documentation <http://pycaption.readthedocs.org>`__.
@@ -15,7 +15,7 @@ For details, see the `documentation <http://pycaption.readthedocs.org>`__.
 License
 -------
 
-This module is Copyright (c) 2012-2024 PBS.org and is available under the `Apache
+This module is Copyright (c) 2012-2025 PBS.org and is available under the `Apache
 License, Version 2.0 <http://www.apache.org/licenses/LICENSE-2.0>`__.
 
 .. |Build Status| image:: https://github.com/pbs/pycaption/actions/workflows/unit_tests.yml/badge.svg

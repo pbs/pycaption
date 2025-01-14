@@ -1,5 +1,9 @@
 Changelog
 ---------
+2.2.16
+^^^^^^
+- Update copyright details.
+
 2.2.15
 ^^^^^^
 - Always skip doubled special characters, not just in case the cue starters are doubled.
