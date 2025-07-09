@@ -147,7 +147,7 @@ Positioning
 
 Some caption formats support positioning information and PyCaption tries to preserve it when possible. In the process, some adjustments are made. Some of these adjustments can be customized by properly initializing the Writer class.
 
-.. py:class:: BaseWriter(relativize=True, video_width=None, video_height=None, fit_to_screen=True)
+.. py:class:: BaseWriter(relativize=True, video_width=None, video_height=None, fit_to_screen=True, include_positioning=True)
 
     :param relativize: If True (default), converts absolute positioning
             values (e.g. px) to percentage. ATTENTION: WebVTT does not support
@@ -163,6 +163,9 @@ Some caption formats support positioning information and PyCaption tries to pres
             (re)calculate it based on origin. It is a pycaption fix for caption
             files that are technically valid but contains inconsistent settings
             that may cause long captions to be cut out of the screen.
+    :param include_positioning: If True (default), positioning information
+            is processed and included in the output. If False, all positioning
+            information is ignored and default positioning is used.
 
 Examples
 ~~~~~~~~
