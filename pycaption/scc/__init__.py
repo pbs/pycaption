@@ -572,14 +572,22 @@ class SCCWriter(BaseWriter):
 
         # PASS 3:
         # Write captions.
+        captions = []
         for code, start, end in codes:
-            output += f"{self._format_timestamp(start)}\t"
-            output += "94ae 94ae 9420 9420 "
-            output += code
-            output += "942c 942c 942f 942f\n\n"
+            caption = f"{self._format_timestamp(start)}\t"
+            caption += "94ae 94ae 9420 9420 "
+            caption += code
+            caption += "942c 942c 942f 942f"
+            captions.append((start, caption))
             if end is not None:
-                output += f"{self._format_timestamp(end)}\t942c 942c\n\n"
+                captions.append((end, f"{self._format_timestamp(end)}\t942c 942c"))
 
+        # PASS 4:
+        # Sort captions.
+        list.sort(captions, key=lambda caption: caption[0])
+        captions = ["%s" % code[1] for code in captions]
+
+        output += "\n\n".join(captions)
         return output
 
     # Wrap lines at 32 chars
