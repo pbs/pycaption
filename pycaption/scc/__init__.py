@@ -566,11 +566,21 @@ class SCCWriter(BaseWriter):
             if index == 0:
                 continue
             previous_code, previous_start, previous_end = codes[index - 1]
-            if previous_end + 3 * MICROSECONDS_PER_CODEWORD >= code_start:
-                codes[index - 1] = (previous_code, previous_start, None)
-            codes[index] = (code, code_start, end)
+            # concatenate overlapping code
+            if previous_start > code_start:
+                combined_code = f"{previous_code} 942c 942c 942f 942f 94ae 94ae 9420 9420 {code}"
+                codes[index - 1] = (None)
+                codes[index] = (combined_code, previous_start, end)
+            else:
+                if previous_end + 3 * MICROSECONDS_PER_CODEWORD >= code_start:
+                    codes[index - 1] = (previous_code, previous_start, None)
+                codes[index] = (code, code_start, end)
 
         # PASS 3:
+        # Remove empty captions due to code concatenation
+        codes = list(filter(None, codes))
+
+        # PASS 4:
         # Write captions.
         for code, start, end in codes:
             output += f"{self._format_timestamp(start)}\t"
