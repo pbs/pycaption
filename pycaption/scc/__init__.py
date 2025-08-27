@@ -78,6 +78,7 @@ http://www.theneitherworld.com/mcpoodle/SCC_TOOLS/DOCS/SCC_FORMAT.HTML
  just carried over when implementing positioning.
 """
 
+import os
 import math
 import re
 import textwrap
@@ -566,19 +567,29 @@ class SCCWriter(BaseWriter):
             if index == 0:
                 continue
             previous_code, previous_start, previous_end = codes[index - 1]
-            if previous_end + 3 * MICROSECONDS_PER_CODEWORD >= code_start:
-                codes[index - 1] = (previous_code, previous_start, None)
-            codes[index] = (code, code_start, end)
+            # concatenate overlapping code
+            if previous_start > code_start:
+                combined_code = f"{previous_code} 942c 942c 942f 942f 94ae 94ae 9420 9420 {code}"
+                codes[index - 1] = (None)
+                codes[index] = (combined_code, previous_start, end)
+            else:
+                if previous_end + 3 * MICROSECONDS_PER_CODEWORD >= code_start:
+                    codes[index - 1] = (previous_code, previous_start, None)
+                codes[index] = (code, code_start, end)
 
         # PASS 3:
+        # Remove empty captions due to code concatenation
+        codes = list(filter(None, codes))
+
+        # PASS 4:
         # Write captions.
         for code, start, end in codes:
-            output += f"{self._format_timestamp(start)}\t"
+            output += f"{self._format_timestamp_df(start)}\t"
             output += "94ae 94ae 9420 9420 "
             output += code
             output += "942c 942c 942f 942f\n\n"
             if end is not None:
-                output += f"{self._format_timestamp(end)}\t942c 942c\n\n"
+                output += f"{self._format_timestamp_df(end)}\t942c 942c\n\n"
 
         return output
 
@@ -637,12 +648,73 @@ class SCCWriter(BaseWriter):
                 code = self._maybe_space(code)
             code = self._maybe_align(code)
         return code
+  
+#    @staticmethod
+#    def _format_timestamp(microseconds):
+#        seconds_float = microseconds / 1000.0 / 1000.0
+#         Convert to non-drop-frame timecode
+#        seconds_float *= 1000.0 / 1001.0
+#        hours = math.floor(seconds_float / 3600)
+#        seconds_float -= hours * 3600
+#        minutes = math.floor(seconds_float / 60)
+#        seconds_float -= minutes * 60
+#        seconds = math.floor(seconds_float)
+#        seconds_float -= seconds
+#        frames = math.floor(seconds_float * 30)
+#        return f"{hours:02}:{minutes:02}:{seconds:02}:{frames:02}"
+   
+    @staticmethod
+    def _format_timestamp_df(microseconds: int) -> str:
+        """
+        Convert microseconds → 29.97fps drop-frame timecode (HH:MM:SS;FF).
+        Applies drop-frame rules: skip frame numbers 00 and 01 at the start of every minute,
+        except every 10th minute.
+        """
+        # Convert elapsed wall-clock microseconds into equivalent 29.97fps frames
+        total_frames = round(microseconds * 30 / 1_000_000 * 1000 / 1001)
+
+        fps = 30
+        FRAMES_PER_HOUR  = 107892   # 29.97 * 3600
+        FRAMES_PER_10MIN = 17982    # 29.97 * 600
+
+        # Hours
+        hours = total_frames // FRAMES_PER_HOUR
+        total_frames -= hours * FRAMES_PER_HOUR
+
+        # Tens of minutes
+        tens = total_frames // FRAMES_PER_10MIN
+        total_frames -= tens * FRAMES_PER_10MIN
+
+        # Minutes within 10-min block
+        minutes_in_block = 0
+        for i in range(10):
+            minute_frames = 1800 if i == 9 else 1798  # 10th minute has 1800 frames, others 1798
+            if total_frames >= minute_frames:
+                total_frames -= minute_frames
+                minutes_in_block += 1
+            else:
+                break
+
+        minutes = tens * 10 + minutes_in_block
+
+        # Seconds and frames
+        seconds = total_frames // fps
+        frames  = total_frames % fps
+
+        # Return drop-frame formatted timecode (semicolon!)
+        return f"{hours:02}:{minutes:02}:{seconds:02};{frames:02}"
 
     @staticmethod
-    def _format_timestamp(microseconds):
-        seconds_float = microseconds / 1000.0 / 1000.0
-        # Convert to non-drop-frame timecode
+    def _format_timestamp_ndf(microseconds: int) -> str:
+        """
+        Convert microseconds → 29.97fps non-drop-frame timecode (HH:MM:SS:FF).
+        Uses 30fps frame counting with NTSC correction factor.
+        """
+        # Convert to elapsed seconds
+        seconds_float = microseconds / 1_000_000.0
+        # Apply NTSC fudge factor to align to 29.97 fps
         seconds_float *= 1000.0 / 1001.0
+
         hours = math.floor(seconds_float / 3600)
         seconds_float -= hours * 3600
         minutes = math.floor(seconds_float / 60)
@@ -650,7 +722,10 @@ class SCCWriter(BaseWriter):
         seconds = math.floor(seconds_float)
         seconds_float -= seconds
         frames = math.floor(seconds_float * 30)
+
+        # Return non-drop-frame formatted timecode (colon!)
         return f"{hours:02}:{minutes:02}:{seconds:02}:{frames:02}"
+    
 
 
 class _SccTimeTranslator:
