@@ -536,9 +536,9 @@ class SCCReader(BaseReader):
 
 
 class SCCWriter(BaseWriter):
-    def __init__(self, *args, **kw):
+    def __init__(self, *args,drop_frame=True, **kw):
         super().__init__(*args, **kw)
-
+        self.drop_frame = drop_frame
     def write(self, caption_set):
         output = HEADER + "\n\n"
 
@@ -550,7 +550,10 @@ class SCCWriter(BaseWriter):
         # Only support one language.
         lang = list(caption_set.get_languages())[0]
         captions = caption_set.get_captions(lang)
-
+        if self.drop_frame == True:
+            MICROSECONDS_PER_CODEWORD = 1000.0 * 1000.0 / (30.0 * 1000.0 / 1001.0)
+        elif self.drop_frame == False:
+            MICROSECONDS_PER_CODEWORD = 1000.0 * 1000.0 / (30.0)
         # PASS 1: compute codes for each caption
         codes = [
             (self._text_to_code(caption), caption.start, caption.end)
@@ -561,20 +564,26 @@ class SCCWriter(BaseWriter):
         # Advance start times so as to have time to write to the pop-on
         # buffer; possibly remove the previous clear-screen command
         for index, (code, start, end) in enumerate(codes):
-            code_words = len(code) / 5 + 8
-            code_time_microseconds = code_words * MICROSECONDS_PER_CODEWORD
+            #code_words = len(code) / 5 + 8
+            code_words = len(code.split()) + 8
+            
+            code_time_microseconds = (code_words+2) * MICROSECONDS_PER_CODEWORD
             code_start = start - code_time_microseconds
             if index == 0:
+                # also back-shift first cue so load-time is accounted for
+                codes[index] = (code, code_start, end)
                 continue
             previous_code, previous_start, previous_end = codes[index - 1]
             # concatenate overlapping code
-            if previous_start > code_start:
-                combined_code = f"{previous_code} 942c 942c 942f 942f 94ae 94ae 9420 9420 {code}"
-                codes[index - 1] = (None)
-                codes[index] = (combined_code, previous_start, end)
+            if code_start <= (previous_start + MICROSECONDS_PER_CODEWORD) :
+                prev_words = len(previous_code.split()) + 8  # ENM/RCL + overhead
+                code_start = max(code_start, previous_start + prev_words * MICROSECONDS_PER_CODEWORD)
+                codes[index] = (code, code_start, end)
+                # Also ensure previous ends before this starts if they nearly touch
+                codes[index - 1] = (previous_code, previous_start, None)
             else:
-                if previous_end + 3 * MICROSECONDS_PER_CODEWORD >= code_start:
-                    codes[index - 1] = (previous_code, previous_start, None)
+                if previous_end is not None and previous_end + 3 * MICROSECONDS_PER_CODEWORD >= code_start:
+                     codes[index - 1] = (previous_code, previous_start, None)
                 codes[index] = (code, code_start, end)
 
         # PASS 3:
@@ -583,15 +592,98 @@ class SCCWriter(BaseWriter):
 
         # PASS 4:
         # Write captions.
+        def _df_frames(us: int) -> int:
+            # must mirror _format_timestamp_df quantization
+            return math.floor(us * 30 / 1_000_000 * 1000 / 1001 + 1e-9)
+        
+        last_emitted_frames = -1
+       
+        
+        
         for code, start, end in codes:
-            output += f"{self._format_timestamp_df(start)}\t"
-            output += "94ae 94ae 9420 9420 "
-            output += code
-            output += "942c 942c 942f 942f\n\n"
+            # bump by one frame if this quantizes to the same DF frame as previous
+            cur_frames = _df_frames(start) if self.drop_frame else None
+            if self.drop_frame and cur_frames <= last_emitted_frames:
+                # add exactly one codeword's worth of time until frame advances
+                while _df_frames(start) <= last_emitted_frames:
+                    start += MICROSECONDS_PER_CODEWORD
+                cur_frames = _df_frames(start)
+            if self.drop_frame:
+               last_emitted_frames = cur_frames
+
+            if not self.drop_frame:
+            # bump by one codeword if same HH:MM:SS:FF as last
+                def _ndf_frames(us: int) -> int:
+                    # mirror _format_timestamp_ndf
+                    seconds_float = us / 1_000_000.0 * 1000.0 / 1001.0
+                    total_frames = int(seconds_float * 30)  # floor
+                    return total_frames
+                cur_frames = _ndf_frames(start)
+                if cur_frames <= last_emitted_frames:
+                    while _ndf_frames(start) <= last_emitted_frames:
+                        start += MICROSECONDS_PER_CODEWORD
+                last_emitted_frames = _ndf_frames(start)   
+            
+            # ---- MINIMAL SPLIT (only if >80 tokens) ----
+            _prefix = ["94ae","94ae","9420","9420"]
+            _suffix = ["942f","942f"]
+            _code_tokens = code.split()
+            _total = len(_prefix) + len(_code_tokens) + len(_suffix)
+            if _total > 80:
+                # first chunk at 'start'
+                _keep = 80 - len(_prefix) - len(_suffix)  # 74
+                _first = _prefix + _code_tokens[:_keep] + _suffix
+                if self.drop_frame:
+                    ts_start = self._format_timestamp_df(start)
+                else:
+                    ts_start = self._format_timestamp_ndf(start)
+                output += f"{ts_start}\t" + " ".join(_first) + "\n\n"
+
+                # second chunk at start + 1 codeword (and guard again)
+                start2 = start + MICROSECONDS_PER_CODEWORD
+                cur2 = _df_frames(start2) if self.drop_frame else None
+                if self.drop_frame and cur2 <= last_emitted_frames:
+                    while _df_frames(start2) <= last_emitted_frames:
+                        start2 += MICROSECONDS_PER_CODEWORD
+                    cur2 = _df_frames(start2)
+                if self.drop_frame:
+                    last_emitted_frames = cur2
+                _rest = _prefix + _code_tokens[_keep:] + _suffix
+                if self.drop_frame:
+                    ts2 = self._format_timestamp_df(start2)
+                else:
+                    ts2 = self._format_timestamp_ndf(start2)
+                output += f"{ts2}\t" + " ".join(_rest) + "\n\n"
+
+                if end is not None:
+                    ts_end = (self._format_timestamp_df(end)
+                              if self.drop_frame else
+                              self._format_timestamp_ndf(end))
+                    output += f"{ts_end}\t942c 942c\n\n"
+                continue
+            # ---- /MINIMAL SPLIT ----   
+        # choose formatter based on flag
+            if self.drop_frame:
+              ts_start = self._format_timestamp_df(start)
+            else:
+              ts_start = self._format_timestamp_ndf(start)
+          
+            output += f"{ts_start}\t"
+            output += "94ae 94ae 9420 9420 "  
+            output += code + " "
+            output += "942f 942f\n\n"  
+
             if end is not None:
-                output += f"{self._format_timestamp_df(end)}\t942c 942c\n\n"
+                if self.drop_frame:
+                  ts_end = self._format_timestamp_df(end)
+                else:
+                  ts_end = self._format_timestamp_ndf(end)
+
+                output += f"{ts_end}\t942c 942c\n\n"
 
         return output
+    
+    
 
     # Wrap lines at 32 chars
     @staticmethod
@@ -637,7 +729,7 @@ class SCCWriter(BaseWriter):
         for row, line in enumerate(lines):
             row += 16 - len(lines)
             # Move cursor to column 0 of the destination row
-            for _ in range(2):
+            for _ in range(1):
                 code += (
                     PAC_HIGH_BYTE_BY_ROW[row]
                     + f"{PAC_LOW_BYTE_BY_ROW_RESTRICTED[row]} "
@@ -663,46 +755,58 @@ class SCCWriter(BaseWriter):
 #        frames = math.floor(seconds_float * 30)
 #        return f"{hours:02}:{minutes:02}:{seconds:02}:{frames:02}"
    
+    
+    # @staticmethod
+    # def _format_timestamp_df(microseconds: int) -> str:
+    #     """
+    #     Convert microseconds to 29.97 fps drop-frame timecode (HH:MM:SS;FF)
+    #     using SMPTE 12M rules: drop 2 frames every minute except every 10th.
+    #     """
+    #     total_frames = int(round(microseconds * 30 / 1_000_000 * 1000 / 1001 + 1e-9))
+    #     fps = 30
+    #     frames_per_10min = 17982  # 10*60*30 - 2*9
+    #     d = total_frames // frames_per_10min
+    #     m = total_frames % frames_per_10min
+    #     adjusted = total_frames + 18 * d + (0 if m < 2 else 2 * ((m - 2) // 1798))
+    #     hours = adjusted // (fps * 60 * 60)          # 108000
+    #     adjusted = adjusted % (fps * 60 * 60)
+    #     minutes = adjusted // (fps * 60)             # 1800
+    #     adjusted = adjusted % (fps * 60)
+    #     seconds = adjusted // fps
+    #     frames = adjusted % fps
+    #     return f"{hours:02}:{minutes:02}:{seconds:02};{frames:02}"
+
     @staticmethod
-    def _format_timestamp_df(microseconds: int) -> str:
+    def _format_timestamp_df(us: int) -> str:
         """
-        Convert microseconds → 29.97fps drop-frame timecode (HH:MM:SS;FF).
-        Applies drop-frame rules: skip frame numbers 00 and 01 at the start of every minute,
-        except every 10th minute.
+        29.97 fps DROP-FRAME timecode (HH:MM:SS;FF) from microseconds.
+        Uses exact 30000/1001 math and the standard 10-minute block method.
         """
-        # Convert elapsed wall-clock microseconds into equivalent 29.97fps frames
-        total_frames = round(microseconds * 30 / 1_000_000 * 1000 / 1001)
+        # 1) Real frames at 30000/1001 (quantize to nearest frame)
+        total_frames = int(round(us * 30 / 1_000_000 * 1000 / 1001 + 1e-9))
 
+        # 2) Add back the dropped frames to get "timecode counting" frames
         fps = 30
-        FRAMES_PER_HOUR  = 107892   # 29.97 * 3600
-        FRAMES_PER_10MIN = 17982    # 29.97 * 600
+        FRAMES_PER_10MIN = 17982  # 10*60*30 - 2*9
+        d = total_frames // FRAMES_PER_10MIN          # number of full 10-min blocks
+        m = total_frames %  FRAMES_PER_10MIN          # remainder into current block
+        # Within each 10-min block, 2 frames are dropped at the top of minutes 1–9.
+        if m < 2:
+            tc_frames = total_frames + 18 * d
+        else:
+            tc_frames = total_frames + 18 * d + 2 * ((m - 2) // 1798)
 
-        # Hours
-        hours = total_frames // FRAMES_PER_HOUR
-        total_frames -= hours * FRAMES_PER_HOUR
+        # 3) Derive HH:MM:SS;FF in "timecode counting" space (30 fps)
+        hours   =  tc_frames // (fps * 60 * 60)
+        rem     =  tc_frames %  (fps * 60 * 60)
+        minutes =  rem // (fps * 60)
+        rem     =  rem %  (fps * 60)
+        seconds =  rem // fps
+        frames  =  rem %  fps
 
-        # Tens of minutes
-        tens = total_frames // FRAMES_PER_10MIN
-        total_frames -= tens * FRAMES_PER_10MIN
+        return f"{hours:02d}:{minutes:02d}:{seconds:02d};{frames:02d}"
 
-        # Minutes within 10-min block
-        minutes_in_block = 0
-        for i in range(10):
-            minute_frames = 1800 if i == 9 else 1798  # 10th minute has 1800 frames, others 1798
-            if total_frames >= minute_frames:
-                total_frames -= minute_frames
-                minutes_in_block += 1
-            else:
-                break
 
-        minutes = tens * 10 + minutes_in_block
-
-        # Seconds and frames
-        seconds = total_frames // fps
-        frames  = total_frames % fps
-
-        # Return drop-frame formatted timecode (semicolon!)
-        return f"{hours:02}:{minutes:02}:{seconds:02};{frames:02}"
 
     @staticmethod
     def _format_timestamp_ndf(microseconds: int) -> str:
