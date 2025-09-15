@@ -1,5 +1,9 @@
 Changelog
 ---------
+2.2.18
+^^^^^^
+- Update changelog and new release tag.
+
 2.2.17
 ^^^^^^
 - Update nltk from 3.8.0 to 3.9.1.
