@@ -1,5 +1,9 @@
 Changelog
 ---------
+2.2.19
+^^^^^^
+- Remove support for python 3.8 and 3.9.
+
 2.2.18
 ^^^^^^
 - Update changelog and new release tag.

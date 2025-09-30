@@ -20,7 +20,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["py38", "py39", "py310", "py311", "py312"]
+        python-version: ["py310", "py311", "py312"]
 
     steps:
       - uses: actions/checkout@v2

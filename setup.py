@@ -20,7 +20,7 @@ transcript_dependencies = ["nltk==3.9.1"]
 
 setup(
     name="pycaption",
-    version="2.2.18",
+    version="2.2.19.dev1",
     description="Closed caption converter",
     long_description=open(README_PATH).read(),
     author="Joe Norton",
@@ -30,7 +30,7 @@ setup(
         "Documentation": "https://pycaption.readthedocs.io/",
         "Release notes": "https://pycaption.readthedocs.io" "/en/stable/changelog.html",
     },
-    python_requires=">=3.8,<4.0",
+    python_requires=">=3.10,<4.0",
     install_requires=dependencies,
     extras_require={"dev": dev_dependencies, "transcript": transcript_dependencies},
     packages=find_packages(),
@@ -41,8 +41,6 @@ setup(
         "Operating System :: OS Independent",
         "Programming Language :: Python",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.8",
-        "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
         "Programming Language :: Python :: 3.12",
