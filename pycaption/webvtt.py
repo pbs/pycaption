@@ -301,7 +301,7 @@ class WebVTTWriter(BaseWriter):
         :type layout: Layout
         :rtype: str
         """
-        if not layout:
+        if not self.include_positioning or not layout:
             return ""
 
         # If it's converting from WebVTT to WebVTT, keep positioning info

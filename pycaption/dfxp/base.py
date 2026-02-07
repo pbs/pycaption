@@ -340,7 +340,16 @@ class DFXPWriter(BaseWriter):
 
         # Loop through all captions/nodes and apply transformations to layout
         # in function of the provided or default settings
+        caption_set.layout_info = self._relativize_and_fit_to_screen(
+            caption_set.layout_info)
+        
         for lang in langs:
+            # Also process the language-specific layout info
+            lang_layout_info = caption_set.get_layout_info(lang)
+            if hasattr(caption_set._captions[lang], 'layout_info'):
+                caption_set._captions[lang].layout_info = self._relativize_and_fit_to_screen(
+                    lang_layout_info)
+            
             for caption in caption_set.get_captions(lang):
                 caption.layout_info = self._relativize_and_fit_to_screen(
                     caption.layout_info)

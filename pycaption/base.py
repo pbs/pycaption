@@ -52,7 +52,8 @@ class BaseReader:
 
 class BaseWriter:
     def __init__(
-        self, relativize=True, video_width=None, video_height=None, fit_to_screen=True
+        self, relativize=True, video_width=None, video_height=None, fit_to_screen=True,
+        include_positioning=True
     ):
         """
         Initialize writer with the given parameters.
@@ -72,13 +73,19 @@ class BaseWriter:
             It is a pycaption fix for caption files that are technically valid
             but contains inconsistent settings that may cause long captions to
             be cut out of the screen.
+        :param include_positioning: If True (default), positioning information
+            is processed and included in the output. If False, all positioning
+            information is ignored and default positioning is used.
         """
         self.relativize = relativize
         self.video_width = video_width
         self.video_height = video_height
         self.fit_to_screen = fit_to_screen
+        self.include_positioning = include_positioning
 
     def _relativize_and_fit_to_screen(self, layout_info):
+        if not self.include_positioning:
+            return None
         if layout_info:
             if self.relativize:
                 # Transform absolute values (e.g. px) into percentages
