@@ -563,11 +563,12 @@ class SCCWriter(BaseWriter):
             code_words = len(code) / 5 + 8
             code_time_microseconds = code_words * MICROSECONDS_PER_CODEWORD
             code_start = start - code_time_microseconds
-            if index == 0:
-                continue
-            previous_code, previous_start, previous_end = codes[index - 1]
-            if previous_end + 3 * MICROSECONDS_PER_CODEWORD >= code_start:
-                codes[index - 1] = (previous_code, previous_start, None)
+            if index > 0:
+                previous_code, previous_start, previous_end = codes[index - 1]
+                if code_start < previous_start:
+                    code_start = previous_start
+                if previous_end + 3 * MICROSECONDS_PER_CODEWORD >= code_start:
+                    codes[index - 1] = (previous_code, previous_start, None)
             codes[index] = (code, code_start, end)
 
         # PASS 3:
