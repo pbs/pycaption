@@ -72,7 +72,6 @@ class TestSCCTimestampOrdering:
     def test_scc_captions_are_in_order_when_short_text_followed_by_long(self):
         """When short caption text is followed by longer caption text,
         the SCC output timestamps should remain in chronological order.
-        See: https://github.com/pbs/pycaption/issues/XXX
         """
         vtt_input = (
             "WEBVTT\n\n"
@@ -91,6 +90,7 @@ class TestSCCTimestampOrdering:
         )
         captions = WebVTTReader().read(vtt_input)
         scc_output = SCCWriter().write(captions)
+        # SCC timestamps use HH:MM:SS:FF format (FF = frames)
         timestamps = re.findall(r"(\d+:\d+:\d+:\d+)", scc_output)
         for i in range(1, len(timestamps)):
             assert timestamps[i] >= timestamps[i - 1], (
