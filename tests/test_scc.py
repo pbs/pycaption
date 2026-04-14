@@ -68,10 +68,12 @@ class TestSCCReader(ReaderTestingMixIn):
         captions = SCCReader().read(sample_scc_multiple_positioning)
 
         # SCC generates only origin, and we always expect it.
+        # With threshold-based approach: small jumps (1-3 rows) use breaks,
+        # large jumps (4+ rows) use repositioning (new cues)
+        # Each caption has independent positioning (not inherited from previous)
         expected_positioning = [
             ((10.0, UnitEnum.PERCENT), (77.0, UnitEnum.PERCENT)),
             ((40.0, UnitEnum.PERCENT), (5.0, UnitEnum.PERCENT)),
-            ((70.0, UnitEnum.PERCENT), (23.0, UnitEnum.PERCENT)),
             ((20.0, UnitEnum.PERCENT), (47.0, UnitEnum.PERCENT)),
             ((20.0, UnitEnum.PERCENT), (89.0, UnitEnum.PERCENT)),
             ((40.0, UnitEnum.PERCENT), (53.0, UnitEnum.PERCENT)),
@@ -421,10 +423,10 @@ class TestCoverageOnly:
             "®°½",
             "®°½",
             "ABû",
-            '♪',
-            '♪',
-            '♪♪',
-            '♪♪',
+            "♪",
+            "♪",
+            "♪♪",
+            "♪♪",
             "ÁÉÓ¡",
             "WHERE YOU'RE STANDING NOW,",
             "LOOKING OUT THERE, THAT'S AL",

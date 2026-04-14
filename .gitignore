@@ -38,6 +38,7 @@ docs/_build
 # Environments
 env/
 venv/
+.env
 
 # Pyenv files
 .python-version

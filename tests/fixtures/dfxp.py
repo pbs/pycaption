@@ -915,16 +915,15 @@ def sample_dfxp_from_scc_output():
    <region tts:displayAlign="after" tts:textAlign="start" xml:id="bottom"/>
    <region tts:displayAlign="before" tts:origin="10% 77%" tts:textAlign="left" xml:id="r0"/>
    <region tts:displayAlign="before" tts:origin="40% 5%" tts:textAlign="left" xml:id="r1"/>
-   <region tts:displayAlign="before" tts:origin="70% 23%" tts:textAlign="left" xml:id="r2"/>
-   <region tts:displayAlign="before" tts:origin="20% 47%" tts:textAlign="left" xml:id="r3"/>
-   <region tts:displayAlign="before" tts:origin="20% 89%" tts:textAlign="left" xml:id="r4"/>
-   <region tts:displayAlign="before" tts:origin="40% 53%" tts:textAlign="left" xml:id="r5"/>
-   <region tts:displayAlign="before" tts:origin="70% 17%" tts:textAlign="left" xml:id="r6"/>
-   <region tts:displayAlign="before" tts:origin="20% 35%" tts:textAlign="left" xml:id="r7"/>
-   <region tts:displayAlign="before" tts:origin="20% 83%" tts:textAlign="left" xml:id="r8"/>
-   <region tts:displayAlign="before" tts:origin="70% 11%" tts:textAlign="left" xml:id="r9"/>
-   <region tts:displayAlign="before" tts:origin="40% 41%" tts:textAlign="left" xml:id="r10"/>
-   <region tts:displayAlign="before" tts:origin="20% 71%" tts:textAlign="left" xml:id="r11"/>
+   <region tts:displayAlign="before" tts:origin="20% 47%" tts:textAlign="left" xml:id="r2"/>
+   <region tts:displayAlign="before" tts:origin="20% 89%" tts:textAlign="left" xml:id="r3"/>
+   <region tts:displayAlign="before" tts:origin="40% 53%" tts:textAlign="left" xml:id="r4"/>
+   <region tts:displayAlign="before" tts:origin="70% 17%" tts:textAlign="left" xml:id="r5"/>
+   <region tts:displayAlign="before" tts:origin="20% 35%" tts:textAlign="left" xml:id="r6"/>
+   <region tts:displayAlign="before" tts:origin="20% 83%" tts:textAlign="left" xml:id="r7"/>
+   <region tts:displayAlign="before" tts:origin="70% 11%" tts:textAlign="left" xml:id="r8"/>
+   <region tts:displayAlign="before" tts:origin="40% 41%" tts:textAlign="left" xml:id="r9"/>
+   <region tts:displayAlign="before" tts:origin="20% 71%" tts:textAlign="left" xml:id="r10"/>
   </layout>
  </head>
  <body>
@@ -933,40 +932,38 @@ def sample_dfxp_from_scc_output():
     abab
    </p>
    <p begin="00:00:01.134" end="00:00:03.136" region="r1" style="default">
-    cdcd
-   </p>
-   <p begin="00:00:01.134" end="00:00:03.136" region="r2" style="default">
+    cdcd<br/><br/><br/>
     efef
    </p>
-   <p begin="00:00:03.136" end="00:00:09.709" region="r3" style="default">
+   <p begin="00:00:03.136" end="00:00:09.709" region="r2" style="default">
     ghgh<br/>
     ijij<br/>
     klkl
    </p>
-   <p begin="00:00:09.709" end="00:00:11.711" region="r4" style="default">
+   <p begin="00:00:09.709" end="00:00:11.711" region="r3" style="default">
     mnmn
    </p>
-   <p begin="00:00:09.709" end="00:00:11.711" region="r5" style="default">
+   <p begin="00:00:09.709" end="00:00:11.711" region="r4" style="default">
     opop
    </p>
-   <p begin="00:00:09.709" end="00:00:11.711" region="r6" style="default">
+   <p begin="00:00:09.709" end="00:00:11.711" region="r5" style="default">
     qrqr
    </p>
-   <p begin="00:00:11.711" end="00:00:20.086" region="r7" style="default">
+   <p begin="00:00:11.711" end="00:00:20.086" region="r6" style="default">
     stst<br/>
     uvuv<br/>
     wxwx
    </p>
-   <p begin="00:00:20.086" end="00:00:22.088" region="r8" style="default">
+   <p begin="00:00:20.086" end="00:00:22.088" region="r7" style="default">
     yzyz
    </p>
-   <p begin="00:00:20.086" end="00:00:22.088" region="r9" style="default">
+   <p begin="00:00:20.086" end="00:00:22.088" region="r8" style="default">
     0101
    </p>
-   <p begin="00:00:20.086" end="00:00:22.088" region="r10" style="default">
+   <p begin="00:00:20.086" end="00:00:22.088" region="r9" style="default">
     2323
    </p>
-   <p begin="00:00:22.088" end="00:00:26.088" region="r11" style="default">
+   <p begin="00:00:22.088" end="00:00:26.088" region="r10" style="default">
     4545<br/>
     6767<br/>
     8989
@@ -977,7 +974,7 @@ def sample_dfxp_from_scc_output():
 """
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture()
 def sample_dfxp_with_properly_closing_spans_output():
     return """\
 <?xml version="1.0" encoding="utf-8"?>
@@ -992,7 +989,7 @@ def sample_dfxp_with_properly_closing_spans_output():
    <region tts:displayAlign="before" tts:extent="60% 12%" tts:origin="30% 83%" tts:textAlign="left" xml:id="r1"/>
    <region tts:displayAlign="before" tts:extent="40% 12%" tts:origin="50% 83%" tts:textAlign="left" xml:id="r2"/>
    <region tts:displayAlign="before" tts:extent="30% 12%" tts:origin="60% 83%" tts:textAlign="left" xml:id="r3"/>
-   <region tts:displayAlign="before" tts:extent="60% 6%" tts:origin="30% 89%" tts:textAlign="left" xml:id="r4"/>
+   <region tts:displayAlign="before" tts:extent="80% 6%" tts:origin="10% 89%" tts:textAlign="left" xml:id="r4"/>
   </layout>
  </head>
  <body>
@@ -1015,11 +1012,8 @@ def sample_dfxp_with_properly_closing_spans_output():
     <span tts:fontStyle="italic" region="r3">bb</span><br/>
     cc
    </p>
-   <p begin="00:01:55.966" end="00:01:59.500" region="r3" style="default">
-    abcd
-   </p>
    <p begin="00:01:55.966" end="00:01:59.500" region="r4" style="default">
-    abcd
+    abcdabcd
    </p>
   </div>
  </body>
