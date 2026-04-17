@@ -84,9 +84,10 @@ class TestSAMItoSAMI(SAMITestingMixIn):
     ):
         # Absolute positioning settings (e.g. px) are converted to percentages
         caption_set = self.reader.read(sample_sami_partial_margins)
-        result = SAMIWriter(video_width=VIDEO_WIDTH, video_height=VIDEO_HEIGHT).write(
-            caption_set
-        )
+        result = SAMIWriter(
+            video_width=VIDEO_WIDTH,
+            video_height=VIDEO_HEIGHT
+        ).write(caption_set)
 
         self.assert_sami_captions_equal(sample_sami_partial_margins_relativized, result)
 

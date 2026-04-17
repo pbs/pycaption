@@ -88,7 +88,8 @@ class TestWebVTTReader(ReaderTestingMixIn):
         # todo: same assert w/ different arguments -> this can be parametrized;
         with pytest.raises(CaptionReadError):
             WebVTTReader(ignore_timing_errors=False).read(
-                "\n" "00:00:20.000 --> 00:00:10.000\n" "foo bar baz"
+                "\n" "00:00:20.000 --> 00:00:10.000\n" 
+                "foo bar baz"
             )
 
         with pytest.raises(CaptionReadError):
@@ -110,13 +111,15 @@ class TestWebVTTReader(ReaderTestingMixIn):
         # Even if timing errors are ignored, this has to raise an exception
         with pytest.raises(CaptionReadSyntaxError):
             WebVTTReader().read(
-                "\nNOTE invalid cue stamp\n00:00:20.000 --> \nfoo bar baz\n"
+                "\nNOTE invalid cue stamp\n"
+                "00:00:20.000 --> \nfoo bar baz\n"
             )
 
         # And this too
         with pytest.raises(CaptionReadSyntaxError):
             WebVTTReader().read(
-                "\n00:00:20,000 --> 00:00:22,000\n" "Note the comma instead of point.\n"
+                "\n00:00:20,000 --> 00:00:22,000\n" 
+                "Note the comma instead of point.\n"
             )
 
         # todo: at this point it can be split into 2 separate tests
@@ -144,7 +147,8 @@ class TestWebVTTReader(ReaderTestingMixIn):
     def test_invalid_files(self):
         with pytest.raises(CaptionReadError):
             WebVTTReader(ignore_timing_errors=False).read(
-                "00:00:20.000 --> 00:00:10.000\n" "Start time is greater than end time."
+                "00:00:20.000 --> 00:00:10.000\n" 
+                "Start time is greater than end time."
             )
 
         with pytest.raises(CaptionReadError):
@@ -177,7 +181,9 @@ class TestWebVTTWriter:
         assert sample_webvtt_double_br == results
 
     def test_break_node_positioning_is_ignored(
-        self, webvtt_from_dfxp_with_conflicting_align, dfxp_style_region_align_conflict
+        self,
+        webvtt_from_dfxp_with_conflicting_align,
+        dfxp_style_region_align_conflict
     ):
         caption_set = DFXPReader().read(dfxp_style_region_align_conflict)
         results = WebVTTWriter().write(caption_set)

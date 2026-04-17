@@ -144,9 +144,8 @@ class Stretch(TwoDimensionalObject):
         """
         for parameter in [horizontal, vertical]:
             if not isinstance(parameter, Size):
-                raise ValueError(
-                    "Stretch must be initialized with two valid " "Size objects."
-                )
+                raise ValueError("Stretch must be initialized with two valid " 
+                    "Size objects.")
         self.horizontal = horizontal
         self.vertical = vertical
 
@@ -295,9 +294,8 @@ class Point(TwoDimensionalObject):
         """
         for parameter in [x, y]:
             if not isinstance(parameter, Size):
-                raise ValueError(
-                    "Point must be initialized with two valid " "Size objects."
-                )
+                raise ValueError("Point must be initialized with two valid " 
+                                 "Size objects.")
         self.x = x
         self.y = y
 
@@ -443,7 +441,8 @@ class Size:
         # The input must be valid so that any conversion can be done
         if not (video_width or video_height):
             raise RelativizationError(
-                "At least one of video width or height" " must be given as a reference"
+                "At least one of video width or height" 
+                " must be given as a reference"
             )
         elif video_width and video_height:
             raise RelativizationError(

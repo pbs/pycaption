@@ -319,9 +319,8 @@ class DFXPReader(BaseReader):
                 attrs["italics"] = True
             elif arg.lower() == "tts:fontweight" and dfxp_attrs[arg] == "bold":
                 attrs["bold"] = True
-            elif arg.lower() == "tts:textdecoration" and "underline" in dfxp_attrs[
-                arg
-            ].strip().split(" "):
+            elif (arg.lower() == "tts:textdecoration"
+                  and "underline" in dfxp_attrs[arg].strip().split(" ")):
                 attrs["underline"] = True
             elif arg.lower() == "tts:textalign":
                 attrs["text-align"] = dfxp_attrs[arg]

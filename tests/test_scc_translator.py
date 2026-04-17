@@ -22,7 +22,9 @@ class TestSCCTranslator:
         assert sample_translated_scc_custom_brackets == result
 
     def test_commands_not_found(
-        self, sample_scc_with_unknown_commands, sample_translated_scc_commands_not_found
+        self,
+        sample_scc_with_unknown_commands,
+        sample_translated_scc_commands_not_found
     ):
         result = translate_scc(sample_scc_with_unknown_commands)
 
