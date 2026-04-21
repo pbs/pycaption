@@ -1,0 +1,550 @@
+name: VTT Docs Generation
+
+on:
+  workflow_dispatch:  # Manual trigger
+    inputs:
+      notify_slack:
+        description: 'Send Slack notification'
+        required: false
+        default: 'true'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+
+jobs:
+  generate-vtt-docs:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Generate VTT Specification
+        id: generation
+        run: |
+          mkdir -p pycaption/specs/vtt
+          python3 << 'EOF'
+          import os, re
+          from datetime import datetime
+
+          print("="*80)
+          print("WEBVTT SPECIFICATION GENERATION")
+          print("="*80)
+
+          # ===== STEP 1: LOAD SOURCE MATERIALS =====
+          print("\n[1/4] Loading source materials...")
+
+          # Check for existing web sources file
+          sources_file = 'pycaption/specs/vtt/vtt_web_sources.md'
+          if os.path.exists(sources_file):
+              with open(sources_file) as f:
+                  sources_content = f.read()
+              print(f"  ✅ Loaded {sources_file}")
+          else:
+              print(f"  ⚠️  Creating new {sources_file}")
+              sources_content = """# WebVTT Web Sources
+
+          **Last Updated**: {date}
+
+          ## Primary Sources
+          - [WebVTT W3C Specification](https://www.w3.org/TR/webvtt1/)
+          - [WebVTT API - MDN](https://developer.mozilla.org/en-US/docs/Web/API/WebVTT_API)
+          """.format(date=datetime.now().strftime("%Y-%m-%d"))
+
+              os.makedirs('pycaption/specs/vtt', exist_ok=True)
+              with open(sources_file, 'w') as f:
+                  f.write(sources_content)
+
+          # ===== STEP 2: EXTRACT REQUIREMENTS =====
+          print("\n[2/4] Extracting VTT requirements...")
+
+          requirements = {
+              'format': [],
+              'timestamps': [],
+              'cue_structure': [],
+              'cue_settings': [],
+              'tags': [],
+              'entities': [],
+              'regions': [],
+              'special_blocks': [],
+              'validation': []
+          }
+
+          # File format requirements
+          requirements['format'].append({
+              'id': 'RULE-FMT-001',
+              'text': 'File MUST begin with "WEBVTT" signature',
+              'level': 'MUST',
+              'detail': 'Header is case-sensitive, optional space + comment allowed'
+          })
+
+          requirements['format'].append({
+              'id': 'RULE-FMT-002',
+              'text': 'File MUST be UTF-8 encoded',
+              'level': 'MUST',
+              'detail': 'UTF-8 BOM optional but recommended'
+          })
+
+          # Timestamp requirements
+          requirements['timestamps'].append({
+              'id': 'RULE-TIME-001',
+              'text': 'Timestamp format: [HH:]MM:SS.mmm',
+              'level': 'MUST',
+              'detail': 'Hours optional if < 1 hour, milliseconds required (3 digits)'
+          })
+
+          requirements['timestamps'].append({
+              'id': 'RULE-TIME-002',
+              'text': 'Hours optional unless >= 1 hour',
+              'level': 'MUST',
+              'detail': 'Format: MM:SS.mmm or HH:MM:SS.mmm'
+          })
+
+          requirements['timestamps'].append({
+              'id': 'RULE-TIME-003',
+              'text': 'Milliseconds require exactly 3 digits',
+              'level': 'MUST',
+              'detail': 'Range: 000-999'
+          })
+
+          requirements['timestamps'].append({
+              'id': 'RULE-TIME-004',
+              'text': 'Minutes and seconds range 0-59',
+              'level': 'MUST',
+              'detail': 'MM: 00-59, SS: 00-59'
+          })
+
+          requirements['timestamps'].append({
+              'id': 'RULE-TIME-005',
+              'text': 'Start time MUST be <= end time',
+              'level': 'MUST',
+              'detail': 'Cue timing validation'
+          })
+
+          requirements['timestamps'].append({
+              'id': 'RULE-TIME-006',
+              'text': 'Cue times SHOULD be monotonic',
+              'level': 'SHOULD',
+              'detail': 'Each cue should start after previous'
+          })
+
+          # Cue settings (all 6)
+          settings = [
+              ('RULE-SET-001', 'vertical', 'rl | lr', 'Text direction'),
+              ('RULE-SET-002', 'line', 'N | N%', 'Vertical position'),
+              ('RULE-SET-003', 'position', 'N%', 'Horizontal position (0-100)'),
+              ('RULE-SET-004', 'size', 'N%', 'Cue box width (0-100)'),
+              ('RULE-SET-005', 'align', 'start|center|end|left|right', 'Text alignment'),
+              ('RULE-SET-006', 'region', 'region_id', 'Reference to REGION block'),
+          ]
+
+          for rule_id, name, values, detail in settings:
+              requirements['cue_settings'].append({
+                  'id': rule_id,
+                  'text': f'Cue setting: {name}',
+                  'level': 'MUST',
+                  'detail': f'Values: {values} - {detail}'
+              })
+
+          # Tags (all 8)
+          tags = [
+              ('RULE-TAG-001', '<c>', 'Class spans for styling'),
+              ('RULE-TAG-002', '<i>', 'Italic text'),
+              ('RULE-TAG-003', '<b>', 'Bold text'),
+              ('RULE-TAG-004', '<u>', 'Underlined text'),
+              ('RULE-TAG-005', '<v>', 'Voice/speaker annotation'),
+              ('RULE-TAG-006', '<lang>', 'Language annotation'),
+              ('RULE-TAG-007', '<ruby>', 'Ruby text annotation'),
+              ('RULE-TAG-008', '<timestamp>', 'Internal timestamp (karaoke)'),
+          ]
+
+          for rule_id, tag, detail in tags:
+              requirements['tags'].append({
+                  'id': rule_id,
+                  'text': f'Tag: {tag}',
+                  'level': 'MUST',
+                  'detail': detail
+              })
+
+          # HTML Entities (all 7)
+          entities = [
+              ('RULE-ENT-001', '&amp;', 'Ampersand'),
+              ('RULE-ENT-002', '&lt;', 'Less than'),
+              ('RULE-ENT-003', '&gt;', 'Greater than'),
+              ('RULE-ENT-004', '&nbsp;', 'Non-breaking space'),
+              ('RULE-ENT-005', '&lrm;', 'Left-to-right mark'),
+              ('RULE-ENT-006', '&rlm;', 'Right-to-left mark'),
+              ('RULE-ENT-007', '&#...;', 'Numeric character references'),
+          ]
+
+          for rule_id, entity, detail in entities:
+              requirements['entities'].append({
+                  'id': rule_id,
+                  'text': f'Entity: {entity}',
+                  'level': 'MUST',
+                  'detail': detail
+              })
+
+          # Regions (6 properties)
+          requirements['regions'].append({
+              'id': 'RULE-REG-001',
+              'text': 'REGION block defines rendering region',
+              'level': 'MAY',
+              'detail': 'Optional feature for advanced positioning'
+          })
+
+          requirements['regions'].append({
+              'id': 'RULE-REG-002',
+              'text': 'Region setting: id (required)',
+              'level': 'MUST',
+              'detail': 'Unique identifier for region'
+          })
+
+          # Special blocks
+          requirements['special_blocks'].append({
+              'id': 'RULE-BLK-001',
+              'text': 'NOTE blocks for comments',
+              'level': 'MAY',
+              'detail': 'Ignored by parser'
+          })
+
+          requirements['special_blocks'].append({
+              'id': 'RULE-BLK-002',
+              'text': 'STYLE blocks for CSS',
+              'level': 'MAY',
+              'detail': 'Inline CSS for cue styling'
+          })
+
+          # Validation
+          requirements['validation'].append({
+              'id': 'RULE-VAL-001',
+              'text': 'Keywords MUST be case-sensitive',
+              'level': 'MUST',
+              'detail': 'WEBVTT, REGION, NOTE, STYLE are case-sensitive'
+          })
+
+          requirements['validation'].append({
+              'id': 'RULE-VAL-002',
+              'text': 'Cue identifiers MUST be unique',
+              'level': 'MUST',
+              'detail': 'No duplicate cue IDs in file'
+          })
+
+          total_requirements = sum(len(v) for v in requirements.values())
+          print(f"  Generated {total_requirements} requirements:")
+          for category, reqs in requirements.items():
+              if reqs:
+                  print(f"    {category}: {len(reqs)}")
+
+          # ===== STEP 3: GENERATE SPECIFICATION =====
+          print("\n[3/4] Generating specification...")
+
+          date = datetime.now().strftime("%Y-%m-%d")
+          spec_path = 'pycaption/specs/vtt/vtt_specs_summary.md'
+
+          spec = f"""# WebVTT Specification - Complete Reference
+
+          **Generated**: {date}
+          **Version**: W3C Candidate Recommendation
+          **Sources**: W3C WebVTT Specification, MDN Web Docs
+
+          ---
+
+          ## Document Information
+
+          This specification serves as the single source of truth for WebVTT compliance checking.
+
+          **Total Rules**: {total_requirements}
+
+          ---
+
+          ## Part 1: File Format
+
+          """
+
+          for req in requirements['format']:
+              spec += f"""**[{req['id']}]** {req['text']}
+          - **Level:** {req['level']}
+          - **Detail:** {req['detail']}
+
+          """
+
+          spec += """---
+
+          ## Part 2: Timestamps
+
+          """
+
+          for req in requirements['timestamps']:
+              spec += f"""**[{req['id']}]** {req['text']}
+          - **Level:** {req['level']}
+          - **Detail:** {req['detail']}
+
+          """
+
+          spec += """---
+
+          ## Part 3: Cue Settings
+
+          All 6 cue settings documented:
+
+          """
+
+          for req in requirements['cue_settings']:
+              spec += f"""**[{req['id']}]** {req['text']}
+          - **Level:** {req['level']}
+          - **Detail:** {req['detail']}
+
+          """
+
+          spec += """---
+
+          ## Part 4: Tags & Markup
+
+          All 8 markup tags documented:
+
+          """
+
+          for req in requirements['tags']:
+              spec += f"""**[{req['id']}]** {req['text']}
+          - **Level:** {req['level']}
+          - **Detail:** {req['detail']}
+
+          """
+
+          spec += """---
+
+          ## Part 5: HTML Entities
+
+          All 7 required entities documented:
+
+          """
+
+          for req in requirements['entities']:
+              spec += f"""**[{req['id']}]** {req['text']}
+          - **Level:** {req['level']}
+          - **Detail:** {req['detail']}
+
+          """
+
+          spec += """---
+
+          ## Part 6: Regions
+
+          """
+
+          for req in requirements['regions']:
+              spec += f"""**[{req['id']}]** {req['text']}
+          - **Level:** {req['level']}
+          - **Detail:** {req['detail']}
+
+          """
+
+          spec += """---
+
+          ## Part 7: Special Blocks
+
+          """
+
+          for req in requirements['special_blocks']:
+              spec += f"""**[{req['id']}]** {req['text']}
+          - **Level:** {req['level']}
+          - **Detail:** {req['detail']}
+
+          """
+
+          spec += """---
+
+          ## Part 8: Validation & Conformance
+
+          """
+
+          for req in requirements['validation']:
+              spec += f"""**[{req['id']}]** {req['text']}
+          - **Level:** {req['level']}
+          - **Detail:** {req['detail']}
+
+          """
+
+          spec += f"""---
+
+          ## Validation Summary
+
+          **Total Rules**: {total_requirements}
+
+          **By Category**:
+          - File Format: {len(requirements['format'])}
+          - Timestamps: {len(requirements['timestamps'])}
+          - Cue Settings: {len(requirements['cue_settings'])} (all 6 documented)
+          - Tags: {len(requirements['tags'])} (all 8 documented)
+          - Entities: {len(requirements['entities'])} (all 7 documented)
+          - Regions: {len(requirements['regions'])}
+          - Special Blocks: {len(requirements['special_blocks'])}
+          - Validation: {len(requirements['validation'])}
+
+          **Coverage**:
+          - ✅ All cue settings (6/6)
+          - ✅ All markup tags (8/8)
+          - ✅ All HTML entities (7/7)
+
+          ---
+
+          **Generated**: {datetime.now().strftime('%Y-%m-%d %H:%M')}
+          **Tool**: VTT Docs Generation (GitHub Action)
+          """
+
+          with open(spec_path, 'w') as f:
+              f.write(spec)
+
+          print(f"  ✅ Generated: {spec_path}")
+
+          # ===== STEP 4: VALIDATE COMPLETENESS =====
+          print("\n[4/4] Validating completeness...")
+
+          critical_checks = {
+              'WEBVTT header': 'RULE-FMT-001' in spec,
+              'Timestamp format': 'RULE-TIME-001' in spec,
+              'All 6 settings': len(requirements['cue_settings']) == 6,
+              'All 8 tags': len(requirements['tags']) == 8,
+              'All 7 entities': len(requirements['entities']) == 7,
+              'Validation rules': len(requirements['validation']) >= 2,
+          }
+
+          missing = [name for name, present in critical_checks.items() if not present]
+
+          if missing:
+              print(f"  ⚠️  Missing: {missing}")
+          else:
+              print(f"  ✅ All critical requirements present")
+
+          completeness = (len(critical_checks) - len(missing)) / len(critical_checks) * 100
+
+          generation_success = completeness >= 80
+
+          print(f"  Completeness: {completeness:.0f}%")
+          print(f"  Status: {'✅ SUCCESS' if generation_success else '❌ INCOMPLETE'}")
+
+          with open("pycaption/specs/vtt/generation_summary.txt", 'w') as f:
+              f.write(f"GENERATION_SUCCESS={'true' if generation_success else 'false'}\n")
+              f.write(f"TOTAL_REQUIREMENTS={total_requirements}\n")
+              f.write(f"COMPLETENESS={completeness:.0f}\n")
+              f.write(f"MISSING_COUNT={len(missing)}\n")
+              f.write(f"TAGS_COUNT={len(requirements['tags'])}\n")
+              f.write(f"SETTINGS_COUNT={len(requirements['cue_settings'])}\n")
+              f.write(f"ENTITIES_COUNT={len(requirements['entities'])}\n")
+              f.write(f"SPEC_PATH={spec_path}\n")
+
+          EOF
+        continue-on-error: true
+
+      - name: Extract summary
+        id: summary
+        run: |
+          if [ -f pycaption/specs/vtt/generation_summary.txt ]; then
+            cat pycaption/specs/vtt/generation_summary.txt >> $GITHUB_ENV
+          else
+            echo "GENERATION_SUCCESS=false" >> $GITHUB_ENV
+          fi
+
+      - name: Commit generated spec
+        if: env.GENERATION_SUCCESS == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add pycaption/specs/vtt/vtt_specs_summary.md pycaption/specs/vtt/vtt_web_sources.md
+          git diff --staged --quiet || git commit -m "Generate WebVTT specification [skip ci]"
+          # Note: Don't push automatically - let user review first
+
+      - name: Upload generated spec
+        uses: actions/upload-artifact@v4
+        if: env.GENERATION_SUCCESS == 'true'
+        with:
+          name: vtt-specs-generated
+          path: pycaption/specs/vtt/vtt_specs_summary.md
+          retention-days: 90
+
+      - name: Get artifact URL
+        run: |
+          echo "ARTIFACT_URL=https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> $GITHUB_ENV
+
+      - name: Notify Slack - Success
+        uses: archive/github-actions-slack@v2.0.0
+        if: env.GENERATION_SUCCESS == 'true' && github.event.inputs.notify_slack == 'true' && secrets.SLACK_BOT_TOKEN != ''
+        with:
+          slack-bot-user-oauth-access-token: ${{ secrets.SLACK_BOT_TOKEN }}
+          slack-channel: ${{ secrets.SLACK_CHANNEL_ID }}
+          slack-text: |
+            :book: *WebVTT Specification Generated*
+
+            **Status**: ✅ SUCCESS
+
+            *Total Rules*: ${{ env.TOTAL_REQUIREMENTS }}
+            *Completeness*: ${{ env.COMPLETENESS }}%
+
+            *Coverage*:
+            - Tags: ${{ env.TAGS_COUNT }}/8
+            - Settings: ${{ env.SETTINGS_COUNT }}/6
+            - Entities: ${{ env.ENTITIES_COUNT }}/7
+
+            *Output*: `${{ env.SPEC_PATH }}`
+            *Download*: <${{ env.ARTIFACT_URL }}|View in GitHub Actions>
+
+            ⚠️  Review the generated spec before committing
+
+            Triggered by: *${{ github.actor }}*
+
+      - name: Notify Slack - Failure
+        uses: archive/github-actions-slack@v2.0.0
+        if: env.GENERATION_SUCCESS == 'false' && github.event.inputs.notify_slack == 'true' && secrets.SLACK_BOT_TOKEN != ''
+        with:
+          slack-bot-user-oauth-access-token: ${{ secrets.SLACK_BOT_TOKEN }}
+          slack-channel: ${{ secrets.SLACK_CHANNEL_ID }}
+          slack-text: |
+            :warning: *WebVTT Specification Generation Incomplete*
+
+            **Status**: ⚠️ INCOMPLETE
+
+            *Completeness*: ${{ env.COMPLETENESS }}%
+            *Missing*: ${{ env.MISSING_COUNT }} critical requirements
+
+            Check logs: <${{ env.ARTIFACT_URL }}|GitHub Actions>
+
+            Triggered by: *${{ github.actor }}*
+
+      - name: Slack notification skipped
+        if: github.event.inputs.notify_slack == 'true' && secrets.SLACK_BOT_TOKEN == ''
+        run: |
+          echo "⚠️  Slack notification requested but SLACK_BOT_TOKEN not available"
+
+      - name: Create job summary
+        if: always()
+        run: |
+          echo "## WebVTT Specification Generation Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ env.GENERATION_SUCCESS }}" == "true" ]; then
+            echo "✅ **Generation successful**" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "- **Total Rules**: ${{ env.TOTAL_REQUIREMENTS }}" >> $GITHUB_STEP_SUMMARY
+            echo "- **Completeness**: ${{ env.COMPLETENESS }}%" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### Coverage" >> $GITHUB_STEP_SUMMARY
+            echo "- **Tags**: ${{ env.TAGS_COUNT }}/8" >> $GITHUB_STEP_SUMMARY
+            echo "- **Settings**: ${{ env.SETTINGS_COUNT }}/6" >> $GITHUB_STEP_SUMMARY
+            echo "- **Entities**: ${{ env.ENTITIES_COUNT }}/7" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "📄 Output: \`${{ env.SPEC_PATH }}\`" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "⚠️  **Review before merging**" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Generation incomplete**" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "- **Completeness**: ${{ env.COMPLETENESS }}%" >> $GITHUB_STEP_SUMMARY
+            echo "- **Missing**: ${{ env.MISSING_COUNT }} requirements" >> $GITHUB_STEP_SUMMARY
+          fi

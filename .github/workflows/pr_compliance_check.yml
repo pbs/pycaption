@@ -1,0 +1,629 @@
+name: PR Compliance Check
+
+on:
+  workflow_dispatch:  # Manual trigger
+    inputs:
+      pr_number:
+        description: 'PR number (leave empty for latest)'
+        required: false
+        type: string
+      notify_slack:
+        description: 'Send Slack notification'
+        required: false
+        default: 'true'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  pr-compliance:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # Full history for proper diff
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+      - name: Determine PR to analyze
+        id: pr_info
+        run: |
+          if [ -n "${{ github.event.inputs.pr_number }}" ]; then
+            PR_NUM="${{ github.event.inputs.pr_number }}"
+          elif [ -n "${{ github.event.pull_request.number }}" ]; then
+            PR_NUM="${{ github.event.pull_request.number }}"
+          else
+            # Get latest open PR
+            PR_NUM=$(gh pr list --state open --limit 1 --json number --jq '.[0].number' || echo "")
+          fi
+
+          if [ -z "$PR_NUM" ]; then
+            echo "No PR found to analyze"
+            echo "pr_exists=false" >> $GITHUB_OUTPUT
+          else
+            echo "PR_NUMBER=$PR_NUM" >> $GITHUB_ENV
+            echo "pr_exists=true" >> $GITHUB_OUTPUT
+            echo "Analyzing PR #$PR_NUM"
+          fi
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Run PR Compliance Analysis
+        if: steps.pr_info.outputs.pr_exists == 'true'
+        id: analysis
+        run: |
+          mkdir -p pycaption/compliance_checks
+          python3 << 'EOF'
+          import os, re, glob, json
+          from datetime import datetime
+
+          print("="*80)
+          print("PR COMPLIANCE & CODE REVIEW ANALYSIS")
+          print("="*80)
+
+          pr_number = os.environ.get('PR_NUMBER', 'unknown')
+          print(f"\nAnalyzing PR #{pr_number}")
+
+          # ===== STEP 1: DETECT CHANGED FORMATS =====
+          print("\n[1/5] Detecting format changes...")
+
+          import subprocess
+
+          # Get base branch (main or master)
+          base_branch = 'main'
+          try:
+              subprocess.run(['git', 'rev-parse', '--verify', 'origin/main'],
+                           check=True, capture_output=True)
+          except:
+              base_branch = 'master'
+
+          # Get changed files
+          result = subprocess.run(
+              ['git', 'diff', '--name-only', f'origin/{base_branch}...HEAD'],
+              capture_output=True, text=True
+          )
+          changed_files = result.stdout.strip().split('\n') if result.stdout.strip() else []
+
+          formats = {
+              'scc': {'changed': False, 'files': []},
+              'vtt': {'changed': False, 'files': []},
+              'dfxp': {'changed': False, 'files': []},
+          }
+
+          patterns = {
+              'scc': r'(pycaption/scc/|tests/.*scc)',
+              'vtt': r'(pycaption/(webvtt|vtt)|tests/.*(webvtt|vtt))',
+              'dfxp': r'(pycaption/dfxp/|tests/.*dfxp)',
+          }
+
+          for file in changed_files:
+              for fmt, pattern in patterns.items():
+                  if re.search(pattern, file, re.I):
+                      formats[fmt]['changed'] = True
+                      formats[fmt]['files'].append(file)
+
+          any_changed = any(f['changed'] for f in formats.values())
+
+          if not any_changed:
+              print("✅ No caption format changes - skipping compliance checks")
+              with open("pycaption/compliance_checks/pr_summary.txt", 'w') as f:
+                  f.write("ANALYSIS_NEEDED=false\n")
+              exit(0)
+
+          for fmt, data in formats.items():
+              if data['changed']:
+                  print(f"  ✅ {fmt.upper()}: {len(data['files'])} files")
+
+          # ===== STEP 2: GET PR DIFF =====
+          print("\n[2/5] Analyzing code changes...")
+
+          diff_result = subprocess.run(
+              ['git', 'diff', f'origin/{base_branch}...HEAD'],
+              capture_output=True, text=True
+          )
+          diff_content = diff_result.stdout
+
+          # Parse additions and deletions
+          additions = []
+          deletions = []
+          current_file = None
+
+          for line in diff_content.split('\n'):
+              if line.startswith('diff --git'):
+                  match = re.search(r'b/(.+)$', line)
+                  current_file = match.group(1) if match else None
+              elif line.startswith('+') and not line.startswith('+++'):
+                  additions.append({'file': current_file, 'line': line[1:].strip()})
+              elif line.startswith('-') and not line.startswith('---'):
+                  deletions.append({'file': current_file, 'line': line[1:].strip()})
+
+          print(f"  Additions: {len(additions)} lines")
+          print(f"  Deletions: {len(deletions)} lines")
+
+          # ===== STEP 3: COMPLIANCE CHECKS =====
+          print("\n[3/5] Checking compliance...")
+
+          compliance_issues = []
+
+          # SCC compliance checks
+          if formats['scc']['changed']:
+              print("  Checking SCC compliance...")
+
+              # Load SCC spec if available
+              spec_file = 'pycaption/specs/scc/scc_specs_summary.md'
+              spec_content = ""
+              if os.path.exists(spec_file):
+                  with open(spec_file) as f:
+                      spec_content = f.read()
+
+              for add in additions:
+                  if not add['file'] or 'scc' not in add['file']:
+                      continue
+
+                  line = add['line']
+
+                  # Check 1: Incorrect RU4 hex
+                  if "'94a7'" in line or '"94a7"' in line:
+                      compliance_issues.append({
+                          'format': 'SCC',
+                          'severity': 'CRITICAL',
+                          'rule': 'CTRL-008',
+                          'issue': 'Incorrect RU4 hex value',
+                          'detail': "Found '94a7', should be '9427'",
+                          'file': add['file'],
+                          'line': line[:80]
+                      })
+
+                  # Check 2: Missing validation patterns
+                  if 'def ' in line and 'validate' not in line.lower():
+                      # Function without validation in name - check if it should validate
+                      if any(keyword in line.lower() for keyword in ['parse', 'read', 'decode']):
+                          # These should have validation
+                          has_validation = any(
+                              'raise' in a['line'] or 'if ' in a['line']
+                              for a in additions[additions.index(add):additions.index(add)+10]
+                              if a['file'] == add['file']
+                          )
+                          if not has_validation:
+                              compliance_issues.append({
+                                  'format': 'SCC',
+                                  'severity': 'MEDIUM',
+                                  'rule': 'VALIDATION',
+                                  'issue': 'Function may need validation',
+                                  'detail': 'Parse/read function without visible validation',
+                                  'file': add['file'],
+                                  'line': line[:80]
+                              })
+
+          # VTT compliance checks
+          if formats['vtt']['changed']:
+              print("  Checking VTT compliance...")
+
+              for add in additions:
+                  if not add['file'] or 'vtt' not in add['file'].lower():
+                      continue
+
+                  line = add['line']
+
+                  # Check 1: WEBVTT header handling
+                  if 'WEBVTT' in line and '!=' not in line:
+                      if 'strip()' not in line or '==' not in line:
+                          compliance_issues.append({
+                              'format': 'VTT',
+                              'severity': 'HIGH',
+                              'rule': 'RULE-FMT-001',
+                              'issue': 'WEBVTT header validation may be incorrect',
+                              'detail': 'Header should use exact match with strip()',
+                              'file': add['file'],
+                              'line': line[:80]
+                          })
+
+                  # Check 2: Timestamp format validation
+                  if 'timestamp' in line.lower() and 'def ' in line:
+                      # Check if validation exists nearby
+                      has_regex = any(
+                          'regex' in a['line'] or 'match' in a['line']
+                          for a in additions[additions.index(add):additions.index(add)+15]
+                          if a['file'] == add['file']
+                      )
+                      if not has_regex:
+                          compliance_issues.append({
+                              'format': 'VTT',
+                              'severity': 'MEDIUM',
+                              'rule': 'RULE-TIME-001',
+                              'issue': 'Timestamp function needs format validation',
+                              'detail': 'Should validate HH:MM:SS.mmm format',
+                              'file': add['file'],
+                              'line': line[:80]
+                          })
+
+          print(f"  Found: {len(compliance_issues)} potential compliance issues")
+
+          # ===== STEP 4: REGRESSION ANALYSIS =====
+          print("\n[4/5] Checking for regressions...")
+
+          regressions = []
+
+          for deletion in deletions:
+              if not deletion['file']:
+                  continue
+
+              line = deletion['line']
+
+              # Check 1: Removed validation
+              if 'raise' in line or 'assert' in line:
+                  # Check if it's truly removed or just moved
+                  is_moved = any(
+                      line in a['line']
+                      for a in additions
+                      if a['file'] == deletion['file']
+                  )
+                  if not is_moved:
+                      regressions.append({
+                          'type': 'REMOVED_VALIDATION',
+                          'severity': 'HIGH',
+                          'file': deletion['file'],
+                          'detail': f"Validation removed: {line[:60]}",
+                          'impact': 'May accept invalid input'
+                      })
+
+              # Check 2: Removed function
+              if 'def ' in line:
+                  func_match = re.search(r'def\s+(\w+)', line)
+                  if func_match:
+                      func_name = func_match.group(1)
+                      is_moved = any(
+                          f'def {func_name}' in a['line']
+                          for a in additions
+                      )
+                      if not is_moved and not func_name.startswith('_'):
+                          regressions.append({
+                              'type': 'REMOVED_FUNCTION',
+                              'severity': 'CRITICAL',
+                              'file': deletion['file'],
+                              'detail': f"Public function removed: {func_name}",
+                              'impact': 'Breaking change for users'
+                          })
+
+              # Check 3: Changed control codes
+              old_hex = re.findall(r"['\"]([0-9a-fA-F]{4})['\"]", line)
+              if old_hex:
+                  # Check if replacement is different
+                  for hex_val in old_hex:
+                      new_hex = None
+                      for add in additions:
+                          if add['file'] == deletion['file']:
+                              new_match = re.findall(r"['\"]([0-9a-fA-F]{4})['\"]", add['line'])
+                              if new_match and new_match[0] != hex_val:
+                                  new_hex = new_match[0]
+                                  break
+
+                      if new_hex and new_hex != hex_val:
+                          regressions.append({
+                              'type': 'CHANGED_CONTROL_CODE',
+                              'severity': 'CRITICAL',
+                              'file': deletion['file'],
+                              'detail': f"Control code changed: {hex_val} → {new_hex}",
+                              'impact': 'May break caption rendering'
+                          })
+
+          print(f"  Found: {len(regressions)} potential regressions")
+
+          # ===== STEP 5: CODE QUALITY REVIEW =====
+          print("\n[5/5] Code quality review...")
+
+          quality_issues = []
+
+          for add in additions:
+              if not add['file'] or not add['file'].endswith('.py'):
+                  continue
+
+              line = add['line']
+
+              # Check 1: Bare except
+              if re.search(r'except\s*:', line) and 'except Exception' not in line:
+                  quality_issues.append({
+                      'type': 'BARE_EXCEPT',
+                      'severity': 'MEDIUM',
+                      'file': add['file'],
+                      'detail': 'Bare except clause catches all exceptions',
+                      'recommendation': 'Use specific exception types'
+                  })
+
+              # Check 2: Magic numbers
+              if re.search(r'\b(32|15|30|29\.97)\b', line):
+                  if 'SPEC' not in line and '#' not in line:
+                      quality_issues.append({
+                          'type': 'MAGIC_NUMBER',
+                          'severity': 'LOW',
+                          'file': add['file'],
+                          'detail': f"Magic number in: {line[:60]}",
+                          'recommendation': 'Use named constant'
+                      })
+
+              # Check 3: Missing docstrings for public functions
+              if re.search(r'^\s*def\s+[a-z]\w+\(', line):
+                  # Check if next few lines have docstring
+                  idx = additions.index(add)
+                  has_docstring = any(
+                      '"""' in additions[i]['line'] or "'''" in additions[i]['line']
+                      for i in range(idx+1, min(idx+5, len(additions)))
+                      if additions[i]['file'] == add['file']
+                  )
+                  if not has_docstring:
+                      quality_issues.append({
+                          'type': 'MISSING_DOCSTRING',
+                          'severity': 'LOW',
+                          'file': add['file'],
+                          'detail': f"Function without docstring: {line[:60]}",
+                          'recommendation': 'Add docstring'
+                      })
+
+          print(f"  Found: {len(quality_issues)} code quality suggestions")
+
+          # ===== GENERATE REPORT =====
+          print("\n[6/6] Generating report...")
+
+          date = datetime.now().strftime("%Y-%m-%d")
+
+          # Determine folder based on primary format
+          primary_format = None
+          changed_count = sum(1 for f in formats.values() if f['changed'])
+
+          if changed_count == 1:
+              for fmt, data in formats.items():
+                  if data['changed']:
+                      primary_format = fmt
+                      break
+
+          if primary_format:
+              report_dir = f"pycaption/compliance_checks/{primary_format}"
+              report_path = f"{report_dir}/pr_{pr_number}_review_{date}.md"
+          else:
+              report_dir = "pycaption/compliance_checks"
+              report_path = f"{report_dir}/pr_{pr_number}_review_{date}.md"
+
+          os.makedirs(report_dir, exist_ok=True)
+
+          # Calculate severity counts
+          critical_count = sum(1 for i in compliance_issues + regressions
+                              if i.get('severity') == 'CRITICAL')
+          high_count = sum(1 for i in compliance_issues + regressions
+                          if i.get('severity') == 'HIGH')
+
+          # Generate report
+          report = f"""# PR #{pr_number} Compliance & Code Review
+
+          **Generated**: {date}
+          **Formats Changed**: {', '.join(f.upper() for f, d in formats.items() if d['changed'])}
+
+          ## Executive Summary
+
+          **Compliance Issues**: {len(compliance_issues)} ({critical_count} critical, {high_count} high)
+          **Regressions**: {len(regressions)}
+          **Code Quality**: {len(quality_issues)} suggestions
+
+          **Overall Risk**: {'🔴 HIGH' if critical_count > 0 else '🟡 MEDIUM' if high_count > 0 else '🟢 LOW'}
+
+          ---
+
+          ## 1. Compliance Issues ({len(compliance_issues)})
+
+          """
+
+          if compliance_issues:
+              for i, issue in enumerate(compliance_issues, 1):
+                  report += f"""### {i}. [{issue['severity']}] {issue['issue']}
+
+          - **Format**: {issue['format']}
+          - **Rule**: {issue['rule']}
+          - **File**: `{issue['file']}`
+          - **Detail**: {issue['detail']}
+          - **Line**: `{issue['line']}`
+
+          """
+          else:
+              report += "✅ No compliance issues detected\n\n"
+
+          report += f"""---
+
+          ## 2. Regression Analysis ({len(regressions)})
+
+          """
+
+          if regressions:
+              for i, reg in enumerate(regressions, 1):
+                  report += f"""### {i}. [{reg['severity']}] {reg['type']}
+
+          - **File**: `{reg['file']}`
+          - **Detail**: {reg['detail']}
+          - **Impact**: {reg['impact']}
+
+          """
+          else:
+              report += "✅ No regressions detected\n\n"
+
+          report += f"""---
+
+          ## 3. Code Quality Review ({len(quality_issues)})
+
+          """
+
+          if quality_issues:
+              for i, qissue in enumerate(quality_issues, 1):
+                  report += f"""### {i}. [{qissue['severity']}] {qissue['type']}
+
+          - **File**: `{qissue['file']}`
+          - **Detail**: {qissue['detail']}
+          - **Recommendation**: {qissue['recommendation']}
+
+          """
+          else:
+              report += "✅ Code quality looks good\n\n"
+
+          report += f"""---
+
+          ## Recommendation
+
+          """
+
+          if critical_count > 0:
+              report += "🔴 **DO NOT MERGE** - Critical issues must be fixed first\n"
+          elif high_count > 0 or len(regressions) > 0:
+              report += "🟡 **REVIEW REQUIRED** - Address high-severity issues before merging\n"
+          else:
+              report += "🟢 **SAFE TO MERGE** - No critical issues found\n"
+
+          report += f"\n---\n**Generated by**: PR Compliance Check workflow\n"
+
+          with open(report_path, 'w') as f:
+              f.write(report)
+
+          print(f"✅ Report: {report_path}")
+
+          # Write summary
+          with open("pycaption/compliance_checks/pr_summary.txt", 'w') as f:
+              f.write(f"ANALYSIS_NEEDED=true\n")
+              f.write(f"PR_NUMBER={pr_number}\n")
+              f.write(f"COMPLIANCE_ISSUES={len(compliance_issues)}\n")
+              f.write(f"REGRESSIONS={len(regressions)}\n")
+              f.write(f"QUALITY_ISSUES={len(quality_issues)}\n")
+              f.write(f"CRITICAL_COUNT={critical_count}\n")
+              f.write(f"HIGH_COUNT={high_count}\n")
+              f.write(f"REPORT_PATH={report_path}\n")
+              f.write(f"RISK_LEVEL={'HIGH' if critical_count > 0 else 'MEDIUM' if high_count > 0 else 'LOW'}\n")
+
+          EOF
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Extract summary
+        id: summary
+        run: |
+          if [ -f pycaption/compliance_checks/pr_summary.txt ]; then
+            cat pycaption/compliance_checks/pr_summary.txt >> $GITHUB_ENV
+          else
+            echo "ANALYSIS_NEEDED=false" >> $GITHUB_ENV
+          fi
+
+      - name: Upload PR review report
+        uses: actions/upload-artifact@v4
+        if: env.ANALYSIS_NEEDED == 'true'
+        with:
+          name: pr-compliance-report
+          path: pycaption/compliance_checks/**/pr_*_review_*.md
+          retention-days: 90
+
+      - name: Get artifact URL
+        run: |
+          echo "ARTIFACT_URL=https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> $GITHUB_ENV
+
+      - name: Notify Slack - Results
+        uses: archive/github-actions-slack@v2.0.0
+        if: env.ANALYSIS_NEEDED == 'true' && github.event.inputs.notify_slack == 'true' && secrets.SLACK_BOT_TOKEN != ''
+        with:
+          slack-bot-user-oauth-access-token: ${{ secrets.SLACK_BOT_TOKEN }}
+          slack-channel: ${{ secrets.SLACK_CHANNEL_ID }}
+          slack-text: |
+            :mag: *PR #${{ env.PR_NUMBER }} Compliance Review*
+
+            **Risk Level**: ${{ env.RISK_LEVEL == 'HIGH' && '🔴 HIGH' || env.RISK_LEVEL == 'MEDIUM' && '🟡 MEDIUM' || '🟢 LOW' }}
+
+            *Compliance Issues*: ${{ env.COMPLIANCE_ISSUES }} (${{ env.CRITICAL_COUNT }} critical)
+            *Regressions*: ${{ env.REGRESSIONS }}
+            *Code Quality*: ${{ env.QUALITY_ISSUES }} suggestions
+
+            *Report*: `${{ env.REPORT_PATH }}`
+            *Download*: <${{ env.ARTIFACT_URL }}|View in GitHub Actions>
+
+            Triggered by: *${{ github.actor }}*
+
+      - name: Notify Slack - No Changes
+        uses: archive/github-actions-slack@v2.0.0
+        if: env.ANALYSIS_NEEDED == 'false' && github.event.inputs.notify_slack == 'true' && secrets.SLACK_BOT_TOKEN != ''
+        with:
+          slack-bot-user-oauth-access-token: ${{ secrets.SLACK_BOT_TOKEN }}
+          slack-channel: ${{ secrets.SLACK_CHANNEL_ID }}
+          slack-text: |
+            :white_check_mark: *PR #${{ env.PR_NUMBER }} - No Caption Changes*
+
+            No SCC/VTT/DFXP files changed - compliance check skipped
+
+            Triggered by: *${{ github.actor }}*
+
+      - name: Slack notification skipped
+        if: github.event.inputs.notify_slack == 'true' && secrets.SLACK_BOT_TOKEN == ''
+        run: |
+          echo "⚠️  Slack notification requested but SLACK_BOT_TOKEN not available"
+
+      - name: Comment on PR
+        if: env.ANALYSIS_NEEDED == 'true' && github.event.pull_request.number
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            const riskLevel = process.env.RISK_LEVEL;
+            const complianceIssues = process.env.COMPLIANCE_ISSUES;
+            const regressions = process.env.REGRESSIONS;
+            const criticalCount = process.env.CRITICAL_COUNT;
+
+            const riskEmoji = riskLevel === 'HIGH' ? '🔴' : riskLevel === 'MEDIUM' ? '🟡' : '🟢';
+            const recommendation = riskLevel === 'HIGH'
+              ? '**DO NOT MERGE** - Critical issues must be fixed first'
+              : riskLevel === 'MEDIUM'
+              ? '**REVIEW REQUIRED** - Address issues before merging'
+              : '**SAFE TO MERGE** - No critical issues found';
+
+            const comment = `## ${riskEmoji} PR Compliance Review
+
+            **Risk Level**: ${riskLevel}
+
+            - **Compliance Issues**: ${complianceIssues} (${criticalCount} critical)
+            - **Regressions**: ${regressions}
+
+            ${recommendation}
+
+            📄 Full report available in [workflow artifacts](${process.env.ARTIFACT_URL})`;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+      - name: Create job summary
+        if: always()
+        run: |
+          echo "## PR Compliance Check Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ env.ANALYSIS_NEEDED }}" == "true" ]; then
+            echo "✅ **Analysis completed for PR #${{ env.PR_NUMBER }}**" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### Risk Level: ${{ env.RISK_LEVEL }}" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "- **Compliance Issues**: ${{ env.COMPLIANCE_ISSUES }}" >> $GITHUB_STEP_SUMMARY
+            echo "- **Critical**: ${{ env.CRITICAL_COUNT }}" >> $GITHUB_STEP_SUMMARY
+            echo "- **High**: ${{ env.HIGH_COUNT }}" >> $GITHUB_STEP_SUMMARY
+            echo "- **Regressions**: ${{ env.REGRESSIONS }}" >> $GITHUB_STEP_SUMMARY
+            echo "- **Code Quality**: ${{ env.QUALITY_ISSUES }}" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "📄 Report: \`${{ env.REPORT_PATH }}\`" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "ℹ️  No caption format changes detected" >> $GITHUB_STEP_SUMMARY
+          fi

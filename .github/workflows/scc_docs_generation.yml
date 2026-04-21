@@ -1,0 +1,431 @@
+name: SCC Docs Generation
+
+on:
+  workflow_dispatch:  # Manual trigger
+    inputs:
+      notify_slack:
+        description: 'Send Slack notification'
+        required: false
+        default: 'true'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+
+jobs:
+  generate-scc-docs:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Generate SCC Specification
+        id: generation
+        run: |
+          mkdir -p pycaption/specs/scc
+          python3 << 'EOF'
+          import os, re, glob
+          from datetime import datetime
+
+          print("="*80)
+          print("SCC SPECIFICATION GENERATION")
+          print("="*80)
+
+          # ===== STEP 1: LOAD SOURCE MATERIALS =====
+          print("\n[1/5] Loading source materials...")
+
+          sources = {}
+
+          # Load standards summary (CEA-608/708)
+          standards_file = 'pycaption/specs/scc/standards_summary.md'
+          if os.path.exists(standards_file):
+              with open(standards_file) as f:
+                  sources['standards'] = f.read()
+              print(f"  ✅ Loaded {standards_file} ({len(sources['standards'])} chars)")
+          else:
+              print(f"  ⚠️  Not found: {standards_file}")
+              sources['standards'] = ""
+
+          # Load web summary
+          web_file = 'pycaption/specs/scc/scc_web_summary.md'
+          if os.path.exists(web_file):
+              with open(web_file) as f:
+                  sources['web'] = f.read()
+              print(f"  ✅ Loaded {web_file} ({len(sources['web'])} chars)")
+          else:
+              print(f"  ⚠️  Not found: {web_file}")
+              sources['web'] = ""
+
+          if not sources['standards'] and not sources['web']:
+              print("❌ No source materials found")
+              with open("pycaption/specs/scc/generation_summary.txt", 'w') as f:
+                  f.write("GENERATION_SUCCESS=false\n")
+                  f.write("ERROR=No source materials\n")
+              exit(0)
+
+          # ===== STEP 2: EXTRACT REQUIREMENTS =====
+          print("\n[2/5] Extracting requirements...")
+
+          requirements = {
+              'file_format': [],
+              'control_codes': [],
+              'timing': [],
+              'layout': [],
+              'protocols': [],
+              'validation': []
+          }
+
+          combined = sources['standards'] + "\n" + sources['web']
+
+          # Extract file format requirements
+          if 'Scenarist_SCC' in combined:
+              requirements['file_format'].append({
+                  'id': 'RULE-FMT-001',
+                  'text': 'File MUST begin with "Scenarist_SCC V1.0"',
+                  'level': 'MUST'
+              })
+
+          # Extract frame rates
+          frame_rates = re.findall(r'(23\.976|24|25|29\.97|30)\s*fps', combined, re.I)
+          if frame_rates:
+              requirements['timing'].append({
+                  'id': 'RULE-TIME-001',
+                  'text': f'Frame rates: {", ".join(set(frame_rates))}',
+                  'level': 'MUST'
+              })
+
+          # Extract control codes
+          hex_codes = re.findall(r'0x([0-9a-fA-F]{4})', combined)
+          if hex_codes:
+              requirements['control_codes'].append({
+                  'id': 'CTRL-001',
+                  'text': f'Found {len(set(hex_codes))} control codes',
+                  'level': 'MUST'
+              })
+
+          # Extract RU4 specifically
+          if '9427' in combined or 'RU4' in combined:
+              requirements['control_codes'].append({
+                  'id': 'CTRL-008',
+                  'text': 'RU4 (Roll-Up 4) control code: 0x9427',
+                  'level': 'MUST'
+              })
+
+          # Extract layout limits
+          if '32' in combined and 'character' in combined.lower():
+              requirements['layout'].append({
+                  'id': 'RULE-LAY-001',
+                  'text': '32 characters per row maximum',
+                  'level': 'MUST'
+              })
+
+          if '15' in combined and 'row' in combined.lower():
+              requirements['layout'].append({
+                  'id': 'RULE-LAY-002',
+                  'text': '15 rows maximum',
+                  'level': 'MUST'
+              })
+
+          # Extract caption modes
+          if 'Pop-on' in combined or 'pop on' in combined.lower():
+              requirements['protocols'].append({
+                  'id': 'RULE-PROTO-001',
+                  'text': 'Pop-on mode: RCL → text → EOC',
+                  'level': 'MUST'
+              })
+
+          if 'Roll-up' in combined or 'roll up' in combined.lower():
+              requirements['protocols'].append({
+                  'id': 'RULE-PROTO-002',
+                  'text': 'Roll-up mode: RU2/3/4 → text → CR',
+                  'level': 'MUST'
+              })
+
+          if 'Paint-on' in combined or 'paint on' in combined.lower():
+              requirements['protocols'].append({
+                  'id': 'RULE-PROTO-003',
+                  'text': 'Paint-on mode: RDC → text',
+                  'level': 'MUST'
+              })
+
+          # Extract drop-frame
+          if 'drop' in combined.lower() and 'frame' in combined.lower():
+              requirements['timing'].append({
+                  'id': 'RULE-TIME-002',
+                  'text': 'Drop-frame timecode for 29.97 fps',
+                  'level': 'MUST'
+              })
+
+          # Extract parity
+          if 'parity' in combined.lower():
+              requirements['validation'].append({
+                  'id': 'RULE-ENC-001',
+                  'text': 'Odd parity (N/A for SCC text format)',
+                  'level': 'MUST'
+              })
+
+          total_requirements = sum(len(v) for v in requirements.values())
+          print(f"  Extracted {total_requirements} requirements:")
+          for category, reqs in requirements.items():
+              if reqs:
+                  print(f"    {category}: {len(reqs)}")
+
+          # ===== STEP 3: GENERATE SPECIFICATION =====
+          print("\n[3/5] Generating specification...")
+
+          date = datetime.now().strftime("%Y-%m-%d")
+          spec_path = 'pycaption/specs/scc/scc_specs_summary.md'
+
+          spec = f"""# SCC Specification - Complete Reference
+
+          **Generated**: {date}
+          **Version**: 1.0
+          **Sources**: CEA-608-E S-2019, CEA-708-E R-2018, web documentation
+
+          ---
+
+          ## Document Information
+
+          This specification serves as the single source of truth for SCC compliance checking.
+
+          **Total Requirements**: {total_requirements}
+
+          ---
+
+          ## Part 1: File Format
+
+          """
+
+          for req in requirements['file_format']:
+              spec += f"""**[{req['id']}]** {req['text']}
+          - **Level:** {req['level']}
+
+          """
+
+          spec += """---
+
+          ## Part 2: Timing & Frame Rates
+
+          """
+
+          for req in requirements['timing']:
+              spec += f"""**[{req['id']}]** {req['text']}
+          - **Level:** {req['level']}
+
+          """
+
+          spec += """---
+
+          ## Part 3: Control Codes
+
+          """
+
+          for req in requirements['control_codes']:
+              spec += f"""**[{req['id']}]** {req['text']}
+          - **Level:** {req['level']}
+
+          """
+
+          spec += """---
+
+          ## Part 4: Layout Constraints
+
+          """
+
+          for req in requirements['layout']:
+              spec += f"""**[{req['id']}]** {req['text']}
+          - **Level:** {req['level']}
+
+          """
+
+          spec += """---
+
+          ## Part 5: Caption Mode Protocols
+
+          """
+
+          for req in requirements['protocols']:
+              spec += f"""**[{req['id']}]** {req['text']}
+          - **Level:** {req['level']}
+
+          """
+
+          spec += """---
+
+          ## Part 6: Validation & Encoding
+
+          """
+
+          for req in requirements['validation']:
+              spec += f"""**[{req['id']}]** {req['text']}
+          - **Level:** {req['level']}
+
+          """
+
+          spec += f"""---
+
+          ## Validation Summary
+
+          **Total Requirements**: {total_requirements}
+
+          By Category:
+          - File Format: {len(requirements['file_format'])}
+          - Timing: {len(requirements['timing'])}
+          - Control Codes: {len(requirements['control_codes'])}
+          - Layout: {len(requirements['layout'])}
+          - Protocols: {len(requirements['protocols'])}
+          - Validation: {len(requirements['validation'])}
+
+          ---
+
+          **Generated**: {datetime.now().strftime('%Y-%m-%d %H:%M')}
+          **Tool**: SCC Docs Generation (GitHub Action)
+          """
+
+          with open(spec_path, 'w') as f:
+              f.write(spec)
+
+          print(f"  ✅ Generated: {spec_path}")
+
+          # ===== STEP 4: VALIDATE COMPLETENESS =====
+          print("\n[4/5] Validating completeness...")
+
+          critical_checks = {
+              'Header': 'RULE-FMT-001' in spec,
+              'RU4': 'CTRL-008' in spec,
+              'Frame rates': 'RULE-TIME-001' in spec,
+              'Row limit': 'RULE-LAY-001' in spec,
+              'Protocols': 'RULE-PROTO-001' in spec,
+          }
+
+          missing = [name for name, present in critical_checks.items() if not present]
+
+          if missing:
+              print(f"  ⚠️  Missing critical requirements: {missing}")
+          else:
+              print(f"  ✅ All critical requirements present")
+
+          completeness = (len(critical_checks) - len(missing)) / len(critical_checks) * 100
+
+          # ===== STEP 5: GENERATE SUMMARY =====
+          print("\n[5/5] Summary...")
+
+          generation_success = completeness >= 80
+
+          print(f"  Completeness: {completeness:.0f}%")
+          print(f"  Status: {'✅ SUCCESS' if generation_success else '❌ INCOMPLETE'}")
+
+          with open("pycaption/specs/scc/generation_summary.txt", 'w') as f:
+              f.write(f"GENERATION_SUCCESS={'true' if generation_success else 'false'}\n")
+              f.write(f"TOTAL_REQUIREMENTS={total_requirements}\n")
+              f.write(f"COMPLETENESS={completeness:.0f}\n")
+              f.write(f"MISSING_COUNT={len(missing)}\n")
+              f.write(f"SPEC_PATH={spec_path}\n")
+
+          if not generation_success:
+              print(f"  ⚠️  Missing: {missing}")
+
+          EOF
+        continue-on-error: true
+
+      - name: Extract summary
+        id: summary
+        run: |
+          if [ -f pycaption/specs/scc/generation_summary.txt ]; then
+            cat pycaption/specs/scc/generation_summary.txt >> $GITHUB_ENV
+          else
+            echo "GENERATION_SUCCESS=false" >> $GITHUB_ENV
+          fi
+
+      - name: Commit generated spec
+        if: env.GENERATION_SUCCESS == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add pycaption/specs/scc/scc_specs_summary.md
+          git diff --staged --quiet || git commit -m "Generate SCC specification [skip ci]"
+          # Note: Don't push automatically - let user review first
+
+      - name: Upload generated spec
+        uses: actions/upload-artifact@v4
+        if: env.GENERATION_SUCCESS == 'true'
+        with:
+          name: scc-specs-generated
+          path: pycaption/specs/scc/scc_specs_summary.md
+          retention-days: 90
+
+      - name: Get artifact URL
+        run: |
+          echo "ARTIFACT_URL=https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> $GITHUB_ENV
+
+      - name: Notify Slack - Success
+        uses: archive/github-actions-slack@v2.0.0
+        if: env.GENERATION_SUCCESS == 'true' && github.event.inputs.notify_slack == 'true' && secrets.SLACK_BOT_TOKEN != ''
+        with:
+          slack-bot-user-oauth-access-token: ${{ secrets.SLACK_BOT_TOKEN }}
+          slack-channel: ${{ secrets.SLACK_CHANNEL_ID }}
+          slack-text: |
+            :book: *SCC Specification Generated*
+
+            **Status**: ✅ SUCCESS
+
+            *Total Requirements*: ${{ env.TOTAL_REQUIREMENTS }}
+            *Completeness*: ${{ env.COMPLETENESS }}%
+            *Missing*: ${{ env.MISSING_COUNT }}
+
+            *Output*: `${{ env.SPEC_PATH }}`
+            *Download*: <${{ env.ARTIFACT_URL }}|View in GitHub Actions>
+
+            ⚠️  Review the generated spec before committing
+
+            Triggered by: *${{ github.actor }}*
+
+      - name: Notify Slack - Failure
+        uses: archive/github-actions-slack@v2.0.0
+        if: env.GENERATION_SUCCESS == 'false' && github.event.inputs.notify_slack == 'true' && secrets.SLACK_BOT_TOKEN != ''
+        with:
+          slack-bot-user-oauth-access-token: ${{ secrets.SLACK_BOT_TOKEN }}
+          slack-channel: ${{ secrets.SLACK_CHANNEL_ID }}
+          slack-text: |
+            :warning: *SCC Specification Generation Incomplete*
+
+            **Status**: ⚠️ INCOMPLETE
+
+            *Completeness*: ${{ env.COMPLETENESS }}%
+            *Missing critical requirements*: ${{ env.MISSING_COUNT }}
+
+            Check logs: <${{ env.ARTIFACT_URL }}|GitHub Actions>
+
+            Triggered by: *${{ github.actor }}*
+
+      - name: Slack notification skipped
+        if: github.event.inputs.notify_slack == 'true' && secrets.SLACK_BOT_TOKEN == ''
+        run: |
+          echo "⚠️  Slack notification requested but SLACK_BOT_TOKEN not available"
+
+      - name: Create job summary
+        if: always()
+        run: |
+          echo "## SCC Specification Generation Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ env.GENERATION_SUCCESS }}" == "true" ]; then
+            echo "✅ **Generation successful**" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "- **Requirements**: ${{ env.TOTAL_REQUIREMENTS }}" >> $GITHUB_STEP_SUMMARY
+            echo "- **Completeness**: ${{ env.COMPLETENESS }}%" >> $GITHUB_STEP_SUMMARY
+            echo "- **Output**: \`${{ env.SPEC_PATH }}\`" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "⚠️  **Review the generated specification before merging**" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Generation incomplete**" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "- **Completeness**: ${{ env.COMPLETENESS }}%" >> $GITHUB_STEP_SUMMARY
+            echo "- **Missing**: ${{ env.MISSING_COUNT }} critical requirements" >> $GITHUB_STEP_SUMMARY
+          fi
