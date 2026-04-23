@@ -1,5 +1,20 @@
 Changelog
 ---------
+2.2.21
+^^^^^^
+  - supports multi-row jumps: small jumps (1-3 rows)
+    emit the correct number of line breaks,
+    large jumps (4+ rows) trigger repositioning instead
+  - clear positioning state at caption boundaries
+    (EOC, roll-up, paint-on, clear commands)
+  - Code reformatted with Black/isort across the codebase
+  - Added missing tests for _PositioningTracker,
+    Alignment.from_horizontal_and_vertical_align
+
+2.2.20
+^^^^^^
+- update apache license and copyright year
+
 2.2.19
 ^^^^^^
 - Remove support for python 3.8 and 3.9.
