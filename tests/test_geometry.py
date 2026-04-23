@@ -1,7 +1,17 @@
 import pytest
 
 from pycaption import CaptionReadSyntaxError
-from pycaption.geometry import Layout, Padding, Point, Size, Stretch, UnitEnum
+from pycaption.geometry import (
+    Alignment,
+    HorizontalAlignmentEnum,
+    Layout,
+    Padding,
+    Point,
+    Size,
+    Stretch,
+    UnitEnum,
+    VerticalAlignmentEnum,
+)
 
 
 class TestIsValidGeometryObject:
@@ -135,3 +145,58 @@ class TestSize:
             Size.from_string(string)
 
         assert exc_info.value.args[0].startswith(f"Invalid size: {string}.")
+
+
+class TestAlignmentFromHorizontalAndVertical:
+    @pytest.mark.parametrize(
+        "text_align, expected",
+        [
+            ("left", HorizontalAlignmentEnum.LEFT),
+            ("start", HorizontalAlignmentEnum.START),
+            ("center", HorizontalAlignmentEnum.CENTER),
+            ("right", HorizontalAlignmentEnum.RIGHT),
+            ("end", HorizontalAlignmentEnum.END),
+        ],
+    )
+    def test_horizontal_mapping(self, text_align, expected):
+        alignment = Alignment.from_horizontal_and_vertical_align(
+            text_align=text_align
+        )
+
+        assert alignment.horizontal == expected
+        assert alignment.vertical is None
+
+    @pytest.mark.parametrize(
+        "display_align, expected",
+        [
+            ("before", VerticalAlignmentEnum.TOP),
+            ("center", VerticalAlignmentEnum.CENTER),
+            ("after", VerticalAlignmentEnum.BOTTOM),
+        ],
+    )
+    def test_vertical_mapping(self, display_align, expected):
+        alignment = Alignment.from_horizontal_and_vertical_align(
+            display_align=display_align
+        )
+
+        assert alignment.vertical == expected
+        assert alignment.horizontal is None
+
+    def test_both_dimensions(self):
+        alignment = Alignment.from_horizontal_and_vertical_align(
+            text_align="center", display_align="after"
+        )
+
+        assert alignment.horizontal == HorizontalAlignmentEnum.CENTER
+        assert alignment.vertical == VerticalAlignmentEnum.BOTTOM
+
+    def test_unknown_values_return_none(self):
+        assert (
+            Alignment.from_horizontal_and_vertical_align(
+                text_align="bogus", display_align="bogus"
+            )
+            is None
+        )
+
+    def test_no_args_returns_none(self):
+        assert Alignment.from_horizontal_and_vertical_align() is None
