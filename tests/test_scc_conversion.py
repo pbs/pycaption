@@ -1,3 +1,5 @@
+import re
+
 import pytest
 
 from pycaption import (
@@ -6,6 +8,7 @@ from pycaption import (
     SCCWriter,
     SRTReader,
     SRTWriter,
+    WebVTTReader,
     WebVTTWriter,
 )
 from tests.mixins import CaptionSetTestingMixIn
@@ -63,6 +66,36 @@ class TestSCCtoDFXP:
         dfxp = DFXPWriter().write(caption_set)
 
         assert dfxp == sample_dfxp_with_ampersand_character
+
+
+class TestSCCTimestampOrdering:
+    def test_scc_captions_are_in_order_when_short_text_followed_by_long(self):
+        """When short caption text is followed by longer caption text,
+        the SCC output timestamps should remain in chronological order.
+        """
+        vtt_input = (
+            "WEBVTT\n\n"
+            "0\n"
+            "00:00:02.200 --> 00:00:02.359\n"
+            "you know,\n\n"
+            "1\n"
+            "00:00:02.400 --> 00:00:03.760\n"
+            "the way he kind of looked at me.\n\n"
+            "2\n"
+            "00:00:04.700 --> 00:00:05.169\n"
+            "And I said,\n\n"
+            "3\n"
+            "00:00:05.210 --> 00:00:05.520\n"
+            "oh\n"
+        )
+        captions = WebVTTReader().read(vtt_input)
+        scc_output = SCCWriter().write(captions)
+        # SCC timestamps use HH:MM:SS:FF format (FF = frames)
+        timestamps = re.findall(r"(\d+:\d+:\d+:\d+)", scc_output)
+        for i in range(1, len(timestamps)):
+            assert timestamps[i] >= timestamps[i - 1], (
+                f"Timestamps out of order: {timestamps[i - 1]} > {timestamps[i]}"
+            )
 
 
 class TestSCCToWebVTT:
