@@ -91,6 +91,23 @@ class TestSCCReader(ReaderTestingMixIn):
         ]
         assert expected_positioning == actual_positioning
 
+    def test_breaks_do_not_accumulate_across_caption_boundaries(
+        self, sample_scc_multiple_positioning
+    ):
+        captions = SCCReader().read(sample_scc_multiple_positioning).get_captions(
+            "en-US"
+        )
+
+        for caption in captions:
+            assert caption.nodes, "Caption must have at least one node"
+            assert caption.nodes[0].type_ != CaptionNode.BREAK, (
+                "Caption must not start with a BREAK node — indicates breaks "
+                "leaked from the previous caption"
+            )
+            assert caption.nodes[-1].type_ != CaptionNode.BREAK, (
+                "Caption must not end with a trailing BREAK node"
+            )
+
     def test_tab_offset(self, sample_scc_tab_offset):
         captions = SCCReader().read(sample_scc_tab_offset)
 
