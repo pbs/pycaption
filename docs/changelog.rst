@@ -10,6 +10,10 @@ Changelog
   - Code reformatted with Black/isort across the codebase
   - Added missing tests for _PositioningTracker,
     Alignment.from_horizontal_and_vertical_align
+    - Bump actions/checkout from v2 to v4 in CI workflow
+    - Replace unmaintained archive/github-actions-slack with
+      slackapi/slack-github-action@v3.0.2 (fixes Node.js and
+      set-output deprecation warnings)
 
 2.2.20
 ^^^^^^

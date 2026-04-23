@@ -23,7 +23,7 @@ jobs:
         python-version: ["py310", "py311", "py312"]
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
       - name: Run Test
         id: tests
@@ -59,11 +59,13 @@ jobs:
           echo "BRANCH=${BRANCH#refs/*/}" >> $GITHUB_ENV
 
       - name: Notify if test FAILED
-        uses: archive/github-actions-slack@v2.0.0
+        uses: slackapi/slack-github-action@v3.0.2
         with:
-          slack-bot-user-oauth-access-token: ${{ secrets.SLACK_BOT_TOKEN }}
-          slack-channel: ${{ secrets.SLACK_CHANNEL_ID }}
-          slack-text: ":boom: *${{ env.FAILED_AMOUNT }}* Pycaption test(s) failed for Python *${{ matrix.python-version }}* on the *${{ env.BRANCH }}* branch (triggered by *${{ github.actor }}*)"
+          method: chat.postMessage
+          token: ${{ secrets.SLACK_BOT_TOKEN }}
+          payload: |
+            channel: ${{ secrets.SLACK_CHANNEL_ID }}
+            text: ":boom: *${{ env.FAILED_AMOUNT }}* Pycaption test(s) failed for Python *${{ matrix.python-version }}* on the *${{ env.BRANCH }}* branch (triggered by *${{ github.actor }}*)"
         if: steps.tests.outcome == 'failure' && !github.event.pull_request.head.repo.fork
 
       - name: Mark test failure
@@ -71,9 +73,11 @@ jobs:
         if: steps.tests.outcome == 'failure'
 
       - name: Slack notify tests PASSED
-        uses: archive/github-actions-slack@v2.0.0
+        uses: slackapi/slack-github-action@v3.0.2
         with:
-          slack-bot-user-oauth-access-token: ${{ secrets.SLACK_BOT_TOKEN }}
-          slack-channel: ${{ secrets.SLACK_CHANNEL_ID }}
-          slack-text: ":rocket: All (*${{ env.PASSED_AMOUNT }}*) Pycaption tests passed for Python *${{ matrix.python-version }}* covering *${{ env.COVERAGE }}%* of code on the *${{ env.BRANCH }}* branch (triggered by *${{ github.actor }}*)"
+          method: chat.postMessage
+          token: ${{ secrets.SLACK_BOT_TOKEN }}
+          payload: |
+            channel: ${{ secrets.SLACK_CHANNEL_ID }}
+            text: ":rocket: All (*${{ env.PASSED_AMOUNT }}*) Pycaption tests passed for Python *${{ matrix.python-version }}* covering *${{ env.COVERAGE }}%* of code on the *${{ env.BRANCH }}* branch (triggered by *${{ github.actor }}*)"
         if: steps.tests.outcome == 'success' && !github.event.pull_request.head.repo.fork
