@@ -314,6 +314,8 @@ class SCCReader(BaseReader):
             if not self.buffer.is_empty():
                 self.caption_stash.create_and_store(self.buffer, self.time)
                 self.buffer = self.node_creator_factory.new_creator()
+                # Reset positioning state for new caption boundary
+                self.node_creator_factory.position_tracker.reset_for_new_caption()
 
     def _translate_line(self, line):
         # ignore blank lines
@@ -367,13 +369,13 @@ class SCCReader(BaseReader):
         # doubled special characters and doubled extended characters
         # with only one member of each pair being displayed.
 
-        doubled_types = (word != "94a1" and word in COMMANDS) or _is_pac_command(word) or word in SPECIAL_CHARS
+        doubled_types = (
+            (word != "94a1" and word in COMMANDS)
+            or _is_pac_command(word)
+            or word in SPECIAL_CHARS
+        )
         if self.double_starter:
-            doubled_types = (
-                doubled_types
-                or word in EXTENDED_CHARS
-                or word == "94a1"
-            )
+            doubled_types = doubled_types or word in EXTENDED_CHARS or word == "94a1"
 
         if word in CUE_STARTING_COMMAND and word != self.last_command:
             self.double_starter = False
@@ -426,6 +428,8 @@ class SCCReader(BaseReader):
             if not self.buffer.is_empty():
                 self.caption_stash.create_and_store(self.buffer, self.time)
                 self.buffer = self.node_creator_factory.new_creator()
+                # Reset positioning state for new caption boundary
+                self.node_creator_factory.position_tracker.reset_for_new_caption()
 
             self.time = self.time_translator.get_time()
 
@@ -445,6 +449,8 @@ class SCCReader(BaseReader):
             if not self.buffer.is_empty():
                 self.caption_stash.create_and_store(self.buffer, self.time)
                 self.buffer = self.node_creator_factory.new_creator()
+                # Reset positioning state for new caption boundary
+                self.node_creator_factory.position_tracker.reset_for_new_caption()
 
             # set rows to empty, configure start time for caption
             self.roll_rows = []
@@ -453,6 +459,8 @@ class SCCReader(BaseReader):
         # clear pop_on buffer
         elif word == "94ae":
             self.buffer = self.node_creator_factory.new_creator()
+            # Reset positioning state for new caption boundary
+            self.node_creator_factory.position_tracker.reset_for_new_caption()
 
         # display pop_on buffer [End Of Caption]
         elif word == "942f":
@@ -465,6 +473,8 @@ class SCCReader(BaseReader):
             cue = PopOnCue(buffer=deepcopy(self.buffer), start=self.time, end=0)
             self.pop_ons_queue.appendleft(cue)
             self.buffer = self.node_creator_factory.new_creator()
+            # Reset positioning state for new caption boundary
+            self.node_creator_factory.position_tracker.reset_for_new_caption()
 
         # roll up captions [Carriage Return]
         elif word == "94ad":
@@ -522,6 +532,8 @@ class SCCReader(BaseReader):
         # convert buffer and empty
         self.caption_stash.create_and_store(self.buffer, self.time)
         self.buffer = self.node_creator_factory.new_creator()
+        # Reset positioning state for new caption boundary
+        self.node_creator_factory.position_tracker.reset_for_new_caption()
 
         # configure time
         self.time = self.time_translator.get_time()
