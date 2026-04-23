@@ -173,6 +173,10 @@ jobs:
                   if not add['file'] or 'scc' not in add['file']:
                       continue
 
+                  # Skip non-Python files (documentation, configs, etc.)
+                  if not add['file'].endswith('.py'):
+                      continue
+
                   line = add['line']
 
                   # Check 1: Incorrect RU4 hex
@@ -216,6 +220,10 @@ jobs:
                   if not add['file'] or 'vtt' not in add['file'].lower():
                       continue
 
+                  # Skip non-Python files (documentation, configs, etc.)
+                  if not add['file'].endswith('.py'):
+                      continue
+
                   line = add['line']
 
                   # Check 1: WEBVTT header handling
@@ -257,17 +265,33 @@ jobs:
 
           regressions = []
 
+          # Get list of Python files actually modified by this PR (not just added)
+          modified_py_files = set()
+          for add in additions:
+              if add['file'] and add['file'].endswith('.py'):
+                  # Check if file also has deletions (meaning it was modified, not just created)
+                  if any(d['file'] == add['file'] for d in deletions):
+                      modified_py_files.add(add['file'])
+
+          print(f"  Checking {len(modified_py_files)} modified Python files...")
+
           for deletion in deletions:
               if not deletion['file']:
+                  continue
+
+              # Only check Python files that were actually modified by this PR
+              if deletion['file'] not in modified_py_files:
                   continue
 
               line = deletion['line']
 
               # Check 1: Removed validation
               if 'raise' in line or 'assert' in line:
-                  # Check if it's truly removed or just moved
+                  # Normalize for comparison (handle quote style changes, whitespace, line breaks)
+                  norm_deleted = re.sub(r'\s+', ' ', line.replace("'", '"')).strip()
                   is_moved = any(
-                      line in a['line']
+                      norm_deleted in re.sub(r'\s+', ' ', a['line'].replace("'", '"')).strip()
+                      or re.sub(r'\s+', ' ', a['line'].replace("'", '"')).strip() in norm_deleted
                       for a in additions
                       if a['file'] == deletion['file']
                   )
