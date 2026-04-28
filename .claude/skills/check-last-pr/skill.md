@@ -144,6 +144,13 @@ if dfxp_files:
 
 print(f"  Flow: {flow} | Source: {len(py_src_files)} | Tests: {len(py_test_files)}")
 
+if not detected_flows:
+    print("No caption format changes - skipping compliance checks")
+    os.makedirs("ai_artifacts/compliance_checks", exist_ok=True)
+    with open("ai_artifacts/compliance_checks/pr_summary.txt", 'w') as f:
+        f.write("ANALYSIS_NEEDED=false\n")
+    exit(0)
+
 # ===== PARSE DIFF WITH LINE NUMBERS =====
 print("\n[4/8] Parsing diff...")
 
@@ -986,4 +993,15 @@ print(f"  Report: {report_path}")
 print(f"  Recommendation: {rec_icon} {recommendation}")
 print(f"  {rec_reason}")
 print(f"{'='*80}")
+
+with open("ai_artifacts/compliance_checks/pr_summary.txt", 'w') as f:
+    f.write(f"ANALYSIS_NEEDED=true\n")
+    f.write(f"PR_NUMBER={pr_number}\n")
+    f.write(f"COMPLIANCE_ISSUES={len(compliance_issues)}\n")
+    f.write(f"REGRESSIONS={len(regressions)}\n")
+    f.write(f"QUALITY_ISSUES={len(quality_issues)}\n")
+    f.write(f"CRITICAL_COUNT={len(critical)}\n")
+    f.write(f"HIGH_COUNT={len(high)}\n")
+    f.write(f"REPORT_PATH={report_path}\n")
+    f.write(f"RISK_LEVEL={'HIGH' if critical else 'MEDIUM' if high else 'LOW'}\n")
 ```

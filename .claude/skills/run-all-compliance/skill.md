@@ -44,7 +44,7 @@ echo ""
 
 echo "[3/3] DFXP Compliance Check"
 echo "-------------------------------------------"
-sed -n '/^```python/,/^```/{ /^```/d; p; }' .claude/skills/check-dfxp-compliance/SKILL.md > "$TMPDIR/dfxp.py"
+sed -n '/^```python/,/^```/{ /^```/d; p; }' .claude/skills/check-dfxp-compliance/skill.md > "$TMPDIR/dfxp.py"
 python3 "$TMPDIR/dfxp.py"
 DFXP_EXIT=$?
 echo ""
