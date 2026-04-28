@@ -37,8 +37,8 @@ Single command - fetches web sources, performs comprehensive analysis, generates
 **Read existing documentation:**
 ```bash
 # Check what we already have
-ls -la pycaption/specs/vtt/
-cat pycaption/specs/vtt/vtt_web_sources.md
+ls -la ai_artifacts/specs/vtt/
+cat ai_artifacts/specs/vtt/vtt_web_sources.md
 ```
 
 **If `vtt_specs_summary.md` exists:**
@@ -56,11 +56,12 @@ cat pycaption/specs/vtt/vtt_web_sources.md
 # Use ToolSearch to load WebFetch
 ```
 
-**Read URLs from `pycaption/specs/vtt/vtt_web_sources.md`:**
+**Read URLs from `ai_artifacts/specs/vtt/vtt_web_sources.md`:**
 ```python
 import re
 
-sources_content = read("pycaption/specs/vtt/vtt_web_sources.md")
+with open("ai_artifacts/specs/vtt/vtt_web_sources.md") as _f:
+    sources_content = _f.read()
 
 # Extract URLs from markdown links: [Text](URL)
 url_pattern = r'\[([^\]]+)\]\(([^)]+)\)'
@@ -70,7 +71,7 @@ for match in re.findall(url_pattern, sources_content):
     title, url = match
     existing_sources.append({'title': title, 'url': url})
 
-print(f"📋 Found {len(existing_sources)} existing sources")
+print(f"Found {len(existing_sources)} existing sources")
 for s in existing_sources:
     print(f"   - {s['title']}")
 ```
@@ -79,23 +80,21 @@ for s in existing_sources:
 ```python
 # Fetch W3C spec - most authoritative source
 w3c_url = 'https://www.w3.org/TR/webvtt1/'
-print(f"🌐 Fetching W3C WebVTT Specification...")
+print("Fetching W3C WebVTT Specification...")
 
-w3c_content = WebFetch(w3c_url)
-
-# Extract key sections (focus on specification text, skip navigation)
-# Store in temporary file for processing
-write("/tmp/w3c_webvtt_spec.txt", w3c_content)
+# Use the WebFetch tool to fetch w3c_url
+# Store result in a variable for processing
+# w3c_content = <result from WebFetch tool>
 ```
 
 **Fetch MDN Documentation (Supplementary):**
 ```python
 # MDN provides practical examples and browser compatibility info
 mdn_url = 'https://developer.mozilla.org/en-US/docs/Web/API/WebVTT_API'
-print(f"🌐 Fetching MDN WebVTT Documentation...")
+print("Fetching MDN WebVTT Documentation...")
 
-mdn_content = WebFetch(mdn_url)
-write("/tmp/mdn_webvtt_docs.txt", mdn_content)
+# Use the WebFetch tool to fetch mdn_url
+# mdn_content = <result from WebFetch tool>
 ```
 
 **Context optimization:**
@@ -126,8 +125,9 @@ search_queries = [
 # Execute searches and collect results
 search_results = []
 for query in search_queries:
-    print(f"🔍 Searching: {query}")
-    results = WebSearch(query)
+    print(f"Searching: {query}")
+    # Use the WebSearch tool for each query
+    results = []  # populated by WebSearch tool
     search_results.append({
         'query': query,
         'results': results
@@ -137,36 +137,33 @@ for query in search_queries:
 
 **Identify high-value sources from search results:**
 ```python
-# Filter for authoritative sources:
-# - w3.org (W3C specs)
-# - developer.mozilla.org (MDN)
-# - webvtt.org (if exists)
-# - github.com/w3c (spec repos)
-# - Major browser documentation
+import re
 
-new_sources = []
-for result in search_results:
-    for item in result['results']:
-        url = item['url']
-        if any(domain in url for domain in ['w3.org', 'developer.mozilla.org', 'github.com/w3c']):
-            if url not in [s['url'] for s in existing_sources]:
-                new_sources.append({
-                    'title': item['title'],
-                    'url': url,
-                    'query': result['query']
-                })
-                print(f"   ✅ New source found: {item['title']}")
+# Re-read existing sources (each block is independent)
+with open("ai_artifacts/specs/vtt/vtt_web_sources.md") as _f:
+    _sources_content = _f.read()
+existing_sources = [
+    {'title': m[0], 'url': m[1]}
+    for m in re.findall(r'\[([^\]]+)\]\(([^)]+)\)', _sources_content)
+]
 
-print(f"\n📚 Found {len(new_sources)} new authoritative sources")
+# Agent: for each URL found in the search step above, check if it is
+# authoritative (w3.org, developer.mozilla.org, github.com/w3c) and not
+# already in existing_sources. Collect matches into new_sources list:
+_existing_urls = {s['url'] for s in existing_sources}
+new_sources = []  # Agent fills this from search results
+# new_sources.append({'title': <title>, 'url': <url>, 'query': <query>})
+
+print(f"\nFound {len(new_sources)} new authoritative sources")
 ```
 
 **Fetch new sources:**
 ```python
-for source in new_sources[:5]:  # Limit to top 5 to manage context
-    print(f"🌐 Fetching: {source['title']}")
-    content = WebFetch(source['url'])
-    # Extract and save relevant sections
-    write(f"/tmp/webvtt_source_{len(existing_sources) + new_sources.index(source)}.txt", content)
+# Agent: for each source in new_sources (up to 5), use WebFetch to
+# retrieve the content. new_sources was built in the filtering step above.
+# for source in new_sources[:5]:
+#     print(f"Fetching: {source['title']}")
+#     # Use the WebFetch tool with url=source['url']
 ```
 
 ### Step 3: Exhaustive Completeness Verification
@@ -257,55 +254,57 @@ for source in new_sources[:5]:  # Limit to top 5 to manage context
 
 **Completeness Checklist (MUST achieve 100%):**
 ```python
+# TEMPLATE: All values start as False. Update each to True as you confirm
+# coverage during spec generation. Re-run this block to check progress.
 completeness_check = {
     'file_format': {
-        'header': True/False,  # WEBVTT signature
-        'encoding': True/False,  # UTF-8
-        'bom': True/False,  # BOM handling
-        'line_endings': True/False,  # CR/LF/CRLF
-        'blank_line': True/False,  # After header
+        'header': False,  # WEBVTT signature
+        'encoding': False,  # UTF-8
+        'bom': False,  # BOM handling
+        'line_endings': False,  # CR/LF/CRLF
+        'blank_line': False,  # After header
     },
     'timestamps': {
-        'format': True/False,  # [HH:]MM:SS.mmm
-        'validation': True/False,  # Start <= end
-        'ranges': True/False,  # MM/SS 00-59
-        'milliseconds': True/False,  # Exactly 3 digits
-        'separator': True/False,  # ` --> `
+        'format': False,  # [HH:]MM:SS.mmm
+        'validation': False,  # Start <= end
+        'ranges': False,  # MM/SS 00-59
+        'milliseconds': False,  # Exactly 3 digits
+        'separator': False,  # ` --> `
     },
     'cue_settings': {
-        'vertical': True/False,  # rl/lr
-        'line': True/False,  # N or N%
-        'position': True/False,  # N%
-        'size': True/False,  # N%
-        'align': True/False,  # start/center/end/left/right
-        'region': True/False,  # region_id
+        'vertical': False,  # rl/lr
+        'line': False,  # N or N%
+        'position': False,  # N%
+        'size': False,  # N%
+        'align': False,  # start/center/end/left/right
+        'region': False,  # region_id
     },
     'markup_tags': {
-        'class_span': True/False,  # <c>
-        'italics': True/False,  # <i>
-        'bold': True/False,  # <b>
-        'underline': True/False,  # <u>
-        'voice': True/False,  # <v>
-        'language': True/False,  # <lang>
-        'ruby': True/False,  # <ruby><rt>
-        'timestamp': True/False,  # <00:01:23.456>
+        'class_span': False,  # <c>
+        'italics': False,  # <i>
+        'bold': False,  # <b>
+        'underline': False,  # <u>
+        'voice': False,  # <v>
+        'language': False,  # <lang>
+        'ruby': False,  # <ruby><rt>
+        'timestamp': False,  # <00:01:23.456>
     },
     'html_entities': {
-        'required': True/False,  # &amp; &lt; &gt; &nbsp; &lrm; &rlm;
-        'escaping': True/False,  # Escape rules
+        'required': False,  # &amp; &lt; &gt; &nbsp; &lrm; &rlm;
+        'escaping': False,  # Escape rules
     },
     'regions': {
-        'region_block': True/False,  # REGION definition
-        'properties': True/False,  # id/width/lines/anchors/scroll
+        'region_block': False,  # REGION definition
+        'properties': False,  # id/width/lines/anchors/scroll
     },
     'special_blocks': {
-        'note': True/False,  # NOTE comments
-        'style': True/False,  # STYLE CSS
+        'note': False,  # NOTE comments
+        'style': False,  # STYLE CSS
     },
     'validation': {
-        'must_rules': True/False,  # All MUST requirements
-        'should_rules': True/False,  # All SHOULD requirements
-        'error_handling': True/False,  # Error strategies
+        'must_rules': False,  # All MUST requirements
+        'should_rules': False,  # All SHOULD requirements
+        'error_handling': False,  # Error strategies
     },
 }
 
@@ -314,10 +313,10 @@ total_items = sum(len(v) for v in completeness_check.values())
 covered_items = sum(sum(v.values()) for v in completeness_check.values())
 completeness = (covered_items / total_items) * 100
 
-print(f"📊 Completeness: {completeness:.1f}% ({covered_items}/{total_items} items)")
+print(f"Completeness: {completeness:.1f}% ({covered_items}/{total_items} items)")
 
 if completeness < 100:
-    print("⚠️  Missing items - additional web search required")
+    print("Missing items - additional web search required")
     # List what's missing
     for category, items in completeness_check.items():
         missing = [k for k, v in items.items() if not v]
@@ -327,21 +326,28 @@ if completeness < 100:
 
 **If new sources found during search, update vtt_web_sources.md:**
 ```python
-if new_sources:
-    # Append to vtt_web_sources.md
-    current_sources = read("pycaption/specs/vtt/vtt_web_sources.md")
-    
-    for source in new_sources:
-        if source['url'] not in current_sources:
-            current_sources += f"- [{source['title']}]({source['url']})\n"
-    
-    write("pycaption/specs/vtt/vtt_web_sources.md", current_sources)
-    print(f"✅ Updated vtt_web_sources.md with {len(new_sources)} new sources")
+# Agent: if you discovered new sources during the search/filter steps,
+# append them to vtt_web_sources.md now. For each new source URL not
+# already in the file, add a markdown link line.
+import re as _re, os
+_sources_path = "ai_artifacts/specs/vtt/vtt_web_sources.md"
+if os.path.exists(_sources_path):
+    with open(_sources_path) as _f:
+        _current = _f.read()
+    _known_urls = {m[1] for m in _re.findall(r'\[([^\]]+)\]\(([^)]+)\)', _current)}
+    # Agent: for each new source discovered above, if url not in _known_urls:
+    #   _current += f"- [{title}]({url})\n"
+    # Then write back:
+    # with open(_sources_path, "w") as _f:
+    #     _f.write(_current)
+    print("Source file update complete")
+else:
+    print(f"WARNING: {_sources_path} not found — skipping source update")
 ```
 
 ### Step 4: Generate Exhaustive Specification
 
-Create `pycaption/specs/vtt/vtt_specs_summary.md` using structure from `skill_part2.md`.
+Create `ai_artifacts/specs/vtt/vtt_specs_summary.md` using the rule format below.
 
 **Key differences from old approach:**
 - Rule-based format with unique IDs (RULE-FMT-###, RULE-TIME-###, etc.)
@@ -349,8 +355,6 @@ Create `pycaption/specs/vtt/vtt_specs_summary.md` using structure from `skill_pa
 - Test patterns for automated validation
 - Level indicators (MUST/SHOULD/MAY/MUST NOT)
 - Source attribution per rule
-
-**See `skill_part2.md` for complete structure template.**
 
 **Rule Format:**
 ```markdown
@@ -444,7 +448,13 @@ Create `pycaption/specs/vtt/vtt_specs_summary.md` using structure from `skill_pa
 
 **Generate spec with incremental writing (context-efficient):**
 ```python
-# Write spec section by section, not all at once
+from datetime import datetime
+import os
+
+os.makedirs("ai_artifacts/specs/vtt", exist_ok=True)
+spec_path = "ai_artifacts/specs/vtt/vtt_specs_summary.md"
+
+# Write spec header
 spec_content = f"""# WebVTT Specification - Complete Reference
 
 **Generated**: {datetime.now().strftime("%Y-%m-%d")}
@@ -456,20 +466,14 @@ spec_content = f"""# WebVTT Specification - Complete Reference
 
 """
 
-# Write initial header
-write("pycaption/specs/vtt/vtt_specs_summary.md", spec_content)
+with open(spec_path, "w") as _f:
+    _f.write(spec_content)
 
-# Generate Part 1: File Format (write immediately)
-part1 = generate_file_format_rules()
-append_to_spec(part1)
-
-# Generate Part 2: Timestamps (write immediately)
-part2 = generate_timestamp_rules()
-append_to_spec(part2)
-
-# ... continue for all parts
-
-# This avoids holding entire spec in memory
+# Then generate and append each part section by section:
+# Part 1: File Format rules
+# Part 2: Timestamp rules
+# ... continue for all parts (Parts 1-10)
+# Append each part with: with open(spec_path, "a") as _f: _f.write(part)
 ```
 
 ### Step 5: Exhaustive Quality Validation
@@ -596,52 +600,155 @@ Document conflicts and resolutions.
 
 ### Step 7: Update Web Sources
 
-Append new URLs (if any) to `pycaption/specs/vtt/vtt_web_sources.md`:
+Append new URLs (if any) to `ai_artifacts/specs/vtt/vtt_web_sources.md`:
 ```markdown
 - [New Source Title](https://url.example.com)
 ```
+
+### Step 8: Post-Generation Validation Against Master Checklist
+
+**CRITICAL:** After generating the spec, run this validation script. If it reports FAIL, fix the spec and re-run until PASS.
+
+```python
+import re
+
+print("=" * 60)
+print("POST-GENERATION VALIDATION: WebVTT")
+print("Checking vtt_specs_summary.md against master_checklist.md")
+print("=" * 60)
+
+with open('ai_artifacts/specs/vtt/master_checklist.md') as _f:
+    checklist = _f.read()
+with open('ai_artifacts/specs/vtt/vtt_specs_summary.md') as _f:
+    spec = _f.read()
+
+failures = []
+warnings = []
+
+# 1. Check all required rule IDs
+rule_ids = re.findall(r'^- ((?:RULE|IMPL)-[A-Z]+-\d{3})', checklist, re.M)
+for rid in rule_ids:
+    if rid not in spec:
+        failures.append(f"MISSING RULE: {rid}")
+found_rules = len(rule_ids) - len([f for f in failures if 'MISSING RULE' in f])
+print(f"[1/6] Rule IDs: {found_rules}/{len(rule_ids)}")
+
+# 2. Check required tags
+tags_section = re.search(r'## Required Tags.*?\n((?:- .+\n)+)', checklist)
+if tags_section:
+    tags = re.findall(r'^- `(.+?)`', tags_section.group(1), re.M)
+    for tag in tags:
+        # Search for the tag in spec (handle angle brackets)
+        tag_clean = tag.replace('<', '').replace('>', '').split('/')[0].split('.')[0]
+        if not re.search(rf'<{re.escape(tag_clean)}[>\s./]', spec):
+            if not re.search(re.escape(tag_clean), spec, re.I):
+                failures.append(f"MISSING TAG: {tag}")
+    print(f"[2/6] Tags: {len(tags) - len([f for f in failures if 'TAG' in f])}/{len(tags)}")
+
+# 3. Check required settings
+settings_section = re.search(r'## Required Cue Settings.*?\n((?:- .+\n)+)', checklist)
+if settings_section:
+    settings = re.findall(r'^- (\w+):', settings_section.group(1), re.M)
+    for setting in settings:
+        if not re.search(rf'\b{re.escape(setting)}\b', spec):
+            failures.append(f"MISSING SETTING: {setting}")
+    print(f"[3/6] Settings: {len(settings) - len([f for f in failures if 'SETTING' in f])}/{len(settings)}")
+
+# 4. Check required entities
+entities_section = re.search(r'## Required HTML Entities.*?\n((?:- .+\n)+)', checklist)
+if entities_section:
+    entities = re.findall(r'^- (.+?)$', entities_section.group(1), re.M)
+    for entity in entities:
+        entity_clean = entity.strip().split(' ')[0]
+        if entity_clean not in spec:
+            if not re.search(re.escape(entity_clean), spec):
+                warnings.append(f"MISSING ENTITY: {entity_clean}")
+    print(f"[4/6] Entities: checked {len(entities)}")
+
+# 5. Check required enum values
+enum_sections = re.findall(r'### (.+?)\n((?:- .+\n)+)', checklist)
+missing_enums = 0
+total_enums = 0
+for section_name, values_block in enum_sections:
+    values = re.findall(r'^- (.+)$', values_block, re.M)
+    for val in values:
+        val_clean = val.strip()
+        total_enums += 1
+        if val_clean not in spec:
+            if not re.search(re.escape(val_clean), spec, re.I):
+                missing_enums += 1
+                warnings.append(f"MISSING ENUM [{section_name}]: {val_clean}")
+print(f"[5/6] Enum values: {total_enums - missing_enums}/{total_enums}")
+
+# 6. Check severity distribution
+severity_section = re.search(r'## Required Severity Distribution\n((?:.*\n)*)', checklist)
+if severity_section:
+    for match in re.finditer(r'- (MUST|SHOULD|MAY|MUST NOT): (\d+)', severity_section.group(1)):
+        level, minimum = match.group(1), int(match.group(2))
+        actual = len(re.findall(rf'Level:\*\*\s*{re.escape(level)}\b', spec))
+        if actual < minimum:
+            failures.append(f"SEVERITY {level}: found {actual}, need >= {minimum}")
+        print(f"[6/6] {level}: {actual} (min {minimum}) {'PASS' if actual >= minimum else 'FAIL'}")
+
+# Report
+print("\n" + "=" * 60)
+if failures:
+    print(f"FAIL: {len(failures)} failures, {len(warnings)} warnings\n")
+    for f in failures:
+        print(f"  FAIL: {f}")
+    for w in warnings[:10]:
+        print(f"  WARN: {w}")
+    if len(warnings) > 10:
+        print(f"  ... and {len(warnings) - 10} more warnings")
+    print("\nFix the spec and re-run this validation.")
+else:
+    print(f"PASS: All checks passed ({len(warnings)} warnings)")
+    for w in warnings[:10]:
+        print(f"  WARN: {w}")
+print("=" * 60)
+```
+
+**If FAIL:** Fix the missing items in the spec, then re-run the validation script. Repeat until PASS.
 
 ---
 
 ## Output Files
 
-1. **`pycaption/specs/vtt/vtt_specs_summary.md`** - Complete specification with 40-50 rules
-2. **`pycaption/specs/vtt/vtt_web_sources.md`** - Updated URL list (if new sources found)
+1. **`ai_artifacts/specs/vtt/vtt_specs_summary.md`** - Complete specification with 60-80 rules
+2. **`ai_artifacts/specs/vtt/vtt_web_sources.md`** - Updated URL list (if new sources found)
 
 ---
 
 ## Success Criteria (Exhaustive - 100% Required)
 
-**Completeness (CRITICAL - All must be ✅):**
-- ✅ 60-80 total rules documented (RULE-* + IMPL-*)
-- ✅ All 8 markup tags individually documented with examples (c, i, b, u, v, lang, ruby, timestamp)
-- ✅ All 6 cue settings individually documented with validation (vertical, line, position, size, align, region)
-- ✅ All 6 HTML entities individually documented (&amp;, &lt;, &gt;, &nbsp;, &lrm;, &rlm;)
-- ✅ All 6 REGION properties individually documented (id, width, lines, regionanchor, viewportanchor, scroll)
-- ✅ Header validation rules (WEBVTT signature, UTF-8, BOM, blank line)
-- ✅ Timestamp format and validation rules (format, ranges, start<=end, sequential)
-- ✅ Cue structure rules (identifier, timing line, payload, blank line terminator)
-- ✅ Special blocks (NOTE comments, STYLE CSS)
-- ✅ Validation rules (error handling, recovery strategies)
-- ✅ 30-40 MUST rules (all critical requirements)
-- ✅ 15-20 SHOULD rules (best practices)
-- ✅ 5-10 MAY rules (optional features)
-- ✅ 12-15 IMPL rules (generic, no pycaption-specific code)
+**Master Checklist Validation (CRITICAL - must PASS):**
+- All rule IDs from `master_checklist.md` present in generated spec
+- All 8 tags present
+- All 6 settings present
+- All 6 entities present
+- All enum values present
+- Severity distribution meets minimums
 
-**Quality (All must be ✅):**
-- ✅ Unique rule IDs (no duplicates)
-- ✅ Sequential numbering within categories
-- ✅ Valid test patterns for all rules
-- ✅ Source attribution (W3C section references)
-- ✅ Generic IMPL rules (no pycaption-specific references)
-- ✅ Self-validation report included
-- ✅ Completeness score 100%
+**Completeness:**
+- 60-80 total rules documented (RULE-* + IMPL-*)
+- All 8 markup tags individually documented with examples
+- All 6 cue settings individually documented with validation
+- All 6 HTML entities individually documented
+- All 6 REGION properties individually documented
+- Header, timestamp, cue structure, special blocks rules
+- 12-15 IMPL rules (generic, no pycaption-specific code)
+
+**Quality:**
+- Unique rule IDs (no duplicates)
+- Sequential numbering within categories
+- Valid test patterns for all rules
+- Source attribution (W3C section references)
+- Generic IMPL rules (no pycaption-specific references)
 
 **Web Sources:**
-- ✅ W3C WebVTT spec fetched
-- ✅ MDN documentation fetched
-- ✅ Additional sources found via web search (if needed)
-- ✅ All new sources added to vtt_web_sources.md
+- W3C WebVTT spec fetched
+- MDN documentation fetched
+- All new sources added to vtt_web_sources.md
 ---
 
 ## Context Window Optimization

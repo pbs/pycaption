@@ -1,0 +1,167 @@
+name: All Compliance Checks
+
+on:
+  workflow_dispatch:
+    inputs:
+      notify_slack:
+        description: 'Send Slack notification'
+        required: false
+        default: 'true'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+
+permissions:
+  contents: read
+
+jobs:
+  all-compliance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+      - name: Run all compliance checks
+        id: compliance
+        run: |
+          echo "=========================================="
+          echo "  RUNNING ALL COMPLIANCE CHECKS"
+          echo "=========================================="
+
+          TMPDIR=$(mktemp -d)
+          trap 'rm -rf "$TMPDIR"' EXIT
+
+          echo ""
+          echo "[1/3] SCC Compliance Check"
+          echo "-------------------------------------------"
+          sed -n '/^```python/,/^```/{ /^```/d; p; }' .claude/skills/check-scc-compliance/SKILL.md > "$TMPDIR/scc.py"
+          python3 "$TMPDIR/scc.py"
+          SCC_EXIT=$?
+
+          echo ""
+          echo "[2/3] VTT Compliance Check"
+          echo "-------------------------------------------"
+          sed -n '/^```python/,/^```/{ /^```/d; p; }' .claude/skills/check-vtt-compliance/skill.md > "$TMPDIR/vtt.py"
+          python3 "$TMPDIR/vtt.py"
+          VTT_EXIT=$?
+
+          echo ""
+          echo "[3/3] DFXP Compliance Check"
+          echo "-------------------------------------------"
+          sed -n '/^```python/,/^```/{ /^```/d; p; }' .claude/skills/check-dfxp-compliance/SKILL.md > "$TMPDIR/dfxp.py"
+          python3 "$TMPDIR/dfxp.py"
+          DFXP_EXIT=$?
+
+          echo ""
+          echo "=========================================="
+          echo "  ALL COMPLIANCE CHECKS COMPLETE"
+          echo "=========================================="
+
+          SCC_STATUS=$([ $SCC_EXIT -eq 0 ] && echo 'OK' || echo 'FAILED')
+          VTT_STATUS=$([ $VTT_EXIT -eq 0 ] && echo 'OK' || echo 'FAILED')
+          DFXP_STATUS=$([ $DFXP_EXIT -eq 0 ] && echo 'OK' || echo 'FAILED')
+
+          echo "  SCC: $SCC_STATUS"
+          echo "  VTT: $VTT_STATUS"
+          echo "  DFXP: $DFXP_STATUS"
+
+          SCC_REPORT=$(ls -t ai_artifacts/compliance_checks/scc/compliance_report_*.md 2>/dev/null | head -1)
+          VTT_REPORT=$(ls -t ai_artifacts/compliance_checks/vtt/compliance_report_*.md 2>/dev/null | head -1)
+          DFXP_REPORT=$(ls -t ai_artifacts/compliance_checks/dfxp/compliance_report_*.md 2>/dev/null | head -1)
+
+          # Extract issue counts from reports
+          SCC_ISSUES=$(grep -oP 'Total issues\*\*: \K\d+' "$SCC_REPORT" 2>/dev/null || echo "unknown")
+          SCC_MUST=$(grep -oP 'MUST violations\*\*: \K\d+' "$SCC_REPORT" 2>/dev/null || echo "unknown")
+          VTT_ISSUES=$(grep -oP 'Total issues\*\*: \K\d+' "$VTT_REPORT" 2>/dev/null || echo "unknown")
+          VTT_MUST=$(grep -oP 'MUST violations\*\*: \K\d+' "$VTT_REPORT" 2>/dev/null || echo "unknown")
+          DFXP_ISSUES=$(grep -oP 'Total issues\*\*: \K\d+' "$DFXP_REPORT" 2>/dev/null || echo "unknown")
+          DFXP_MUST=$(grep -oP 'MUST violations\*\*: \K\d+' "$DFXP_REPORT" 2>/dev/null || echo "unknown")
+
+          # Write summary for later steps
+          {
+            echo "SCC_STATUS=$SCC_STATUS"
+            echo "VTT_STATUS=$VTT_STATUS"
+            echo "DFXP_STATUS=$DFXP_STATUS"
+            echo "SCC_ISSUES=$SCC_ISSUES"
+            echo "SCC_MUST=$SCC_MUST"
+            echo "VTT_ISSUES=$VTT_ISSUES"
+            echo "VTT_MUST=$VTT_MUST"
+            echo "DFXP_ISSUES=$DFXP_ISSUES"
+            echo "DFXP_MUST=$DFXP_MUST"
+          } >> $GITHUB_ENV
+
+          # Fail if any check crashed
+          if [ $SCC_EXIT -ne 0 ] || [ $VTT_EXIT -ne 0 ] || [ $DFXP_EXIT -ne 0 ]; then
+            echo "ANY_FAILED=true" >> $GITHUB_ENV
+          else
+            echo "ANY_FAILED=false" >> $GITHUB_ENV
+          fi
+        continue-on-error: true
+
+      - name: Upload all compliance reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: all-compliance-reports
+          path: ai_artifacts/compliance_checks/
+          retention-days: 90
+
+      - name: Write job summary
+        run: |
+          cat >> $GITHUB_STEP_SUMMARY << 'EOF'
+          ## All Compliance Checks
+
+          | Format | Status | Issues | MUST |
+          |--------|--------|--------|------|
+          EOF
+          echo "| SCC | ${{ env.SCC_STATUS }} | ${{ env.SCC_ISSUES }} | ${{ env.SCC_MUST }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| VTT | ${{ env.VTT_STATUS }} | ${{ env.VTT_ISSUES }} | ${{ env.VTT_MUST }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| DFXP | ${{ env.DFXP_STATUS }} | ${{ env.DFXP_ISSUES }} | ${{ env.DFXP_MUST }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Download reports from the [Actions tab](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY
+
+      - name: Check Slack token availability
+        id: slack_check
+        run: |
+          if [ -n "$SLACK_TOKEN" ]; then
+            echo "available=true" >> $GITHUB_OUTPUT
+          else
+            echo "available=false" >> $GITHUB_OUTPUT
+          fi
+        env:
+          SLACK_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+
+      - name: Notify Slack
+        if: github.event.inputs.notify_slack == 'true' && steps.slack_check.outputs.available == 'true'
+        uses: archive/github-actions-slack@v2.0.0
+        with:
+          slack-bot-user-oauth-access-token: ${{ secrets.SLACK_BOT_TOKEN }}
+          slack-channel: ${{ secrets.SLACK_CHANNEL_ID }}
+          slack-text: |
+            :memo: *All Compliance Checks Complete*
+
+            | Format | Status | Issues | MUST |
+            |--------|--------|--------|------|
+            | SCC | ${{ env.SCC_STATUS }} | ${{ env.SCC_ISSUES }} | ${{ env.SCC_MUST }} |
+            | VTT | ${{ env.VTT_STATUS }} | ${{ env.VTT_ISSUES }} | ${{ env.VTT_MUST }} |
+            | DFXP | ${{ env.DFXP_STATUS }} | ${{ env.DFXP_ISSUES }} | ${{ env.DFXP_MUST }} |
+
+            <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|Download reports>
+
+      - name: Fail job on script crash
+        if: env.ANY_FAILED == 'true'
+        run: |
+          echo "::error::One or more compliance checks failed"
+          exit 1

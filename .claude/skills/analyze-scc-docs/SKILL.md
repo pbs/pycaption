@@ -24,9 +24,9 @@ Generates unified, code-verifiable SCC specification (`scc_specs_summary.md`) as
 ### Step 1: Load Documentation
 
 Read and analyze:
-- `pycaption/specs/scc/standards_summary.md` (CEA-608/708)
-- `pycaption/specs/scc/scc_web_summary.md` (web docs)
-- `pycaption/specs/scc/web_sources.txt` (checked URLs)
+- `ai_artifacts/specs/scc/standards_summary.md` (CEA-608/708)
+- `ai_artifacts/specs/scc/scc_web_summary.md` (web docs)
+- `ai_artifacts/specs/scc/scc_web_sources.md` (checked URLs)
 
 ### Step 2: Completeness Verification
 
@@ -76,11 +76,11 @@ Read and analyze:
 
 ### Step 3: Web Search (if gaps exist)
 
-Search for missing specs, exclude URLs in `web_sources.txt`.
+Search for missing specs, exclude URLs in `scc_web_sources.md`.
 
 ### Step 4: Generate Specification
 
-Create `pycaption/specs/scc/scc_specs_summary.md` with:
+Create `ai_artifacts/specs/scc/scc_specs_summary.md` with:
 
 **Structure:**
 ```markdown
@@ -221,39 +221,123 @@ Document conflicts and resolutions.
 
 ### Step 7: Update Web Sources
 
-Append new URLs to `pycaption/specs/scc/web_sources.txt`.
+Append new URLs to `ai_artifacts/specs/scc/scc_web_sources.md`.
+
+### Step 8: Post-Generation Validation Against Master Checklist
+
+**CRITICAL:** After generating the spec, run this validation script. If it reports FAIL, fix the spec and re-run until PASS.
+
+```python
+import re
+
+print("=" * 60)
+print("POST-GENERATION VALIDATION: SCC")
+print("Checking scc_specs_summary.md against master_checklist.md")
+print("=" * 60)
+
+with open('ai_artifacts/specs/scc/master_checklist.md') as _f: checklist = _f.read()
+with open('ai_artifacts/specs/scc/scc_specs_summary.md') as _f: spec = _f.read()
+
+failures = []
+warnings = []
+
+# 1. Check all required rule IDs
+rule_ids = re.findall(r'^- ((?:RULE|IMPL)-[A-Z]+-\d{3})', checklist, re.M)
+for rid in rule_ids:
+    if rid not in spec:
+        failures.append(f"MISSING RULE: {rid}")
+print(f"[1/5] Rule IDs: {len(rule_ids) - len([f for f in failures if 'RULE' in f])}/{len(rule_ids)}")
+
+# 2. Check required control code hex values
+hex_codes = re.findall(r'^- ([0-9a-f]{4})\s+#', checklist, re.M)
+for code in hex_codes:
+    if code not in spec.lower():
+        failures.append(f"MISSING CONTROL CODE: {code}")
+print(f"[2/5] Control codes: {len(hex_codes) - len([f for f in failures if 'CONTROL' in f])}/{len(hex_codes)}")
+
+# 3. Check required enum values
+enum_sections = re.findall(r'### (.+?)\n((?:- .+\n)+)', checklist)
+for section_name, values_block in enum_sections:
+    values = re.findall(r'^- (.+)$', values_block, re.M)
+    for val in values:
+        val_clean = val.strip()
+        if val_clean not in spec:
+            # Try case-insensitive for colors/modes
+            if not re.search(re.escape(val_clean), spec, re.I):
+                warnings.append(f"MISSING ENUM [{section_name}]: {val_clean}")
+print(f"[3/5] Enum values: checked {sum(len(re.findall(r'^- .+$', vb, re.M)) for _, vb in enum_sections)} values")
+
+# 4. Check severity distribution
+severity_section = re.search(r'## Required Severity Distribution\n((?:.*\n)*)', checklist)
+if severity_section:
+    for match in re.finditer(r'- (MUST|SHOULD|MAY|MUST NOT): (\d+)', severity_section.group(1)):
+        level, minimum = match.group(1), int(match.group(2))
+        actual = len(re.findall(rf'Level:\*\*\s*{re.escape(level)}\b', spec))
+        if actual < minimum:
+            failures.append(f"SEVERITY {level}: found {actual}, need >= {minimum}")
+        print(f"[4/5] {level}: {actual} (min {minimum}) {'PASS' if actual >= minimum else 'FAIL'}")
+
+# 5. Check control code category coverage
+for category in ['PAC', 'Mid-row', 'Special character', 'Extended character', 'XDS']:
+    if not re.search(category.replace('-', '.'), spec, re.I):
+        warnings.append(f"MISSING CATEGORY: {category}")
+print(f"[5/5] Control code categories checked")
+
+# Report
+print("\n" + "=" * 60)
+if failures:
+    print(f"FAIL: {len(failures)} failures, {len(warnings)} warnings\n")
+    for f in failures:
+        print(f"  FAIL: {f}")
+    for w in warnings:
+        print(f"  WARN: {w}")
+    print("\nFix the spec and re-run this validation.")
+else:
+    print(f"PASS: All checks passed ({len(warnings)} warnings)")
+    for w in warnings:
+        print(f"  WARN: {w}")
+print("=" * 60)
+```
+
+**If FAIL:** Fix the missing items in the spec, then re-run the validation script. Repeat until PASS.
 
 ---
 
 ## Output Files
 
-1. **`pycaption/specs/scc/scc_specs_summary.md`** - Complete specification
-2. **`pycaption/specs/scc/web_sources.txt`** - Updated URL list
+1. **`ai_artifacts/specs/scc/scc_specs_summary.md`** - Complete specification
+2. **`ai_artifacts/specs/scc/scc_web_sources.md`** - Updated URL list
 
 ---
 
 ## Success Criteria
 
-**Completeness (CRITICAL):**
-- ✅ 300+ control codes documented
-- ✅ All frame rates (5 variants)
-- ✅ Parity rules (RULE-ENC-001, IMPL-ENC-001, marked N/A for SCC)
-- ✅ Character limits (32/row, 15 rows)
-- ✅ Base row validation
-- ✅ Protocol sequences
-- ✅ 50+ MUST, 25+ SHOULD, 15+ MAY rules
-- ✅ All caption modes
+**Master Checklist Validation (CRITICAL - must PASS):**
+- All rule IDs from `master_checklist.md` present in generated spec
+- All control code hex values present
+- All enum values present
+- Severity distribution meets minimums
+- All control code categories documented
+
+**Completeness:**
+- 300+ control codes documented
+- All frame rates (5 variants)
+- Parity rules (RULE-ENC-001, IMPL-ENC-001, marked N/A for SCC)
+- Character limits (32/row, 15 rows)
+- Base row validation
+- Protocol sequences
+- All caption modes
 
 **Quality:**
-- ✅ Unique rule IDs
-- ✅ Valid test patterns
-- ✅ Source attribution
-- ✅ Generic IMPL rules (no pycaption references)
+- Unique rule IDs
+- Valid test patterns
+- Source attribution
+- Generic IMPL rules (no pycaption references)
 
 **Usability:**
-- ✅ Parseable by check-scc-compliance
-- ✅ Error messages can reference rule IDs
-- ✅ Ready for code compliance checking
+- Parseable by check-scc-compliance
+- Error messages can reference rule IDs
+- Ready for code compliance checking
 
 ---
 

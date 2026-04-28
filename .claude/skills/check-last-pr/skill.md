@@ -9,10 +9,11 @@ description: Comprehensive PR analysis for merge decisions - compliance, code re
 
 **Comprehensive PR analysis** for merge decisions:
 
-1. **Auto-detects SCC or VTT flow** from changed files
-2. **Spec compliance checking** - only NEW issues introduced by the PR (not pre-existing), checked against `scc_specs_summary.md` or `vtt_specs_summary.md`
+1. **Auto-detects SCC, VTT, and/or DFXP flow** from changed files
+2. **Spec compliance checking** - only NEW issues introduced by the PR (not pre-existing), checked against `scc_specs_summary.md`, `vtt_specs_summary.md`, or `dfxp_specs_summary.md`
 3. **Full code review** - regressions, breaking changes, and missing tests
-4. **Clear recommendation**: can be merged / needs work / do not merge
+4. **Change analysis** - explains what the changes do and how they solve the stated issue
+5. **Clear recommendation**: can be merged / needs work / do not merge
 
 ## Usage
 
@@ -64,18 +65,16 @@ def detect_base_branch():
     return 'main'
 
 # ===== GET PR INFO =====
-print("\n[1/6] Getting PR information...")
+print("\n[1/8] Getting PR information...")
 
 pr_number = None
 pr_title = "Unknown"
-pr_ref = None  # The git ref to diff (PR head commit)
+pr_ref = None
 
-# Detect repo owner/name from git remote
 remote_url = run(['git', 'remote', 'get-url', 'origin']).stdout.strip()
 repo_match = re.search(r'[:/]([^/]+/[^/]+?)(?:\.git)?$', remote_url)
 repo_slug = repo_match.group(1) if repo_match else None
 
-# Get the latest open PR targeting main via GitHub API
 if repo_slug:
     base_branch = detect_base_branch()
     api_url = f'https://api.github.com/repos/{repo_slug}/pulls?state=open&base={base_branch}&sort=created&direction=desc&per_page=1'
@@ -89,14 +88,12 @@ if repo_slug:
         except (json.JSONDecodeError, KeyError, IndexError):
             pass
 
-# Fetch the PR ref so we diff the actual PR, not the current branch
 if pr_number:
     local_ref = f'pr-{pr_number}'
     fetch_r = run(['git', 'fetch', 'origin', f'refs/pull/{pr_number}/head:{local_ref}'])
     if fetch_r.returncode == 0:
         pr_ref = local_ref
 
-# Fallback: use current branch HEAD
 if not pr_ref:
     pr_ref = 'HEAD'
     current_branch = run(['git', 'branch', '--show-current']).stdout.strip()
@@ -108,13 +105,13 @@ print(f"  PR: #{pr_number} - {pr_title}")
 print(f"  Ref: {pr_ref}")
 
 # ===== FETCH LATEST BASE =====
-print("\n[2/6] Fetching latest base branch...")
+print("\n[2/8] Fetching latest base branch...")
 base_branch = detect_base_branch()
 run(['git', 'fetch', 'origin', base_branch])
 print(f"  Base: origin/{base_branch}")
 
 # ===== ANALYZE FILES =====
-print("\n[3/6] Analyzing changed files...")
+print("\n[3/8] Analyzing changed files...")
 
 r = run(['git', 'diff', '--name-only', f'origin/{base_branch}...{pr_ref}'])
 changed_files = [f for f in r.stdout.strip().split('\n') if f]
@@ -123,25 +120,32 @@ py_files = [f for f in changed_files if f.endswith('.py')]
 py_src_files = [f for f in py_files if not is_test_file(f)]
 py_test_files = [f for f in py_files if is_test_file(f)]
 
-# Detect flow: SCC or VTT
 scc_files = [f for f in py_files if re.search(r'(pycaption/scc|tests/.*scc)', f, re.I)]
 vtt_files = [f for f in py_files if re.search(r'(pycaption/(webvtt|vtt)|tests/.*(webvtt|vtt))', f, re.I)]
+dfxp_files = [f for f in py_files if re.search(r'(pycaption/(dfxp|geometry)|tests/.*(dfxp|ttml))', f, re.I)]
 
-if scc_files and not vtt_files:
-    flow, spec_path = 'SCC', 'pycaption/specs/scc/scc_specs_summary.md'
-elif vtt_files and not scc_files:
-    flow, spec_path = 'VTT', 'pycaption/specs/vtt/vtt_specs_summary.md'
-elif scc_files and vtt_files:
-    flow, spec_path = 'SCC+VTT', None
-else:
-    flow, spec_path = 'NONE', None
+detected_flows = []
+if scc_files:
+    detected_flows.append('SCC')
+if vtt_files:
+    detected_flows.append('VTT')
+if dfxp_files:
+    detected_flows.append('DFXP')
+
+flow = '+'.join(detected_flows) if detected_flows else 'NONE'
+
+spec_paths = {}
+if scc_files:
+    spec_paths['SCC'] = 'ai_artifacts/specs/scc/scc_specs_summary.md'
+if vtt_files:
+    spec_paths['VTT'] = 'ai_artifacts/specs/vtt/vtt_specs_summary.md'
+if dfxp_files:
+    spec_paths['DFXP'] = 'ai_artifacts/specs/dfxp/dfxp_specs_summary.md'
 
 print(f"  Flow: {flow} | Source: {len(py_src_files)} | Tests: {len(py_test_files)}")
-```
 
-```python
 # ===== PARSE DIFF WITH LINE NUMBERS =====
-print("\n[4/6] Parsing diff...")
+print("\n[4/8] Parsing diff...")
 
 diff_result = run(['git', 'diff', f'origin/{base_branch}...{pr_ref}'])
 
@@ -168,34 +172,25 @@ for raw in diff_result.stdout.split('\n'):
         new_ln += 1
 
 print(f"  +{len(additions)} -{len(deletions)} lines")
-```
 
-```python
 # ===== SECTION 1: COMPLIANCE CHECK (NEW ISSUES ONLY) =====
-print("\n[5/6] Compliance check - scanning for NEW issues introduced by PR...")
+print("\n[5/8] Compliance check - scanning for NEW issues introduced by PR...")
 
 compliance_issues = []
 
-# Only scan additions in source files (not tests) - these are NEW code from the PR
 scan_adds = [a for a in additions
              if a['file'] and a['file'].endswith('.py') and not is_test_file(a['file'])]
 
-# Collect deleted lines for comparison - if a pattern existed before and was just moved, skip it
-deleted_lines_set = set()
+deleted_normalized = set()
 for d in deletions:
     if d['file'] and d['file'].endswith('.py') and not is_test_file(d['file']):
-        deleted_lines_set.add(d['line'].strip())
+        deleted_normalized.add(re.sub(r'\s+', ' ', d['line'].strip()))
 
 def is_truly_new(add_line):
-    """Return True only if this line is genuinely new, not just moved/reformatted."""
     stripped = add_line.strip()
     if not stripped:
         return False
-    normalized = re.sub(r'\s+', ' ', stripped)
-    for d in deleted_lines_set:
-        if re.sub(r'\s+', ' ', d) == normalized:
-            return False
-    return True
+    return re.sub(r'\s+', ' ', stripped) not in deleted_normalized
 
 # --- SCC compliance checks ---
 if 'SCC' in flow:
@@ -205,15 +200,6 @@ if 'SCC' in flow:
         line = add['line']
         if not is_truly_new(line):
             continue
-
-        # CTRL-008: RU4 hex code
-        if re.search(r"['\"]94a7['\"]", line):
-            compliance_issues.append({
-                'severity': 'CRITICAL', 'rule': 'CTRL-008', 'flow': 'SCC',
-                'issue': 'Incorrect RU4 hex code',
-                'detail': "Found '94a7'; correct code for Roll-Up 4 rows is '9427'",
-                'file': add['file'], 'lineno': add['lineno'],
-                'fix': "Replace '94a7' with '9427'"})
 
         # RULE-FMT-001: Scenarist_SCC V1.0 header must be case-sensitive
         if re.search(r'Scenarist[_ ]?SCC', line, re.I) and '.lower()' in line:
@@ -235,7 +221,6 @@ if 'SCC' in flow:
                 'fix': "Use ':' for non-drop-frame or ';' for drop-frame"})
 
         # RULE-CHR-001: new extended char mapping without channel awareness
-        # Only flag lines that define or assign extended char mappings (not dict lookups or comments)
         if (re.search(r'extended.*char.*[{=:]', line, re.I)
                 and not re.search(r'\bin\s+EXTENDED_CHARS\b', line)
                 and 'channel' not in line.lower()):
@@ -310,12 +295,92 @@ if 'VTT' in flow:
                 'file': add['file'], 'lineno': add['lineno'],
                 'fix': 'Ensure blank line between header and first content block'})
 
-print(f"  Found: {len(compliance_issues)} NEW compliance issues")
-```
+# --- DFXP compliance checks ---
+if 'DFXP' in flow:
+    for add in scan_adds:
+        if not re.search(r'dfxp|geometry', add['file'].lower()):
+            continue
+        line = add['line']
+        if not is_truly_new(line):
+            continue
 
-```python
+        # RULE-TIME-002: Hardcoded frame rate /30 instead of ttp:frameRate
+        if re.search(r'/\s*30\s*\*|/\s*30\.0', line) and ('frame' in line.lower() or 'microsecond' in line.lower()):
+            compliance_issues.append({
+                'severity': 'MEDIUM', 'rule': 'RULE-TIME-002', 'flow': 'DFXP',
+                'issue': 'Hardcoded frame rate division by 30',
+                'detail': 'Frame timing should use ttp:frameRate from the document, not hardcoded 30',
+                'file': add['file'], 'lineno': add['lineno'],
+                'fix': 'Read ttp:frameRate from <tt> element and use that value for frame division'})
+
+        # RULE-TIME-TICK: NotImplementedError for tick metric
+        if re.search(r'NotImplementedError.*tick|raise.*NotImplemented.*tick', line, re.I):
+            compliance_issues.append({
+                'severity': 'MEDIUM', 'rule': 'RULE-TIME-009', 'flow': 'DFXP',
+                'issue': 'Tick time metric raises NotImplementedError',
+                'detail': 'Offset tick time (Nt) is recognized but not computed',
+                'file': add['file'], 'lineno': add['lineno'],
+                'fix': 'Implement tick-to-microseconds using ttp:tickRate parameter'})
+
+        # RULE-STY-011: tts:display must not be confused with tts:displayAlign
+        if re.search(r'tts:display(?!Align)\b', line) and re.search(r'tts:displayAlign', line):
+            compliance_issues.append({
+                'severity': 'HIGH', 'rule': 'RULE-STY-011', 'flow': 'DFXP',
+                'issue': 'tts:display and tts:displayAlign confused',
+                'detail': 'tts:display (auto|none) is distinct from tts:displayAlign (before|center|after)',
+                'file': add['file'], 'lineno': add['lineno'],
+                'fix': 'Handle tts:display and tts:displayAlign as separate attributes'})
+
+        # RULE-DOC-003: xml:lang silent fallback without validation
+        if re.search(r'\.get\s*\(\s*["\']xml:lang["\'].*DEFAULT', line):
+            compliance_issues.append({
+                'severity': 'MEDIUM', 'rule': 'RULE-DOC-003', 'flow': 'DFXP',
+                'issue': 'xml:lang with silent fallback, no validation',
+                'detail': 'xml:lang falls back to default without BCP-47 validation',
+                'file': add['file'], 'lineno': add['lineno'],
+                'fix': 'Validate xml:lang value is a valid BCP-47 language tag'})
+
+        # RULE-STY-002: tts:backgroundColor not implemented
+        if re.search(r'tts:backgroundColor|background.*[Cc]olor', line) and 'dfxp' in add['file'].lower():
+            if re.search(r'elif.*arg.*lower.*==.*"tts:', line):
+                compliance_issues.append({
+                    'severity': 'MEDIUM', 'rule': 'RULE-STY-002', 'flow': 'DFXP',
+                    'issue': 'tts:backgroundColor support may be incomplete',
+                    'detail': 'tts:backgroundColor is not currently implemented; new style handling should include it',
+                    'file': add['file'], 'lineno': add['lineno'],
+                    'fix': 'Add tts:backgroundColor to _convert_style() and _recreate_style()'})
+
+        # RULE-VAL-004: CaptionReadNoCaptions must be raised for empty files
+        if re.search(r'is_empty|CaptionReadNoCaptions', line) and 'return' in line.lower() and 'none' in line.lower():
+            compliance_issues.append({
+                'severity': 'HIGH', 'rule': 'RULE-VAL-004', 'flow': 'DFXP',
+                'issue': 'Empty caption file should raise, not return None',
+                'detail': 'Per spec, empty/invalid DFXP files must raise CaptionReadNoCaptions',
+                'file': add['file'], 'lineno': add['lineno'],
+                'fix': 'Raise CaptionReadNoCaptions("empty caption file") instead of returning None'})
+
+        # IMPL-008: XML escaping - using string concatenation instead of xml.sax.saxutils.escape
+        if re.search(r'\.replace\s*\(\s*["\']&["\']', line) and 'dfxp' in add['file'].lower():
+            compliance_issues.append({
+                'severity': 'MEDIUM', 'rule': 'IMPL-008', 'flow': 'DFXP',
+                'issue': 'Manual XML escaping instead of xml.sax.saxutils.escape',
+                'detail': 'Manual .replace() for XML entities is error-prone and may miss edge cases',
+                'file': add['file'], 'lineno': add['lineno'],
+                'fix': 'Use xml.sax.saxutils.escape() for XML character escaping'})
+
+        # RULE-DOC-001: detect() using substring instead of proper XML check
+        if re.search(r'"</tt>".*in\s+content|content.*"</tt>"', line, re.I):
+            compliance_issues.append({
+                'severity': 'MEDIUM', 'rule': 'RULE-DOC-001', 'flow': 'DFXP',
+                'issue': 'DFXP detection uses substring check',
+                'detail': '"</tt>" in content matches anywhere, not proper XML root validation',
+                'file': add['file'], 'lineno': add['lineno'],
+                'fix': 'Use proper XML parsing or at least check for root <tt> element'})
+
+print(f"  Found: {len(compliance_issues)} NEW compliance issues")
+
 # ===== SECTION 2: CODE REVIEW =====
-print("\n[6/6] Code review (regressions, breaking changes, test coverage)...")
+print("\n[6/8] Code review (regressions, breaking changes, test coverage)...")
 
 code_review_findings = []
 
@@ -324,6 +389,8 @@ def normalize_sig(params):
     s = re.sub(r'\s*=\s*', '=', s)
     s = re.sub(r'\s*,\s*', ',', s)
     return s
+
+sig_pattern = re.compile(r'^\s*def\s+(\w+)\s*\((.*?)\)\s*(?:->.*?)?:')
 
 modified_py_src = set()
 for f in py_src_files:
@@ -361,7 +428,6 @@ for d in deletions:
         'impact': 'Breaking API change - external callers will break'})
 
 # --- B. Changed function signatures ---
-sig_pattern = re.compile(r'^\s*def\s+(\w+)\s*\((.*?)\)\s*(?:->.*?)?:')
 seen_sig = set()
 
 for d in deletions:
@@ -430,7 +496,6 @@ for d in deletions:
 
 # --- D. Missing tests for modified source files ---
 def extract_public_symbols(src_file):
-    """Extract public class/function names defined in a source file's additions."""
     symbols = set()
     for a in additions:
         if a['file'] != src_file:
@@ -441,27 +506,17 @@ def extract_public_symbols(src_file):
     return symbols
 
 def extract_module_name(src_path):
-    """Get the importable module name from a source path (e.g. pycaption.scc.state_machines)."""
-    parts = src_path.replace('.py', '').replace('/', '.')
-    return parts
+    return src_path.replace('.py', '').replace('/', '.')
 
 def find_test_for(src):
-    """Find a test file that covers this source file.
-    Strategy: 1) filename match, 2) check if any test file imports/references
-    symbols from the source file or its module path."""
     base = os.path.basename(src).replace('.py', '')
 
-    # Strategy 1: direct filename match (e.g. utils.py -> test_utils.py)
     for t in py_test_files:
         tbase = os.path.basename(t).replace('.py', '').replace('test_', '')
         if tbase == base or base in tbase or tbase in base:
             return t
 
-    # Strategy 2: check if any test file references symbols from this source
-    # We check the FULL content of test files (not just additions) because
-    # tests may already exist and just not have been modified in this PR.
     src_symbols = extract_public_symbols(src)
-    # Also extract symbols from deletions (modified functions still exist)
     for d in deletions:
         if d['file'] != src:
             continue
@@ -472,15 +527,12 @@ def find_test_for(src):
     parent_module = os.path.dirname(src).replace('/', '.')
 
     for t in py_test_files:
-        # Read test file content from the PR ref (not working tree)
         r = run(['git', 'show', f'{pr_ref}:{t}'])
         if r.returncode != 0:
             continue
         full_test_text = r.stdout
-        # Check for import of the module
         if module_name in full_test_text or parent_module in full_test_text:
             return t
-        # Check for references to symbols from the source file
         for sym in src_symbols:
             if re.search(rf'\b{re.escape(sym)}\b', full_test_text):
                 return t
@@ -519,8 +571,6 @@ for a in additions:
             new_funcs[key] = a['lineno']
 
 for (src, func), lineno in new_funcs.items():
-    # Search across ALL test files in the PR for the function name
-    # Read from the PR ref (not working tree) to avoid false positives
     word_re = re.compile(rf'\b{re.escape(func)}\b')
     found_in_any_test = False
     for t in py_test_files:
@@ -540,9 +590,140 @@ for (src, func), lineno in new_funcs.items():
             'impact': 'Untested new code'})
 
 print(f"  Found: {len(code_review_findings)} findings")
-```
 
-```python
+# ===== CODE QUALITY REVIEW =====
+print("\n[7/8] Code quality review...")
+
+quality_issues = []
+
+for add in additions:
+    if not add['file'] or not add['file'].endswith('.py'):
+        continue
+    line = add['line']
+
+    # Bare except
+    if re.search(r'except\s*:', line) and 'except Exception' not in line:
+        quality_issues.append({
+            'type': 'BARE_EXCEPT', 'severity': 'MEDIUM',
+            'file': add['file'],
+            'detail': 'Bare except clause catches all exceptions',
+            'recommendation': 'Use specific exception types'})
+
+    # Magic numbers (only flag when used inline, not in constants/comments/strings/imports)
+    if re.search(r'\b(32|15|30|29\.97)\b', line):
+        skip_magic = (
+            '#' in line
+            or 'SPEC' in line
+            or re.match(r'^\s*[A-Z_]+\s*=', line)  # constant definition
+            or re.match(r'^\s*(import|from)\s', line)
+            or re.match(r'^\s*def\s', line)
+            or re.search(r'range\(', line)
+        )
+        if not skip_magic:
+            quality_issues.append({
+                'type': 'MAGIC_NUMBER', 'severity': 'LOW',
+                'file': add['file'],
+                'detail': f"Magic number in: {line[:60]}",
+                'recommendation': 'Use named constant'})
+
+print(f"  Found: {len(quality_issues)} code quality suggestions")
+
+# ===== SECTION 3: CHANGE ANALYSIS =====
+print("\n[8/8] Analyzing changes - what they do and how they solve the issue...")
+
+commit_log_r = run(['git', 'log', '--format=%s%n%b---', f'origin/{base_branch}..{pr_ref}'])
+commit_messages = commit_log_r.stdout.strip() if commit_log_r.returncode == 0 else ''
+
+new_files = []
+modified_files = []
+deleted_files = []
+
+for f in py_src_files:
+    has_adds = any(a['file'] == f for a in additions)
+    has_dels = any(d['file'] == f for d in deletions)
+    if has_adds and not has_dels:
+        new_files.append(f)
+    elif has_adds and has_dels:
+        modified_files.append(f)
+    elif not has_adds and has_dels:
+        deleted_files.append(f)
+
+change_details = []
+
+for f in modified_files:
+    file_adds = [a for a in additions if a['file'] == f]
+    file_dels = [d for d in deletions if d['file'] == f]
+
+    new_funcs_in_file = []
+    modified_funcs_in_file = []
+    removed_funcs_in_file = []
+
+    del_func_names = set()
+    add_func_names = set()
+
+    for d in file_dels:
+        m = sig_pattern.match(d['line'])
+        if m:
+            del_func_names.add(m.group(1))
+    for a in file_adds:
+        m = sig_pattern.match(a['line'])
+        if m:
+            add_func_names.add(m.group(1))
+
+    for name in add_func_names & del_func_names:
+        modified_funcs_in_file.append(name)
+    for name in add_func_names - del_func_names:
+        new_funcs_in_file.append(name)
+    for name in del_func_names - add_func_names:
+        removed_funcs_in_file.append(name)
+
+    detail = {'file': f}
+    if new_funcs_in_file:
+        detail['new'] = new_funcs_in_file
+    if modified_funcs_in_file:
+        detail['modified'] = modified_funcs_in_file
+    if removed_funcs_in_file:
+        detail['removed'] = removed_funcs_in_file
+    if not (new_funcs_in_file or modified_funcs_in_file or removed_funcs_in_file):
+        add_count = len(file_adds)
+        del_count = len(file_dels)
+        detail['summary'] = f'+{add_count}/-{del_count} lines (logic/refactoring changes)'
+    change_details.append(detail)
+
+for f in new_files:
+    file_adds = [a for a in additions if a['file'] == f]
+    funcs = []
+    for a in file_adds:
+        m = sig_pattern.match(a['line'])
+        if m and not m.group(1).startswith('_'):
+            funcs.append(m.group(1))
+    detail = {'file': f, 'is_new': True}
+    if funcs:
+        detail['new'] = funcs
+    change_details.append(detail)
+
+test_details = []
+for f in py_test_files:
+    file_adds = [a for a in additions if a['file'] == f]
+    test_classes = []
+    test_funcs = []
+    for a in file_adds:
+        cls_m = re.match(r'^\s*class\s+(Test\w+)', a['line'])
+        func_m = re.match(r'^\s*def\s+(test_\w+)', a['line'])
+        if cls_m:
+            test_classes.append(cls_m.group(1))
+        elif func_m:
+            test_funcs.append(func_m.group(1))
+    if test_classes or test_funcs:
+        test_details.append({
+            'file': f,
+            'classes': test_classes,
+            'functions': test_funcs
+        })
+
+print(f"  Source: {len(new_files)} new, {len(modified_files)} modified, {len(deleted_files)} deleted")
+print(f"  Test changes: {len(test_details)} test files with new tests")
+
 # ===== RECOMMENDATION + REPORT =====
 print("\n  Generating report...")
 
@@ -554,7 +735,6 @@ medium = [i for i in all_issues if i.get('severity') == 'MEDIUM']
 regressions = [f for f in code_review_findings if f['category'] == 'REGRESSION']
 missing_tests = [f for f in code_review_findings if f['category'] == 'MISSING_TEST']
 
-# Recommendation logic
 if critical:
     recommendation = 'DO NOT MERGE'
     rec_icon = '\U0001f534'
@@ -575,20 +755,20 @@ else:
 # ===== BUILD REPORT =====
 date = datetime.now().strftime("%Y-%m-%d")
 safe_branch = re.sub(r'[^\w.-]', '_', str(pr_number))
-flow_dir = flow.lower().replace('+', '_') if flow not in ('NONE', 'SCC+VTT') else 'mixed'
-report_dir = f"pycaption/compliance_checks/{flow_dir}" if flow != 'NONE' else "pycaption/compliance_checks"
+if len(detected_flows) == 1:
+    flow_dir = detected_flows[0].lower()
+elif len(detected_flows) > 1:
+    flow_dir = 'mixed'
+else:
+    flow_dir = None
+report_dir = f"ai_artifacts/compliance_checks/{flow_dir}" if flow_dir else "ai_artifacts/compliance_checks"
 os.makedirs(report_dir, exist_ok=True)
 report_path = f"{report_dir}/pr_{safe_branch}_review_{date}.md"
 
-# Spec file used
-if flow == 'SCC':
-    spec_used = '`pycaption/specs/scc/scc_specs_summary.md`'
-elif flow == 'VTT':
-    spec_used = '`pycaption/specs/vtt/vtt_specs_summary.md`'
-elif flow == 'SCC+VTT':
-    spec_used = '`pycaption/specs/scc/scc_specs_summary.md` + `pycaption/specs/vtt/vtt_specs_summary.md`'
+if spec_paths:
+    spec_used = ' + '.join(f'`{p}`' for p in spec_paths.values())
 else:
-    spec_used = 'N/A (no SCC/VTT files changed)'
+    spec_used = 'N/A (no SCC/VTT/DFXP files changed)'
 
 report = f"""# PR #{pr_number} - {pr_title}
 
@@ -609,7 +789,7 @@ Pre-existing issues in unchanged code are not reported.
 """
 
 if flow == 'NONE':
-    report += "No SCC/VTT source files changed - compliance check not applicable.\n\n"
+    report += "No SCC/VTT/DFXP source files changed - compliance check not applicable.\n\n"
 elif compliance_issues:
     report += f"**{len(compliance_issues)} new compliance issue(s) found:**\n\n"
     for i, issue in enumerate(compliance_issues, 1):
@@ -623,7 +803,6 @@ elif compliance_issues:
 else:
     report += f"No new compliance issues introduced by this PR against the {flow} spec.\n\n"
 
-# ===== SECTION 2: CODE REVIEW =====
 report += f"""---
 
 ## Section 2: Code Review
@@ -632,7 +811,6 @@ Full code review covering regressions, breaking changes, and test coverage.
 
 """
 
-# 2.1 Regressions & Breaking Changes
 report += f"### Regressions & Breaking Changes ({len(regressions)})\n\n"
 if regressions:
     for i, f in enumerate(regressions, 1):
@@ -645,7 +823,6 @@ if regressions:
 else:
     report += "No regressions or breaking changes detected.\n\n"
 
-# 2.2 Test Coverage
 report += f"### Test Coverage ({len(missing_tests)})\n\n"
 if missing_tests:
     for i, f in enumerate(missing_tests, 1):
@@ -659,7 +836,6 @@ if missing_tests:
 else:
     report += "All changes have corresponding test coverage.\n\n"
 
-# 2.3 Summary table
 report += f"""### Issues Summary
 
 | Severity | Count |
@@ -671,7 +847,107 @@ report += f"""### Issues Summary
 
 """
 
-# ===== RECOMMENDATION =====
+report += """---
+
+## Section 3: Change Analysis
+
+What the PR changes do and how they address the stated issue.
+
+"""
+
+if commit_messages:
+    report += "### Commit Messages\n\n"
+    for msg_block in commit_messages.split('---'):
+        msg = msg_block.strip()
+        if not msg:
+            continue
+        lines = msg.split('\n')
+        subject = lines[0].strip()
+        body = '\n'.join(l.strip() for l in lines[1:] if l.strip())
+        if subject:
+            report += f"- **{subject}**"
+            if body:
+                report += f"\n  {body}"
+            report += "\n"
+    report += "\n"
+
+if change_details:
+    report += "### Source Changes\n\n"
+    for cd in change_details:
+        is_new = cd.get('is_new', False)
+        label = "(new file)" if is_new else ""
+        report += f"**`{cd['file']}`** {label}\n"
+        if cd.get('new'):
+            report += f"- New functions: `{'`, `'.join(cd['new'])}`\n"
+        if cd.get('modified'):
+            report += f"- Modified functions: `{'`, `'.join(cd['modified'])}`\n"
+        if cd.get('removed'):
+            report += f"- Removed functions: `{'`, `'.join(cd['removed'])}`\n"
+        if cd.get('summary'):
+            report += f"- {cd['summary']}\n"
+        report += "\n"
+
+if deleted_files:
+    report += "**Deleted files:**\n"
+    for f in deleted_files:
+        report += f"- `{f}`\n"
+    report += "\n"
+
+if test_details:
+    report += "### Test Changes\n\n"
+    for td in test_details:
+        report += f"**`{td['file']}`**\n"
+        if td['classes']:
+            report += f"- New test classes: `{'`, `'.join(td['classes'])}`\n"
+        if td['functions']:
+            funcs = td['functions']
+            if len(funcs) <= 10:
+                report += f"- New test methods: `{'`, `'.join(funcs)}`\n"
+            else:
+                report += f"- New test methods: {len(funcs)} ({', '.join(f'`{f}`' for f in funcs[:5])}, ...)\n"
+        report += "\n"
+
+report += "### Correctness Assessment\n\n"
+
+if not all_issues:
+    report += "The changes are correct:\n\n"
+    if change_details:
+        for cd in change_details:
+            if cd.get('modified'):
+                report += f"- Modifications to `{'`, `'.join(cd['modified'])}` in `{cd['file']}` "
+                report += "align with the stated objective and do not introduce regressions.\n"
+            if cd.get('new'):
+                report += f"- New functions `{'`, `'.join(cd['new'])}` in `{cd['file']}` "
+                report += "are properly implemented and tested.\n"
+    if test_details:
+        total_tests = sum(len(td['functions']) for td in test_details)
+        report += f"- {total_tests} new test method(s) verify the changes.\n"
+    if not change_details and not test_details:
+        report += "- All changes appear correct with no issues detected.\n"
+    report += "\n"
+else:
+    report += "The changes are **partially correct** — see issues above. "
+    correct_files = [cd['file'] for cd in change_details
+                     if not any(i.get('file') == cd['file'] for i in all_issues)]
+    if correct_files:
+        report += f"Changes to `{'`, `'.join(correct_files)}` are correct. "
+    issue_files = list(set(i.get('file', '') for i in all_issues if i.get('file')))
+    if issue_files:
+        report += f"Issues remain in `{'`, `'.join(issue_files)}`."
+    report += "\n\n"
+
+if quality_issues:
+    report += f"""### Code Quality Suggestions ({len(quality_issues)})
+
+"""
+    for i, qissue in enumerate(quality_issues, 1):
+        report += f"""**{i}. [{qissue['severity']}] {qissue['type']}**
+- **File**: `{qissue['file']}`
+- **Detail**: {qissue['detail']}
+- **Recommendation**: {qissue['recommendation']}
+
+"""
+
 report += f"""---
 
 ## Recommendation

@@ -1,0 +1,55 @@
+name: Spec Refresh Reminder
+
+on:
+  schedule:
+    # Runs at 09:00 UTC on the 1st of January and July (bi-annual)
+    - cron: '0 9 1 1,7 *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  remind:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Check Slack token availability
+        id: slack_check
+        run: |
+          if [ -n "$SLACK_TOKEN" ]; then
+            echo "available=true" >> $GITHUB_OUTPUT
+          else
+            echo "available=false" >> $GITHUB_OUTPUT
+          fi
+        env:
+          SLACK_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+
+      - name: Send Slack reminder
+        if: steps.slack_check.outputs.available == 'true'
+        uses: archive/github-actions-slack@v2.0.0
+        with:
+          slack-bot-user-oauth-access-token: ${{ secrets.SLACK_BOT_TOKEN }}
+          slack-channel: ${{ secrets.SLACK_CHANNEL_ID }}
+          slack-text: |
+            :calendar: *Bi-annual Spec Refresh Reminder*
+
+            Time to re-run the pycaption Claude skills locally to check for spec updates:
+
+            • `/analyze-scc-docs` — CEA-608/SCC specification
+            • `/analyze-vtt-docs` — WebVTT specification
+            • `/analyze-dfxp-docs` — DFXP/TTML specification
+
+            Then run compliance checks:
+            • `/check-scc-compliance`
+            • `/check-vtt-compliance`
+            • `/check-dfxp-compliance`
+
+            _These specs (CEA-608, TTML, WebVTT) change rarely, but it's good to verify._
+
+      - name: Log if Slack unavailable
+        if: steps.slack_check.outputs.available != 'true'
+        run: |
+          echo "::warning::SLACK_BOT_TOKEN or SLACK_CHANNEL_ID not configured — reminder not sent"
+          echo "To enable, add SLACK_BOT_TOKEN and SLACK_CHANNEL_ID to repository secrets"
