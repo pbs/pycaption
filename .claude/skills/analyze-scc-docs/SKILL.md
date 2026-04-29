@@ -23,14 +23,21 @@ Generates unified, code-verifiable SCC specification (`scc_specs_summary.md`) as
 
 ### Step 1: Load Documentation
 
-Read and analyze:
-- `ai_artifacts/specs/scc/standards_summary.md` (CEA-608/708)
+**Always read:**
+- `ai_artifacts/specs/scc/scc_specs_summary.md` (existing rule framework)
 - `ai_artifacts/specs/scc/scc_web_summary.md` (web docs)
 - `ai_artifacts/specs/scc/scc_web_sources.md` (checked URLs)
 
+**Check for local standards file (NOT in the repo — user provides separately):**
+- Check if `ai_artifacts/specs/scc/standards_summary.md` exists locally
+- If it exists: read it as the primary CEA-608/708 reference alongside the files above
+- If it does NOT exist: skip it and rely on web sources instead (see Step 3)
+
+This file is not committed to the repo because it contains proprietary CEA-608 standard text. Contributors who have a licensed copy can place it at the path above to get more comprehensive analysis.
+
 ### Step 2: Completeness Verification
 
-**CRITICAL:** Verify ALL these areas covered (check standards_summary.md thoroughly):
+**CRITICAL:** Verify ALL these areas covered (check scc_specs_summary.md + standards_summary.md if available, otherwise web sources):
 
 **File Format:**
 - Header: "Scenarist_SCC V1.0" exact match
@@ -74,9 +81,20 @@ Read and analyze:
 
 **Identify gaps** - anything missing from above.
 
-### Step 3: Web Search (if gaps exist)
+### Step 3: Web Search
 
-Search for missing specs, exclude URLs in `scc_web_sources.md`.
+**Determine search scope based on available sources:**
+
+**If `ai_artifacts/specs/scc/standards_summary.md` was found in Step 1:**
+1. First, use the local standards file + existing specs to fill gaps
+2. Then fetch URLs listed in `scc_web_sources.md` to cross-reference and confirm
+3. Only search for additional web sources if gaps still remain after the above
+4. Exclude URLs already in `scc_web_sources.md` from new searches
+
+**If `ai_artifacts/specs/scc/standards_summary.md` was NOT found:**
+1. Fetch all URLs listed in `scc_web_sources.md` and extract relevant information
+2. Search the web for CEA-608/708 requirements to fill any remaining gaps
+3. Exclude URLs already in `scc_web_sources.md` from new searches
 
 ### Step 4: Generate Specification
 
@@ -144,7 +162,7 @@ Quick reference, sources
 
 **Critical Requirements to Include:**
 
-**Parity (from standards_summary.md:1896-1898):**
+**Parity (CEA-608 requirement):**
 ```markdown
 **[RULE-ENC-001]** Bytes MUST have odd parity
 - **Applicability:** N/A for SCC text format (parity pre-encoded in hex)
@@ -154,7 +172,7 @@ Quick reference, sources
 - Parity already encoded in hex values
 ```
 
-**Character/Row Limits (from standards_summary.md:2504-2505):**
+**Character/Row Limits (CEA-608 requirement):**
 ```markdown
 **[RULE-LAY-001]** MUST NOT exceed 32 characters per row
 **[RULE-LAY-002]** MUST NOT exceed 15 rows total
@@ -350,14 +368,16 @@ print("=" * 60)
 - WHY: check-scc-compliance discovers actual code structure
 
 **Missed Requirements Prevention:**
-- Parity: From standards_summary.md:1896-1898 (mark N/A for SCC)
-- Character limits: From standards_summary.md:2504-2505
-- Base row: From standards_summary.md:231-232, 1768-1778
-- Frame rates: From standards_summary.md (all 5 variants)
+- Parity: CEA-608 parity requirement (mark N/A for SCC text format)
+- Character limits: 32 chars/row, 15 rows max
+- Base row: Must have room for roll-up depth
+- Frame rates: All 5 variants (23.976, 24, 25, 29.97 DF/NDF, 30)
 - Protocol sequences: From caption mode sections
 
 **Thoroughness:**
-- Read standards_summary.md completely
+- Read scc_specs_summary.md and scc_web_summary.md completely
+- If available, read ai_artifacts/specs/scc/standards_summary.md (local only, not in repo)
+- Search web for any missing CEA-608/708 requirements
 - Extract ALL MUST/SHOULD/MAY statements
 - Document even if "N/A for SCC" (for completeness)
 - Verify against completeness checklist in Step 2

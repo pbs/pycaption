@@ -453,7 +453,7 @@
 | 0x7D | } | Ñ | CHAR-DIFF-008 |
 | 0x7E | ~ | ñ | CHAR-DIFF-009 |
 
-**Sources:** CEA-608 Annex A, lines 278-390 in standards_summary.md
+**Sources:** CEA-608 Annex A
 
 ### 3.2 Special Characters
 
@@ -719,7 +719,7 @@
 - **Level:** MUST NOT
 - **Validation:** Count characters per row, error if > 32
 - **Common Violations:** Long text without proper line breaks
-- **Sources:** CEA-608 line 2504-2505 in standards_summary.md
+- **Sources:** CEA-608 Section 2504-2505
 - **Confidence:** High
 
 **[RULE-LAY-003]** Total visible rows MUST NOT exceed 15
@@ -769,7 +769,7 @@
 
 - **Frame Range:** 0-23
 - **Level:** MUST
-- **Sources:** SMPTE standards, standards_summary.md
+- **Sources:** SMPTE standards
 - **Confidence:** High
 
 **[RULE-FPS-002]** MUST support 24 fps (film)
@@ -844,7 +844,7 @@
 - **Applicability:** Raw CEA-608 line 21 transmission
 - **SCC Applicability:** N/A (SCC files use hex text, parity pre-encoded)
 - **Note:** SCC parsers/writers work with hex values where parity is already encoded
-- **Sources:** CEA-608 lines 1896-1898 in standards_summary.md
+- **Sources:** CEA-608 Section 1896-1898
 - **Confidence:** High
 
 **[IMPL-ENC-001]** SCC Parser MAY skip parity validation
@@ -1143,7 +1143,7 @@ While not part of core captioning, SCC files may contain XDS packets.
 - ✅ Cross-mode commands: EDM in all modes (RULE-EDM-001)
 
 #### Source Attribution
-- ✅ All rules cite sources (CEA-608, scc_web_summary.md, standards_summary.md)
+- ✅ All rules cite sources (CEA-608, scc_web_summary.md)
 - ✅ Source line numbers provided where applicable
 - ✅ Confidence levels indicated (High/Medium/Low)
 
@@ -1164,7 +1164,7 @@ The following areas are represented by sample entries with full enumeration note
 3. **Special Characters**: 16 shown with full reference
 4. **Extended Characters**: Language sets documented with ranges
 
-**Rationale:** Complete 300+ code enumeration available in source documents (standards_summary.md). This specification provides structured patterns for automated parsing.
+**Rationale:** Complete 300+ code enumeration available in CEA-608 source documents. This specification provides structured patterns for automated parsing.
 
 ### Usability Verification
 

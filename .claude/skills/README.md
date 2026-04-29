@@ -13,7 +13,7 @@ analyze-*-docs --> check-*-compliance --> suggest-*-fixes
 
 | Skill | What it does |
 |-------|-------------|
-| `/analyze-scc-docs` | Generate SCC spec summary from CEA-608/708 web sources (agent-driven, uses WebFetch/WebSearch) |
+| `/analyze-scc-docs` | Generate SCC spec summary from CEA-608/708 sources. Uses local `standards_summary.md` if available, otherwise falls back to web sources (agent-driven, uses WebFetch/WebSearch) |
 | `/analyze-vtt-docs` | Generate WebVTT spec summary from W3C web sources (agent-driven, uses WebFetch/WebSearch) |
 | `/analyze-dfxp-docs` | Generate DFXP/TTML spec summary from W3C TTML web sources (agent-driven, uses WebFetch/WebSearch) |
 | `/check-scc-compliance` | Deep validation + 44 rules + 621 control codes + frame rate analysis + test coverage |
@@ -56,14 +56,29 @@ A bi-annual Slack reminder (`spec_refresh_reminder.yml`) fires on Jan 1 and Jul 
 - **IMPL-XXX-###**: Implementation requirements
 - **CTRL-###**: Control codes (SCC only)
 
+## Local Standards Files
+
+The SCC compliance workflow can optionally use a local copy of the CEA-608/708 standard for more comprehensive analysis. This file is **not committed to the repo** (gitignored) because it contains proprietary content from CTA.
+
+| File | Purpose | In repo? |
+|------|---------|----------|
+| `ai_artifacts/specs/scc/standards_summary.md` | Verbatim CEA-608/708 reference (proprietary) | **No** — gitignored, local only |
+| `ai_artifacts/specs/scc/scc_specs_summary.md` | Derived rule framework (44 rules) | Yes |
+| `ai_artifacts/specs/scc/scc_web_summary.md` | Summarized from public web sources | Yes |
+
+**How it works:** When `/analyze-scc-docs` runs, it checks if `standards_summary.md` exists locally. If found, it uses it as the primary CEA-608/708 reference alongside web sources. If not found, it relies entirely on web sources. The compliance checks (`/check-scc-compliance`, CI workflows) only need `scc_specs_summary.md` — they work without the proprietary file.
+
+Contributors with a licensed copy of CEA-608-E can place it at `ai_artifacts/specs/scc/standards_summary.md` to get richer spec analysis.
+
 ## Notes
 
 - Fix skills target ONE issue at a time for efficiency (~20K vs 90K tokens)
 - Specs are the source of truth for compliance checks; compliance scripts read spec summaries, not raw standards
 - Spec summaries: `ai_artifacts/specs/{scc,vtt,dfxp}/*_specs_summary.md`
 - Master checklists: `ai_artifacts/specs/{scc,vtt,dfxp}/master_checklist.md`
+- Compliance reports are uploaded as GitHub Actions artifacts (90-day retention), not committed to the repo
 - Slack notifications require `SLACK_BOT_TOKEN` and `SLACK_CHANNEL_ID` repository secrets
 - `${{ github.token }}` is used automatically for GitHub API calls (no secret setup needed)
 
 ---
-**Last Updated**: 2026-04-28
+**Last Updated**: 2026-04-29
