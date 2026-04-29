@@ -4,6 +4,7 @@
 **Sources**: W3C TTML1 Specification 3rd Edition (https://www.w3.org/TR/2018/REC-ttml1-20181108/), W3C TTML1 Original (https://www.w3.org/TR/ttml1/), W3C TTML2 (https://www.w3.org/TR/ttml2/)
 **Version**: W3C Recommendation, Third Edition (November 2018)
 **Total Rules**: 112
+**License**: Requirements summarized from W3C TTML1 Specification, Copyright (c) W3C. Published under the W3C Document License (https://www.w3.org/copyright/document-license-2023/).
 
 ---
 

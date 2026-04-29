@@ -36,11 +36,10 @@
 ## Verified Information Sources
 
 All technical specifications in scc_web_summary.md are compiled from:
-1. CEA-608 standard (ANSI/CTA-608-E S-2019)
-2. CEA-708 standard (ANSI/CTA-708-E R-2018)
+1. Open-source implementations (libcaption, CCExtractor, pycaption)
+2. Public web-based technical documentation and format guides
 3. FCC regulations (47 CFR §79.1)
-4. Implementation experience from libcaption and pycaption
-5. Industry best practices documentation
+4. Industry best practices documentation
 
 **Note:** The mcpoodle SCC_TOOLS documentation was historically the most comprehensive web-based SCC reference but is no longer accessible as of 2024.
 

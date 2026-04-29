@@ -126,22 +126,23 @@ jobs:
           | Format | Status | Issues | MUST |
           |--------|--------|--------|------|
           EOF
-          echo "| SCC | ${{ env.SCC_STATUS }} | ${{ env.SCC_ISSUES }} | ${{ env.SCC_MUST }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| VTT | ${{ env.VTT_STATUS }} | ${{ env.VTT_ISSUES }} | ${{ env.VTT_MUST }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| DFXP | ${{ env.DFXP_STATUS }} | ${{ env.DFXP_ISSUES }} | ${{ env.DFXP_MUST }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| SCC | $SCC_STATUS | $SCC_ISSUES | $SCC_MUST |" >> $GITHUB_STEP_SUMMARY
+          echo "| VTT | $VTT_STATUS | $VTT_ISSUES | $VTT_MUST |" >> $GITHUB_STEP_SUMMARY
+          echo "| DFXP | $DFXP_STATUS | $DFXP_ISSUES | $DFXP_MUST |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "Download reports from the [Actions tab](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY
 
       - name: Check Slack token availability
         id: slack_check
         run: |
-          if [ -n "$SLACK_TOKEN" ]; then
+          if [ -n "$SLACK_TOKEN" ] && [ -n "$SLACK_CHANNEL" ]; then
             echo "available=true" >> $GITHUB_OUTPUT
           else
             echo "available=false" >> $GITHUB_OUTPUT
           fi
         env:
           SLACK_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_CHANNEL: ${{ secrets.SLACK_CHANNEL_ID }}
 
       - name: Notify Slack
         if: github.event.inputs.notify_slack == 'true' && steps.slack_check.outputs.available == 'true'

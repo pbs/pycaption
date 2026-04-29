@@ -50,11 +50,11 @@ spec = _read(spec_file)
 
 # Extract all rules from spec
 all_rules = {}
-for match in re.finditer(r'\*\*\[(RULE-[A-Z]+-\d{3}|IMPL-[A-Z]+-\d{3})\]\*\*\s*(.+?)(?:\n|$)', spec):
+for match in re.finditer(r'\*\*\[(RULE-[A-Z]+-\d{3}|IMPL-(?:[A-Z]+-)?\d{3})\]\*\*\s*(.+?)(?:\n|$)', spec):
     rule_id = match.group(1)
     rule_name = match.group(2).strip()
     rule_start = match.start()
-    next_rule = re.search(r'\*\*\[(?:RULE-[A-Z]+-\d{3}|IMPL-[A-Z]+-\d{3})\]\*\*', spec[rule_start + 1:])
+    next_rule = re.search(r'\*\*\[(?:RULE-[A-Z]+-\d{3}|IMPL-(?:[A-Z]+-)?\d{3})\]\*\*', spec[rule_start + 1:])
     rule_block = spec[rule_start:rule_start + 1 + next_rule.start()] if next_rule else spec[rule_start:]
     level_match = re.search(r'\*\*Level:\*\*\s*(MUST NOT|MUST|SHOULD|MAY)', rule_block)
     level = level_match.group(1) if level_match else 'UNKNOWN'

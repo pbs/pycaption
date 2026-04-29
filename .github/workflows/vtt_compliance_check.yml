@@ -93,13 +93,14 @@ jobs:
       - name: Check Slack token availability
         id: slack_check
         run: |
-          if [ -n "$SLACK_TOKEN" ]; then
+          if [ -n "$SLACK_TOKEN" ] && [ -n "$SLACK_CHANNEL" ]; then
             echo "available=true" >> $GITHUB_OUTPUT
           else
             echo "available=false" >> $GITHUB_OUTPUT
           fi
         env:
           SLACK_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_CHANNEL: ${{ secrets.SLACK_CHANNEL_ID }}
 
       - name: Notify Slack - Success
         uses: archive/github-actions-slack@f530f3aa696b2eef0e5aba82450e387bd7723903 # v2.0.0
@@ -151,24 +152,24 @@ jobs:
           echo "## WebVTT Compliance Check Results" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
-          if [ "${{ env.REPORT_EXISTS }}" == "true" ]; then
+          if [ "$REPORT_EXISTS" == "true" ]; then
             echo "**Compliance check completed**" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "### Metrics" >> $GITHUB_STEP_SUMMARY
-            echo "- **Total Issues**: ${{ env.TOTAL_ISSUES }}" >> $GITHUB_STEP_SUMMARY
-            echo "- **MUST Violations**: ${{ env.MUST_VIOLATIONS }}" >> $GITHUB_STEP_SUMMARY
-            echo "- **Validation Gaps**: ${{ env.VALIDATION_GAPS }}" >> $GITHUB_STEP_SUMMARY
-            echo "- **Implementation Caveats**: ${{ env.CAVEATS }}" >> $GITHUB_STEP_SUMMARY
-            echo "- **Missing Rules**: ${{ env.MISSING_RULES }}" >> $GITHUB_STEP_SUMMARY
-            echo "- **Tag Round-trip Gaps**: ${{ env.TAG_ROUNDTRIP_GAPS }}/8" >> $GITHUB_STEP_SUMMARY
-            echo "- **Setting Parse Gaps**: ${{ env.SETTING_PARSE_GAPS }}/6" >> $GITHUB_STEP_SUMMARY
-            echo "- **Entity Gaps**: ${{ env.ENTITY_GAPS }}/7" >> $GITHUB_STEP_SUMMARY
-            echo "- **Test Gaps**: ${{ env.TEST_GAPS }}" >> $GITHUB_STEP_SUMMARY
+            echo "- **Total Issues**: $TOTAL_ISSUES" >> $GITHUB_STEP_SUMMARY
+            echo "- **MUST Violations**: $MUST_VIOLATIONS" >> $GITHUB_STEP_SUMMARY
+            echo "- **Validation Gaps**: $VALIDATION_GAPS" >> $GITHUB_STEP_SUMMARY
+            echo "- **Implementation Caveats**: $CAVEATS" >> $GITHUB_STEP_SUMMARY
+            echo "- **Missing Rules**: $MISSING_RULES" >> $GITHUB_STEP_SUMMARY
+            echo "- **Tag Round-trip Gaps**: $TAG_ROUNDTRIP_GAPS/8" >> $GITHUB_STEP_SUMMARY
+            echo "- **Setting Parse Gaps**: $SETTING_PARSE_GAPS/6" >> $GITHUB_STEP_SUMMARY
+            echo "- **Entity Gaps**: $ENTITY_GAPS/7" >> $GITHUB_STEP_SUMMARY
+            echo "- **Test Gaps**: $TEST_GAPS" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "### Report" >> $GITHUB_STEP_SUMMARY
-            echo "Report saved to: \`${{ env.REPORT_PATH }}\`" >> $GITHUB_STEP_SUMMARY
+            echo "Report saved to: \`$REPORT_PATH\`" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "Download artifacts from the [Actions tab](${{ env.ARTIFACT_URL }})" >> $GITHUB_STEP_SUMMARY
+            echo "Download artifacts from the [Actions tab]($ARTIFACT_URL)" >> $GITHUB_STEP_SUMMARY
           else
             echo "**Compliance check failed**" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY

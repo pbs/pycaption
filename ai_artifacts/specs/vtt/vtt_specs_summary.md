@@ -5,6 +5,7 @@
 **Version**: W3C Candidate Recommendation  
 **Total Rules**: 76 (50 RULE-XXX + 7 RULE-ENT + 7 RULE-VAL + 12 IMPL-XXX)  
 **Coverage**: ✅ EXHAUSTIVE - All 8 tags, 6 settings, 7 entities, 6 region properties individually documented
+**License**: Requirements summarized from W3C WebVTT Specification, Copyright (c) W3C. Published under the W3C Software and Document License (https://www.w3.org/copyright/software-license-2023/).
 
 ---
 

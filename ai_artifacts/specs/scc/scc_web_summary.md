@@ -169,31 +169,25 @@ Both uppercase and lowercase hex digits are valid:
 
 ### 5.1 Caption Mode Commands
 
-| Hex Code | Command | Mode | Description |
-|----------|---------|------|-------------|
-| 9420 | RCL | Pop-on | Resume Caption Loading - buffered captions |
-| 9425 | RU2 | Roll-up | Roll-Up 2 rows - live scrolling |
-| 9426 | RU3 | Roll-up | Roll-Up 3 rows - live scrolling |
-| 9427 | RU4 | Roll-up | Roll-Up 4 rows - live scrolling |
-| 9429 | RDC | Paint-on | Resume Direct Captioning - immediate display |
+- RCL (9420) — Resume Caption Loading, selects pop-on mode (buffered captions)
+- RU2 (9425) — Roll-Up 2 rows, selects 2-row live scrolling
+- RU3 (9426) — Roll-Up 3 rows, selects 3-row live scrolling
+- RU4 (9427) — Roll-Up 4 rows, selects 4-row live scrolling
+- RDC (9429) — Resume Direct Captioning, selects paint-on mode (immediate display)
 
 ### 5.2 Display Control Commands
 
-| Hex Code | Command | Function |
-|----------|---------|----------|
-| 942c | EDM | Erase Displayed Memory - clear screen |
-| 942e | ENM | Erase Non-Displayed Memory - clear buffer |
-| 942f | EOC | End Of Caption - display pop-on caption |
+- EDM (942c) — Erase Displayed Memory, clears the visible screen
+- ENM (942e) — Erase Non-Displayed Memory, clears the off-screen buffer
+- EOC (942f) — End Of Caption, displays the buffered pop-on caption
 
 ### 5.3 Cursor Control Commands
 
-| Hex Code | Command | Function |
-|----------|---------|----------|
-| 9421 | BS | Backspace - move cursor left, delete char |
-| 94ad | CR | Carriage Return - roll up one line |
-| 9721 | TO1 | Tab Offset 1 - move cursor right 1 column |
-| 9722 | TO2 | Tab Offset 2 - move cursor right 2 columns |
-| 9723 | TO3 | Tab Offset 3 - move cursor right 3 columns |
+- BS (9421) — Backspace, moves cursor left and deletes character
+- CR (94ad) — Carriage Return, scrolls roll-up text up one line
+- TO1 (9721) — Tab Offset 1, moves cursor right 1 column
+- TO2 (9722) — Tab Offset 2, moves cursor right 2 columns
+- TO3 (9723) — Tab Offset 3, moves cursor right 3 columns
 
 ### 5.4 Preamble Address Codes (PACs)
 
@@ -203,18 +197,7 @@ PACs set row position, column indent, and optionally text attributes.
 - First byte: Determines row
 - Second byte: Determines column indent and style
 
-**Row Positioning Examples:**
-
-| Hex Code | Row | Indent | Style |
-|----------|-----|--------|-------|
-| 9140 | 1 | 0 | White |
-| 9141 | 1 | 4 | White |
-| 91d0 | 2 | 0 | White |
-| 9240 | 3 | 0 | White |
-| 9470 | 11 | 0 | White |
-| 1340 | 13 | 0 | White |
-| 1640 | 14 | 0 | White |
-| 9670 | 15 | 0 | White |
+**Row Positioning:** PAC codes map to rows 1-15 with various hex ranges. Complete PAC decoding logic is implemented in `pycaption/scc/constants.py`.
 
 **Column Indents:**
 - Indent 0: Column 1
@@ -354,41 +337,11 @@ Change text attributes mid-row (color, italics, underline).
 
 ### 7.1 Basic ASCII Characters
 
-Characters 0x20-0x7F map directly to ASCII:
-
-| Hex | Char | Hex | Char | Hex | Char |
-|-----|------|-----|------|-----|------|
-| 20 | space | 41 | A | 61 | a |
-| 21 | ! | 42 | B | 62 | b |
-| 30 | 0 | 43 | C | 63 | c |
-| 31 | 1 | 44 | D | 64 | d |
-
-**Full ASCII Range:** Space through lowercase z
-
-**Note:** Some codes have special meanings in CEA-608 context
+Characters 0x20-0x7F map directly to ASCII (space through lowercase z). Some codes have special meanings in CEA-608 context — 9 characters differ from ISO-8859-1. Complete character mapping is in `pycaption/scc/constants.py`.
 
 ### 7.2 Special Characters
 
-Accessed via two-byte special character codes:
-
-| Hex Code | Character | Description |
-|----------|-----------|-------------|
-| 1130 | ® | Registered mark |
-| 1131 | ° | Degree sign |
-| 1132 | ½ | One half |
-| 1133 | ¿ | Inverted question |
-| 1134 | ™ | Trademark |
-| 1135 | ¢ | Cent sign |
-| 1136 | £ | Pound sterling |
-| 1137 | ♪ | Music note |
-| 1138 | à | a with grave |
-| 1139 | [space] | Transparent space |
-| 113a | è | e with grave |
-| 113b | â | a with circumflex |
-| 113c | ê | e with circumflex |
-| 113d | î | i with circumflex |
-| 113e | ô | o with circumflex |
-| 113f | û | u with circumflex |
+16 special characters accessed via two-byte codes in the 0x11xx range (0x1130-0x113F). These include ®, °, ½, ¿, ™, ¢, £, ♪, accented vowels, and transparent space. Complete mappings are in `pycaption/scc/constants.py`.
 
 ### 7.3 Extended Characters
 
@@ -842,9 +795,8 @@ SCC files can contain XDS (eXtended Data Services) packets in Field 2:
 
 This document compiled from:
 
-1. **Technical Specifications:**
-   - CEA-608 standard (ANSI/CTA-608-E)
-   - EIA-608 specifications
+1. **Public Technical Documentation:**
+   - SCC format specifications (publicly available documentation)
    - Scenarist format documentation
 
 2. **Implementation References:**

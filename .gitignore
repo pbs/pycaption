@@ -44,4 +44,4 @@ venv/
 .python-version
 
 # Local proprietary standards docs (not for distribution)
-ai_artifacts/specs/scc/standards_summary.md
+ai_artifacts/specs/*/standards_summary.md

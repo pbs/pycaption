@@ -78,7 +78,11 @@ repo_slug = repo_match.group(1) if repo_match else None
 if repo_slug:
     base_branch = detect_base_branch()
     api_url = f'https://api.github.com/repos/{repo_slug}/pulls?state=open&base={base_branch}&sort=created&direction=desc&per_page=1'
-    r = run(['curl', '-s', '-f', api_url])
+    curl_cmd = ['curl', '-s', '-f', api_url]
+    gh_token = os.environ.get('GH_TOKEN') or os.environ.get('GITHUB_TOKEN')
+    if gh_token:
+        curl_cmd[2:2] = ['-H', f'Authorization: Bearer {gh_token}']
+    r = run(curl_cmd)
     if r.returncode == 0 and r.stdout.strip():
         try:
             data = json.loads(r.stdout)

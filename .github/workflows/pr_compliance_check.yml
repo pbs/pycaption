@@ -126,13 +126,14 @@ jobs:
       - name: Check Slack token availability
         id: slack_check
         run: |
-          if [ -n "$SLACK_TOKEN" ]; then
+          if [ -n "$SLACK_TOKEN" ] && [ -n "$SLACK_CHANNEL" ]; then
             echo "available=true" >> $GITHUB_OUTPUT
           else
             echo "available=false" >> $GITHUB_OUTPUT
           fi
         env:
           SLACK_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_CHANNEL: ${{ secrets.SLACK_CHANNEL_ID }}
 
       - name: Notify Slack - Results
         uses: archive/github-actions-slack@f530f3aa696b2eef0e5aba82450e387bd7723903 # v2.0.0
@@ -216,18 +217,18 @@ jobs:
           echo "## PR Compliance Check Results" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
-          if [ "${{ env.ANALYSIS_NEEDED }}" == "true" ]; then
-            echo "**Analysis completed for PR #${{ env.PR_NUMBER }}**" >> $GITHUB_STEP_SUMMARY
+          if [ "$ANALYSIS_NEEDED" == "true" ]; then
+            echo "**Analysis completed for PR #$PR_NUMBER**" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "### Risk Level: ${{ env.RISK_LEVEL }}" >> $GITHUB_STEP_SUMMARY
+            echo "### Risk Level: $RISK_LEVEL" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "- **Compliance Issues**: ${{ env.COMPLIANCE_ISSUES }}" >> $GITHUB_STEP_SUMMARY
-            echo "- **Critical**: ${{ env.CRITICAL_COUNT }}" >> $GITHUB_STEP_SUMMARY
-            echo "- **High**: ${{ env.HIGH_COUNT }}" >> $GITHUB_STEP_SUMMARY
-            echo "- **Regressions**: ${{ env.REGRESSIONS }}" >> $GITHUB_STEP_SUMMARY
-            echo "- **Code Quality**: ${{ env.QUALITY_ISSUES }}" >> $GITHUB_STEP_SUMMARY
+            echo "- **Compliance Issues**: $COMPLIANCE_ISSUES" >> $GITHUB_STEP_SUMMARY
+            echo "- **Critical**: $CRITICAL_COUNT" >> $GITHUB_STEP_SUMMARY
+            echo "- **High**: $HIGH_COUNT" >> $GITHUB_STEP_SUMMARY
+            echo "- **Regressions**: $REGRESSIONS" >> $GITHUB_STEP_SUMMARY
+            echo "- **Code Quality**: $QUALITY_ISSUES" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "Report: \`${{ env.REPORT_PATH }}\`" >> $GITHUB_STEP_SUMMARY
+            echo "Report: \`$REPORT_PATH\`" >> $GITHUB_STEP_SUMMARY
           else
             echo "No caption format changes detected" >> $GITHUB_STEP_SUMMARY
           fi

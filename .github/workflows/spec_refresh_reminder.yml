@@ -18,13 +18,14 @@ jobs:
       - name: Check Slack token availability
         id: slack_check
         run: |
-          if [ -n "$SLACK_TOKEN" ]; then
+          if [ -n "$SLACK_TOKEN" ] && [ -n "$SLACK_CHANNEL" ]; then
             echo "available=true" >> $GITHUB_OUTPUT
           else
             echo "available=false" >> $GITHUB_OUTPUT
           fi
         env:
           SLACK_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_CHANNEL: ${{ secrets.SLACK_CHANNEL_ID }}
 
       - name: Send Slack reminder
         if: steps.slack_check.outputs.available == 'true'

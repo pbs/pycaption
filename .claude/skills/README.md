@@ -40,8 +40,10 @@ All compliance actions extract and run the same Python scripts from the skill `.
 
 ## Security
 
-- Third-party GitHub Actions are pinned to commit SHA (not mutable tags) to prevent supply-chain attacks
+- Third-party GitHub Actions (`archive/github-actions-slack`) are pinned to commit SHA (not mutable tags) to prevent supply-chain attacks
+- Workflow `run:` blocks use shell variable expansion (`$VAR`) instead of expression interpolation (`${{ env.VAR }}`) for defense-in-depth against injection
 - PR compliance workflow uses allowlist-only extraction when reading script output into `$GITHUB_ENV`
+- Slack availability checks verify both `SLACK_BOT_TOKEN` and `SLACK_CHANNEL_ID` before attempting to send
 - Workflows use minimal permissions (`contents: read`; only `pr_compliance_check` adds `pull-requests: write`)
 
 ## Spec Regeneration
@@ -64,17 +66,17 @@ A bi-annual Slack reminder (`spec_refresh_reminder.yml`) fires on Jan 1 and Jul 
 
 ## Local Standards Files
 
-The SCC compliance workflow can optionally use a local copy of the CEA-608/708 standard for more comprehensive analysis. This file is **not committed to the repo** (gitignored) because it contains proprietary content from CTA.
+Any format's compliance workflow can optionally use a local copy of its proprietary standard for more comprehensive analysis. These files are **not committed to the repo** (gitignored via `ai_artifacts/specs/*/standards_summary.md`) because they may contain proprietary content.
 
 | File | Purpose | In repo? |
 |------|---------|----------|
-| `ai_artifacts/specs/scc/standards_summary.md` | Verbatim CEA-608/708 reference (proprietary) | **No** — gitignored, local only |
+| `ai_artifacts/specs/*/standards_summary.md` | Proprietary standard reference (any format) | **No** — gitignored, local only |
 | `ai_artifacts/specs/scc/scc_specs_summary.md` | Derived rule framework (44 rules) | Yes |
 | `ai_artifacts/specs/scc/scc_web_summary.md` | Summarized from public web sources | Yes |
 
-**How it works:** When `/analyze-scc-docs` runs, it checks if `standards_summary.md` exists locally. If found, it uses it as the primary CEA-608/708 reference alongside web sources. If not found, it relies entirely on web sources. The compliance checks (`/check-scc-compliance`, CI workflows) only need `scc_specs_summary.md` — they work without the proprietary file.
+**How it works:** When `/analyze-scc-docs` runs, it checks if `standards_summary.md` exists locally. If found, it uses it as the primary reference alongside web sources. If not found, it relies entirely on web sources. The compliance checks (`/check-scc-compliance`, CI workflows) only need `scc_specs_summary.md` — they work without the proprietary file.
 
-Contributors with a licensed copy of CEA-608-E can place it at `ai_artifacts/specs/scc/standards_summary.md` to get richer spec analysis.
+Contributors with a licensed copy of the relevant standard can place it at `ai_artifacts/specs/{format}/standards_summary.md` to get richer spec analysis.
 
 ## Notes
 
