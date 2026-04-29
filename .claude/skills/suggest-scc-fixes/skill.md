@@ -220,23 +220,12 @@ def generate_code_fix(_issue_info, _context):
         spec_ref = extract_spec_reference(spec_content, 'RU4') if spec_content else \
                    "CEA-608 Section 6.4.2 (Roll-Up Captions)"
         return f'''
-#### Change Required
+#### No Change Required
 
-```python
-# File: pycaption/scc/__init__.py
-# Line: 437 (approximate)
+The current RU4 hex code `94a7` in `pycaption/scc/__init__.py` is **correct**.
 
-# BEFORE (incorrect):
-elif word in ("9425", "9426", "94a7"):  # RU2, RU3, RU4
-
-# AFTER (correct):
-elif word in ("9425", "9426", "9427"):  # RU2, RU3, RU4
-```
-
-**What**: Change `"94a7"` to `"9427"` (single character: `a` -> `2`)
-
-**Why**: According to **{spec_ref}**, RU4 (Roll-Up 4 rows) control code is
-specified as hex value `0x9427`.
+Per **{spec_ref}**, CEA-608 uses odd-parity encoding. The RU4 (Roll-Up 4 rows)
+control code with odd parity is `0x94a7`, not `0x9427`.
 
 **Spec Reference**: See `ai_artifacts/specs/scc/scc_specs_summary.md` -> Search for `[CTRL-RU4]`
 or `[RULE-ROLLUP-001]` for complete control code table.

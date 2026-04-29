@@ -36,7 +36,13 @@ analyze-*-docs --> check-*-compliance --> suggest-*-fixes
 | `pr_compliance_check.yml` | `workflow_dispatch` / `pull_request` | PR review: compliance, regressions, test coverage, comments on PR |
 | `spec_refresh_reminder.yml` | `schedule` (bi-annual) / `workflow_dispatch` | Sends Slack reminder to re-run analyze-docs skills locally |
 
-All compliance actions extract and run the same Python scripts from the skill `.md` files — local skills and GitHub Actions produce identical reports.
+All compliance actions extract and run the same Python scripts from the skill `.md` files — local skills and GitHub Actions produce identical reports. Workflows extract metrics directly from the generated report markdown (not from a separate summary file).
+
+## Security
+
+- Third-party GitHub Actions are pinned to commit SHA (not mutable tags) to prevent supply-chain attacks
+- PR compliance workflow uses allowlist-only extraction when reading script output into `$GITHUB_ENV`
+- Workflows use minimal permissions (`contents: read`; only `pr_compliance_check` adds `pull-requests: write`)
 
 ## Spec Regeneration
 
@@ -76,7 +82,7 @@ Contributors with a licensed copy of CEA-608-E can place it at `ai_artifacts/spe
 - Specs are the source of truth for compliance checks; compliance scripts read spec summaries, not raw standards
 - Spec summaries: `ai_artifacts/specs/{scc,vtt,dfxp}/*_specs_summary.md`
 - Master checklists: `ai_artifacts/specs/{scc,vtt,dfxp}/master_checklist.md`
-- Compliance reports are uploaded as GitHub Actions artifacts (90-day retention), not committed to the repo
+- CI workflows upload compliance reports as GitHub Actions artifacts (90-day retention); local runs write to `ai_artifacts/compliance_checks/`
 - Slack notifications require `SLACK_BOT_TOKEN` and `SLACK_CHANNEL_ID` repository secrets
 - `${{ github.token }}` is used automatically for GitHub API calls (no secret setup needed)
 

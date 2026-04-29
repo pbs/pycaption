@@ -27,7 +27,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.x'
+          python-version: '3.11'
 
       - name: Install dependencies
         run: |
@@ -47,7 +47,7 @@ jobs:
           echo ""
           echo "[1/3] SCC Compliance Check"
           echo "-------------------------------------------"
-          sed -n '/^```python/,/^```/{ /^```/d; p; }' .claude/skills/check-scc-compliance/SKILL.md > "$TMPDIR/scc.py"
+          sed -n '/^```python/,/^```/{ /^```/d; p; }' .claude/skills/check-scc-compliance/skill.md > "$TMPDIR/scc.py"
           python3 "$TMPDIR/scc.py"
           SCC_EXIT=$?
 
@@ -83,12 +83,12 @@ jobs:
           DFXP_REPORT=$(ls -t ai_artifacts/compliance_checks/dfxp/compliance_report_*.md 2>/dev/null | head -1)
 
           # Extract issue counts from reports
-          SCC_ISSUES=$(grep -oP 'Total issues\*\*: \K\d+' "$SCC_REPORT" 2>/dev/null || echo "unknown")
-          SCC_MUST=$(grep -oP 'MUST violations\*\*: \K\d+' "$SCC_REPORT" 2>/dev/null || echo "unknown")
-          VTT_ISSUES=$(grep -oP 'Total issues\*\*: \K\d+' "$VTT_REPORT" 2>/dev/null || echo "unknown")
-          VTT_MUST=$(grep -oP 'MUST violations\*\*: \K\d+' "$VTT_REPORT" 2>/dev/null || echo "unknown")
-          DFXP_ISSUES=$(grep -oP 'Total issues\*\*: \K\d+' "$DFXP_REPORT" 2>/dev/null || echo "unknown")
-          DFXP_MUST=$(grep -oP 'MUST violations\*\*: \K\d+' "$DFXP_REPORT" 2>/dev/null || echo "unknown")
+          SCC_ISSUES=$(grep -oE 'Total issues\*\*: [0-9]+' "$SCC_REPORT" 2>/dev/null | grep -oE '[0-9]+' || echo "unknown")
+          SCC_MUST=$(grep -oE 'MUST violations\*\*: [0-9]+' "$SCC_REPORT" 2>/dev/null | grep -oE '[0-9]+' || echo "unknown")
+          VTT_ISSUES=$(grep -oE 'Total issues\*\*: [0-9]+' "$VTT_REPORT" 2>/dev/null | grep -oE '[0-9]+' || echo "unknown")
+          VTT_MUST=$(grep -oE 'MUST violations\*\*: [0-9]+' "$VTT_REPORT" 2>/dev/null | grep -oE '[0-9]+' || echo "unknown")
+          DFXP_ISSUES=$(grep -oE 'Total issues\*\*: [0-9]+' "$DFXP_REPORT" 2>/dev/null | grep -oE '[0-9]+' || echo "unknown")
+          DFXP_MUST=$(grep -oE 'MUST violations\*\*: [0-9]+' "$DFXP_REPORT" 2>/dev/null | grep -oE '[0-9]+' || echo "unknown")
 
           # Write summary for later steps
           {
@@ -145,7 +145,7 @@ jobs:
 
       - name: Notify Slack
         if: github.event.inputs.notify_slack == 'true' && steps.slack_check.outputs.available == 'true'
-        uses: archive/github-actions-slack@v2.0.0
+        uses: archive/github-actions-slack@f530f3aa696b2eef0e5aba82450e387bd7723903 # v2.0.0
         with:
           slack-bot-user-oauth-access-token: ${{ secrets.SLACK_BOT_TOKEN }}
           slack-channel: ${{ secrets.SLACK_CHANNEL_ID }}

@@ -30,7 +30,7 @@ trap 'rm -rf "$TMPDIR"' EXIT
 
 echo "[1/3] SCC Compliance Check"
 echo "-------------------------------------------"
-sed -n '/^```python/,/^```/{ /^```/d; p; }' .claude/skills/check-scc-compliance/SKILL.md > "$TMPDIR/scc.py"
+sed -n '/^```python/,/^```/{ /^```/d; p; }' .claude/skills/check-scc-compliance/skill.md > "$TMPDIR/scc.py"
 python3 "$TMPDIR/scc.py"
 SCC_EXIT=$?
 echo ""

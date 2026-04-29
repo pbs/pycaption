@@ -100,7 +100,13 @@ jobs:
             echo "SCRIPT_CRASHED=true" >> $GITHUB_ENV
           fi
           if [ -f ai_artifacts/compliance_checks/pr_summary.txt ]; then
-            cat ai_artifacts/compliance_checks/pr_summary.txt >> $GITHUB_ENV
+            while IFS='=' read -r key value; do
+              case "$key" in
+                ANALYSIS_NEEDED|PR_NUMBER|COMPLIANCE_ISSUES|REGRESSIONS|QUALITY_ISSUES|CRITICAL_COUNT|HIGH_COUNT|REPORT_PATH|RISK_LEVEL)
+                  echo "${key}=${value}" >> $GITHUB_ENV
+                  ;;
+              esac
+            done < ai_artifacts/compliance_checks/pr_summary.txt
           else
             echo "ANALYSIS_NEEDED=false" >> $GITHUB_ENV
           fi
@@ -129,7 +135,7 @@ jobs:
           SLACK_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
 
       - name: Notify Slack - Results
-        uses: archive/github-actions-slack@v2.0.0
+        uses: archive/github-actions-slack@f530f3aa696b2eef0e5aba82450e387bd7723903 # v2.0.0
         if: env.ANALYSIS_NEEDED == 'true' && (github.event.inputs.notify_slack || 'true') == 'true' && steps.slack_check.outputs.available == 'true'
         with:
           slack-bot-user-oauth-access-token: ${{ secrets.SLACK_BOT_TOKEN }}
@@ -149,7 +155,7 @@ jobs:
             Triggered by: *${{ github.actor }}*
 
       - name: Notify Slack - No Changes
-        uses: archive/github-actions-slack@v2.0.0
+        uses: archive/github-actions-slack@f530f3aa696b2eef0e5aba82450e387bd7723903 # v2.0.0
         if: env.ANALYSIS_NEEDED == 'false' && (github.event.inputs.notify_slack || 'true') == 'true' && steps.slack_check.outputs.available == 'true'
         with:
           slack-bot-user-oauth-access-token: ${{ secrets.SLACK_BOT_TOKEN }}

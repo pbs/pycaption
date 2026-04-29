@@ -40,7 +40,7 @@ jobs:
           mkdir -p ai_artifacts/compliance_checks/scc
           TMPDIR=$(mktemp -d)
           trap 'rm -rf "$TMPDIR"' EXIT
-          sed -n '/^```python/,/^```/{ /^```/d; p; }' .claude/skills/check-scc-compliance/SKILL.md > "$TMPDIR/scc.py"
+          sed -n '/^```python/,/^```/{ /^```/d; p; }' .claude/skills/check-scc-compliance/skill.md > "$TMPDIR/scc.py"
           python3 "$TMPDIR/scc.py"
         continue-on-error: true
 
@@ -51,9 +51,15 @@ jobs:
             echo "::warning::Compliance script crashed — check logs for Python errors"
             echo "SCRIPT_CRASHED=true" >> $GITHUB_ENV
           fi
-          if [ -f ai_artifacts/compliance_checks/scc/summary.txt ]; then
-            cat ai_artifacts/compliance_checks/scc/summary.txt >> $GITHUB_ENV
+          REPORT=$(ls -t ai_artifacts/compliance_checks/scc/compliance_report_*.md 2>/dev/null | head -1)
+          if [ -n "$REPORT" ]; then
             echo "REPORT_EXISTS=true" >> $GITHUB_ENV
+            echo "REPORT_PATH=${REPORT}" >> $GITHUB_ENV
+            echo "TOTAL_ISSUES=$(grep -oE 'Total issues\*\*: [0-9]+' "$REPORT" | grep -oE '[0-9]+' || echo unknown)" >> $GITHUB_ENV
+            echo "MUST_VIOLATIONS=$(grep -oE 'MUST violations\*\*: [0-9]+' "$REPORT" | grep -oE '[0-9]+' || echo unknown)" >> $GITHUB_ENV
+            echo "VALIDATION_GAPS=$(grep -E '^\| Validation gaps' "$REPORT" | grep -oE '[0-9]+' | head -1 || echo unknown)" >> $GITHUB_ENV
+            echo "MISSING_RULES=$(grep -E '^\| Missing rules' "$REPORT" | grep -oE '[0-9]+' | head -1 || echo unknown)" >> $GITHUB_ENV
+            echo "TEST_GAPS=$(grep -E '^\| Test gaps' "$REPORT" | grep -oE '[0-9]+' | head -1 || echo unknown)" >> $GITHUB_ENV
           else
             echo "REPORT_EXISTS=false" >> $GITHUB_ENV
             echo "TOTAL_ISSUES=unknown" >> $GITHUB_ENV
@@ -92,7 +98,7 @@ jobs:
           SLACK_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
 
       - name: Notify Slack - Success
-        uses: archive/github-actions-slack@v2.0.0
+        uses: archive/github-actions-slack@f530f3aa696b2eef0e5aba82450e387bd7723903 # v2.0.0
         if: env.REPORT_EXISTS == 'true' && github.event.inputs.notify_slack == 'true' && steps.slack_check.outputs.available == 'true'
         with:
           slack-bot-user-oauth-access-token: ${{ secrets.SLACK_BOT_TOKEN }}
@@ -112,7 +118,7 @@ jobs:
             Triggered by: *${{ github.actor }}*
 
       - name: Notify Slack - Failure
-        uses: archive/github-actions-slack@v2.0.0
+        uses: archive/github-actions-slack@f530f3aa696b2eef0e5aba82450e387bd7723903 # v2.0.0
         if: env.REPORT_EXISTS == 'false' && github.event.inputs.notify_slack == 'true' && steps.slack_check.outputs.available == 'true'
         with:
           slack-bot-user-oauth-access-token: ${{ secrets.SLACK_BOT_TOKEN }}
