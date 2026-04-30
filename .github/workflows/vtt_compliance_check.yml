@@ -1,0 +1,183 @@
+name: VTT Compliance Check
+
+on:
+  workflow_dispatch:  # Manual trigger only
+    inputs:
+      notify_slack:
+        description: 'Send Slack notification'
+        required: false
+        default: 'true'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+
+permissions:
+  contents: read
+
+jobs:
+  vtt-compliance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+      - name: Run VTT Compliance Check
+        id: compliance
+        run: |
+          mkdir -p ai_artifacts/compliance_checks/vtt
+          TMPDIR=$(mktemp -d)
+          trap 'rm -rf "$TMPDIR"' EXIT
+          sed -n '/^```python/,/^```/{ /^```/d; p; }' .claude/skills/check-vtt-compliance/skill.md > "$TMPDIR/vtt.py"
+          python3 "$TMPDIR/vtt.py"
+        continue-on-error: true
+
+      - name: Extract summary metrics
+        id: metrics
+        run: |
+          if [ "${{ steps.compliance.outcome }}" = "failure" ]; then
+            echo "::warning::Compliance script crashed — check logs for Python errors"
+            echo "SCRIPT_CRASHED=true" >> $GITHUB_ENV
+          fi
+          REPORT=$(ls -t ai_artifacts/compliance_checks/vtt/compliance_report_*.md 2>/dev/null | head -1)
+          if [ -n "$REPORT" ]; then
+            echo "REPORT_EXISTS=true" >> $GITHUB_ENV
+            echo "REPORT_PATH=${REPORT}" >> $GITHUB_ENV
+            echo "TOTAL_ISSUES=$(grep -oE 'Total issues\*\*: [0-9]+' "$REPORT" | grep -oE '[0-9]+' || echo unknown)" >> $GITHUB_ENV
+            echo "MUST_VIOLATIONS=$(grep -oE 'MUST violations\*\*: [0-9]+' "$REPORT" | grep -oE '[0-9]+' || echo unknown)" >> $GITHUB_ENV
+            echo "VALIDATION_GAPS=$(grep -E '^\| Validation gaps' "$REPORT" | grep -oE '[0-9]+' | head -1 || echo unknown)" >> $GITHUB_ENV
+            echo "CAVEATS=$(grep -E '^\| Implementation caveats' "$REPORT" | grep -oE '[0-9]+' | head -1 || echo unknown)" >> $GITHUB_ENV
+            echo "MISSING_RULES=$(grep -E '^\| Missing rules' "$REPORT" | grep -oE '[0-9]+' | head -1 || echo unknown)" >> $GITHUB_ENV
+            echo "TAG_ROUNDTRIP_GAPS=$(grep -E '^\| Tag round-trip gaps' "$REPORT" | grep -oE '[0-9]+' | head -1 || echo unknown)" >> $GITHUB_ENV
+            echo "SETTING_PARSE_GAPS=$(grep -E '^\| Setting parse gaps' "$REPORT" | grep -oE '[0-9]+' | head -1 || echo unknown)" >> $GITHUB_ENV
+            echo "ENTITY_GAPS=$(grep -E '^\| Entity gaps' "$REPORT" | grep -oE '[0-9]+' | head -1 || echo unknown)" >> $GITHUB_ENV
+            echo "TEST_GAPS=$(grep -E '^\| Test gaps' "$REPORT" | grep -oE '[0-9]+' | head -1 || echo unknown)" >> $GITHUB_ENV
+          else
+            echo "REPORT_EXISTS=false" >> $GITHUB_ENV
+            echo "TOTAL_ISSUES=unknown" >> $GITHUB_ENV
+          fi
+
+      - name: Upload compliance report
+        uses: actions/upload-artifact@v4
+        if: env.REPORT_EXISTS == 'true'
+        with:
+          name: vtt-compliance-report
+          path: ai_artifacts/compliance_checks/vtt/compliance_report_*.md
+          retention-days: 90
+
+      - name: Upload full compliance folder
+        uses: actions/upload-artifact@v4
+        if: env.REPORT_EXISTS == 'true'
+        with:
+          name: vtt-compliance-full
+          path: ai_artifacts/compliance_checks/vtt/
+          retention-days: 90
+
+      - name: Get artifact URL
+        id: artifact_url
+        run: |
+          echo "ARTIFACT_URL=https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> $GITHUB_ENV
+
+      - name: Check Slack token availability
+        id: slack_check
+        run: |
+          if [ -n "$SLACK_TOKEN" ] && [ -n "$SLACK_CHANNEL" ]; then
+            echo "available=true" >> $GITHUB_OUTPUT
+          else
+            echo "available=false" >> $GITHUB_OUTPUT
+          fi
+        env:
+          SLACK_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_CHANNEL: ${{ secrets.SLACK_CHANNEL_ID }}
+
+      - name: Notify Slack - Success
+        uses: archive/github-actions-slack@f530f3aa696b2eef0e5aba82450e387bd7723903 # v2.0.0
+        if: env.REPORT_EXISTS == 'true' && env.SCRIPT_CRASHED != 'true' && github.event.inputs.notify_slack == 'true' && steps.slack_check.outputs.available == 'true'
+        with:
+          slack-bot-user-oauth-access-token: ${{ secrets.SLACK_BOT_TOKEN }}
+          slack-channel: ${{ secrets.SLACK_CHANNEL_ID }}
+          slack-text: |
+            :memo: *WebVTT Compliance Check Complete*
+
+            *Total Issues*: ${{ env.TOTAL_ISSUES }}
+            *MUST Violations*: ${{ env.MUST_VIOLATIONS }}
+            *Validation Gaps*: ${{ env.VALIDATION_GAPS }}
+            *Implementation Caveats*: ${{ env.CAVEATS }}
+            *Missing Rules*: ${{ env.MISSING_RULES }}
+            *Tag Round-trip Gaps*: ${{ env.TAG_ROUNDTRIP_GAPS }}/8
+            *Setting Parse Gaps*: ${{ env.SETTING_PARSE_GAPS }}/6
+            *Entity Gaps*: ${{ env.ENTITY_GAPS }}/7
+            *Test Gaps*: ${{ env.TEST_GAPS }}
+
+            *Report Location*: `${{ env.REPORT_PATH }}`
+            *Artifacts*: <${{ env.ARTIFACT_URL }}|View in GitHub Actions>
+
+            Triggered by: *${{ github.actor }}*
+
+      - name: Notify Slack - Failure
+        uses: archive/github-actions-slack@f530f3aa696b2eef0e5aba82450e387bd7723903 # v2.0.0
+        if: env.REPORT_EXISTS == 'false' && github.event.inputs.notify_slack == 'true' && steps.slack_check.outputs.available == 'true'
+        with:
+          slack-bot-user-oauth-access-token: ${{ secrets.SLACK_BOT_TOKEN }}
+          slack-channel: ${{ secrets.SLACK_CHANNEL_ID }}
+          slack-text: |
+            :x: *WebVTT Compliance Check Failed*
+
+            The compliance check script encountered an error.
+
+            *Run*: <${{ env.ARTIFACT_URL }}|View logs in GitHub Actions>
+
+            Triggered by: *${{ github.actor }}*
+
+      - name: Slack notification skipped
+        if: github.event.inputs.notify_slack == 'true' && steps.slack_check.outputs.available == 'false'
+        run: |
+          echo "Slack notification requested but SLACK_BOT_TOKEN not available"
+
+      - name: Create job summary
+        if: always()
+        run: |
+          echo "## WebVTT Compliance Check Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ "$REPORT_EXISTS" == "true" ]; then
+            echo "**Compliance check completed**" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### Metrics" >> $GITHUB_STEP_SUMMARY
+            echo "- **Total Issues**: $TOTAL_ISSUES" >> $GITHUB_STEP_SUMMARY
+            echo "- **MUST Violations**: $MUST_VIOLATIONS" >> $GITHUB_STEP_SUMMARY
+            echo "- **Validation Gaps**: $VALIDATION_GAPS" >> $GITHUB_STEP_SUMMARY
+            echo "- **Implementation Caveats**: $CAVEATS" >> $GITHUB_STEP_SUMMARY
+            echo "- **Missing Rules**: $MISSING_RULES" >> $GITHUB_STEP_SUMMARY
+            echo "- **Tag Round-trip Gaps**: $TAG_ROUNDTRIP_GAPS/8" >> $GITHUB_STEP_SUMMARY
+            echo "- **Setting Parse Gaps**: $SETTING_PARSE_GAPS/6" >> $GITHUB_STEP_SUMMARY
+            echo "- **Entity Gaps**: $ENTITY_GAPS/7" >> $GITHUB_STEP_SUMMARY
+            echo "- **Test Gaps**: $TEST_GAPS" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### Report" >> $GITHUB_STEP_SUMMARY
+            echo "Report saved to: \`$REPORT_PATH\`" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Download artifacts from the [Actions tab]($ARTIFACT_URL)" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "**Compliance check failed**" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Check the logs for errors." >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Fail job on script crash
+        if: env.SCRIPT_CRASHED == 'true'
+        run: |
+          echo "::error::Compliance script crashed — failing job"
+          exit 1

@@ -42,3 +42,6 @@ venv/
 
 # Pyenv files
 .python-version
+
+# Local proprietary standards docs (not for distribution)
+ai_artifacts/specs/*/standards_summary.md
