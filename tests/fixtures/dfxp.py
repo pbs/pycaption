@@ -963,7 +963,7 @@ def sample_dfxp_from_scc_output():
    <p begin="00:00:20.086" end="00:00:22.088" region="r9" style="default">
     2323
    </p>
-   <p begin="00:00:22.088" end="00:00:26.088" region="r10" style="default">
+   <p begin="00:00:22.088" end="00:00:36.169" region="r10" style="default">
     4545<br/>
     6767<br/>
     8989

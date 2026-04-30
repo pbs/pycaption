@@ -1000,3 +1000,21 @@ class TestTimingCorrectingCaptionList:
         num_captions = len(caption_set.get_captions("en-US"))
 
         assert num_captions == 2
+
+    def test_paint_on_edm_erases_displayed(self, sample_scc_paint_on_edm):
+        caption_set = SCCReader().read(sample_scc_paint_on_edm)
+        captions = caption_set.get_captions("en-US")
+
+        assert len(captions) == 2
+
+        texts = [
+            node.content
+            for caption in captions
+            for node in caption.nodes
+            if node.type_ == CaptionNode.TEXT
+        ]
+        assert texts == ["I think", "Hello"]
+
+        assert captions[0].end > captions[0].start
+        assert captions[1].end > captions[1].start
+        assert captions[0].end <= captions[1].start
