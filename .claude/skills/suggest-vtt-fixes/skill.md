@@ -30,6 +30,14 @@ Automatically finds latest report and generates fix for top priority issue.
 
 ---
 
+## Pre-flight: Read `.claude/skills/gotchas.md`
+
+**REQUIRED** before generating fix suggestions. Pay special attention to gotchas #1 (no proprietary data tables in suggested code) and #3 (W3C license attribution).
+
+**Post-run:** If you discover a new gotcha during fix generation (a regex pattern that silently misses IDs, a code pattern that looks correct but violates the spec, or a compliance report format change that breaks extraction), append it to `.claude/skills/gotchas.md` with the same numbered format.
+
+---
+
 ## Implementation
 
 ### Run this script

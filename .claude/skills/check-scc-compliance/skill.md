@@ -76,6 +76,31 @@ for match in re.finditer(r'\*\*\[(RULE-[A-Z]+-\d{3}|IMPL-(?:[A-Z]+-)?\d{3})\]\*\
 
 print(f"[INIT] Extracted {len(rule_index)} rules from spec")
 
+# ===== SANITY CHECK: Verify expected code landmarks exist =====
+landmarks = {
+    'class SCCReader': ('pycaption/scc/__init__.py', r'class\s+SCCReader\b'),
+    'class SCCWriter': ('pycaption/scc/__init__.py', r'class\s+SCCWriter\b'),
+    'def detect (SCCReader)': ('pycaption/scc/__init__.py', r'def\s+detect\b'),
+    'def read (SCCReader)': ('pycaption/scc/__init__.py', r'def\s+read\b'),
+    'COMMANDS dict': ('pycaption/scc/constants.py', r'COMMANDS\s*='),
+    'CHARACTERS dict': ('pycaption/scc/constants.py', r'CHARACTERS\s*='),
+}
+stale_warnings = []
+for name, (expected_file, pattern) in landmarks.items():
+    try:
+        with open(expected_file) as _fh:
+            if not re.search(pattern, _fh.read()):
+                stale_warnings.append(f"{name} not found in {expected_file}")
+    except FileNotFoundError:
+        stale_warnings.append(f"{expected_file} does not exist")
+
+if stale_warnings:
+    print(f"[SANITY] WARNING: {len(stale_warnings)} landmark(s) not found — patterns may be stale:")
+    for w in stale_warnings:
+        print(f"  - {w}")
+else:
+    print("[SANITY] All code landmarks found")
+
 issues = {
     'validation_gaps': [],
     'partial_validation': [],
@@ -526,13 +551,20 @@ must_issues = (len([i for i in issues['validation_gaps'] if i.get('severity') ==
                len([i for i in issues['partial_validation'] if i.get('severity') == 'MUST']) +
                len(must_missing))
 
+sanity_section = ""
+if stale_warnings:
+    sanity_section = "\n**STALE PATTERN WARNING**: The following expected code landmarks were not found. Some findings below may report features as 'missing' when they have actually been renamed or moved:\n"
+    for w in stale_warnings:
+        sanity_section += f"- {w}\n"
+    sanity_section += "\n"
+
 report = f"""# SCC EXHAUSTIVE Compliance Report
 
 **Generated**: {date}
 **Spec**: {latest_spec}
 **Analysis**: Deep Validation + Systematic Rules + Control Codes + Tests
 **Implementation**: {main_file}, {const_file}
-
+{sanity_section}
 ---
 
 ## Executive Summary

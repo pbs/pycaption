@@ -108,7 +108,7 @@ jobs:
 
       - name: Notify Slack - Success
         uses: archive/github-actions-slack@f530f3aa696b2eef0e5aba82450e387bd7723903 # v2.0.0
-        if: env.REPORT_EXISTS == 'true' && github.event.inputs.notify_slack == 'true' && steps.slack_check.outputs.available == 'true'
+        if: env.REPORT_EXISTS == 'true' && env.SCRIPT_CRASHED != 'true' && github.event.inputs.notify_slack == 'true' && steps.slack_check.outputs.available == 'true'
         with:
           slack-bot-user-oauth-access-token: ${{ secrets.SLACK_BOT_TOKEN }}
           slack-channel: ${{ secrets.SLACK_CHANNEL_ID }}

@@ -30,6 +30,14 @@ Automatically finds latest report and generates fix for top priority issue.
 
 ---
 
+## Pre-flight: Read `.claude/skills/gotchas.md`
+
+**REQUIRED** before generating fix suggestions. Pay special attention to gotchas #1 (no proprietary data tables in suggested code) and #2 (no proprietary source attributions).
+
+**Post-run:** If you discover a new gotcha during fix generation (a regex pattern that silently misses IDs, a code pattern that looks correct but violates the spec, or a compliance report format change that breaks extraction), append it to `.claude/skills/gotchas.md` with the same numbered format.
+
+---
+
 ## Context Optimization Strategy
 
 **Why focus on one issue:**
@@ -77,7 +85,7 @@ critical_match = re.search(r'### .*CRITICAL(.*?)(?=\n### |\n## |\Z)', report_con
 critical_section = critical_match.group(1) if critical_match else report_content
 
 first_issue_match = re.search(
-    r'1\.\s+\*\*\[?(RULE-[A-Z]+-\d{3}|IMPL-[A-Z]+-\d{3}|CTRL-\d{3})\]?\*\*[:\s]+(.+?)(?:\n|$)',
+    r'1\.\s+\*\*\[?(RULE-[A-Z]+-\d{3}|IMPL-(?:[A-Z]+-)?\d{3}|CTRL-\d{3})\]?\*\*[:\s]+(.+?)(?:\n|$)',
     critical_section
 )
 
@@ -86,7 +94,7 @@ if not first_issue_match:
     val_section = re.search(r'## 1\. Validation Gaps.*?\n(.*?)(?=\n## |\Z)', report_content, re.DOTALL)
     if val_section:
         first_issue_match = re.search(
-            r'### (RULE-[A-Z]+-\d{3}|IMPL-[A-Z]+-\d{3}):\s+(.+?)(?:\n|$)',
+            r'### (RULE-[A-Z]+-\d{3}|IMPL-(?:[A-Z]+-)?\d{3}):\s+(.+?)(?:\n|$)',
             val_section.group(1)
         )
 

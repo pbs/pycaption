@@ -23,6 +23,8 @@ Generates unified, code-verifiable SCC specification (`scc_specs_summary.md`) as
 
 **REQUIRED** before generating any spec content. Pay special attention to gotchas #1 (no proprietary data tables), #2 (no proprietary source attributions), and #9 (gitignore covers all formats).
 
+**Post-run:** If you discover a new gotcha during spec generation (a copyright/licensing trap, a source attribution pattern that should be avoided, a web source that returns misleading data, or a spec structure issue that could cause downstream compliance check failures), append it to `.claude/skills/gotchas.md` with the same numbered format.
+
 ## Implementation
 
 ### Step 1: Load Documentation
@@ -234,8 +236,8 @@ If FAIL, fix and re-validate.
 ### Step 6: Source Attribution
 
 Track sources for each rule:
-- CEA-608-E section (Primary)
-- CEA-708-E section (Primary)
+- Public SCC documentation (Primary)
+- SCC format specification (Primary)
 - scc_web_summary.md line (Confirms)
 - Confidence: High/Medium/Low
 

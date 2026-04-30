@@ -62,6 +62,31 @@ for match in re.finditer(r'\*\*\[(RULE-[A-Z]+-\d{3}|IMPL-(?:[A-Z]+-)?\d{3})\]\*\
 
 print(f"[INIT] Spec: {len(all_rules)} rules, Code: {len(content)} chars")
 
+# ===== SANITY CHECK: Verify expected code landmarks exist =====
+landmarks = {
+    'class WebVTTReader': (webvtt_file, r'class\s+WebVTTReader\b'),
+    'class WebVTTWriter': (webvtt_file, r'class\s+WebVTTWriter\b'),
+    'def detect (WebVTTReader)': (webvtt_file, r'def\s+detect\b'),
+    'def read (WebVTTReader)': (webvtt_file, r'def\s+read\b'),
+    'def write (WebVTTWriter)': (webvtt_file, r'def\s+write\b'),
+    'class Layout': ('pycaption/geometry.py', r'class\s+Layout\b'),
+}
+stale_warnings = []
+for name, (expected_file, pattern) in landmarks.items():
+    try:
+        with open(expected_file) as _fh:
+            if not re.search(pattern, _fh.read()):
+                stale_warnings.append(f"{name} not found in {expected_file}")
+    except FileNotFoundError:
+        stale_warnings.append(f"{expected_file} does not exist")
+
+if stale_warnings:
+    print(f"[SANITY] WARNING: {len(stale_warnings)} landmark(s) not found — patterns may be stale:")
+    for w in stale_warnings:
+        print(f"  - {w}")
+else:
+    print("[SANITY] All code landmarks found")
+
 # ===== PHASE 1: DEEP VALIDATION =====
 # Check critical rules at function level, not keyword level
 print("\n[1/5] Deep Validation Analysis")
@@ -520,13 +545,20 @@ must_count = (len([g for g in validation_gaps if g.get('severity') == 'MUST']) +
               len([p for p in partial_validation if p.get('severity') == 'MUST']) +
               len(must_missing))
 
+sanity_section = ""
+if stale_warnings:
+    sanity_section = "\n**STALE PATTERN WARNING**: The following expected code landmarks were not found. Some findings below may report features as 'missing' when they have actually been renamed or moved:\n"
+    for w in stale_warnings:
+        sanity_section += f"- {w}\n"
+    sanity_section += "\n"
+
 report = f"""# WebVTT EXHAUSTIVE Compliance Report
 
 **Generated**: {date}
 **Spec**: {spec_file} ({len(all_rules)} rules)
 **Implementation**: {webvtt_file}
 **Analysis**: Deep Validation + Systematic Rules + Coverage + Tests
-
+{sanity_section}
 ---
 
 ## Executive Summary

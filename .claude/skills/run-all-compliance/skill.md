@@ -1,3 +1,8 @@
+---
+name: run-all-compliance
+description: Runs all 3 compliance checks (SCC, VTT, DFXP) in sequence, produces 3 dated reports.
+---
+
 # run-all-compliance
 
 ## What this skill does
@@ -31,22 +36,19 @@ trap 'rm -rf "$TMPDIR"' EXIT
 echo "[1/3] SCC Compliance Check"
 echo "-------------------------------------------"
 sed -n '/^```python/,/^```/{ /^```/d; p; }' .claude/skills/check-scc-compliance/skill.md > "$TMPDIR/scc.py"
-python3 "$TMPDIR/scc.py"
-SCC_EXIT=$?
+python3 "$TMPDIR/scc.py" && SCC_EXIT=0 || SCC_EXIT=$?
 echo ""
 
 echo "[2/3] VTT Compliance Check"
 echo "-------------------------------------------"
 sed -n '/^```python/,/^```/{ /^```/d; p; }' .claude/skills/check-vtt-compliance/skill.md > "$TMPDIR/vtt.py"
-python3 "$TMPDIR/vtt.py"
-VTT_EXIT=$?
+python3 "$TMPDIR/vtt.py" && VTT_EXIT=0 || VTT_EXIT=$?
 echo ""
 
 echo "[3/3] DFXP Compliance Check"
 echo "-------------------------------------------"
 sed -n '/^```python/,/^```/{ /^```/d; p; }' .claude/skills/check-dfxp-compliance/skill.md > "$TMPDIR/dfxp.py"
-python3 "$TMPDIR/dfxp.py"
-DFXP_EXIT=$?
+python3 "$TMPDIR/dfxp.py" && DFXP_EXIT=0 || DFXP_EXIT=$?
 echo ""
 
 echo "=========================================="

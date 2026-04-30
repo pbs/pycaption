@@ -16,9 +16,9 @@ analyze-*-docs --> check-*-compliance --> suggest-*-fixes
 | `/analyze-scc-docs` | Generate SCC spec summary from CEA-608/708 sources. Uses local `standards_summary.md` if available, otherwise falls back to web sources (agent-driven, uses WebFetch/WebSearch) |
 | `/analyze-vtt-docs` | Generate WebVTT spec summary from W3C web sources (agent-driven, uses WebFetch/WebSearch) |
 | `/analyze-dfxp-docs` | Generate DFXP/TTML spec summary from W3C TTML web sources (agent-driven, uses WebFetch/WebSearch) |
-| `/check-scc-compliance` | 12 deep validations (cross-mode EDM, zero-value truthiness, silent error suppression, read-only styling, position fallback, etc.) + 44 rules + 704 control codes + frame rate analysis + test coverage |
-| `/check-vtt-compliance` | Deep validation + 76 rules + tag/setting/entity coverage with read/write distinction |
-| `/check-dfxp-compliance` | Deep validation + 115 rules + styling/timing/parameter coverage with read/write distinction |
+| `/check-scc-compliance` | Sanity check + 12 deep validations (cross-mode EDM, zero-value truthiness, silent error suppression, read-only styling, position fallback, etc.) + 44 rules + 704 control codes + frame rate analysis + test coverage |
+| `/check-vtt-compliance` | Sanity check + deep validation + 76 rules + tag/setting/entity coverage with read/write distinction |
+| `/check-dfxp-compliance` | Sanity check + deep validation + 115 rules + styling/timing/parameter coverage with read/write distinction |
 | `/suggest-scc-fixes` | Analyzes latest SCC compliance report, generates code fix for the most critical issue |
 | `/suggest-vtt-fixes` | Analyzes latest VTT compliance report, generates code fix for the most critical issue |
 | `/suggest-dfxp-fixes` | Analyzes latest DFXP compliance report, generates code fix for the most critical issue |
@@ -45,6 +45,8 @@ All compliance actions extract and run the same Python scripts from the skill `.
 - PR compliance workflow uses allowlist-only extraction when reading script output into `$GITHUB_ENV`
 - Slack availability checks verify both `SLACK_BOT_TOKEN` and `SLACK_CHANNEL_ID` before attempting to send
 - Workflows use minimal permissions (`contents: read`; only `pr_compliance_check` adds `pull-requests: write`)
+- Slack success notifications require `SCRIPT_CRASHED != 'true'` to prevent misleading messages from partial runs
+- PR comment step uses `continue-on-error: true` to avoid failing the job on fork PRs where `GITHUB_TOKEN` is read-only
 
 ## Spec Regeneration
 
@@ -80,7 +82,7 @@ Contributors with a licensed copy of the relevant standard can place it at `ai_a
 
 ## Gotchas
 
-[`gotchas.md`](gotchas.md) lists past mistakes (copyright, workflow bugs, false-positive reviews) that skills must avoid. Skills that generate specs, write workflows, or review PRs reference it in their pre-flight checks.
+[`gotchas.md`](gotchas.md) lists past mistakes (copyright, workflow bugs, false-positive reviews, security patterns) that skills must avoid. Skills reference it in pre-flight checks and append new gotchas post-run when they discover repeatable patterns. Currently 12 gotchas covering: proprietary content, source attribution, W3C licensing, expression injection, `set -e` bugs, Slack guards, IMPL regex, false-positive reviews, gitignore coverage, SHA pinning, crash guards, and fork PR failures.
 
 ## Notes
 

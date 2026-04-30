@@ -47,6 +47,14 @@ Lessons from PR #369 review. Every skill that generates specs, writes workflows,
 
 **Rule:** Always use `$VAR` (shell expansion) instead of `${{ env.VAR }}` in `run:` blocks. Reserve `${{ }}` for `if:` conditions, `with:` parameters, and `env:` mappings where shell expansion is not available.
 
+This is especially dangerous for **attacker-controlled GitHub context values** like `github.head_ref`, `github.event.pull_request.title`, `github.event.pull_request.body`, and `github.event.comment.body`. These are fully user-controlled and MUST never appear in `run:` blocks. Pass them through an `env:` mapping instead:
+```yaml
+env:
+  HEAD_REF: ${{ github.head_ref || github.ref }}
+run: |
+  BRANCH="$HEAD_REF"
+```
+
 **Applies to:** All workflow files, `check-last-pr`
 
 ---
@@ -109,6 +117,43 @@ With both passed via `env:` block.
 **Rule:** Use glob pattern `ai_artifacts/specs/*/standards_summary.md` to cover all formats.
 
 **Applies to:** `.gitignore`, `analyze-*-docs`
+
+---
+
+## 10. Third-party actions must be SHA-pinned and workflows need explicit `permissions:`
+
+**What happened:** `unit_tests.yml` used `slackapi/slack-github-action@v3.0.2` (mutable tag) while compliance workflows correctly SHA-pinned their Slack action. Four workflows also lacked a `permissions:` block, getting default write-all permissions.
+
+**Rule:**
+- All third-party GitHub Actions (anything not under `actions/`) MUST be pinned to a full commit SHA, not a mutable tag. A compromised tag update can exfiltrate secrets.
+- Every workflow MUST declare an explicit `permissions:` block with minimal scopes. Never rely on default write-all.
+
+**Applies to:** All workflow files, `check-last-pr`
+
+---
+
+## 11. Don't send Slack success before confirming the script didn't crash
+
+**What happened:** Compliance workflows used `continue-on-error: true` on the script step so metric extraction could proceed. But the Slack success notification fired based on `REPORT_EXISTS=true` without checking `SCRIPT_CRASHED`. A script that crashes after partially writing a report sends a misleading "success" with incomplete metrics.
+
+**Rule:** Slack success notifications must also check that the script did not crash:
+```yaml
+if: env.REPORT_EXISTS == 'true' && env.SCRIPT_CRASHED != 'true'
+```
+
+**Applies to:** All compliance workflow files, `check-last-pr`
+
+---
+
+## 12. Fork PRs break `pull-requests: write` steps
+
+**What happened:** `pr_compliance_check.yml` uses `actions/github-script` to comment on PRs. On fork PRs, `GITHUB_TOKEN` is read-only, so the `createComment` API call returns 403 and fails the entire job — even though the compliance analysis itself succeeded.
+
+**Rule:** Any step that writes to a PR (comments, labels, status checks) must either:
+- Use `continue-on-error: true` so the job doesn't fail on forks, or
+- Add a fork check to the `if:` condition: `&& !github.event.pull_request.head.repo.fork`
+
+**Applies to:** `pr_compliance_check`, `check-last-pr`, any new workflow that comments on PRs
 
 ---
 

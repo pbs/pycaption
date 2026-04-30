@@ -30,6 +30,14 @@ Automatically finds latest report and generates fix for top priority issue.
 
 ---
 
+## Pre-flight: Read `.claude/skills/gotchas.md`
+
+**REQUIRED** before generating fix suggestions. Pay special attention to gotchas #1 (no proprietary data tables in suggested code) and #3 (W3C license attribution).
+
+**Post-run:** If you discover a new gotcha during fix generation (a regex pattern that silently misses IDs, a code pattern that looks correct but violates the spec, or a compliance report format change that breaks extraction), append it to `.claude/skills/gotchas.md` with the same numbered format.
+
+---
+
 ## Context Optimization Strategy
 
 **Why focus on one issue:**
@@ -96,7 +104,7 @@ issue_info = None
 if val_gaps_section:
     text = val_gaps_section.group(1)
     match = re.search(
-        r'### (RULE-[A-Z]+-\d{3}|IMPL-\d{3}):\s+(.+?)(?:\n|$)',
+        r'### (RULE-[A-Z]+-\d{3}|IMPL-(?:[A-Z]+-)?\d{3}):\s+(.+?)(?:\n|$)',
         text
     )
     if match:
@@ -131,7 +139,7 @@ if val_gaps_section:
 if not issue_info and caveats_section:
     text = caveats_section.group(1)
     match = re.search(
-        r'### (RULE-[A-Z]+-\d{3}|IMPL-\d{3}):\s+(.+?)(?:\n|$)',
+        r'### (RULE-[A-Z]+-\d{3}|IMPL-(?:[A-Z]+-)?\d{3}):\s+(.+?)(?:\n|$)',
         text
     )
     if match:
@@ -156,7 +164,7 @@ if not issue_info and caveats_section:
 if not issue_info and missing_section:
     text = missing_section.group(1)
     match = re.search(
-        r'-\s+\*\*(RULE-[A-Z]+-\d{3}|IMPL-\d{3})\*\*:\s+(.+?)(?:\n|$)',
+        r'-\s+\*\*(RULE-[A-Z]+-\d{3}|IMPL-(?:[A-Z]+-)?\d{3})\*\*:\s+(.+?)(?:\n|$)',
         text
     )
     if match:

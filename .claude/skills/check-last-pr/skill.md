@@ -23,7 +23,7 @@ description: Comprehensive PR analysis for merge decisions - compliance, code re
 
 Auto-fetches PR for current branch and generates comprehensive review.
 
-**Pre-flight:** Read `.claude/skills/gotchas.md` before reviewing. Pay special attention to gotcha #8 (verify claims before reporting issues).
+**Pre-flight:** Read `.claude/skills/gotchas.md` before reviewing. Pay special attention to gotchas #4 (expression injection in `run:` blocks), #5 (`set -e` exit code capture), #8 (verify claims before reporting issues), #10 (SHA-pinning and permissions), #11 (Slack crash guard), and #12 (fork PR write failures).
 
 **Post-review:** If you discover a new gotcha during this review (a pattern that would cause a false positive, a workflow bug class, a copyright/licensing trap), append it to `.claude/skills/gotchas.md` with the same numbered format.
 

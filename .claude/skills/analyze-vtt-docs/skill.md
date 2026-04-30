@@ -24,6 +24,8 @@ Generates comprehensive, exhaustive WebVTT specification (`vtt_specs_summary.md`
 
 **Pre-flight:** Read `.claude/skills/gotchas.md` before generating specs. Pay special attention to gotcha #3 (W3C license attribution required).
 
+**Post-run:** If you discover a new gotcha during spec generation (a copyright/licensing trap, a W3C attribution pattern that should be avoided, a web source that returns misleading data, or a spec structure issue that could cause downstream compliance check failures), append it to `.claude/skills/gotchas.md` with the same numbered format.
+
 **Usage:**
 ```bash
 /analyze-vtt-docs

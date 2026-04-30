@@ -73,6 +73,33 @@ for match in re.finditer(r'\*\*\[(RULE-[A-Z]+-\d{3}|IMPL-(?:[A-Z]+-)?\d{3})\]\*\
 
 print(f"[INIT] Extracted {len(all_rules)} rules from spec")
 
+# ===== SANITY CHECK: Verify expected code landmarks exist =====
+landmarks = {
+    'class DFXPReader': ('pycaption/dfxp/base.py', r'class\s+DFXPReader\b'),
+    'class DFXPWriter': ('pycaption/dfxp/base.py', r'class\s+DFXPWriter\b'),
+    'def detect (DFXPReader)': ('pycaption/dfxp/base.py', r'def\s+detect\b'),
+    'def read (DFXPReader)': ('pycaption/dfxp/base.py', r'def\s+read\b'),
+    '_convert_style function': ('pycaption/dfxp/base.py', r'def\s+_convert_style\b'),
+    '_recreate_style function': ('pycaption/dfxp/base.py', r'def\s+_recreate_style\b'),
+    'class SinglePositioningDFXPWriter': ('pycaption/dfxp/extras.py', r'class\s+SinglePositioningDFXPWriter\b'),
+    'class Layout': ('pycaption/geometry.py', r'class\s+Layout\b'),
+}
+stale_warnings = []
+for name, (expected_file, pattern) in landmarks.items():
+    try:
+        with open(expected_file) as _fh:
+            if not re.search(pattern, _fh.read()):
+                stale_warnings.append(f"{name} not found in {expected_file}")
+    except FileNotFoundError:
+        stale_warnings.append(f"{expected_file} does not exist")
+
+if stale_warnings:
+    print(f"[SANITY] WARNING: {len(stale_warnings)} landmark(s) not found — patterns may be stale:")
+    for w in stale_warnings:
+        print(f"  - {w}")
+else:
+    print("[SANITY] All code landmarks found")
+
 issues = {
     'validation_gaps': [],
     'partial_validation': [],
@@ -764,13 +791,20 @@ must_issues = (len([i for i in issues['validation_gaps'] if i.get('severity') ==
                len([i for i in issues['partial_validation'] if i.get('severity') == 'MUST']) +
                len(must_missing))
 
+sanity_section = ""
+if stale_warnings:
+    sanity_section = "\n**STALE PATTERN WARNING**: The following expected code landmarks were not found. Some findings below may report features as 'missing' when they have actually been renamed or moved:\n"
+    for w in stale_warnings:
+        sanity_section += f"- {w}\n"
+    sanity_section += "\n"
+
 report = f"""# DFXP/TTML EXHAUSTIVE Compliance Report
 
 **Generated**: {date}
 **Spec**: {latest_spec}
 **Analysis**: Deep Validation + Systematic Rules + Coverage + Tests
 **Implementation files**: {', '.join(f for f in impl_files if os.path.exists(f))}
-
+{sanity_section}
 ---
 
 ## Executive Summary
