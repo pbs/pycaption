@@ -16,7 +16,7 @@ analyze-*-docs --> check-*-compliance --> suggest-*-fixes
 | `/analyze-scc-docs` | Generate SCC spec summary from CEA-608/708 sources. Uses local `standards_summary.md` if available, otherwise falls back to web sources (agent-driven, uses WebFetch/WebSearch) |
 | `/analyze-vtt-docs` | Generate WebVTT spec summary from W3C web sources (agent-driven, uses WebFetch/WebSearch) |
 | `/analyze-dfxp-docs` | Generate DFXP/TTML spec summary from W3C TTML web sources (agent-driven, uses WebFetch/WebSearch) |
-| `/check-scc-compliance` | Deep validation + 44 rules + 621 control codes + frame rate analysis + test coverage |
+| `/check-scc-compliance` | 12 deep validations (cross-mode EDM, zero-value truthiness, silent error suppression, read-only styling, position fallback, etc.) + 44 rules + 704 control codes + frame rate analysis + test coverage |
 | `/check-vtt-compliance` | Deep validation + 76 rules + tag/setting/entity coverage with read/write distinction |
 | `/check-dfxp-compliance` | Deep validation + 115 rules + styling/timing/parameter coverage with read/write distinction |
 | `/suggest-scc-fixes` | Analyzes latest SCC compliance report, generates code fix for the most critical issue |
