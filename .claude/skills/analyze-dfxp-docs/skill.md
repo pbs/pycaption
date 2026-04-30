@@ -22,6 +22,8 @@ Generates comprehensive, exhaustive DFXP/TTML specification (`dfxp_specs_summary
 
 **Key:** Ensures NO requirements missed - exhaustive coverage from W3C TTML1 spec + web search.
 
+**Pre-flight:** Read `.claude/skills/gotchas.md` before generating specs. Pay special attention to gotcha #3 (W3C license attribution required).
+
 **Usage:**
 ```bash
 /analyze-dfxp-docs

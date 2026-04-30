@@ -19,6 +19,10 @@ Generates unified, code-verifiable SCC specification (`scc_specs_summary.md`) as
 
 ---
 
+## Pre-flight: Read `.claude/skills/gotchas.md`
+
+**REQUIRED** before generating any spec content. Pay special attention to gotchas #1 (no proprietary data tables), #2 (no proprietary source attributions), and #9 (gitignore covers all formats).
+
 ## Implementation
 
 ### Step 1: Load Documentation

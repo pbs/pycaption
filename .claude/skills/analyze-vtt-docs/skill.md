@@ -22,6 +22,8 @@ Generates comprehensive, exhaustive WebVTT specification (`vtt_specs_summary.md`
 
 **Key:** Ensures NO requirements missed - exhaustive coverage from W3C spec + MDN + web search.
 
+**Pre-flight:** Read `.claude/skills/gotchas.md` before generating specs. Pay special attention to gotcha #3 (W3C license attribution required).
+
 **Usage:**
 ```bash
 /analyze-vtt-docs

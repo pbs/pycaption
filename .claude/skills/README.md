@@ -78,6 +78,10 @@ Any format's compliance workflow can optionally use a local copy of its propriet
 
 Contributors with a licensed copy of the relevant standard can place it at `ai_artifacts/specs/{format}/standards_summary.md` to get richer spec analysis.
 
+## Gotchas
+
+[`gotchas.md`](gotchas.md) lists past mistakes (copyright, workflow bugs, false-positive reviews) that skills must avoid. Skills that generate specs, write workflows, or review PRs reference it in their pre-flight checks.
+
 ## Notes
 
 - Fix skills target ONE issue at a time for efficiency (~20K vs 90K tokens)
@@ -89,4 +93,4 @@ Contributors with a licensed copy of the relevant standard can place it at `ai_a
 - `${{ github.token }}` is used automatically for GitHub API calls (no secret setup needed)
 
 ---
-**Last Updated**: 2026-04-29
+**Last Updated**: 2026-04-30
