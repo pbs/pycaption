@@ -16,7 +16,7 @@ dependencies = [
 
 dev_dependencies = ["pytest", "pytest-lazy-fixture"]
 
-transcript_dependencies = ["nltk==3.9.1"]
+transcript_dependencies = ["nltk==3.9.4"]
 
 setup(
     name="pycaption",
