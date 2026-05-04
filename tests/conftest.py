@@ -123,6 +123,7 @@ from tests.fixtures.scc import (  # noqa: F401
     sample_scc_with_spaces_at_eol_pop,
     sample_scc_with_spaces_at_eol_roll,
     sample_scc_with_unknown_commands,
+    sample_scc_paint_on_edm,
     scc_that_generates_webvtt_with_proper_newlines,
 )
 from tests.fixtures.srt import (

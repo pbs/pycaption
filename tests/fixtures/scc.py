@@ -643,3 +643,19 @@ Scenarist_SCC V1.0
 00:00:01:24	9429 91d0 c180 c220 91e0 c1c2 2020 2080 92c2 c1c2 2080
 
 """
+
+
+@pytest.fixture(scope="session")
+def sample_scc_paint_on_edm():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:00;00	9429 4920 f468 e96e 6b80
+
+00:00:01;00	942c
+
+00:00:02;00	9429 c8e5 ecec ef80
+
+00:00:04;00	942c
+
+"""

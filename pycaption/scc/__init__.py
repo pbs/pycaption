@@ -484,8 +484,17 @@ class SCCReader(BaseReader):
 
         # 942c - Erase Displayed Memory - Clear the current screen of any
         # displayed captions or text.
-        elif word == "942c" and self.pop_ons_queue:
-            self._pop_on(end=self.time_translator.get_time())
+        elif word == "942c":
+            edm_time = self.time_translator.get_time()
+            if self.pop_ons_queue:
+                self._pop_on(end=edm_time)
+            if self.buffer_dict.active_key in ("paint", "roll") \
+                    and not self.buffer.is_empty():
+                self.caption_stash.create_and_store(
+                    self.buffer, self.time, edm_time)
+                self.buffer = self.node_creator_factory.new_creator()
+                self.node_creator_factory.position_tracker.reset_for_new_caption()
+                self.time = edm_time
 
         # If command is not one of the aforementioned, add it to buffer
         else:

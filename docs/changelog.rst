@@ -1,5 +1,11 @@
 Changelog
 ---------
+2.2.22
+^^^^^^
+  - Fix: EDM (Erase Displayed Memory) command now
+    correctly clears displayed captions in paint-on
+    and roll-up modes.
+
 2.2.21
 ^^^^^^
   - supports multi-row jumps: small jumps (1-3 rows)
