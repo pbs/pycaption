@@ -3,6 +3,11 @@ Changelog
 2.2.23
 ^^^^^^
   - bumps nltk from 3.9.1 to 3.9.4.
+  - Fix SCC writer producing out-of-order timestamps when a short
+    caption is immediately followed by a longer one.
+    The buffer lead-time calculation could
+    push a caption's start before its predecessor;
+    now clamped to preserve chronological order.
 
 2.2.22
 ^^^^^^
