@@ -1,5 +1,9 @@
 Changelog
 ---------
+2.2.23
+^^^^^^
+  - bumps nltk from 3.9.1 to 3.9.4.
+
 2.2.22
 ^^^^^^
   - Fix: EDM (Erase Displayed Memory) command now
