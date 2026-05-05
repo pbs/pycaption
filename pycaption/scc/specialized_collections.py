@@ -340,11 +340,12 @@ class InstructionNodeCreator:
             node = _InstructionNode(position=current_position)
             self._collection.append(node)
 
-        # handle a simple line break
+        # handle line break(s) - may be multiple for multi-row jumps
         if self._position_tracer.is_linebreak_required():
-            self._collection.append(
-                _InstructionNode.create_break(position=current_position)
-            )
+            for _ in range(self._position_tracer._breaks_required):
+                self._collection.append(
+                    _InstructionNode.create_break(position=current_position)
+                )
             self._position_tracer.acknowledge_linebreak_consumed()
             node = _InstructionNode.create_text(current_position)
             self._collection.append(node)
@@ -412,9 +413,10 @@ class InstructionNodeCreator:
                     #  it should open italic tag
                     #  if break is required, break then add style tag
                     if self._position_tracer.is_linebreak_required():
-                        self._collection.append(
-                            _InstructionNode.create_break(position=current_position)
-                        )
+                        for _ in range(self._position_tracer._breaks_required):
+                            self._collection.append(
+                                _InstructionNode.create_break(position=current_position)
+                            )
                         self._position_tracer.acknowledge_linebreak_consumed()
                     self._collection.append(
                         _InstructionNode.create_italics_style(current_position)
@@ -433,9 +435,10 @@ class InstructionNodeCreator:
                     )
                     self.last_style = "italics off"
                     if self._position_tracer.is_linebreak_required():
-                        self._collection.append(
-                            _InstructionNode.create_break(position=current_position)
-                        )
+                        for _ in range(self._position_tracer._breaks_required):
+                            self._collection.append(
+                                _InstructionNode.create_break(position=current_position)
+                            )
                         self._position_tracer.acknowledge_linebreak_consumed()
 
         #  handle mid-row codes that follows a text node
@@ -446,7 +449,7 @@ class InstructionNodeCreator:
         prev_text_node = self.get_previous_text_node()
         prev_node_is_break = prev_text_node is not None and any(
             x.is_explicit_break()
-            for x in self._collection[self._collection.index(prev_text_node):]
+            for x in self._collection[self._collection.index(prev_text_node) :]
         )
         if (
             command in MID_ROW_CODES

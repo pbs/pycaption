@@ -1,8 +1,8 @@
 import pytest
 
-from pycaption import MicroDVDReader, CaptionReadNoCaptions
-from pycaption.exceptions import CaptionReadSyntaxError, CaptionReadTimingError
+from pycaption import CaptionReadNoCaptions, MicroDVDReader
 from pycaption.base import DEFAULT_LANGUAGE_CODE
+from pycaption.exceptions import CaptionReadSyntaxError, CaptionReadTimingError
 from tests.mixins import ReaderTestingMixIn
 
 
@@ -40,8 +40,8 @@ class TestMicroDVDReader(ReaderTestingMixIn):
         # due to lossy nature of microsec -> frame# we check that
         # conversion is within a second of expected value
         # (fyi: timestamps in examples/ and tests/fixtures/ differ)
-        assert abs(17350000 - paragraph.start) < 10 ** 6
-        assert abs(18752000 - paragraph.end) < 10 ** 6
+        assert abs(17350000 - paragraph.start) < 10**6
+        assert abs(18752000 - paragraph.end) < 10**6
 
     def test_empty_file(self, sample_microdvd_empty):
         with pytest.raises(CaptionReadNoCaptions):

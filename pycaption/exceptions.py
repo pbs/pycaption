@@ -2,8 +2,9 @@ class CaptionReadError(Exception):
     """
     Generic error raised when the reading of the caption file failed.
     """
+
     def __str__(self):
-        return f'{self.__class__.__name__}({self.args[0]})'
+        return f"{self.__class__.__name__}({self.args[0]})"
 
 
 class CaptionReadNoCaptions(CaptionReadError):

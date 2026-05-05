@@ -10,7 +10,7 @@ output the CaptionSet into captions of your desired format.
 Tested with Python versions 3.10, 3.11 and 3.12.
 (for Python 2 use pycaption < 1.0.0)
 
-For details, see the `documentation <http://pycaption.readthedocs.org>`__.
+For details, see the `documentation <https://pycaption.readthedocs.io>`__.
 
 License
 -------

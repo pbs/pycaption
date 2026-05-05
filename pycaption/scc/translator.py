@@ -1,7 +1,7 @@
 from pycaption.scc.constants import ALL_CHARACTERS, COMMAND_LABELS
 
 
-def translate_scc(scc_content, brackets='[]'):
+def translate_scc(scc_content, brackets="[]"):
     """
     Replaces hexadecimal words with their meaning
 
@@ -16,7 +16,7 @@ def translate_scc(scc_content, brackets='[]'):
     :return: Translated SCC captions
     :rtype: str
     """
-    opening_bracket, closing_bracket = brackets if brackets else ('', '')
+    opening_bracket, closing_bracket = brackets if brackets else ("", "")
     scc_elements = set(scc_content.split())
     for elem in scc_elements:
         name = COMMAND_LABELS.get(elem, ALL_CHARACTERS.get(elem))
@@ -28,5 +28,6 @@ def translate_scc(scc_content, brackets='[]'):
                 name = f"{char1}{char2}"
         if name:
             scc_content = scc_content.replace(
-                elem, f"{opening_bracket}{name}{closing_bracket}")
+                elem, f"{opening_bracket}{name}{closing_bracket}"
+            )
     return scc_content

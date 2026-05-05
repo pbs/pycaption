@@ -68,10 +68,12 @@ class TestSCCReader(ReaderTestingMixIn):
         captions = SCCReader().read(sample_scc_multiple_positioning)
 
         # SCC generates only origin, and we always expect it.
+        # With threshold-based approach: small jumps (1-3 rows) use breaks,
+        # large jumps (4+ rows) use repositioning (new cues)
+        # Each caption has independent positioning (not inherited from previous)
         expected_positioning = [
             ((10.0, UnitEnum.PERCENT), (77.0, UnitEnum.PERCENT)),
             ((40.0, UnitEnum.PERCENT), (5.0, UnitEnum.PERCENT)),
-            ((70.0, UnitEnum.PERCENT), (23.0, UnitEnum.PERCENT)),
             ((20.0, UnitEnum.PERCENT), (47.0, UnitEnum.PERCENT)),
             ((20.0, UnitEnum.PERCENT), (89.0, UnitEnum.PERCENT)),
             ((40.0, UnitEnum.PERCENT), (53.0, UnitEnum.PERCENT)),
@@ -88,6 +90,23 @@ class TestSCCReader(ReaderTestingMixIn):
             for caption_ in captions.get_captions("en-US")
         ]
         assert expected_positioning == actual_positioning
+
+    def test_breaks_do_not_accumulate_across_caption_boundaries(
+        self, sample_scc_multiple_positioning
+    ):
+        captions = SCCReader().read(sample_scc_multiple_positioning).get_captions(
+            "en-US"
+        )
+
+        for caption in captions:
+            assert caption.nodes, "Caption must have at least one node"
+            assert caption.nodes[0].type_ != CaptionNode.BREAK, (
+                "Caption must not start with a BREAK node — indicates breaks "
+                "leaked from the previous caption"
+            )
+            assert caption.nodes[-1].type_ != CaptionNode.BREAK, (
+                "Caption must not end with a trailing BREAK node"
+            )
 
     def test_tab_offset(self, sample_scc_tab_offset):
         captions = SCCReader().read(sample_scc_tab_offset)
@@ -421,10 +440,10 @@ class TestCoverageOnly:
             "®°½",
             "®°½",
             "ABû",
-            '♪',
-            '♪',
-            '♪♪',
-            '♪♪',
+            "♪",
+            "♪",
+            "♪♪",
+            "♪♪",
             "ÁÉÓ¡",
             "WHERE YOU'RE STANDING NOW,",
             "LOOKING OUT THERE, THAT'S AL",
@@ -981,3 +1000,21 @@ class TestTimingCorrectingCaptionList:
         num_captions = len(caption_set.get_captions("en-US"))
 
         assert num_captions == 2
+
+    def test_paint_on_edm_erases_displayed(self, sample_scc_paint_on_edm):
+        caption_set = SCCReader().read(sample_scc_paint_on_edm)
+        captions = caption_set.get_captions("en-US")
+
+        assert len(captions) == 2
+
+        texts = [
+            node.content
+            for caption in captions
+            for node in caption.nodes
+            if node.type_ == CaptionNode.TEXT
+        ]
+        assert texts == ["I think", "Hello"]
+
+        assert captions[0].end > captions[0].start
+        assert captions[1].end > captions[1].start
+        assert captions[0].end <= captions[1].start

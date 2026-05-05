@@ -12,7 +12,7 @@ class _PositioningTracker:
         :type positioning: tuple[int]
         """
         self._positions = [positioning]
-        self._break_required = False
+        self._breaks_required = 0
         self._repositioning_required = False
         # Since the actual column is not applied when encountering a line break
         # this attribute is used to store it and determine by comparison if the
@@ -23,6 +23,10 @@ class _PositioningTracker:
         """Being notified of a position change, updates the internal state,
         to as to be able to tell if it was a trivial change (a simple line
         break) or not.
+
+        Strategy:
+        - Small jumps (1-3 rows): Use line breaks to preserve visual spacing
+        - Large jumps (4+ rows): Use repositioning (creates new cue)
 
         :type positioning: tuple[int]
         :param positioning: a tuple (row, col)
@@ -36,17 +40,35 @@ class _PositioningTracker:
             return
 
         row, col = current
-        if self._break_required:
+        if self._breaks_required:
             col = self._last_column
         new_row, new_col = positioning
         is_tab_offset = new_row == row and col + 1 <= new_col <= col + 3
-        # One line below will be treated as line break, not repositioning
-        if new_row == row + 1:
-            self._positions.append((new_row, col))
-            self._break_required = True
-            self._last_column = new_col
+
+        # Threshold for when to use breaks vs repositioning
+        # Jumps of 4+ rows will trigger repositioning instead of adding breaks
+        MAX_BREAKS_THRESHOLD = 3
+
+        # Handle row jumps
+        if new_row > row:
+            row_diff = new_row - row
+
+            # Small jumps (1-3 rows): Use line breaks to preserve visual spacing
+            if row_diff <= MAX_BREAKS_THRESHOLD:
+                self._positions.append((new_row, col))
+                # Add breaks equal to row difference
+                # Row N -> N+1: 1 break
+                # Row N -> N+2: 2 breaks (preserves 1 blank line)
+                # Row N -> N+3: 3 breaks (preserves 2 blank lines)
+                self._breaks_required = row_diff
+                self._last_column = new_col
+            # Large jumps (4+ rows): Use repositioning (new cue)
+            else:
+                # Reset position - this triggers repositioning
+                self._positions = [positioning]
+                self._repositioning_required = True
         # Tab offsets after line breaks will be ignored to avoid repositioning
-        elif self._break_required and is_tab_offset:
+        elif self._breaks_required and is_tab_offset:
             return
         # force not to reposition on the same coordinates
         elif positioning == current:
@@ -87,11 +109,24 @@ class _PositioningTracker:
         """If the current position is simply one line below the previous.
         :rtype: bool
         """
-        return self._break_required
+        return self._breaks_required > 0
 
     def acknowledge_linebreak_consumed(self):
         """Call to acknowledge that the line required was consumed"""
-        self._break_required = False
+        self._breaks_required = 0
+
+    def reset_for_new_caption(self):
+        """Reset positioning state for a new caption boundary (e.g., EOC).
+
+        This ensures that breaks and repositioning state from the previous
+        caption do not bleed into the new caption. The position list is reset
+        to allow the next caption to set its position independently.
+        """
+        self._breaks_required = 0
+        self._repositioning_required = False
+        self._last_column = None
+        # Reset positions to None so the next PAC sets position fresh
+        self._positions = [None]
 
 
 class DefaultProvidingPositionTracker(_PositioningTracker):

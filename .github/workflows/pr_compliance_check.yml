@@ -1,0 +1,241 @@
+name: PR Compliance Check
+
+on:
+  workflow_dispatch:  # Manual trigger
+    inputs:
+      pr_number:
+        description: 'PR number (leave empty for latest)'
+        required: false
+        type: string
+      notify_slack:
+        description: 'Send Slack notification'
+        required: false
+        default: 'true'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+  pull_request:
+    types: [opened, synchronize]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  pr-compliance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for proper diff
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+      - name: Determine PR to analyze
+        id: pr_info
+        env:
+          INPUT_PR_NUMBER: ${{ github.event.inputs.pr_number }}
+          EVENT_PR_NUMBER: ${{ github.event.pull_request.number }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Detect base branch
+          BASE_BRANCH="main"
+          if ! git rev-parse --verify origin/main >/dev/null 2>&1; then
+            BASE_BRANCH="master"
+          fi
+
+          if [ -n "$INPUT_PR_NUMBER" ]; then
+            PR_NUM="$INPUT_PR_NUMBER"
+          elif [ -n "$EVENT_PR_NUMBER" ]; then
+            PR_NUM="$EVENT_PR_NUMBER"
+          else
+            # Get latest open PR targeting main/master
+            PR_NUM=$(gh pr list --state open --base "$BASE_BRANCH" --limit 1 --json number --jq '.[0].number' || echo "")
+          fi
+
+          if [ -z "$PR_NUM" ]; then
+            echo "No PR found to analyze"
+            echo "pr_exists=false" >> $GITHUB_OUTPUT
+          else
+            echo "PR_NUMBER=$PR_NUM" >> $GITHUB_ENV
+            echo "pr_exists=true" >> $GITHUB_OUTPUT
+            echo "Analyzing PR #$PR_NUM"
+
+            # Fetch the actual PR ref so we diff the PR, not just HEAD
+            git fetch origin "refs/pull/${PR_NUM}/head:pr-${PR_NUM}" 2>/dev/null && \
+              echo "PR_REF=pr-${PR_NUM}" >> $GITHUB_ENV || \
+              echo "PR_REF=HEAD" >> $GITHUB_ENV
+          fi
+
+      - name: Run PR Compliance Analysis
+        if: steps.pr_info.outputs.pr_exists == 'true'
+        id: analysis
+        run: |
+          mkdir -p ai_artifacts/compliance_checks
+          TMPDIR=$(mktemp -d)
+          trap 'rm -rf "$TMPDIR"' EXIT
+          sed -n '/^```python/,/^```/{ /^```/d; p; }' .claude/skills/check-last-pr/skill.md > "$TMPDIR/pr.py"
+          python3 "$TMPDIR/pr.py"
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Extract summary
+        id: summary
+        run: |
+          if [ "${{ steps.analysis.outcome }}" = "failure" ]; then
+            echo "::warning::Analysis script crashed — check logs for Python errors"
+            echo "SCRIPT_CRASHED=true" >> $GITHUB_ENV
+          fi
+          if [ -f ai_artifacts/compliance_checks/pr_summary.txt ]; then
+            while IFS='=' read -r key value; do
+              case "$key" in
+                ANALYSIS_NEEDED|PR_NUMBER|COMPLIANCE_ISSUES|REGRESSIONS|QUALITY_ISSUES|CRITICAL_COUNT|HIGH_COUNT|REPORT_PATH|RISK_LEVEL)
+                  echo "${key}=${value}" >> $GITHUB_ENV
+                  ;;
+              esac
+            done < ai_artifacts/compliance_checks/pr_summary.txt
+          else
+            echo "ANALYSIS_NEEDED=false" >> $GITHUB_ENV
+          fi
+
+      - name: Upload PR review report
+        uses: actions/upload-artifact@v4
+        if: env.ANALYSIS_NEEDED == 'true'
+        with:
+          name: pr-compliance-report
+          path: ai_artifacts/compliance_checks/**/pr_*_review_*.md
+          retention-days: 90
+
+      - name: Get artifact URL
+        run: |
+          echo "ARTIFACT_URL=https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> $GITHUB_ENV
+
+      - name: Check Slack token availability
+        id: slack_check
+        run: |
+          if [ -n "$SLACK_TOKEN" ] && [ -n "$SLACK_CHANNEL" ]; then
+            echo "available=true" >> $GITHUB_OUTPUT
+          else
+            echo "available=false" >> $GITHUB_OUTPUT
+          fi
+        env:
+          SLACK_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_CHANNEL: ${{ secrets.SLACK_CHANNEL_ID }}
+
+      - name: Notify Slack - Results
+        uses: archive/github-actions-slack@f530f3aa696b2eef0e5aba82450e387bd7723903 # v2.0.0
+        if: env.ANALYSIS_NEEDED == 'true' && (github.event.inputs.notify_slack || 'true') == 'true' && steps.slack_check.outputs.available == 'true'
+        with:
+          slack-bot-user-oauth-access-token: ${{ secrets.SLACK_BOT_TOKEN }}
+          slack-channel: ${{ secrets.SLACK_CHANNEL_ID }}
+          slack-text: |
+            :mag: *PR #${{ env.PR_NUMBER }} Compliance Review*
+
+            *Risk Level*: ${{ env.RISK_LEVEL == 'HIGH' && '🔴 HIGH' || env.RISK_LEVEL == 'MEDIUM' && '🟡 MEDIUM' || '🟢 LOW' }}
+
+            *Compliance Issues*: ${{ env.COMPLIANCE_ISSUES }} (${{ env.CRITICAL_COUNT }} critical)
+            *Regressions*: ${{ env.REGRESSIONS }}
+            *Code Quality*: ${{ env.QUALITY_ISSUES }} suggestions
+
+            *Report*: `${{ env.REPORT_PATH }}`
+            *Download*: <${{ env.ARTIFACT_URL }}|View in GitHub Actions>
+
+            Triggered by: *${{ github.actor }}*
+
+      - name: Notify Slack - No Changes
+        uses: archive/github-actions-slack@f530f3aa696b2eef0e5aba82450e387bd7723903 # v2.0.0
+        if: env.ANALYSIS_NEEDED == 'false' && (github.event.inputs.notify_slack || 'true') == 'true' && steps.slack_check.outputs.available == 'true'
+        with:
+          slack-bot-user-oauth-access-token: ${{ secrets.SLACK_BOT_TOKEN }}
+          slack-channel: ${{ secrets.SLACK_CHANNEL_ID }}
+          slack-text: |
+            :white_check_mark: *PR #${{ env.PR_NUMBER }} - No Caption Changes*
+
+            No SCC/VTT/DFXP files changed - compliance check skipped
+
+            Triggered by: *${{ github.actor }}*
+
+      - name: Slack notification skipped
+        if: (github.event.inputs.notify_slack || 'true') == 'true' && steps.slack_check.outputs.available == 'false'
+        run: |
+          echo "Slack notification requested but SLACK_BOT_TOKEN not available"
+
+      - name: Comment on PR
+        if: env.ANALYSIS_NEEDED == 'true' && github.event.pull_request.number
+        continue-on-error: true
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const riskLevel = process.env.RISK_LEVEL;
+            const complianceIssues = process.env.COMPLIANCE_ISSUES;
+            const regressions = process.env.REGRESSIONS;
+            const criticalCount = process.env.CRITICAL_COUNT;
+
+            const riskEmoji = riskLevel === 'HIGH' ? '🔴' : riskLevel === 'MEDIUM' ? '🟡' : '🟢';
+            const recommendation = riskLevel === 'HIGH'
+              ? '**DO NOT MERGE** - Critical issues must be fixed first'
+              : riskLevel === 'MEDIUM'
+              ? '**REVIEW REQUIRED** - Address issues before merging'
+              : '**SAFE TO MERGE** - No critical issues found';
+
+            const comment = [
+              `## ${riskEmoji} PR Compliance Review`,
+              '',
+              `**Risk Level**: ${riskLevel}`,
+              '',
+              `- **Compliance Issues**: ${complianceIssues} (${criticalCount} critical)`,
+              `- **Regressions**: ${regressions}`,
+              '',
+              recommendation,
+              '',
+              `Full report available in [workflow artifacts](${process.env.ARTIFACT_URL})`
+            ].join('\n');
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+      - name: Create job summary
+        if: always()
+        run: |
+          echo "## PR Compliance Check Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ "$ANALYSIS_NEEDED" == "true" ]; then
+            echo "**Analysis completed for PR #$PR_NUMBER**" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### Risk Level: $RISK_LEVEL" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "- **Compliance Issues**: $COMPLIANCE_ISSUES" >> $GITHUB_STEP_SUMMARY
+            echo "- **Critical**: $CRITICAL_COUNT" >> $GITHUB_STEP_SUMMARY
+            echo "- **High**: $HIGH_COUNT" >> $GITHUB_STEP_SUMMARY
+            echo "- **Regressions**: $REGRESSIONS" >> $GITHUB_STEP_SUMMARY
+            echo "- **Code Quality**: $QUALITY_ISSUES" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Report: \`$REPORT_PATH\`" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "No caption format changes detected" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Fail job on script crash
+        if: env.SCRIPT_CRASHED == 'true'
+        run: |
+          echo "::error::Compliance script crashed — failing job"
+          exit 1
