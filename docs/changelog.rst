@@ -8,6 +8,9 @@ Changelog
     The buffer lead-time calculation could
     push a caption's start before its predecessor;
     now clamped to preserve chronological order.
+  - Fix DFXPReader producing None entries in CaptionList when
+    empty <p> elements yield zero parsed nodes, causing
+    AttributeError in merge_concurrent_captions() and SRTWriter.
 
 2.2.22
 ^^^^^^
