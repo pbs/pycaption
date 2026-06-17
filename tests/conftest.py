@@ -45,6 +45,7 @@ from tests.fixtures.dfxp import (  # noqa: F401
     sample_dfxp_with_relativized_positioning,
     sample_dfxp_with_templated_style,
     sample_dfxp_without_region_and_style,
+    sample_dfxp_concurrent_with_empty_p,
 )
 from tests.fixtures.microdvd import missing_fps_sample_microdvd  # noqa: F401
 from tests.fixtures.microdvd import (

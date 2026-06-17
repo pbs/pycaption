@@ -1521,3 +1521,31 @@ def sample_dfxp_default_styling_p_tags():
   </div>
  </body>
 </tt>"""
+
+
+@pytest.fixture(scope="session")
+def sample_dfxp_concurrent_with_empty_p():
+    return """\
+<?xml version="1.0" encoding="utf-8"?>
+<tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml"
+    xmlns:tts="http://www.w3.org/ns/ttml#styling">
+ <head>
+  <styling>
+   <style xml:id="basic" tts:color="white"/>
+  </styling>
+  <layout>
+   <region xml:id="pop1" tts:origin="17.5% 84.66%" tts:extent="62.5% 5.33%"/>
+   <region xml:id="pop2" tts:origin="50% 84.66%" tts:extent="0% 5.33%"/>
+  </layout>
+ </head>
+ <body>
+  <div xml:lang="en">
+   <p region="pop1" style="basic" begin="01:55:05:08" end="01:55:11:14"
+      tts:origin="17.5% 84.66%" tts:extent="62.5% 5.33%">Subtitle End
+   </p>
+   <p region="pop2" style="basic" begin="01:55:05:08" end="01:55:11:14"
+      tts:origin="50% 84.66%" tts:extent="0% 5.33%">
+   </p>
+  </div>
+ </body>
+</tt>"""

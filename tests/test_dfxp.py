@@ -1,6 +1,7 @@
 import pytest
 
-from pycaption import CaptionReadNoCaptions, DFXPReader
+from pycaption import CaptionReadNoCaptions, DFXPReader, SRTWriter
+from pycaption.base import merge_concurrent_captions
 from pycaption.exceptions import (
     CaptionReadError,
     CaptionReadSyntaxError,
@@ -230,3 +231,44 @@ class TestDFXPReader(ReaderTestingMixIn):
         caps = caption_set.get_captions("en-US")
 
         assert len(caps) == 1
+
+    def test_concurrent_captions_with_empty_p_no_none_in_list(
+        self, sample_dfxp_concurrent_with_empty_p
+    ):
+        caption_set = DFXPReader().read(sample_dfxp_concurrent_with_empty_p)
+        captions = caption_set.get_captions("en")
+        assert all(c is not None for c in captions)
+        assert len(captions) == 1
+
+    def test_concurrent_captions_with_empty_p_merge_does_not_crash(
+        self, sample_dfxp_concurrent_with_empty_p
+    ):
+        caption_set = DFXPReader().read(sample_dfxp_concurrent_with_empty_p)
+        merged = merge_concurrent_captions(caption_set)
+        captions = merged.get_captions("en")
+        assert len(captions) >= 1
+        assert all(c is not None for c in captions)
+
+    def test_concurrent_captions_with_empty_p_srt_writer_does_not_crash(
+        self, sample_dfxp_concurrent_with_empty_p
+    ):
+        caption_set = DFXPReader().read(sample_dfxp_concurrent_with_empty_p)
+        output = SRTWriter().write(caption_set)
+        assert "Subtitle End" in output
+
+    def test_none_from_convert_p_tag_is_filtered(self, sample_dfxp):
+        reader = DFXPReader()
+        original = reader._convert_p_tag_to_caption
+        call_count = [0]
+
+        def patched(p_tag):
+            call_count[0] += 1
+            if call_count[0] == 2:
+                return None
+            return original(p_tag)
+
+        reader._convert_p_tag_to_caption = patched
+        caption_set = reader.read(sample_dfxp)
+        captions = caption_set.get_captions("en-US")
+        assert all(c is not None for c in captions)
+        assert len(captions) == 6

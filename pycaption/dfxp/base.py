@@ -147,9 +147,13 @@ class DFXPReader(BaseReader):
     def _convert_div_to_caption_list(self, div):
         return CaptionList(
             [
-                self._convert_p_tag_to_caption(p_tag)
-                for p_tag in div.find_all("p")
-                if p_tag.get_text().strip()
+                caption
+                for caption in (
+                    self._convert_p_tag_to_caption(p_tag)
+                    for p_tag in div.find_all("p")
+                    if p_tag.get_text().strip()
+                )
+                if caption is not None
             ],
             div.layout_info,
         )
