@@ -91,6 +91,7 @@ from tests.fixtures.scc import (  # noqa: F401
     sample_no_positioning_at_all_scc,
     sample_scc_created_dfxp_with_wrongly_closing_spans,
     sample_scc_duplicate_special_characters,
+    sample_scc_doubled_mid_row_before_punctuation,
     sample_scc_duplicate_tab_offset,
     sample_scc_empty,
     sample_scc_eoc_first_command,

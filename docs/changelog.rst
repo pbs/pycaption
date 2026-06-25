@@ -1,5 +1,13 @@
 Changelog
 ---------
+2.2.24
+^^^^^^
+  - Fix SCC ingestion error when a doubled italic-off mid-row code
+    (9120 9120) appears before punctuation. The punctuation lookahead
+    now skips the error-correction duplicate, preventing an unwanted
+    space that pushed lines past the 32-character limit.
+
+
 2.2.23
 ^^^^^^
   - bumps nltk from 3.9.1 to 3.9.4.
