@@ -332,7 +332,15 @@ class SCCReader(BaseReader):
         for idx, word in enumerate(word_list):
             word = word.strip()
             if len(word) == 4:
-                next_command = word_list[idx + 1] if idx + 1 < len(word_list) else None
+                # Look ahead for the next command, skipping the duplicate
+                # that SCC uses for error-correction (same word repeated).
+                next_idx = idx + 1
+                if (next_idx < len(word_list)
+                        and word_list[next_idx].strip() == word):
+                    next_idx += 1
+                next_command = (
+                    word_list[next_idx] if next_idx < len(word_list) else None
+                )
                 self._translate_word(word=word, next_command=next_command)
 
     def _translate_word(self, word, next_command=None):
