@@ -53,7 +53,7 @@ copyright = "2012-2026, PBS.org " \
 # built documents.
 #
 # The short X.Y version.
-version = "2.2.24.dev1"
+version = "2.2.24"
 # The full version, including alpha/beta/rc tags.
 release = "2.2.23"
 
