@@ -392,6 +392,24 @@ class TestSCCReader(ReaderTestingMixIn):
             ]
             assert expected_lines == actual_lines
 
+    def test_doubled_mid_row_before_punctuation_no_extra_space(
+        self,
+        sample_scc_doubled_mid_row_before_punctuation,
+    ):
+        caption_set = SCCReader().read(
+            sample_scc_doubled_mid_row_before_punctuation
+        )
+        captions = caption_set.get_captions("en-US")
+        text_nodes = [
+            node.content
+            for cap_ in captions
+            for node in cap_.nodes
+            if node.type_ == CaptionNode.TEXT
+        ]
+        full_text = "".join(text_nodes)
+        assert " ." not in full_text
+        assert full_text.endswith("Files.")
+
     def test_removing_spaces_at_end_of_lines(
         self,
         sample_scc_with_spaces_at_eol_pop,
