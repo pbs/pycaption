@@ -44,6 +44,7 @@ jobs:
           path: coverage.xml
 
       - name: Add context info to env
+        if: steps.tests.outcome == 'success'
         run: |
           sudo apt-get install -y --no-install-recommends libxml-xpath-perl
           COVERAGE=`xpath -q -e "floor(/coverage/@line-rate * 100)" coverage.xml`
