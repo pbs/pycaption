@@ -14,9 +14,14 @@
   - Best practices
   - Common pitfalls
 
+- [TTML to WebVTT Mapping - W3C Note](https://w3c.github.io/ttml-webvtt-mapping/#ttml-position-from-webvtt-region) ✅ Added 2026-06-29
+  - Region-to-position mapping rules between TTML and WebVTT
+  - Authoritative conversion guidance for positioning/layout
+
 ## Coverage Status
 - ✅ W3C specification: Complete
 - ✅ MDN documentation: Complete
+- ✅ TTML-WebVTT mapping: Added
 - ⚠️ Web search: Not performed (WebSearch tool unavailable)
 
 ## Notes
