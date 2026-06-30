@@ -1,5 +1,15 @@
 Changelog
 ---------
+2.2.25
+^^^^^^
+  - Add drop-frame timecode support to SCCWriter via a new
+    ``drop_frame=False`` parameter. When enabled, timestamps use the
+    standard 10-minute block method with semicolon separators.
+  - Refactor SCCWriter timing pipeline: exact token counting,
+    monotonic frame deduplication, and caption splitting at 80 tokens.
+  - Extract ``SCC_TOKENS_PER_CAPTION_MAX`` as a named constant.
+  - CI: guard coverage-parsing step on test success.
+
 2.2.24
 ^^^^^^
   - Fix SCC ingestion error when a doubled italic-off mid-row code
