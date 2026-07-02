@@ -18,6 +18,11 @@
   - Region-to-position mapping rules between TTML and WebVTT
   - Authoritative conversion guidance for positioning/layout
 
+- [Speechpad WebVTT Reference](https://www.speechpad.com/captions/webvtt) ✅ Added 2026-06-30
+  - Practical guide with examples
+  - Cue settings, regions, styling tags
+  - Common patterns and usage
+
 ## Coverage Status
 - ✅ W3C specification: Complete
 - ✅ MDN documentation: Complete

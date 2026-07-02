@@ -1,5 +1,20 @@
 Changelog
 ---------
+2.2.26
+^^^^^^
+  - Implement WebVTT REGION block parsing in the reader. Cues
+    referencing a region now get proper origin/extent geometry
+    computed via W3C TTML-WebVTT mapping formulas, enabling correct
+    cross-format conversion (e.g., VTT with regions → DFXP produces
+    correct tts:origin and tts:extent).
+  - Fix .x/.y typo in geometry.py fit_to_screen() — the Y-axis
+    safety guard was checking X twice instead of both axes.
+  - Fix _remove_noop_off_on_italics typo in SCC specialized_collections.
+  - Add empty-collection guard in _remove_spaces_at_end_of_the_line.
+  - Replace magic numbers with named _InstructionNode constants.
+  - Remove dead _remove_styles() method from WebVTT reader.
+  - Remove redundant if-guard and unused class attributes in WebVTT writer.
+
 2.2.25
 ^^^^^^
   - Add drop-frame timecode support to SCCWriter via a new

@@ -1,7 +1,7 @@
 # WebVTT Specification - Complete Reference
 
-**Generated**: 2026-04-20  
-**Sources**: W3C WebVTT Specification (https://www.w3.org/TR/webvtt1/), MDN Web Docs  
+**Generated**: 2026-06-30  
+**Sources**: W3C WebVTT Specification (https://www.w3.org/TR/webvtt1/), MDN Web Docs, Speechpad Reference, TTML-WebVTT Mapping (W3C Note)  
 **Version**: W3C Candidate Recommendation  
 **Total Rules**: 76 (50 RULE-XXX + 7 RULE-ENT + 7 RULE-VAL + 12 IMPL-XXX)  
 **Coverage**: ✅ EXHAUSTIVE - All 8 tags, 6 settings, 7 entities, 6 region properties individually documented
@@ -693,13 +693,16 @@
 
 **Supporting:**
 - MDN Web Docs: https://developer.mozilla.org/en-US/docs/Web/API/WebVTT_API ✅ Fetched 2026-04-20
+- Speechpad WebVTT Reference: https://www.speechpad.com/captions/webvtt ✅ Fetched 2026-06-30
+- TTML-WebVTT Mapping (W3C Note): https://w3c.github.io/ttml-webvtt-mapping/ ✅ Fetched 2026-06-30
 
 **Coverage:**
 - W3C spec: All MUST/SHOULD/MAY requirements, complete syntax specification
 - MDN: Browser compatibility, implementation guidance, best practices, examples
-- Web search: Not performed (WebSearch tool unavailable)
+- Speechpad: Practical examples, rendering modes (pop-on/roll-up/paint-on), region anchor analogy
+- TTML-WebVTT mapping: Region-to-position conversion formulas (viewportanchor → tts:origin, lines → height via 5.33vh)
 
-**Completeness:** ✅ Exhaustive coverage achieved from W3C + MDN sources
+**Completeness:** ✅ Exhaustive coverage achieved from W3C + MDN + supplementary sources
 
 ### B. Browser Compatibility Notes
 
@@ -750,9 +753,50 @@
 - WebVTT: UTF-8 Unicode; SCC: ASCII with control codes
 - WebVTT: Millisecond precision; SCC: Frame-based timing
 
+### E. Region-to-Position Conversion (TTML-WebVTT Mapping)
+
+Reference formulas for converting between WebVTT regions and TTML positioning.
+Source: W3C TTML-WebVTT Mapping Note.
+
+**WebVTT Region → tts:origin (TTML):**
+```
+origin_x = viewportanchor_x - (regionanchor_x / 100 * width)
+origin_y = viewportanchor_y - (regionanchor_y / 100 * height)
+tts:origin = "origin_x% origin_y%"
+```
+
+**WebVTT Region → tts:extent (TTML):**
+```
+tts:extent = "width% height%"
+where height = lines * 5.33 (each line ≈ 5.33% of viewport height)
+```
+
+**TTML → WebVTT Region (reverse):**
+```
+regionanchor = 0%,0% (use top-left)
+viewportanchor = tts:origin x%, tts:origin y%
+width = tts:extent width%
+lines = ceil(tts:extent height% / 5.33)
+```
+
+**Default values:**
+| Property | WebVTT Default |
+|----------|---------------|
+| width | 100% |
+| lines | 3 |
+| regionanchor | 0%,100% (bottom-left) |
+| viewportanchor | 0%,100% |
+| scroll | none |
+| line height | 5.33vh |
+
+**Constraints:**
+- WebVTT regions only support horizontal writing modes
+- Region areas are limited to viewport area
+- WebVTT cannot define extent in block progression dimension
+
 ---
 
 **Specification Version**: W3C Candidate Recommendation  
-**Last Updated**: 2026-04-20  
+**Last Updated**: 2026-06-30  
 **Purpose**: Compliance checking for pycaption WebVTT implementation  
 **Usage**: Reference for check-vtt-compliance skill

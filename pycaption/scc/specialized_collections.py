@@ -26,6 +26,9 @@ from .constants import (
 
 PopOnCue = collections.namedtuple("PopOnCue", "buffer, start, end")
 
+# First two hex chars of SCC codes that produce punctuation ['.', '!', '?', ',']
+_PUNCTUATION_PREFIXES = frozenset(["ae", "a1", "bf", "2c"])
+
 
 class PreCaption:
     """
@@ -444,8 +447,7 @@ class InstructionNodeCreator:
         #  handle mid-row codes that follows a text node
         #  don't add space if the next command adds one of
         #  ['.', '!', '?', ',']
-        punctuation = ["ae", "a1", "bf", "2c"]
-        next_is_punctuation = next_command and next_command[:2] in punctuation
+        next_is_punctuation = next_command and next_command[:2] in _PUNCTUATION_PREFIXES
         prev_text_node = self.get_previous_text_node()
         prev_node_is_break = prev_text_node is not None and any(
             x.is_explicit_break()
@@ -501,9 +503,9 @@ class InstructionNodeCreator:
         if len(collection) == 0:
             return False
         for element in collection[::-1]:
-            if element._type == 0:
+            if element._type == _InstructionNode.TEXT:
                 return False
-            elif element._type == 1:
+            elif element._type == _InstructionNode.BREAK:
                 return True
         return False
 
@@ -782,6 +784,8 @@ def _format_italics(collection):
 
 
 def _remove_spaces_at_end_of_the_line(collection):
+    if not collection:
+        return collection
     for idx, node in enumerate(collection):
         if (
             idx > 0
@@ -826,7 +830,7 @@ def _remove_noop_on_off_italics(collection):
     return new_collection
 
 
-def _remove_noon_off_on_italics(collection):
+def _remove_noop_off_on_italics(collection):
     """Removes pairs of off-on italics nodes, that don't surround any other
     node
 
@@ -867,7 +871,7 @@ def _remove_noop_italics(collection):
     """
     new_collection = _remove_noop_on_off_italics(collection)
 
-    new_collection = _remove_noon_off_on_italics(new_collection)
+    new_collection = _remove_noop_off_on_italics(new_collection)
 
     return new_collection
 
