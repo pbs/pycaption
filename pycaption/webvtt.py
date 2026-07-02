@@ -22,7 +22,17 @@ OTHER_SPAN_PATTERN = re.compile(
     r"</?([cibuv]|ruby|rt|lang|(\d+):(\d{2})(:\d{2})?\.(\d{3})).*?>"
 )  # These WebVTT tags are stripped off the cues on conversion
 REGION_SETTING_PATTERN = re.compile(r"^([\w]+):(.+)$")
+"""  
+Matches a setting name (word chars) followed by colon and a value:
+id:region1
+width:50%
+"""
 REGION_ANCHOR_PATTERN = re.compile(r"^(\d+(?:\.\d+)?)%,(\d+(?:\.\d+)?)%$")
+"""
+Matches two percentage values (integer or decimal) separated by a comma:
+0%,0%
+100%,100%
+"""
 LINE_HEIGHT_VH = 5.33
 
 WEBVTT_VERSION_OF = {
