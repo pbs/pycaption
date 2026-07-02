@@ -10,7 +10,7 @@ from .exceptions import (
     CaptionReadSyntaxError,
     InvalidInputError,
 )
-from .geometry import HorizontalAlignmentEnum, Layout
+from .geometry import HorizontalAlignmentEnum, Layout, Point, Size, Stretch, UnitEnum
 
 # A WebVTT timing line has both start/end times and layout related settings
 # (referred to as 'cue settings' in the documentation)
@@ -21,6 +21,9 @@ VOICE_SPAN_PATTERN = re.compile("<v(\\.\\w+)* ([^>]*)>")
 OTHER_SPAN_PATTERN = re.compile(
     r"</?([cibuv]|ruby|rt|lang|(\d+):(\d{2})(:\d{2})?\.(\d{3})).*?>"
 )  # These WebVTT tags are stripped off the cues on conversion
+REGION_SETTING_PATTERN = re.compile(r"^([\w]+):(.+)$")
+REGION_ANCHOR_PATTERN = re.compile(r"^(\d+(?:\.\d+)?)%,(\d+(?:\.\d+)?)%$")
+LINE_HEIGHT_VH = 5.33
 
 WEBVTT_VERSION_OF = {
     HorizontalAlignmentEnum.LEFT: "left",
@@ -69,6 +72,8 @@ class WebVTTReader(BaseReader):
         return caption_set
 
     def _parse(self, lines):
+        # State machine: cycles through waiting-for-timing → collecting-text
+        # → emit-caption-on-blank-line, repeat.
         captions = CaptionList()
         start = None
         end = None
@@ -76,8 +81,13 @@ class WebVTTReader(BaseReader):
         layout_info = None
         found_timing = False
 
+        # Parse REGION blocks from the header area before processing cues
+        self._regions = self._parse_regions(lines)
+
         for i, line in enumerate(lines):
             if "-->" in line:
+                # Timing line found (e.g. "00:00:01.000 --> 00:00:03.000")
+                # marks the start of a new cue
                 found_timing = True
                 timing_line = i
                 last_start_time = captions[-1].start if captions else 0
@@ -91,6 +101,8 @@ class WebVTTReader(BaseReader):
                     raise type(e)(new_msg).with_traceback(tb) from None
 
             elif "" == line:
+                # Blank line = block separator in WebVTT.
+                # If we were collecting a cue, finalize and store it.
                 if found_timing and nodes:
                     found_timing = False
                     caption = Caption(start, end, nodes, layout_info=layout_info)
@@ -98,23 +110,22 @@ class WebVTTReader(BaseReader):
                     nodes = []
             else:
                 if found_timing:
+                    # We're inside a cue — this line is cue text.
+                    # Add a line break between multi-line cue text.
                     if nodes:
                         nodes.append(CaptionNode.create_break())
                     nodes.append(CaptionNode.create_text(self._decode(line)))
                 else:
-                    # it's a comment or some metadata; ignore it
+                    # Outside a cue: cue identifiers, NOTE blocks,
+                    # or other metadata — skip silently.
                     pass
 
-        # Add a last caption if there are remaining nodes
+        # File may not end with a blank line — emit any remaining cue
         if nodes:
             caption = Caption(start, end, nodes, layout_info=layout_info)
             captions.append(caption)
 
         return captions
-
-    def _remove_styles(self, line):
-        partial_result = VOICE_SPAN_PATTERN.sub("\\2: ", line)
-        return OTHER_SPAN_PATTERN.sub("", partial_result)
 
     def _validate_timings(self, start, end, last_start_time):
         if start is None:
@@ -147,7 +158,18 @@ class WebVTTReader(BaseReader):
 
         layout_info = None
         if cue_settings:
-            layout_info = Layout(webvtt_positioning=cue_settings)
+            region_id = self._extract_region_id(cue_settings)
+            if region_id and region_id in self._regions:
+                layout_info = self._regions[region_id]
+                layout_info = Layout(
+                    origin=layout_info.origin,
+                    extent=layout_info.extent,
+                    padding=layout_info.padding,
+                    alignment=layout_info.alignment,
+                    webvtt_positioning=cue_settings,
+                )
+            else:
+                layout_info = Layout(webvtt_positioning=cue_settings)
 
         return start, end, layout_info
 
@@ -189,12 +211,138 @@ class WebVTTReader(BaseReader):
         s = s.replace("&amp;", "&")
         return s
 
+    def _parse_regions(self, lines):
+        """Parse REGION blocks from the file header area.
+
+        A WebVTT region defines a named rectangular area on screen where cues
+        can be rendered. Regions appear before any cues with the syntax:
+
+            REGION
+            id:subtitle_area
+            width:50%
+            lines:3
+            regionanchor:0%,100%
+            viewportanchor:10%,90%
+            scroll:up
+
+        Supported settings:
+            id             - unique identifier (required)
+            width          - region width as percentage (default: 100%)
+            lines          - visible line count (default: 3)
+            regionanchor   - anchor point within region as x%,y% (default: 0%,100%)
+            viewportanchor - anchor point on viewport as x%,y% (default: 0%,100%)
+            scroll         - scroll behavior, only "up" is valid (default: none)
+
+        :returns: dict mapping region id -> Layout
+        """
+        regions = {}
+        i = 0
+        while i < len(lines):
+            line = lines[i].strip()
+            if line == "REGION" or line.startswith(("REGION\t", "REGION ")):
+                i += 1
+                settings = {}
+                seen_keys = set()
+                # Read settings until a blank line (block separator in WebVTT)
+                while i < len(lines) and lines[i].strip() != "":
+                    # Match key:value pair (e.g. "width:50%")
+                    m = REGION_SETTING_PATTERN.match(lines[i].strip())
+                    if m:
+                        key, value = m.group(1), m.group(2)
+                        if key in seen_keys:
+                            i += 1
+                            continue
+                        seen_keys.add(key)
+                        settings[key] = value
+                    i += 1
+                # Skip regions without id (spec requires it; cues can't reference them)
+                if "id" in settings:
+                    region_id = settings["id"]
+                    # First definition wins; duplicates are ignored (RULE-REG-009)
+                    if region_id not in regions:
+                        regions[region_id] = self._region_to_layout(settings)
+            elif "-->" in line:
+                # REGIONs only appear before cues; stop scanning once cues begin
+                break
+            else:
+                i += 1
+        return regions
+
+    def _region_to_layout(self, settings):
+        """Convert parsed region settings dict into a Layout with origin/extent.
+
+        Uses W3C TTML-WebVTT mapping formulas:
+            origin_x = viewportanchor_x - (regionanchor_x / 100 * width)
+            origin_y = viewportanchor_y - (regionanchor_y / 100 * height)
+            height = lines * 5.33
+        """
+        # Spec defaults per W3C WebVTT §6
+        width = 100.0
+        lines = 3
+        regionanchor_x, regionanchor_y = 0.0, 100.0
+        viewportanchor_x, viewportanchor_y = 0.0, 100.0
+        # Parse each setting, falling back to defaults on invalid values
+        if "width" in settings:
+            try:
+                width = float(settings["width"].rstrip("%"))
+            except ValueError:
+                pass
+
+        if "lines" in settings:
+            try:
+                lines = int(settings["lines"])
+            except ValueError:
+                pass
+
+        # regionanchor: which point inside the region is "pinned"
+        # e.g. 0%,100% means the bottom-left corner of the region
+        if "regionanchor" in settings:
+            m = REGION_ANCHOR_PATTERN.match(settings["regionanchor"])
+            if m:
+                regionanchor_x = float(m.group(1))
+                regionanchor_y = float(m.group(2))
+
+        # viewportanchor: where on the screen that pin is placed
+        # e.g. 10%,90% means 10% from left, 90% from top
+        if "viewportanchor" in settings:
+            m = REGION_ANCHOR_PATTERN.match(settings["viewportanchor"])
+            if m:
+                viewportanchor_x = float(m.group(1))
+                viewportanchor_y = float(m.group(2))
+
+        # Calculate the top-left corner (origin) of the region box.
+        # Each line is ~5.33% of viewport height (LINE_HEIGHT_VH).
+        height = lines * LINE_HEIGHT_VH
+        # The origin is where the viewport anchor is, offset back by how far
+        # the region anchor is into the box (as a fraction of box dimensions).
+        origin_x = viewportanchor_x - (regionanchor_x / 100.0 * width)
+        origin_y = viewportanchor_y - (regionanchor_y / 100.0 * height)
+
+        origin = Point(
+            Size(origin_x, UnitEnum.PERCENT),
+            Size(origin_y, UnitEnum.PERCENT),
+        )
+        extent = Stretch(
+            Size(width, UnitEnum.PERCENT),
+            Size(height, UnitEnum.PERCENT),
+        )
+
+        return Layout(
+            origin=origin,
+            extent=extent
+        )
+
+    @staticmethod
+    def _extract_region_id(cue_settings):
+        """Extract region id from cue settings string, if present."""
+        for setting in cue_settings.split():
+            if setting.startswith("region:"):
+                return setting[7:]
+        return None
+
 
 class WebVTTWriter(BaseWriter):
     HEADER = "WEBVTT\n\n"
-    global_layout = None
-    video_width = None
-    video_height = None
 
     def write(self, caption_set, lang=None):
         """
@@ -347,8 +495,7 @@ class WebVTTWriter(BaseWriter):
                 # Since there is no padding in WebVTT, the left padding is
                 # added to the total left offset (if it is defined and not
                 # relative),
-                if left_offset:
-                    left_offset += layout.padding.start
+                left_offset += layout.padding.start
                 # and removed from the total cue width
                 if cue_width:
                     cue_width -= layout.padding.start

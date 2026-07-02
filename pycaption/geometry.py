@@ -213,9 +213,15 @@ class Stretch(TwoDimensionalObject):
 
 
 class Region:
-    """Represents the spatial coordinates of a rectangle
+    """Represents the spatial coordinates of a rectangle.
 
-    Don't instantiate by hand. use Region.from_points or Region.from_extent
+    NOTE: This class is currently dead code — not imported or used anywhere in
+    the codebase. It also contains known bugs (align_from_origin returns
+    inconsistent types, add_extent method does not exist on Point). We left it
+    here because it may serve as a starting point if we ever need geometric
+    rectangle operations beyond what Layout class provides (e.g. region
+    intersection or point-in-region checks).
+    If we'll ever need it, fix the bugs first.
     """
 
     @classmethod
@@ -846,7 +852,7 @@ class Layout:
                 found_absolute_unit = False
                 if bottom_right.x.unit != UnitEnum.PERCENT:
                     found_absolute_unit = True
-                elif bottom_right.x.unit != UnitEnum.PERCENT:
+                elif bottom_right.y.unit != UnitEnum.PERCENT:
                     found_absolute_unit = True
 
                 if found_absolute_unit:

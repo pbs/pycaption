@@ -66,7 +66,7 @@ class TestWebVTTReader(ReaderTestingMixIn):
         assert cue.end == 18737000
 
     def test_webvtt_cue_components_removed_from_text(self):
-        result = self.reader._remove_styles(
+        result = self.reader._decode(
             "<c vIntro><b>Wikipedia</b> is a great adventure. <i>It may have "
             "its shortcomings</i>, but it is<u> the largest</u> collective "
             "knowledge construction endevour</c> <ruby>base text <rt>"
@@ -88,8 +88,7 @@ class TestWebVTTReader(ReaderTestingMixIn):
         # todo: same assert w/ different arguments -> this can be parametrized;
         with pytest.raises(CaptionReadError):
             WebVTTReader(ignore_timing_errors=False).read(
-                "\n" "00:00:20.000 --> 00:00:10.000\n" 
-                "foo bar baz"
+                "\n" "00:00:20.000 --> 00:00:10.000\n" "foo bar baz"
             )
 
         with pytest.raises(CaptionReadError):
@@ -111,15 +110,13 @@ class TestWebVTTReader(ReaderTestingMixIn):
         # Even if timing errors are ignored, this has to raise an exception
         with pytest.raises(CaptionReadSyntaxError):
             WebVTTReader().read(
-                "\nNOTE invalid cue stamp\n"
-                "00:00:20.000 --> \nfoo bar baz\n"
+                "\nNOTE invalid cue stamp\n" "00:00:20.000 --> \nfoo bar baz\n"
             )
 
         # And this too
         with pytest.raises(CaptionReadSyntaxError):
             WebVTTReader().read(
-                "\n00:00:20,000 --> 00:00:22,000\n" 
-                "Note the comma instead of point.\n"
+                "\n00:00:20,000 --> 00:00:22,000\n" "Note the comma instead of point.\n"
             )
 
         # todo: at this point it can be split into 2 separate tests
@@ -147,8 +144,7 @@ class TestWebVTTReader(ReaderTestingMixIn):
     def test_invalid_files(self):
         with pytest.raises(CaptionReadError):
             WebVTTReader(ignore_timing_errors=False).read(
-                "00:00:20.000 --> 00:00:10.000\n" 
-                "Start time is greater than end time."
+                "00:00:20.000 --> 00:00:10.000\n" "Start time is greater than end time."
             )
 
         with pytest.raises(CaptionReadError):
@@ -181,9 +177,7 @@ class TestWebVTTWriter:
         assert sample_webvtt_double_br == results
 
     def test_break_node_positioning_is_ignored(
-        self,
-        webvtt_from_dfxp_with_conflicting_align,
-        dfxp_style_region_align_conflict
+        self, webvtt_from_dfxp_with_conflicting_align, dfxp_style_region_align_conflict
     ):
         caption_set = DFXPReader().read(dfxp_style_region_align_conflict)
         results = WebVTTWriter().write(caption_set)
@@ -202,3 +196,183 @@ class TestWebVTTWriter:
         assert sample_webvtt_multi_lang_de == results
         results = WebVTTWriter().write(caption_set, "en-US")
         assert sample_webvtt_multi_lang_en == results
+
+
+class TestWebVTTRegionParsing:
+    def setup_method(self):
+        self.reader = WebVTTReader()
+
+    def test_region_block_parsed_into_layout(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "REGION\n"
+            "id:subtitle_area\n"
+            "width:50%\n"
+            "lines:3\n"
+            "regionanchor:0%,100%\n"
+            "viewportanchor:10%,90%\n"
+            "scroll:up\n\n"
+            "00:00:01.000 --> 00:00:03.000 region:subtitle_area\n"
+            "Hello world\n"
+        )
+        captions = self.reader.read(vtt)
+        cue = captions.get_captions("en-US")[0]
+        assert cue.layout_info is not None
+        assert cue.layout_info.origin is not None
+        assert cue.layout_info.extent is not None
+
+    def test_region_origin_calculation(self):
+        """origin_x = viewportanchor_x - (regionanchor_x / 100 * width)
+        origin_y = viewportanchor_y - (regionanchor_y / 100 * height)
+        height = lines * 5.33
+        """
+        vtt = (
+            "WEBVTT\n\n"
+            "REGION\n"
+            "id:box\n"
+            "width:50%\n"
+            "lines:3\n"
+            "regionanchor:0%,100%\n"
+            "viewportanchor:10%,90%\n\n"
+            "00:00:01.000 --> 00:00:03.000 region:box\n"
+            "Test\n"
+        )
+        captions = self.reader.read(vtt)
+        cue = captions.get_captions("en-US")[0]
+        layout = cue.layout_info
+        # origin_x = 10 - (0/100 * 50) = 10.0
+        assert layout.origin.x.value == pytest.approx(10.0)
+        # height = 3 * 5.33 = 15.99
+        # origin_y = 90 - (100/100 * 15.99) = 74.01
+        assert layout.origin.y.value == pytest.approx(74.01)
+        # extent = width=50%, height=15.99%
+        assert layout.extent.horizontal.value == pytest.approx(50.0)
+        assert layout.extent.vertical.value == pytest.approx(15.99)
+
+    def test_region_defaults(self):
+        """width=100%, lines=3, regionanchor=0%,100%, viewportanchor=0%,100%"""
+        vtt = (
+            "WEBVTT\n\n"
+            "REGION\n"
+            "id:minimal\n\n"
+            "00:00:01.000 --> 00:00:03.000 region:minimal\n"
+            "Test\n"
+        )
+        captions = self.reader.read(vtt)
+        cue = captions.get_captions("en-US")[0]
+        layout = cue.layout_info
+        # width=100, lines=3, height=15.99
+        # regionanchor=0,100 viewportanchor=0,100
+        # origin_x = 0 - (0/100 * 100) = 0
+        # origin_y = 100 - (100/100 * 15.99) = 84.01
+        assert layout.origin.x.value == pytest.approx(0.0)
+        assert layout.origin.y.value == pytest.approx(84.01)
+        assert layout.extent.horizontal.value == pytest.approx(100.0)
+        assert layout.extent.vertical.value == pytest.approx(15.99)
+
+    def test_region_webvtt_positioning_passthrough(self):
+        """VTT->VTT round-trip: cue settings string preserved."""
+        vtt = (
+            "WEBVTT\n\n"
+            "REGION\n"
+            "id:r1\n"
+            "width:50%\n\n"
+            "00:00:01.000 --> 00:00:03.000 region:r1\n"
+            "Hello\n"
+        )
+        captions = self.reader.read(vtt)
+        cue = captions.get_captions("en-US")[0]
+        assert cue.layout_info.webvtt_positioning == "region:r1"
+
+    def test_invalid_region_reference_ignored(self):
+        vtt = (
+            "WEBVTT\n\n" "00:00:01.000 --> 00:00:03.000 region:nonexistent\n" "Hello\n"
+        )
+        captions = self.reader.read(vtt)
+        cue = captions.get_captions("en-US")[0]
+        # Falls back to raw positioning passthrough
+        assert cue.layout_info.webvtt_positioning == "region:nonexistent"
+        assert cue.layout_info.origin is None
+
+    def test_duplicate_region_id_first_wins(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "REGION\n"
+            "id:dup\n"
+            "width:40%\n\n"
+            "REGION\n"
+            "id:dup\n"
+            "width:80%\n\n"
+            "00:00:01.000 --> 00:00:03.000 region:dup\n"
+            "Test\n"
+        )
+        captions = self.reader.read(vtt)
+        cue = captions.get_captions("en-US")[0]
+        assert cue.layout_info.extent.horizontal.value == pytest.approx(40.0)
+
+    def test_multiple_regions(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "REGION\n"
+            "id:top\n"
+            "width:100%\n"
+            "lines:2\n"
+            "viewportanchor:0%,10%\n"
+            "regionanchor:0%,0%\n\n"
+            "REGION\n"
+            "id:bottom\n"
+            "width:100%\n"
+            "lines:2\n"
+            "viewportanchor:0%,90%\n"
+            "regionanchor:0%,0%\n\n"
+            "00:00:01.000 --> 00:00:03.000 region:top\n"
+            "Top caption\n\n"
+            "00:00:01.000 --> 00:00:03.000 region:bottom\n"
+            "Bottom caption\n"
+        )
+        captions = self.reader.read(vtt)
+        cues = captions.get_captions("en-US")
+        # top: origin_y = 10 - (0/100 * 10.66) = 10.0
+        assert cues[0].layout_info.origin.y.value == pytest.approx(10.0)
+        # bottom: origin_y = 90 - (0/100 * 10.66) = 90.0
+        assert cues[1].layout_info.origin.y.value == pytest.approx(90.0)
+
+    def test_region_without_id_ignored(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "REGION\n"
+            "width:50%\n"
+            "lines:3\n\n"
+            "00:00:01.000 --> 00:00:03.000\n"
+            "No region reference\n"
+        )
+        captions = self.reader.read(vtt)
+        cue = captions.get_captions("en-US")[0]
+        assert cue.layout_info is None
+
+    def test_duplicate_setting_in_region_first_wins(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "REGION\n"
+            "id:r1\n"
+            "width:40%\n"
+            "width:80%\n\n"
+            "00:00:01.000 --> 00:00:03.000 region:r1\n"
+            "Test\n"
+        )
+        captions = self.reader.read(vtt)
+        cue = captions.get_captions("en-US")[0]
+        assert cue.layout_info.extent.horizontal.value == pytest.approx(40.0)
+
+    def test_cue_without_region_unaffected(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "REGION\n"
+            "id:r1\n"
+            "width:50%\n\n"
+            "00:00:01.000 --> 00:00:03.000\n"
+            "No region\n"
+        )
+        captions = self.reader.read(vtt)
+        cue = captions.get_captions("en-US")[0]
+        assert cue.layout_info is None
