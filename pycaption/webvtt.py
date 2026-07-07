@@ -282,9 +282,15 @@ class WebVTTReader(BaseReader):
 
     @staticmethod
     def _pop_matching_tag(open_tags, content):
-        """Remove the most recent matching open tag from the stack."""
+        """Remove the most recent matching open tag from the stack.
+
+        Matches by tag-type key (e.g. "classes", "lang") rather than full
+        dict equality, because closing tags lack the opener's value
+        (</c> -> {'classes': []} vs <c.yellow> -> {'classes': ['yellow']}).
+        """
+        keys = set(content.keys())
         for j in range(len(open_tags) - 1, -1, -1):
-            if open_tags[j] == content:
+            if set(open_tags[j].keys()) == keys:
                 open_tags.pop(j)
                 break
 
