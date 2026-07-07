@@ -4,7 +4,9 @@ from pycaption import (
     DFXPWriter,
     MicroDVDWriter,
     SAMIReader,
+    SAMIWriter,
     SRTReader,
+    SRTWriter,
     WebVTTReader,
     WebVTTWriter,
 )
@@ -114,3 +116,137 @@ class TestWebVTTtoMicroDVD(MicroDVDTestingMixIn):
 
         assert isinstance(results, str)
         self.assert_microdvd_equals(sample_microdvd, results)
+
+
+class TestWebVTTInlineMarkupRoundTrip:
+    def test_italic_roundtrip(self):
+        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\nHello <i>world</i>\n"
+        caption_set = WebVTTReader().read(vtt)
+        result = WebVTTWriter().write(caption_set)
+        assert "<i>world</i>" in result
+
+    def test_bold_roundtrip(self):
+        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\n<b>bold</b> text\n"
+        caption_set = WebVTTReader().read(vtt)
+        result = WebVTTWriter().write(caption_set)
+        assert "<b>bold</b>" in result
+
+    def test_underline_roundtrip(self):
+        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\n<u>underlined</u>\n"
+        caption_set = WebVTTReader().read(vtt)
+        result = WebVTTWriter().write(caption_set)
+        assert "<u>underlined</u>" in result
+
+    def test_nested_style_roundtrip(self):
+        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\n<b><i>both</i></b>\n"
+        caption_set = WebVTTReader().read(vtt)
+        result = WebVTTWriter().write(caption_set)
+        assert "<b><i>both</i></b>" in result
+
+    def test_class_roundtrip(self):
+        vtt = (
+            "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\n"
+            "<c.yellow>colored</c>\n"
+        )
+        caption_set = WebVTTReader().read(vtt)
+        result = WebVTTWriter().write(caption_set)
+        assert "<c.yellow>colored</c>" in result
+
+    def test_lang_roundtrip(self):
+        vtt = (
+            "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\n"
+            "<lang fr>Bonjour</lang>\n"
+        )
+        caption_set = WebVTTReader().read(vtt)
+        result = WebVTTWriter().write(caption_set)
+        assert "<lang fr>Bonjour</lang>" in result
+
+    def test_ruby_roundtrip(self):
+        vtt = (
+            "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\n"
+            "<ruby>base<rt>annotation</rt></ruby>\n"
+        )
+        caption_set = WebVTTReader().read(vtt)
+        result = WebVTTWriter().write(caption_set)
+        assert "<ruby>base<rt>annotation</rt></ruby>" in result
+
+    def test_timestamp_roundtrip(self):
+        vtt = (
+            "WEBVTT\n\n00:00:01.000 --> 00:00:05.000\n"
+            "Hello <00:00:02.500>world\n"
+        )
+        caption_set = WebVTTReader().read(vtt)
+        result = WebVTTWriter().write(caption_set)
+        assert "<00:02.500>" in result
+        assert "Hello" in result
+        assert "world" in result
+
+    def test_mixed_style_and_text_roundtrip(self):
+        vtt = (
+            "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\n"
+            "Normal <i>italic</i> <b>bold</b> end\n"
+        )
+        caption_set = WebVTTReader().read(vtt)
+        result = WebVTTWriter().write(caption_set)
+        assert "Normal <i>italic</i> <b>bold</b> end" in result
+
+    def test_multiline_style_spanning_lines_roundtrip(self):
+        vtt = (
+            "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\n"
+            "<i>line one\nline two</i>\n"
+        )
+        caption_set = WebVTTReader().read(vtt)
+        result = WebVTTWriter().write(caption_set)
+        assert "<i>line one\nline two</i>" in result
+
+    def test_unrecognized_tag_preserved_roundtrip(self):
+        vtt = (
+            "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\n"
+            "He said <LAUGHING> something\n"
+        )
+        caption_set = WebVTTReader().read(vtt)
+        result = WebVTTWriter().write(caption_set)
+        assert "LAUGHING" in result
+        assert "He said" in result
+        assert "something" in result
+
+
+class TestWebVTTStyleCrossFormat:
+    def test_italic_to_dfxp(self):
+        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\n<i>italic</i>\n"
+        caption_set = WebVTTReader().read(vtt)
+        result = DFXPWriter().write(caption_set)
+        assert 'tts:fontStyle="italic"' in result
+
+    def test_italic_to_sami(self):
+        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\n<i>italic</i>\n"
+        caption_set = WebVTTReader().read(vtt)
+        result = SAMIWriter().write(caption_set)
+        assert "font-style:italic" in result
+
+    def test_italic_to_srt(self):
+        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\n<i>italic</i>\n"
+        caption_set = WebVTTReader().read(vtt)
+        result = SRTWriter().write(caption_set)
+        assert "italic" in result
+        assert "<i>" not in result
+
+    def test_structural_tags_stripped_in_srt(self):
+        vtt = (
+            "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\n"
+            "<c.yellow>Hello</c>\n"
+        )
+        caption_set = WebVTTReader().read(vtt)
+        result = SRTWriter().write(caption_set)
+        assert "<c" not in result
+        assert "Hello" in result
+
+    def test_structural_tags_stripped_in_dfxp(self):
+        vtt = (
+            "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\n"
+            "<lang fr>Bonjour</lang>\n"
+        )
+        caption_set = WebVTTReader().read(vtt)
+        result = DFXPWriter().write(caption_set)
+        assert "<lang" not in result
+        assert "Bonjour" in result

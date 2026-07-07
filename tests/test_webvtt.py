@@ -65,12 +65,17 @@ class TestWebVTTReader(ReaderTestingMixIn):
         assert cue.start == 16985000
         assert cue.end == 18737000
 
-    def test_webvtt_cue_components_removed_from_text(self):
-        result = self.reader._decode(
+    def test_webvtt_cue_components_parsed_from_text(self):
+        nodes = self.reader._parse_cue_text(
             "<c vIntro><b>Wikipedia</b> is a great adventure. <i>It may have "
             "its shortcomings</i>, but it is<u> the largest</u> collective "
             "knowledge construction endevour</c> <ruby>base text <rt>"
             "annotation</rt></ruby> <v Audry><b>Yes</b>, indeed!"
+        )
+        from pycaption.base import CaptionNode
+
+        text = "".join(
+            n.content for n in nodes if n.type_ == CaptionNode.TEXT
         )
         expected = (
             "Wikipedia is a great adventure. It may have "
@@ -78,7 +83,7 @@ class TestWebVTTReader(ReaderTestingMixIn):
             "knowledge construction endevour base text annotation"
             " Audry: Yes, indeed!"
         )
-        assert result == expected
+        assert text == expected
 
     def test_empty_file(self, sample_webvtt_empty):
         with pytest.raises(CaptionReadNoCaptions):
@@ -376,3 +381,334 @@ class TestWebVTTRegionParsing:
         captions = self.reader.read(vtt)
         cue = captions.get_captions("en-US")[0]
         assert cue.layout_info is None
+
+
+class TestWebVTTInlineMarkupParsing:
+    def setup_method(self):
+        self.reader = WebVTTReader()
+
+    def test_italic_tags_produce_style_nodes(self):
+        from pycaption.base import CaptionNode
+
+        nodes = self.reader._parse_cue_text("Hello <i>world</i>")
+        assert len(nodes) == 4
+        assert nodes[0].type_ == CaptionNode.TEXT
+        assert nodes[0].content == "Hello "
+        assert nodes[1].type_ == CaptionNode.STYLE
+        assert nodes[1].start is True
+        assert nodes[1].content == {"italics": True}
+        assert nodes[2].type_ == CaptionNode.TEXT
+        assert nodes[2].content == "world"
+        assert nodes[3].type_ == CaptionNode.STYLE
+        assert nodes[3].start is False
+        assert nodes[3].content == {"italics": True}
+
+    def test_bold_tags(self):
+        from pycaption.base import CaptionNode
+
+        nodes = self.reader._parse_cue_text("<b>bold text</b>")
+        assert nodes[0].type_ == CaptionNode.STYLE
+        assert nodes[0].content == {"bold": True}
+        assert nodes[0].start is True
+        assert nodes[1].type_ == CaptionNode.TEXT
+        assert nodes[1].content == "bold text"
+        assert nodes[2].type_ == CaptionNode.STYLE
+        assert nodes[2].content == {"bold": True}
+        assert nodes[2].start is False
+
+    def test_underline_tags(self):
+        from pycaption.base import CaptionNode
+
+        nodes = self.reader._parse_cue_text("<u>underlined</u>")
+        assert nodes[0].type_ == CaptionNode.STYLE
+        assert nodes[0].content == {"underline": True}
+        assert nodes[0].start is True
+
+    def test_nested_tags(self):
+        from pycaption.base import CaptionNode
+
+        nodes = self.reader._parse_cue_text("<b><i>nested</i></b>")
+        assert len(nodes) == 5
+        assert nodes[0].content == {"bold": True}
+        assert nodes[0].start is True
+        assert nodes[1].content == {"italics": True}
+        assert nodes[1].start is True
+        assert nodes[2].type_ == CaptionNode.TEXT
+        assert nodes[2].content == "nested"
+        assert nodes[3].content == {"italics": True}
+        assert nodes[3].start is False
+        assert nodes[4].content == {"bold": True}
+        assert nodes[4].start is False
+
+    def test_class_tag(self):
+        from pycaption.base import CaptionNode
+
+        nodes = self.reader._parse_cue_text("<c.yellow>text</c>")
+        assert nodes[0].type_ == CaptionNode.STYLE
+        assert nodes[0].content == {"classes": ["yellow"]}
+        assert nodes[0].start is True
+        assert nodes[2].type_ == CaptionNode.STYLE
+        assert nodes[2].content == {"classes": []}
+        assert nodes[2].start is False
+
+    def test_class_tag_multiple_classes(self):
+        nodes = self.reader._parse_cue_text("<c.yellow.bg_blue>text</c>")
+        assert nodes[0].content == {"classes": ["yellow", "bg_blue"]}
+
+    def test_lang_tag(self):
+        from pycaption.base import CaptionNode
+
+        nodes = self.reader._parse_cue_text("<lang en>English</lang>")
+        assert nodes[0].type_ == CaptionNode.STYLE
+        assert nodes[0].content == {"lang": "en"}
+        assert nodes[0].start is True
+        assert nodes[2].content == {"lang": ""}
+        assert nodes[2].start is False
+
+    def test_ruby_and_rt_tags(self):
+        from pycaption.base import CaptionNode
+
+        nodes = self.reader._parse_cue_text(
+            "<ruby>base<rt>annotation</rt></ruby>"
+        )
+        assert nodes[0].content == {"ruby": True}
+        assert nodes[0].start is True
+        assert nodes[1].type_ == CaptionNode.TEXT
+        assert nodes[1].content == "base"
+        assert nodes[2].content == {"ruby_text": True}
+        assert nodes[2].start is True
+        assert nodes[3].type_ == CaptionNode.TEXT
+        assert nodes[3].content == "annotation"
+        assert nodes[4].content == {"ruby_text": True}
+        assert nodes[4].start is False
+        assert nodes[5].content == {"ruby": True}
+        assert nodes[5].start is False
+
+    def test_timestamp_tag(self):
+        from pycaption.webvtt import microseconds
+
+        nodes = self.reader._parse_cue_text("text <00:01:23.456> more")
+        ts_nodes = [
+            n for n in nodes
+            if n.type_ == 2 and "timestamp" in n.content
+        ]
+        assert len(ts_nodes) == 1
+        assert ts_nodes[0].content["timestamp"] == microseconds(0, 1, 23, 456)
+        assert ts_nodes[0].start is True
+
+    def test_timestamp_tag_without_hours(self):
+        from pycaption.webvtt import microseconds
+
+        nodes = self.reader._parse_cue_text("text <01:23.456> more")
+        ts_nodes = [
+            n for n in nodes
+            if n.type_ == 2 and "timestamp" in n.content
+        ]
+        assert len(ts_nodes) == 1
+        assert ts_nodes[0].content["timestamp"] == microseconds(0, 1, 23, 456)
+
+    def test_entity_decoding_in_text(self):
+        nodes = self.reader._parse_cue_text("A &amp; B &lt;C&gt;")
+        assert len(nodes) == 1
+        assert nodes[0].content == "A & B <C>"
+
+    def test_plain_text_no_tags(self):
+        from pycaption.base import CaptionNode
+
+        nodes = self.reader._parse_cue_text("No tags here")
+        assert len(nodes) == 1
+        assert nodes[0].type_ == CaptionNode.TEXT
+        assert nodes[0].content == "No tags here"
+
+    def test_unrecognized_angle_brackets_preserved(self):
+        nodes = self.reader._parse_cue_text("<LAUGHING & WHOOPS!>")
+        assert len(nodes) == 1
+        assert nodes[0].content == "<LAUGHING & WHOOPS!>"
+
+    def test_voice_tag_still_baked_into_text(self):
+        nodes = self.reader._parse_cue_text("<v Roger>Hello</v>")
+        text_nodes = [n for n in nodes if n.type_ == 1]
+        combined = "".join(n.content for n in text_nodes)
+        assert "Roger: " in combined
+        assert "Hello" in combined
+
+    def test_full_caption_read_with_styles(
+        self, sample_webvtt_with_inline_style
+    ):
+        from pycaption.base import CaptionNode
+
+        captions = self.reader.read(sample_webvtt_with_inline_style)
+        cues = captions.get_captions("en-US")
+        assert len(cues) == 3
+
+        # First cue: "Hello <i>world</i>"
+        nodes = cues[0].nodes
+        text_nodes = [n for n in nodes if n.type_ == CaptionNode.TEXT]
+        style_nodes = [n for n in nodes if n.type_ == CaptionNode.STYLE]
+        assert any(n.content == "Hello " for n in text_nodes)
+        assert any(n.content == "world" for n in text_nodes)
+        assert any(
+            n.content == {"italics": True} and n.start is True
+            for n in style_nodes
+        )
+        assert any(
+            n.content == {"italics": True} and n.start is False
+            for n in style_nodes
+        )
+
+    def test_full_caption_read_with_structural_tags(
+        self, sample_webvtt_with_structural_tags
+    ):
+        from pycaption.base import CaptionNode
+
+        captions = self.reader.read(sample_webvtt_with_structural_tags)
+        cues = captions.get_captions("en-US")
+        assert len(cues) == 4
+
+        # First cue: "<c.yellow>colored text</c>"
+        nodes = cues[0].nodes
+        style_nodes = [n for n in nodes if n.type_ == CaptionNode.STYLE]
+        assert style_nodes[0].content == {"classes": ["yellow"]}
+        assert style_nodes[0].start is True
+
+        # Second cue: "<lang fr>Bonjour le monde</lang>"
+        nodes = cues[1].nodes
+        style_nodes = [n for n in nodes if n.type_ == CaptionNode.STYLE]
+        assert style_nodes[0].content == {"lang": "fr"}
+        assert style_nodes[0].start is True
+
+    def test_multiline_cue_with_style_spanning_lines(self):
+        from pycaption.base import CaptionNode
+
+        vtt = (
+            "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\n"
+            "<i>line one\nline two</i>\n"
+        )
+        captions = self.reader.read(vtt)
+        cue = captions.get_captions("en-US")[0]
+        nodes = cue.nodes
+        assert nodes[0].type_ == CaptionNode.STYLE
+        assert nodes[0].content == {"italics": True}
+        assert nodes[0].start is True
+        assert nodes[1].type_ == CaptionNode.TEXT
+        assert nodes[1].content == "line one"
+        assert nodes[2].type_ == CaptionNode.BREAK
+        assert nodes[3].type_ == CaptionNode.TEXT
+        assert nodes[3].content == "line two"
+        assert nodes[4].type_ == CaptionNode.STYLE
+        assert nodes[4].content == {"italics": True}
+        assert nodes[4].start is False
+
+    def test_tag_with_class_on_known_style_tag(self):
+        from pycaption.base import CaptionNode
+
+        nodes = self.reader._parse_cue_text("<i.highlight>text</i>")
+        assert nodes[0].type_ == CaptionNode.STYLE
+        assert nodes[0].content == {"italics": True}
+        assert nodes[0].start is True
+        assert nodes[1].type_ == CaptionNode.TEXT
+        assert nodes[1].content == "text"
+        assert nodes[2].type_ == CaptionNode.STYLE
+        assert nodes[2].content == {"italics": True}
+        assert nodes[2].start is False
+
+    def test_empty_cue_text(self):
+        nodes = self.reader._parse_cue_text("")
+        assert nodes == []
+
+    def test_whitespace_only_cue_text(self):
+        nodes = self.reader._parse_cue_text("   ")
+        assert nodes == []
+
+    def test_adjacent_different_style_tags(self):
+        nodes = self.reader._parse_cue_text(
+            "<i>italic</i><b>bold</b><u>underline</u>"
+        )
+        assert len(nodes) == 9
+        assert nodes[0].content == {"italics": True}
+        assert nodes[0].start is True
+        assert nodes[1].content == "italic"
+        assert nodes[2].content == {"italics": True}
+        assert nodes[2].start is False
+        assert nodes[3].content == {"bold": True}
+        assert nodes[3].start is True
+        assert nodes[4].content == "bold"
+        assert nodes[5].content == {"bold": True}
+        assert nodes[5].start is False
+        assert nodes[6].content == {"underline": True}
+        assert nodes[6].start is True
+        assert nodes[7].content == "underline"
+        assert nodes[8].content == {"underline": True}
+        assert nodes[8].start is False
+
+    def test_unclosed_tag_auto_closed_at_cue_end(self):
+        from pycaption.base import CaptionNode
+
+        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\n<i>no close\n"
+        captions = self.reader.read(vtt)
+        cue = captions.get_captions("en-US")[0]
+        nodes = cue.nodes
+        assert nodes[0].type_ == CaptionNode.STYLE
+        assert nodes[0].content == {"italics": True}
+        assert nodes[0].start is True
+        assert nodes[1].type_ == CaptionNode.TEXT
+        assert nodes[1].content == "no close"
+        # Auto-closed at cue end
+        assert nodes[2].type_ == CaptionNode.STYLE
+        assert nodes[2].content == {"italics": True}
+        assert nodes[2].start is False
+
+    def test_multiple_unclosed_tags_closed_in_reverse_order(self):
+        from pycaption.base import CaptionNode
+
+        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\n<b><i>text\n"
+        captions = self.reader.read(vtt)
+        cue = captions.get_captions("en-US")[0]
+        nodes = cue.nodes
+        # open bold, open italic, text, auto-close italic, auto-close bold
+        assert nodes[0].content == {"bold": True}
+        assert nodes[0].start is True
+        assert nodes[1].content == {"italics": True}
+        assert nodes[1].start is True
+        assert nodes[2].content == "text"
+        assert nodes[3].content == {"italics": True}
+        assert nodes[3].start is False
+        assert nodes[4].content == {"bold": True}
+        assert nodes[4].start is False
+
+    def test_partially_closed_tags_only_unclosed_auto_closed(self):
+        from pycaption.base import CaptionNode
+
+        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\n<b><i>text</i>\n"
+        captions = self.reader.read(vtt)
+        cue = captions.get_captions("en-US")[0]
+        nodes = cue.nodes
+        # open bold, open italic, text, close italic, auto-close bold
+        assert nodes[0].content == {"bold": True}
+        assert nodes[0].start is True
+        assert nodes[1].content == {"italics": True}
+        assert nodes[1].start is True
+        assert nodes[2].content == "text"
+        assert nodes[3].content == {"italics": True}
+        assert nodes[3].start is False
+        assert nodes[4].content == {"bold": True}
+        assert nodes[4].start is False
+
+    def test_unclosed_tag_spanning_multiline_cue(self):
+        from pycaption.base import CaptionNode
+
+        vtt = (
+            "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\n"
+            "<i>line one\nline two\n"
+        )
+        captions = self.reader.read(vtt)
+        cue = captions.get_captions("en-US")[0]
+        nodes = cue.nodes
+        assert nodes[0].content == {"italics": True}
+        assert nodes[0].start is True
+        assert nodes[1].content == "line one"
+        assert nodes[2].type_ == CaptionNode.BREAK
+        assert nodes[3].content == "line two"
+        # Auto-closed at cue end
+        assert nodes[4].content == {"italics": True}
+        assert nodes[4].start is False

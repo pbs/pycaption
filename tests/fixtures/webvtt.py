@@ -380,3 +380,38 @@ Test zero padded and two digit timestamps without hours
 
 01:01:01.001 --> 10:10:10.100
 Test zero padded and two digit timestamps without hours"""
+
+
+@pytest.fixture(scope="session")
+def sample_webvtt_with_inline_style():
+    return """\
+WEBVTT
+
+00:00:01.000 --> 00:00:03.000
+Hello <i>world</i>
+
+00:00:04.000 --> 00:00:06.000
+<b>bold</b> and <u>underlined</u>
+
+00:00:07.000 --> 00:00:09.000
+<b><i>nested bold italic</i></b>
+"""
+
+
+@pytest.fixture(scope="session")
+def sample_webvtt_with_structural_tags():
+    return """\
+WEBVTT
+
+00:00:01.000 --> 00:00:03.000
+<c.yellow>colored text</c>
+
+00:00:04.000 --> 00:00:06.000
+<lang fr>Bonjour le monde</lang>
+
+00:00:07.000 --> 00:00:09.000
+<ruby>base text<rt>annotation</rt></ruby>
+
+00:00:10.000 --> 00:00:15.000
+Hello <00:00:12.000>world
+"""

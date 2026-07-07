@@ -169,5 +169,7 @@ from tests.fixtures.webvtt import (  # noqa: F401
     sample_webvtt_output_long_cue,
     sample_webvtt_timestamps,
     sample_webvtt_with_cue_settings,
+    sample_webvtt_with_inline_style,
+    sample_webvtt_with_structural_tags,
     webvtt_from_dfxp_with_conflicting_align,
 )
