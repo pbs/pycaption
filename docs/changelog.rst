@@ -1,5 +1,19 @@
 Changelog
 ---------
+2.2.27
+^^^^^^
+  - Implement WebVTT inline markup tag parsing in the reader. The
+    tag-stripping regex is replaced with a proper parser that converts
+    <i>, <b>, <u>, <c>, <lang>, <ruby>, <rt>, and timestamp tags into
+    CaptionNode.STYLE open/close pairs, enabling correct round-trip
+    through the WebVTT writer and cross-format conversion (e.g.,
+    VTT italic → DFXP tts:fontStyle="italic").
+  - WebVTT writer: add _convert_structural_tag() to emit class, lang,
+    ruby, and timestamp tags from STYLE nodes. A has_text_style flag
+    prevents double-emission when nodes already resolve to i/b/u tags.
+  - Unrecognized angle-bracket content (e.g. <LAUGHING>) is now
+    preserved as literal text instead of being silently dropped.
+
 2.2.26
 ^^^^^^
   - Implement WebVTT REGION block parsing in the reader. Cues

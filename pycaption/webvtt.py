@@ -16,11 +16,37 @@ from .geometry import HorizontalAlignmentEnum, Layout, Point, Size, Stretch, Uni
 # (referred to as 'cue settings' in the documentation)
 # The following pattern captures [start], [end] and [cue settings] if existent
 TIMING_LINE_PATTERN = re.compile(r"^(\S+)\s+-->\s+(\S+)(?:\s+(.*?))?\s*$")
+"""
+Captures [start_timestamp], [end_timestamp], and optional [cue_settings]
+from a WebVTT timing line.
+00:00:01.000 --> 00:00:03.000 align:start position:10%
+"""
 TIMESTAMP_PATTERN = re.compile(r"^(\d+):(\d{2})(:\d{2})?\.(\d{3})")
+"""
+Parses a single WebVTT timestamp into its components.
+Captures: hours (or minutes), minutes (or seconds),
+optional :seconds, milliseconds.
+00:01:23.456 or 01:23.456
+"""
 VOICE_SPAN_PATTERN = re.compile("<v(\\.\\w+)* ([^>]*)>")
-OTHER_SPAN_PATTERN = re.compile(
-    r"</?([cibuv]|ruby|rt|lang|(\d+):(\d{2})(:\d{2})?\.(\d{3})).*?>"
-)  # These WebVTT tags are stripped off the cues on conversion
+"""
+Matches a voice span opening tag, capturing the speaker annotation.
+The speaker name is baked into cue text as "Speaker: " prefix.
+<v Roger Bingham> or <v.loud Speaker>
+"""
+TAG_SPLIT_PATTERN = re.compile(r"(<[^>]+>)")
+"""
+Splits cue text into alternating [text, tag, text, tag, ...] segments.
+The capturing group ensures matched tags are retained in the split result.
+"""
+KNOWN_TAGS = frozenset({"i", "b", "u", "c", "v", "lang", "ruby", "rt"})
+"""
+The set of recognized WebVTT inline tag names.
+Used for classifying opening (<i>, <c.yellow>, <lang en>) and
+closing (</i>, </c>, </v>, </lang>) tags during cue text parsing.
+Note: "v" is included so </v> is consumed as a closing style node
+(the opening <v> is already handled by VOICE_SPAN_PATTERN).
+"""
 REGION_SETTING_PATTERN = re.compile(r"^([\w]+):(.+)$")
 """  
 Matches a setting name (word chars) followed by colon and a value:
@@ -124,7 +150,7 @@ class WebVTTReader(BaseReader):
                     # Add a line break between multi-line cue text.
                     if nodes:
                         nodes.append(CaptionNode.create_break())
-                    nodes.append(CaptionNode.create_text(self._decode(line)))
+                    nodes.extend(self._parse_cue_text(line))
                 else:
                     # Outside a cue: cue identifiers, NOTE blocks,
                     # or other metadata — skip silently.
@@ -200,26 +226,160 @@ class WebVTTReader(BaseReader):
             # Timestamp of the form [minutes]:[seconds].[milliseconds]
             return microseconds(0, m[0], m[1], m[3])
 
-    def _decode(self, s):
+    def _parse_cue_text(self, line):
+        """Parse a single line of WebVTT cue text into a list of CaptionNodes.
+
+        Converts inline markup tags into CaptionNode.STYLE open/close pairs
+        and text content into CaptionNode.TEXT nodes.
+
+        Voice tags are handled before splitting (baked into text as
+        "Speaker: " prefix), matching the legacy behavior.
+
+        :param line: A single line of cue text (raw WebVTT)
+        :returns: list of CaptionNode
         """
-        Convert cue text from WebVTT XML-like format to plain unicode.
-        :type s: str
+        line = line.strip()
+        # \2 is the speaker name capture group; replaces the full <v ...> tag
+        # with "Speaker: " so voice identity is preserved as plain text.
+        line = VOICE_SPAN_PATTERN.sub(r"\2: ", line)
+
+        nodes = []
+        # re.split() with a capturing group guarantees alternating segments:
+        # even indices = text (possibly ""), odd indices = captured tags.
+        # e.g. "Hello <i>world</i>" -> ["Hello ", "<i>", "world", "</i>", ""]
+        parts = TAG_SPLIT_PATTERN.split(line)
+
+        for i, part in enumerate(parts):
+            if not part:
+                continue
+
+            if i % 2 == 0:
+                # Even indices are plain text — decode entities and store
+                text = self._decode_entities(part)
+                if text:
+                    nodes.append(CaptionNode.create_text(text))
+            else:
+                # Odd indices are tags — classify into style/text nodes
+                node = self._classify_tag(part)
+                if node is not None:
+                    nodes.append(node)
+
+        return nodes
+
+    def _classify_tag(self, tag_str):
+        """Classify a captured tag string and return the appropriate
+        CaptionNode.
+
+        Returns a STYLE node for recognized tags, a TEXT node for
+        unrecognized angle-bracket content (e.g. "<LAUGHING>"), so that
+        arbitrary text in angle brackets is preserved rather than dropped.
+
+        :param tag_str: The raw tag string, e.g. "<i>", "</b>", "<c.yellow>"
+        :returns: CaptionNode or None
         """
-        s = s.strip()
-        # Covert voice span
-        s = VOICE_SPAN_PATTERN.sub("\\2: ", s)
-        # TODO: Add support for other WebVTT tags. For now just strip them
-        # off the text.
-        s = OTHER_SPAN_PATTERN.sub("", s)
-        # Replace WebVTT special XML codes with plain unicode values
-        s = s.replace("&lt;", "<")
-        s = s.replace("&gt;", ">")
-        s = s.replace("&lrm;", "\u200e")
-        s = s.replace("&rlm;", "\u200f")
-        s = s.replace("&nbsp;", "\u00a0")
-        # Must do ampersand last
-        s = s.replace("&amp;", "&")
-        return s
+        # Strip the angle brackets: "<i>" -> "i", "</b>" -> "/b"
+        inner = tag_str[1:-1]
+
+        # Closing tag: starts with "/"
+        if inner.startswith("/"):
+            tag_name = inner[1:]
+            if tag_name in KNOWN_TAGS:
+                content = self._tag_content(tag_name)
+                if not content:
+                    return None
+                return CaptionNode.create_style(False, content)
+            else:
+                text = self._decode_entities(tag_str)
+                return CaptionNode.create_text(text)
+
+        # Timestamp tag: e.g. "00:01:23.456"
+        m = TIMESTAMP_PATTERN.match(inner)
+        if m:
+            groups = m.groups()
+            if groups[2] is not None:
+                secs = groups[2].replace(":", "")
+                us = microseconds(
+                    groups[0], groups[1], secs, groups[3]
+                )
+            else:
+                us = microseconds(0, groups[0], groups[1], groups[3])
+            return CaptionNode.create_style(True, {"timestamp": us})
+
+        # Opening tag: extract tag name, optional .classes, optional annotation
+        # Examples: "i", "c.yellow", "lang en"
+        tag_name, class_suffix, annotation = self._parse_opening_tag(inner)
+        if tag_name in KNOWN_TAGS:
+            content = self._tag_content(tag_name, class_suffix, annotation)
+            return CaptionNode.create_style(True, content)
+
+        # Unrecognized — treat as literal text (e.g. "<LAUGHING & WHOOPS!>")
+        text = self._decode_entities(tag_str)
+        return CaptionNode.create_text(text)
+
+    @staticmethod
+    def _parse_opening_tag(inner):
+        """Parse the inside of an opening tag into
+        (name, class_suffix, annotation).
+
+        "i"          -> ("i", None, None)
+        "c.yellow"   -> ("c", "yellow", None)
+        "lang en"    -> ("lang", None, "en")
+        "c.a.b"      -> ("c", "a.b", None)
+
+        :param inner: Tag content without angle brackets
+        :returns: tuple (tag_name, class_suffix, annotation)
+        """
+        # Split on first space for annotation (e.g. "lang en-US")
+        if " " in inner:
+            tag_part, annotation = inner.split(" ", 1)
+        else:
+            tag_part, annotation = inner, None
+
+        # Split on first dot for class suffix (e.g. "c.yellow.highlight")
+        if "." in tag_part:
+            tag_name, class_suffix = tag_part.split(".", 1)
+        else:
+            tag_name, class_suffix = tag_part, None
+
+        return tag_name, class_suffix, annotation
+
+    @staticmethod
+    def _tag_content(tag_name, class_suffix=None, annotation=None):
+        """Build the style content dict for a tag.
+
+        :returns: dict
+        """
+        if tag_name == "i":
+            return {"italics": True}
+        elif tag_name == "b":
+            return {"bold": True}
+        elif tag_name == "u":
+            return {"underline": True}
+        elif tag_name == "c":
+            classes = class_suffix.split(".") if class_suffix else []
+            return {"classes": classes}
+        elif tag_name == "lang":
+            return {"lang": annotation.strip() if annotation else ""}
+        elif tag_name == "ruby":
+            return {"ruby": True}
+        elif tag_name == "rt":
+            return {"ruby_text": True}
+        return {}
+
+    @staticmethod
+    def _decode_entities(text):
+        """Decode WebVTT character entities in a text segment.
+
+        :type text: str
+        :rtype: str
+        """
+        text = text.replace("&lt;", "<")
+        text = text.replace("&gt;", ">")
+        text = text.replace("&lrm;", "‎")
+        text = text.replace("&rlm;", "‏")
+        text = text.replace("&nbsp;", " ")
+        text = text.replace("&amp;", "&")
+        return text
 
     def _parse_regions(self, lines):
         """Parse REGION blocks from the file header area.
@@ -574,20 +734,24 @@ class WebVTTWriter(BaseWriter):
                     node.content, caption_set
                 )
 
+                has_text_style = False
                 styles = ["italics", "underline", "bold"]
                 if not node.start:
                     styles.reverse()
 
                 for style in styles:
                     if style in resulting_style and resulting_style[style]:
+                        has_text_style = True
                         tags = self._convert_style_to_text_tag(style)
                         if node.start:
                             s += tags[0]
                         else:
                             s += tags[1]
 
-                # TODO: Refactor pycaption and eliminate the concept of a
-                # "Style node"
+                if not has_text_style:
+                    s += self._convert_structural_tag(
+                        node.content, node.start
+                    )
             elif node.type_ == CaptionNode.BREAK:
                 if i > 0 and nodes[i - 1].type_ != CaptionNode.TEXT:
                     s += "&nbsp;"
@@ -622,3 +786,34 @@ class WebVTTWriter(BaseWriter):
         # s = s.replace('\u200f', '&rlm;')
         # s = s.replace('\u00a0', '&nbsp;')
         return s
+
+    def _convert_structural_tag(self, content, is_start):
+        """Convert a structural style node back into a WebVTT tag string.
+
+        Structural tags are WebVTT-specific (class, lang, ruby, timestamp).
+        Other writers silently ignore these keys.
+
+        :param content: The style node's content dict
+        :param is_start: True for opening tag, False for closing
+        :returns: str
+        """
+        if "lang" in content:
+            if is_start:
+                lang = content["lang"]
+                return f"<lang {lang}>" if lang else "<lang>"
+            return "</lang>"
+        elif "classes" in content:
+            if is_start:
+                classes = content["classes"]
+                class_str = "." + ".".join(classes) if classes else ""
+                return f"<c{class_str}>"
+            return "</c>"
+        elif "ruby" in content:
+            return "<ruby>" if is_start else "</ruby>"
+        elif "ruby_text" in content:
+            return "<rt>" if is_start else "</rt>"
+        elif "timestamp" in content:
+            if is_start:
+                return f"<{self._timestamp(content['timestamp'])}>"
+            return ""
+        return ""
