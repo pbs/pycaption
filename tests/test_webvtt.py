@@ -640,3 +640,75 @@ class TestWebVTTInlineMarkupParsing:
         assert nodes[7].content == "underline"
         assert nodes[8].content == {"underline": True}
         assert nodes[8].start is False
+
+    def test_unclosed_tag_auto_closed_at_cue_end(self):
+        from pycaption.base import CaptionNode
+
+        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\n<i>no close\n"
+        captions = self.reader.read(vtt)
+        cue = captions.get_captions("en-US")[0]
+        nodes = cue.nodes
+        assert nodes[0].type_ == CaptionNode.STYLE
+        assert nodes[0].content == {"italics": True}
+        assert nodes[0].start is True
+        assert nodes[1].type_ == CaptionNode.TEXT
+        assert nodes[1].content == "no close"
+        # Auto-closed at cue end
+        assert nodes[2].type_ == CaptionNode.STYLE
+        assert nodes[2].content == {"italics": True}
+        assert nodes[2].start is False
+
+    def test_multiple_unclosed_tags_closed_in_reverse_order(self):
+        from pycaption.base import CaptionNode
+
+        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\n<b><i>text\n"
+        captions = self.reader.read(vtt)
+        cue = captions.get_captions("en-US")[0]
+        nodes = cue.nodes
+        # open bold, open italic, text, auto-close italic, auto-close bold
+        assert nodes[0].content == {"bold": True}
+        assert nodes[0].start is True
+        assert nodes[1].content == {"italics": True}
+        assert nodes[1].start is True
+        assert nodes[2].content == "text"
+        assert nodes[3].content == {"italics": True}
+        assert nodes[3].start is False
+        assert nodes[4].content == {"bold": True}
+        assert nodes[4].start is False
+
+    def test_partially_closed_tags_only_unclosed_auto_closed(self):
+        from pycaption.base import CaptionNode
+
+        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\n<b><i>text</i>\n"
+        captions = self.reader.read(vtt)
+        cue = captions.get_captions("en-US")[0]
+        nodes = cue.nodes
+        # open bold, open italic, text, close italic, auto-close bold
+        assert nodes[0].content == {"bold": True}
+        assert nodes[0].start is True
+        assert nodes[1].content == {"italics": True}
+        assert nodes[1].start is True
+        assert nodes[2].content == "text"
+        assert nodes[3].content == {"italics": True}
+        assert nodes[3].start is False
+        assert nodes[4].content == {"bold": True}
+        assert nodes[4].start is False
+
+    def test_unclosed_tag_spanning_multiline_cue(self):
+        from pycaption.base import CaptionNode
+
+        vtt = (
+            "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\n"
+            "<i>line one\nline two\n"
+        )
+        captions = self.reader.read(vtt)
+        cue = captions.get_captions("en-US")[0]
+        nodes = cue.nodes
+        assert nodes[0].content == {"italics": True}
+        assert nodes[0].start is True
+        assert nodes[1].content == "line one"
+        assert nodes[2].type_ == CaptionNode.BREAK
+        assert nodes[3].content == "line two"
+        # Auto-closed at cue end
+        assert nodes[4].content == {"italics": True}
+        assert nodes[4].start is False

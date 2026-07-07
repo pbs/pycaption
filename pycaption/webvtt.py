@@ -114,6 +114,7 @@ class WebVTTReader(BaseReader):
         start = None
         end = None
         nodes = []
+        open_tags = []
         layout_info = None
         found_timing = False
 
@@ -141,16 +142,18 @@ class WebVTTReader(BaseReader):
                 # If we were collecting a cue, finalize and store it.
                 if found_timing and nodes:
                     found_timing = False
+                    self._close_unclosed_tags(nodes, open_tags)
                     caption = Caption(start, end, nodes, layout_info=layout_info)
                     captions.append(caption)
                     nodes = []
+                    open_tags = []
             else:
                 if found_timing:
                     # We're inside a cue — this line is cue text.
                     # Add a line break between multi-line cue text.
                     if nodes:
                         nodes.append(CaptionNode.create_break())
-                    nodes.extend(self._parse_cue_text(line))
+                    nodes.extend(self._parse_cue_text(line, open_tags))
                 else:
                     # Outside a cue: cue identifiers, NOTE blocks,
                     # or other metadata — skip silently.
@@ -158,6 +161,7 @@ class WebVTTReader(BaseReader):
 
         # File may not end with a blank line — emit any remaining cue
         if nodes:
+            self._close_unclosed_tags(nodes, open_tags)
             caption = Caption(start, end, nodes, layout_info=layout_info)
             captions.append(caption)
 
@@ -226,7 +230,7 @@ class WebVTTReader(BaseReader):
             # Timestamp of the form [minutes]:[seconds].[milliseconds]
             return microseconds(0, m[0], m[1], m[3])
 
-    def _parse_cue_text(self, line):
+    def _parse_cue_text(self, line, open_tags=None):
         """Parse a single line of WebVTT cue text into a list of CaptionNodes.
 
         Converts inline markup tags into CaptionNode.STYLE open/close pairs
@@ -236,6 +240,9 @@ class WebVTTReader(BaseReader):
         "Speaker: " prefix), matching the legacy behavior.
 
         :param line: A single line of cue text (raw WebVTT)
+        :param open_tags: Mutable list tracking unclosed tag content dicts
+            across lines within a cue. Callers pass the same list for each
+            line so unclosed tags can be auto-closed at cue end.
         :returns: list of CaptionNode
         """
         line = line.strip()
@@ -263,8 +270,33 @@ class WebVTTReader(BaseReader):
                 node = self._classify_tag(part)
                 if node is not None:
                     nodes.append(node)
+                    if open_tags is not None and node.type_ == CaptionNode.STYLE:
+                        if "timestamp" in node.content:
+                            pass
+                        elif node.start:
+                            open_tags.append(node.content)
+                        else:
+                            self._pop_matching_tag(open_tags, node.content)
 
         return nodes
+
+    @staticmethod
+    def _pop_matching_tag(open_tags, content):
+        """Remove the most recent matching open tag from the stack."""
+        for j in range(len(open_tags) - 1, -1, -1):
+            if open_tags[j] == content:
+                open_tags.pop(j)
+                break
+
+    @staticmethod
+    def _close_unclosed_tags(nodes, open_tags):
+        """Emit closing STYLE nodes for any tags left open at cue end.
+
+        Per W3C WebVTT spec, unclosed tags are implicitly closed at the
+        end of the cue. Closing order is reverse of opening (LIFO).
+        """
+        for content in reversed(open_tags):
+            nodes.append(CaptionNode.create_style(False, content))
 
     def _classify_tag(self, tag_str):
         """Classify a captured tag string and return the appropriate
