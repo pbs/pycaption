@@ -13,6 +13,8 @@ Changelog
     prevents double-emission when nodes already resolve to i/b/u tags.
   - Unrecognized angle-bracket content (e.g. <LAUGHING>) is now
     preserved as literal text instead of being silently dropped.
+  - Auto-close unclosed inline tags at cue end per W3C spec,
+    preventing unbalanced nodes that produce invalid output.
 
 2.2.26
 ^^^^^^
