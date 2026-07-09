@@ -2,6 +2,7 @@ from tests.fixtures.dfxp import (  # noqa: F401
     dfxp_style_region_align_conflict,
     dfxp_with_concurrent_captions,
     sample_dfxp,
+    sample_dfxp_concurrent_with_empty_p,
     sample_dfxp_default_styling_p_tags,
     sample_dfxp_empty,
     sample_dfxp_empty_cue,
@@ -45,7 +46,6 @@ from tests.fixtures.dfxp import (  # noqa: F401
     sample_dfxp_with_relativized_positioning,
     sample_dfxp_with_templated_style,
     sample_dfxp_without_region_and_style,
-    sample_dfxp_concurrent_with_empty_p,
 )
 from tests.fixtures.microdvd import missing_fps_sample_microdvd  # noqa: F401
 from tests.fixtures.microdvd import (
@@ -90,8 +90,8 @@ from tests.fixtures.sami import (
 from tests.fixtures.scc import (  # noqa: F401
     sample_no_positioning_at_all_scc,
     sample_scc_created_dfxp_with_wrongly_closing_spans,
-    sample_scc_duplicate_special_characters,
     sample_scc_doubled_mid_row_before_punctuation,
+    sample_scc_duplicate_special_characters,
     sample_scc_duplicate_tab_offset,
     sample_scc_empty,
     sample_scc_eoc_first_command,
@@ -111,6 +111,7 @@ from tests.fixtures.scc import (  # noqa: F401
     sample_scc_multiple_formats,
     sample_scc_multiple_positioning,
     sample_scc_no_explicit_end_to_last_caption,
+    sample_scc_paint_on_edm,
     sample_scc_pop_on,
     sample_scc_produces_captions_with_start_and_end_time_the_same,
     sample_scc_roll_up_ru2,
@@ -125,12 +126,11 @@ from tests.fixtures.scc import (  # noqa: F401
     sample_scc_with_spaces_at_eol_pop,
     sample_scc_with_spaces_at_eol_roll,
     sample_scc_with_unknown_commands,
-    sample_scc_paint_on_edm,
     scc_that_generates_webvtt_with_proper_newlines,
 )
+from tests.fixtures.srt import sample_srt_ascii  # noqa: F401
 from tests.fixtures.srt import (
     sample_srt,
-    sample_srt_ascii,  # noqa: F401
     sample_srt_blank_lines,
     sample_srt_empty,
     sample_srt_empty_cue_output,
@@ -149,6 +149,7 @@ from tests.fixtures.translated_scc import (  # noqa: F401
 from tests.fixtures.webvtt import (  # noqa: F401
     sample_webvtt,
     sample_webvtt_2,
+    sample_webvtt_bad_case_header,
     sample_webvtt_double_br,
     sample_webvtt_empty,
     sample_webvtt_empty_cue,
@@ -166,12 +167,19 @@ from tests.fixtures.webvtt import (  # noqa: F401
     sample_webvtt_last_cue_zero_start,
     sample_webvtt_multi_lang_de,
     sample_webvtt_multi_lang_en,
+    sample_webvtt_no_blank_after_header,
+    sample_webvtt_no_header,
+    sample_webvtt_note_with_arrow,
+    sample_webvtt_numeric_entities,
     sample_webvtt_output_long_cue,
+    sample_webvtt_style_with_arrow,
     sample_webvtt_timestamps,
+    sample_webvtt_with_bom,
     sample_webvtt_with_combined_settings,
     sample_webvtt_with_cue_settings,
     sample_webvtt_with_inline_style,
     sample_webvtt_with_line_integer,
+    sample_webvtt_with_note_block,
     sample_webvtt_with_position_and_line,
     sample_webvtt_with_size_and_align,
     sample_webvtt_with_structural_tags,

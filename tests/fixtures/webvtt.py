@@ -136,7 +136,7 @@ def sample_webvtt_from_dfxp_with_style():
 
 00:09.209 --> 00:12.312
 This is <i>italic</i>, <b>bold</b>, <u>underline</u>, <i><u><b>everything together in one tag</b></u></i>, and <u><b><i>nested</i></b></u>.
-"""
+"""  # noqa: E501
 
 
 @pytest.fixture(scope="session")
@@ -155,7 +155,7 @@ Hello there, children! Have you seen any visitors?
 00:07.500 --> 00:09.000 align:right position:25% line:75% size:25%
 This is
 the last cue
-"""
+"""  # noqa: E501
 
 
 @pytest.fixture(scope="session")
@@ -174,7 +174,7 @@ Hello there, children! Have you seen any visitors?
 00:07.500 --> 00:09.000 align:right position:25% line:75% size:25%
 This is
 the last cue
-"""
+"""  # noqa: E501
 
 
 @pytest.fixture(scope="session")
@@ -537,3 +537,60 @@ STYLE
 00:00:01.000 --> 00:00:03.000
 <b>Bold text</b>
 """
+
+
+@pytest.fixture(scope="session")
+def sample_webvtt_with_bom():
+    return "﻿WEBVTT\n\n00:00:01.000 --> 00:00:03.000\nHello\n"
+
+
+@pytest.fixture(scope="session")
+def sample_webvtt_no_header():
+    return "00:00:01.000 --> 00:00:03.000\nHello\n"
+
+
+@pytest.fixture(scope="session")
+def sample_webvtt_bad_case_header():
+    return "webvtt\n\n00:00:01.000 --> 00:00:03.000\nHello\n"
+
+
+@pytest.fixture(scope="session")
+def sample_webvtt_no_blank_after_header():
+    return "WEBVTT\n00:00:01.000 --> 00:00:03.000\nHello\n"
+
+
+@pytest.fixture(scope="session")
+def sample_webvtt_with_note_block():
+    return (
+        "WEBVTT\n\n"
+        "NOTE This is a comment\n\n"
+        "00:00:01.000 --> 00:00:03.000\n"
+        "Hello\n"
+    )
+
+
+@pytest.fixture(scope="session")
+def sample_webvtt_note_with_arrow():
+    return (
+        "WEBVTT\n\n"
+        "NOTE This contains --> an arrow\n\n"
+        "00:00:01.000 --> 00:00:03.000\n"
+        "Hello\n"
+    )
+
+
+@pytest.fixture(scope="session")
+def sample_webvtt_style_with_arrow():
+    return (
+        "WEBVTT\n\n"
+        "STYLE\n"
+        "/* --> */\n"
+        "::cue { color: white }\n\n"
+        "00:00:01.000 --> 00:00:03.000\n"
+        "Hello\n"
+    )
+
+
+@pytest.fixture(scope="session")
+def sample_webvtt_numeric_entities():
+    return "WEBVTT\n\n" "00:00:01.000 --> 00:00:03.000\n" "&#169; and &#x266B;\n"

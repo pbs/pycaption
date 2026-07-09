@@ -81,9 +81,7 @@ class TestWebVTTReader(ReaderTestingMixIn):
         )
         from pycaption.base import CaptionNode
 
-        text = "".join(
-            n.content for n in nodes if n.type_ == CaptionNode.TEXT
-        )
+        text = "".join(n.content for n in nodes if n.type_ == CaptionNode.TEXT)
         expected = (
             "Wikipedia is a great adventure. It may have "
             "its shortcomings, but it is the largest collective "
@@ -100,17 +98,19 @@ class TestWebVTTReader(ReaderTestingMixIn):
         # todo: same assert w/ different arguments -> this can be parametrized;
         with pytest.raises(CaptionReadError):
             WebVTTReader(ignore_timing_errors=False).read(
-                "\n" "00:00:20.000 --> 00:00:10.000\n" "foo bar baz"
+                "WEBVTT\n\n" "00:00:20.000 --> 00:00:10.000\n" "foo bar baz"
             )
 
         with pytest.raises(CaptionReadError):
             WebVTTReader(ignore_timing_errors=False).read(
+                "WEBVTT\n\n"
                 "00:00:20.000 --> 00:00:10.000\n"
                 "Start time is greater than end time.\n"
             )
 
         with pytest.raises(CaptionReadError):
             WebVTTReader(ignore_timing_errors=False).read(
+                "WEBVTT\n\n"
                 "00:00:20.000 --> 00:00:30.000\n"
                 "Start times should be consecutive.\n"
                 "\n"
@@ -122,19 +122,23 @@ class TestWebVTTReader(ReaderTestingMixIn):
         # Even if timing errors are ignored, this has to raise an exception
         with pytest.raises(CaptionReadSyntaxError):
             WebVTTReader().read(
-                "\nNOTE invalid cue stamp\n" "00:00:20.000 --> \nfoo bar baz\n"
+                "WEBVTT\n\n"
+                "NOTE invalid cue stamp\n\n"
+                "00:00:20.000 --> \nfoo bar baz\n"
             )
 
         # And this too
         with pytest.raises(CaptionReadSyntaxError):
             WebVTTReader().read(
-                "\n00:00:20,000 --> 00:00:22,000\n" "Note the comma instead of point.\n"
+                "WEBVTT\n\n"
+                "00:00:20,000 --> 00:00:22,000\n"
+                "Note the comma instead of point.\n"
             )
 
         # todo: at this point it can be split into 2 separate tests
         try:
             WebVTTReader().read(
-                "\n"
+                "WEBVTT\n\n"
                 "00:00:20.000 --> 00:00:10.000\n"
                 "Start time is greater than end time.\n"
             )
@@ -143,7 +147,7 @@ class TestWebVTTReader(ReaderTestingMixIn):
 
         try:
             WebVTTReader().read(
-                "\n"
+                "WEBVTT\n\n"
                 "00:00:20.000 --> 00:00:30.000\n"
                 "Start times should be consecutive.\n"
                 "\n"
@@ -156,11 +160,14 @@ class TestWebVTTReader(ReaderTestingMixIn):
     def test_invalid_files(self):
         with pytest.raises(CaptionReadError):
             WebVTTReader(ignore_timing_errors=False).read(
-                "00:00:20.000 --> 00:00:10.000\n" "Start time is greater than end time."
+                "WEBVTT\n\n"
+                "00:00:20.000 --> 00:00:10.000\n"
+                "Start time is greater than end time."
             )
 
         with pytest.raises(CaptionReadError):
             WebVTTReader(ignore_timing_errors=False).read(
+                "WEBVTT\n\n"
                 "00:00:20.000 --> 00:00:30.000\n"
                 "Start times should be consecutive.\n"
                 "\n"
@@ -475,9 +482,7 @@ class TestWebVTTInlineMarkupParsing:
     def test_ruby_and_rt_tags(self):
         from pycaption.base import CaptionNode
 
-        nodes = self.reader._parse_cue_text(
-            "<ruby>base<rt>annotation</rt></ruby>"
-        )
+        nodes = self.reader._parse_cue_text("<ruby>base<rt>annotation</rt></ruby>")
         assert nodes[0].content == {"ruby": True}
         assert nodes[0].start is True
         assert nodes[1].type_ == CaptionNode.TEXT
@@ -495,10 +500,7 @@ class TestWebVTTInlineMarkupParsing:
         from pycaption.webvtt import microseconds
 
         nodes = self.reader._parse_cue_text("text <00:01:23.456> more")
-        ts_nodes = [
-            n for n in nodes
-            if n.type_ == 2 and "timestamp" in n.content
-        ]
+        ts_nodes = [n for n in nodes if n.type_ == 2 and "timestamp" in n.content]
         assert len(ts_nodes) == 1
         assert ts_nodes[0].content["timestamp"] == microseconds(0, 1, 23, 456)
         assert ts_nodes[0].start is True
@@ -507,10 +509,7 @@ class TestWebVTTInlineMarkupParsing:
         from pycaption.webvtt import microseconds
 
         nodes = self.reader._parse_cue_text("text <01:23.456> more")
-        ts_nodes = [
-            n for n in nodes
-            if n.type_ == 2 and "timestamp" in n.content
-        ]
+        ts_nodes = [n for n in nodes if n.type_ == 2 and "timestamp" in n.content]
         assert len(ts_nodes) == 1
         assert ts_nodes[0].content["timestamp"] == microseconds(0, 1, 23, 456)
 
@@ -539,9 +538,7 @@ class TestWebVTTInlineMarkupParsing:
         assert "Roger: " in combined
         assert "Hello" in combined
 
-    def test_full_caption_read_with_styles(
-        self, sample_webvtt_with_inline_style
-    ):
+    def test_full_caption_read_with_styles(self, sample_webvtt_with_inline_style):
         from pycaption.base import CaptionNode
 
         captions = self.reader.read(sample_webvtt_with_inline_style)
@@ -555,12 +552,10 @@ class TestWebVTTInlineMarkupParsing:
         assert any(n.content == "Hello " for n in text_nodes)
         assert any(n.content == "world" for n in text_nodes)
         assert any(
-            n.content == {"italics": True} and n.start is True
-            for n in style_nodes
+            n.content == {"italics": True} and n.start is True for n in style_nodes
         )
         assert any(
-            n.content == {"italics": True} and n.start is False
-            for n in style_nodes
+            n.content == {"italics": True} and n.start is False for n in style_nodes
         )
 
     def test_full_caption_read_with_structural_tags(
@@ -587,10 +582,7 @@ class TestWebVTTInlineMarkupParsing:
     def test_multiline_cue_with_style_spanning_lines(self):
         from pycaption.base import CaptionNode
 
-        vtt = (
-            "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\n"
-            "<i>line one\nline two</i>\n"
-        )
+        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\n" "<i>line one\nline two</i>\n"
         captions = self.reader.read(vtt)
         cue = captions.get_captions("en-US")[0]
         nodes = cue.nodes
@@ -628,9 +620,7 @@ class TestWebVTTInlineMarkupParsing:
         assert nodes == []
 
     def test_adjacent_different_style_tags(self):
-        nodes = self.reader._parse_cue_text(
-            "<i>italic</i><b>bold</b><u>underline</u>"
-        )
+        nodes = self.reader._parse_cue_text("<i>italic</i><b>bold</b><u>underline</u>")
         assert len(nodes) == 9
         assert nodes[0].content == {"italics": True}
         assert nodes[0].start is True
@@ -704,10 +694,7 @@ class TestWebVTTInlineMarkupParsing:
     def test_unclosed_tag_spanning_multiline_cue(self):
         from pycaption.base import CaptionNode
 
-        vtt = (
-            "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\n"
-            "<i>line one\nline two\n"
-        )
+        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\n" "<i>line one\nline two\n"
         captions = self.reader.read(vtt)
         cue = captions.get_captions("en-US")[0]
         nodes = cue.nodes
@@ -725,12 +712,8 @@ class TestWebVTTCueSettingsParsing:
     def setup_method(self):
         self.reader = WebVTTReader()
 
-    def test_position_and_line_percent(
-        self, sample_webvtt_with_position_and_line
-    ):
-        captions = self.reader.read(
-            sample_webvtt_with_position_and_line
-        )
+    def test_position_and_line_percent(self, sample_webvtt_with_position_and_line):
+        captions = self.reader.read(sample_webvtt_with_position_and_line)
         cue = captions.get_captions("en-US")[0]
         layout = cue.layout_info
 
@@ -843,9 +826,7 @@ class TestWebVTTStyleBlockParsing:
         styles = dict(captions.get_styles())
 
         assert "::cue" in styles
-        assert styles["::cue"] == {
-            "color": "white", "background-color": "black"
-        }
+        assert styles["::cue"] == {"color": "white", "background-color": "black"}
 
     def test_multiple_properties(self, sample_webvtt_with_style_and_class_span):
         captions = self.reader.read(sample_webvtt_with_style_and_class_span)
@@ -874,12 +855,8 @@ class TestWebVTTStyleBlockParsing:
                 assert node.content.get("color") == "white"
                 break
 
-    def test_class_resolved_into_node(
-        self, sample_webvtt_with_style_block_class
-    ):
-        captions = self.reader.read(
-            sample_webvtt_with_style_block_class
-        )
+    def test_class_resolved_into_node(self, sample_webvtt_with_style_block_class):
+        captions = self.reader.read(sample_webvtt_with_style_block_class)
         cue = captions.get_captions("en-US")[0]
 
         for node in cue.nodes:
@@ -889,13 +866,145 @@ class TestWebVTTStyleBlockParsing:
                 assert node.content["classes"] == ["yellow"]
                 break
 
-    def test_tag_selector_ignored(
-        self, sample_webvtt_with_style_block_tag_selector
-    ):
-        captions = self.reader.read(
-            sample_webvtt_with_style_block_tag_selector
-        )
+    def test_tag_selector_ignored(self, sample_webvtt_with_style_block_tag_selector):
+        captions = self.reader.read(sample_webvtt_with_style_block_tag_selector)
         styles = dict(captions.get_styles())
 
         assert "b" not in styles
         assert "::cue(b)" not in styles
+
+
+class TestWebVTTInputValidation:
+    """Tests for input validation hardening."""
+
+    def setup_method(self):
+        self.reader = WebVTTReader()
+
+    # --- Header & Encoding ---
+
+    def test_valid_header_accepted(self, sample_webvtt):
+        captions = self.reader.read(sample_webvtt)
+        assert len(captions.get_captions("en-US")) > 0
+
+    def test_header_with_description_accepted(self):
+        vtt = "WEBVTT - This is a description\n\n00:00:01.000 --> 00:00:03.000\nHello\n"
+        captions = self.reader.read(vtt)
+        assert len(captions.get_captions("en-US")) == 1
+
+    def test_header_with_tab_description_accepted(self):
+        vtt = "WEBVTT\tKind: captions\n\n00:00:01.000 --> 00:00:03.000\nHello\n"
+        captions = self.reader.read(vtt)
+        assert len(captions.get_captions("en-US")) == 1
+
+    def test_missing_header_raises(self, sample_webvtt_no_header):
+        with pytest.raises(CaptionReadSyntaxError):
+            self.reader.read(sample_webvtt_no_header)
+
+    def test_wrong_case_header_raises(self, sample_webvtt_bad_case_header):
+        with pytest.raises(CaptionReadSyntaxError):
+            self.reader.read(sample_webvtt_bad_case_header)
+
+    def test_webvtt_substring_only_rejected(self):
+        vtt = (
+            "This file mentions WEBVTT but isn't one\n\n"
+            "00:00:01.000 --> 00:00:03.000\nHello\n"
+        )
+        assert self.reader.detect(vtt) is False
+        with pytest.raises(CaptionReadSyntaxError):
+            self.reader.read(vtt)
+
+    def test_no_blank_after_header_raises(self, sample_webvtt_no_blank_after_header):
+        with pytest.raises(CaptionReadSyntaxError):
+            self.reader.read(sample_webvtt_no_blank_after_header)
+
+    def test_bom_stripped_before_parsing(self, sample_webvtt_with_bom):
+        captions = self.reader.read(sample_webvtt_with_bom)
+        assert len(captions.get_captions("en-US")) == 1
+
+    def test_detect_with_bom(self, sample_webvtt_with_bom):
+        assert self.reader.detect(sample_webvtt_with_bom) is True
+
+    def test_crlf_line_endings(self):
+        vtt = "WEBVTT\r\n\r\n00:00:01.000 --> 00:00:03.000\r\nHello\r\n"
+        captions = self.reader.read(vtt)
+        assert len(captions.get_captions("en-US")) == 1
+
+    def test_cr_line_endings(self):
+        vtt = "WEBVTT\r\r00:00:01.000 --> 00:00:03.000\rHello\r"
+        captions = self.reader.read(vtt)
+        assert len(captions.get_captions("en-US")) == 1
+
+    # --- Entity Decoding ---
+
+    def test_decimal_numeric_entity(self):
+        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\n&#169;\n"
+        captions = self.reader.read(vtt)
+        assert "©" in captions.get_captions("en-US")[0].get_text()
+
+    def test_hex_numeric_entity(self):
+        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\n&#x266B;\n"
+        captions = self.reader.read(vtt)
+        assert "♫" in captions.get_captions("en-US")[0].get_text()
+
+    def test_invalid_numeric_entity_preserved(self):
+        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\n&#xZZZZ;\n"
+        captions = self.reader.read(vtt)
+        assert "&#xZZZZ;" in captions.get_captions("en-US")[0].get_text()
+
+    def test_numeric_entity_full_read(self, sample_webvtt_numeric_entities):
+        captions = self.reader.read(sample_webvtt_numeric_entities)
+        text = captions.get_captions("en-US")[0].get_text()
+        assert "©" in text
+        assert "♫" in text
+
+    def test_amp_entity_not_double_decoded(self):
+        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\n&amp;#65;\n"
+        captions = self.reader.read(vtt)
+        assert "&#65;" in captions.get_captions("en-US")[0].get_text()
+
+    # --- Special Blocks ---
+
+    def test_note_block_skipped(self, sample_webvtt_with_note_block):
+        captions = self.reader.read(sample_webvtt_with_note_block)
+        cues = captions.get_captions("en-US")
+        assert len(cues) == 1
+        assert cues[0].get_text() == "Hello"
+
+    def test_note_with_arrow_not_treated_as_timing(self, sample_webvtt_note_with_arrow):
+        captions = self.reader.read(sample_webvtt_note_with_arrow)
+        cues = captions.get_captions("en-US")
+        assert len(cues) == 1
+        assert cues[0].get_text() == "Hello"
+
+    def test_multiline_note_block_skipped(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "NOTE\n"
+            "This is a multi-line\n"
+            "comment block\n\n"
+            "00:00:01.000 --> 00:00:03.000\n"
+            "Hello\n"
+        )
+        captions = self.reader.read(vtt)
+        cues = captions.get_captions("en-US")
+        assert len(cues) == 1
+        assert cues[0].get_text() == "Hello"
+
+    def test_style_with_arrow_not_treated_as_timing(
+        self, sample_webvtt_style_with_arrow
+    ):
+        captions = self.reader.read(sample_webvtt_style_with_arrow)
+        cues = captions.get_captions("en-US")
+        assert len(cues) == 1
+
+    # --- Unicode ---
+
+    def test_unicode_not_normalized(self):
+        # U+00E9 (pre-composed e-acute) vs U+0065 U+0301 (decomposed)
+        precomposed = "é"
+        decomposed = "é"
+        vtt = f"WEBVTT\n\n00:00:01.000 --> 00:00:03.000\n{precomposed} {decomposed}\n"
+        captions = self.reader.read(vtt)
+        text = captions.get_captions("en-US")[0].get_text()
+        assert precomposed in text
+        assert decomposed in text
