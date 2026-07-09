@@ -10,6 +10,7 @@ from pycaption import (
     WebVTTReader,
     WebVTTWriter,
 )
+from pycaption.base import CaptionNode
 from tests.mixins import DFXPTestingMixIn, MicroDVDTestingMixIn, WebVTTTestingMixIn
 
 
@@ -250,3 +251,81 @@ class TestWebVTTStyleCrossFormat:
         result = DFXPWriter().write(caption_set)
         assert "<lang" not in result
         assert "Bonjour" in result
+
+
+class TestWebVTTCueSettingsConversion:
+    def test_cue_settings_to_dfxp(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "00:00:01.000 --> 00:00:03.000 position:50% line:80% align:center\n"
+            "Hello world\n"
+        )
+        caption_set = WebVTTReader().read(vtt)
+        result = DFXPWriter().write(caption_set)
+
+        assert "tts:origin" in result
+        assert "tts:textAlign" in result
+
+    def test_cue_settings_to_dfxp_text_align(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "00:00:01.000 --> 00:00:03.000 line:50% align:end\n"
+            "Hello world\n"
+        )
+        caption_set = WebVTTReader().read(vtt)
+        result = DFXPWriter().write(caption_set)
+
+        assert "end" in result
+
+    def test_vtt_roundtrip_preserves_positioning(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "00:00:01.000 --> 00:00:03.000 position:50% line:80% align:center\n"
+            "Hello world\n"
+        )
+        caption_set = WebVTTReader().read(vtt)
+        result = WebVTTWriter().write(caption_set)
+
+        assert "position:50% line:80% align:center" in result
+
+    def test_style_block_to_sami_no_invalid_selector(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "STYLE\n"
+            "::cue { color: white }\n"
+            "::cue(.yellow) { color: yellow }\n\n"
+            "00:00:01.000 --> 00:00:03.000\n"
+            "<c.yellow>Hello world</c>\n"
+        )
+        caption_set = WebVTTReader().read(vtt)
+        result = SAMIWriter().write(caption_set)
+
+        assert ".::cue" not in result
+        assert "yellow" in result.lower()
+
+    def test_style_class_to_sami(self, sample_webvtt_with_style_block_class):
+        caption_set = WebVTTReader().read(sample_webvtt_with_style_block_class)
+        result = SAMIWriter().write(caption_set)
+
+        assert "yellow" in result.lower()
+
+    def test_style_block_to_dfxp_valid_xml(
+        self, sample_webvtt_with_style_block_class
+    ):
+        from lxml import etree
+
+        caption_set = WebVTTReader().read(
+            sample_webvtt_with_style_block_class
+        )
+        result = DFXPWriter().write(caption_set)
+
+        etree.fromstring(result.encode("utf-8"))
+        assert "::cue" not in result
+
+    def test_style_class_to_webvtt_preserves_tag(
+        self, sample_webvtt_with_style_block_class
+    ):
+        caption_set = WebVTTReader().read(sample_webvtt_with_style_block_class)
+        result = WebVTTWriter().write(caption_set)
+
+        assert "<c.yellow>" in result

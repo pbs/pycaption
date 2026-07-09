@@ -10,7 +10,16 @@ from .exceptions import (
     CaptionReadSyntaxError,
     InvalidInputError,
 )
-from .geometry import HorizontalAlignmentEnum, Layout, Point, Size, Stretch, UnitEnum
+from .geometry import (
+    Alignment,
+    HorizontalAlignmentEnum,
+    Layout,
+    Point,
+    Size,
+    Stretch,
+    UnitEnum,
+    WritingDirectionEnum,
+)
 
 # A WebVTT timing line has both start/end times and layout related settings
 # (referred to as 'cue settings' in the documentation)
@@ -59,6 +68,27 @@ Matches two percentage values (integer or decimal) separated by a comma:
 0%,0%
 100%,100%
 """
+CUE_SETTING_PATTERN = re.compile(
+    r"(position|line|size|align|vertical):([\w.%-]+)"
+)
+"""
+Matches individual cue settings from the timing line:
+position:50%  line:75%  size:80%  align:center  vertical:rl
+"""
+STYLE_SELECTOR_PATTERN = re.compile(
+    r"::cue(?:\((\.?[\w-]+)\))?\s*\{([^}]*)\}"
+)
+"""
+Matches ::cue selectors with their declaration blocks:
+::cue { color: white }           -> group(1)=None
+::cue(.yellow) { color: yellow } -> group(1)=".yellow"
+::cue(b) { color: red }          -> group(1)="b"
+group(2) is always the declarations between { }.
+Class selectors have a leading dot; tag selectors do not.
+"""
+
+LINE_GRID_SIZE = 15
+
 LINE_HEIGHT_VH = 5.33
 
 WEBVTT_VERSION_OF = {
@@ -70,6 +100,14 @@ WEBVTT_VERSION_OF = {
 }
 
 DEFAULT_ALIGN = "start"
+
+ALIGN_SETTING_MAP = {
+    "start": HorizontalAlignmentEnum.START,
+    "center": HorizontalAlignmentEnum.CENTER,
+    "end": HorizontalAlignmentEnum.END,
+    "left": HorizontalAlignmentEnum.LEFT,
+    "right": HorizontalAlignmentEnum.RIGHT,
+}
 
 
 def microseconds(h, m, s, f):
@@ -100,7 +138,11 @@ class WebVTTReader(BaseReader):
         if not isinstance(content, str):
             raise InvalidInputError("The content is not a unicode string.")
 
-        caption_set = CaptionSet({lang: self._parse(content.splitlines())})
+        lines = content.splitlines()
+        styles = self._parse_style_blocks(lines)
+        captions = self._parse(lines)
+        self._resolve_cue_styles(captions, styles)
+        caption_set = CaptionSet({lang: captions}, styles=styles)
 
         if caption_set.is_empty():
             raise CaptionReadNoCaptions("empty caption file")
@@ -182,7 +224,7 @@ class WebVTTReader(BaseReader):
 
     def _parse_timing_line(self, line, last_start_time):
         """
-        :returns: Tuple (int, int, Layout)
+        :returns: Tuple (int, int, Layout or None)
         """
         m = TIMING_LINE_PATTERN.search(line)
         if not m:
@@ -190,7 +232,6 @@ class WebVTTReader(BaseReader):
 
         start = self._parse_timestamp(m.group(1)) + self.time_shift_microseconds
         end = self._parse_timestamp(m.group(2)) + self.time_shift_microseconds
-
         cue_settings = m.group(3)
 
         if not self.ignore_timing_errors:
@@ -199,17 +240,12 @@ class WebVTTReader(BaseReader):
         layout_info = None
         if cue_settings:
             region_id = self._extract_region_id(cue_settings)
-            if region_id and region_id in self._regions:
-                layout_info = self._regions[region_id]
-                layout_info = Layout(
-                    origin=layout_info.origin,
-                    extent=layout_info.extent,
-                    padding=layout_info.padding,
-                    alignment=layout_info.alignment,
-                    webvtt_positioning=cue_settings,
-                )
-            else:
-                layout_info = Layout(webvtt_positioning=cue_settings)
+            region = (
+                self._regions.get(region_id) if region_id else None
+            )
+            layout_info = self._parse_cue_settings(
+                cue_settings, inherit_from=region
+            )
 
         return start, end, layout_info
 
@@ -246,8 +282,6 @@ class WebVTTReader(BaseReader):
         :returns: list of CaptionNode
         """
         line = line.strip()
-        # \2 is the speaker name capture group; replaces the full <v ...> tag
-        # with "Speaker: " so voice identity is preserved as plain text.
         line = VOICE_SPAN_PATTERN.sub(r"\2: ", line)
 
         nodes = []
@@ -548,6 +582,207 @@ class WebVTTReader(BaseReader):
                 return setting[7:]
         return None
 
+    @staticmethod
+    def _parse_percent_value(value):
+        """Parse "50%" into a Size, or return None if invalid."""
+        if not value.endswith("%"):
+            return None
+        try:
+            return Size(float(value[:-1]), UnitEnum.PERCENT)
+        except ValueError:
+            return None
+
+    @staticmethod
+    def _line_number_to_percent(value):
+        """Convert integer line number to viewport percentage
+        using a 15-line grid."""
+        try:
+            line_num = int(value)
+        except ValueError:
+            return None
+
+        if line_num >= 0:
+            return min(line_num / LINE_GRID_SIZE * 100, 100.0)
+        else:
+            return max(
+                (LINE_GRID_SIZE + line_num) / LINE_GRID_SIZE * 100,
+                0.0,
+            )
+
+    @staticmethod
+    def _parse_cue_settings(cue_settings, inherit_from=None):
+        """Parse cue settings string into a Layout object.
+
+        Also preserves the raw string in webvtt_positioning for VTT round-trip.
+        """
+        origin_x = None
+        origin_y = None
+        extent_horizontal = None
+        alignment = None
+        writing_direction = None
+
+        for match in CUE_SETTING_PATTERN.finditer(cue_settings):
+            name, value = match.group(1), match.group(2)
+
+            if name == "position":
+                origin_x = WebVTTReader._parse_percent_value(value)
+
+            elif name == "line":
+                origin_y = WebVTTReader._parse_percent_value(value)
+                if origin_y is None:
+                    pct = WebVTTReader._line_number_to_percent(value)
+                    if pct is not None:
+                        origin_y = Size(pct, UnitEnum.PERCENT)
+
+            elif name == "size":
+                extent_horizontal = WebVTTReader._parse_percent_value(value)
+
+            elif name == "align":
+                if value in ALIGN_SETTING_MAP:
+                    alignment = Alignment(ALIGN_SETTING_MAP[value], None)
+
+            elif name == "vertical":
+                if value == "rl":
+                    writing_direction = WritingDirectionEnum.VERTICAL_RL
+                elif value == "lr":
+                    writing_direction = WritingDirectionEnum.VERTICAL_LR
+
+        # Only create origin when line: is present — position: alone leaves
+        # y unspecified (WebVTT default is "auto"/bottom, not 0%).
+        origin = None
+        if origin_y is not None:
+            x = origin_x if origin_x is not None else Size(0, UnitEnum.PERCENT)
+            origin = Point(x, origin_y)
+
+        extent = None
+        if extent_horizontal is not None:
+            extent = Stretch(extent_horizontal, Size(100, UnitEnum.PERCENT))
+
+        return Layout(
+            origin=origin,
+            extent=extent,
+            alignment=alignment,
+            writing_direction=writing_direction,
+            webvtt_positioning=cue_settings,
+            inherit_from=inherit_from,
+        )
+
+    def _parse_style_blocks(self, lines):
+        """Extract ::cue rules from STYLE blocks before the first cue."""
+        styles = {}
+        in_style_block = False
+        css_text = ""
+
+        for line in lines:
+            if "-->" in line:
+                break
+
+            if line.strip() == "STYLE":
+                in_style_block = True
+                css_text = ""
+            elif in_style_block:
+                if line == "":
+                    if css_text:
+                        self._extract_cue_styles(css_text, styles)
+                    in_style_block = False
+                    css_text = ""
+                else:
+                    css_text += line + "\n"
+
+        if in_style_block and css_text:
+            self._extract_cue_styles(css_text, styles)
+
+        return styles
+
+    @staticmethod
+    def _extract_cue_styles(css_text, styles):
+        """Extract ::cue rules from CSS text into the styles dict.
+
+        Tag selectors (::cue(b)) are skipped — only bare ::cue and
+        class selectors (::cue(.name)) are supported.
+        """
+        for match in STYLE_SELECTOR_PATTERN.finditer(css_text):
+            selector_inner = match.group(1)
+            declarations = match.group(2)
+
+            if selector_inner is None:
+                key = "::cue"
+            elif selector_inner.startswith("."):
+                key = selector_inner[1:]
+            else:
+                continue
+
+            props = WebVTTReader._parse_css_declarations(declarations)
+            if props:
+                if key in styles:
+                    styles[key].update(props)
+                else:
+                    styles[key] = props
+
+    @staticmethod
+    def _parse_css_declarations(declarations):
+        """Parse CSS declarations into pycaption's internal style dict.
+
+        Only maps the 5 properties pycaption can represent; others are ignored.
+        """
+        props = {}
+        for declaration in declarations.split(";"):
+            declaration = declaration.strip()
+            if not declaration or ":" not in declaration:
+                continue
+            prop_name, _, prop_value = declaration.partition(":")
+            prop_name = prop_name.strip().lower()
+            prop_value = prop_value.strip()
+            if not prop_value:
+                continue
+
+            if prop_name == "font-style" and prop_value == "italic":
+                props["italics"] = True
+            elif prop_name == "font-weight" and prop_value in ("bold", "700"):
+                props["bold"] = True
+            elif prop_name == "text-decoration" and "underline" in prop_value:
+                props["underline"] = True
+            elif prop_name == "color":
+                props["color"] = prop_value
+            elif prop_name == "background-color":
+                props["background-color"] = prop_value
+
+        return props
+
+    @staticmethod
+    def _resolve_cue_styles(captions, styles):
+        """Merge ::cue styles into STYLE nodes so all writers
+        get resolved values."""
+        if not styles:
+            return
+
+        base_style = styles.get("::cue", {})
+
+        for caption in captions:
+            for node in caption.nodes:
+                if node.type_ != CaptionNode.STYLE or not node.start:
+                    continue
+
+                content = node.content
+                classes = content.get("classes", [])
+                if not classes and not base_style:
+                    continue
+
+                # Cascade: ::cue base < ::cue(.class)
+                resolved = {}
+                if base_style:
+                    resolved.update(base_style)
+                for class_name in classes:
+                    class_style = styles.get(class_name, {})
+                    if class_style:
+                        resolved.update(class_style)
+
+                # Preserve existing keys ("classes" needed for round-trip)
+                if resolved:
+                    for key, value in resolved.items():
+                        if key not in content:
+                            content[key] = value
+
 
 class WebVTTWriter(BaseWriter):
     HEADER = "WEBVTT\n\n"
@@ -610,7 +845,6 @@ class WebVTTWriter(BaseWriter):
 
         for style_class in style_classes:
             sub_style = caption_set.get_style(style_class).copy()
-            # Recursively resolve class attributes and calculate style
             resulting_style.update(
                 self._calculate_resulting_style(sub_style, caption_set)
             )
@@ -773,18 +1007,27 @@ class WebVTTWriter(BaseWriter):
                 )
 
                 has_text_style = False
-                styles = ["italics", "underline", "bold"]
-                if not node.start:
-                    styles.reverse()
+                # VTT <c.class> nodes have "classes" but not "class".
+                # Preserve them as structural tags even if they carry
+                # resolved text-style properties from STYLE blocks.
+                # DFXP nodes have both "classes" and "class" — those
+                # should resolve to text tags (<i>, <b>, <u>).
+                is_vtt_class_span = (
+                    "classes" in node.content and "class" not in node.content
+                )
+                if not is_vtt_class_span:
+                    styles = ["italics", "underline", "bold"]
+                    if not node.start:
+                        styles.reverse()
 
-                for style in styles:
-                    if style in resulting_style and resulting_style[style]:
-                        has_text_style = True
-                        tags = self._convert_style_to_text_tag(style)
-                        if node.start:
-                            s += tags[0]
-                        else:
-                            s += tags[1]
+                    for style in styles:
+                        if style in resulting_style and resulting_style[style]:
+                            has_text_style = True
+                            tags = self._convert_style_to_text_tag(style)
+                            if node.start:
+                                s += tags[0]
+                            else:
+                                s += tags[1]
 
                 if not has_text_style:
                     s += self._convert_structural_tag(

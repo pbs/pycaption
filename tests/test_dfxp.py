@@ -176,18 +176,21 @@ class TestDFXPReader(ReaderTestingMixIn):
                 None,
                 None,
                 (HorizontalAlignmentEnum.START, VerticalAlignmentEnum.BOTTOM),
+                None,
             ),
             (
                 ((40, UnitEnum.PERCENT), (40, UnitEnum.PERCENT)),
                 None,
                 None,
                 (HorizontalAlignmentEnum.START, VerticalAlignmentEnum.BOTTOM),
+                None,
             ),
             (
                 ((10, UnitEnum.PERCENT), (70, UnitEnum.PERCENT)),
                 None,
                 None,
                 (HorizontalAlignmentEnum.START, VerticalAlignmentEnum.BOTTOM),
+                None,
             ),
         ]
         actual_layouts = [

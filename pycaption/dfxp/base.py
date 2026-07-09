@@ -379,7 +379,7 @@ class DFXPWriter(BaseWriter):
 
         # Create the styles in the <styling> section, or a default style.
         for style_id, style in caption_set.get_styles():
-            if style != {}:
+            if style != {} and not style_id.startswith("::"):
                 dfxp = self._recreate_styling_tag(style_id, style, dfxp)
         if not caption_set.get_styles():
             dfxp = self._recreate_styling_tag(

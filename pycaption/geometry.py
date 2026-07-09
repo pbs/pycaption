@@ -54,6 +54,14 @@ class HorizontalAlignmentEnum(Enum):
     END = "end"
 
 
+class WritingDirectionEnum(Enum):
+    """Specifies WebVTT writing direction (vertical cue setting)."""
+
+    HORIZONTAL = ""
+    VERTICAL_RL = "rl"
+    VERTICAL_LR = "lr"
+
+
 class Alignment:
     def __init__(self, horizontal, vertical):
         """
@@ -709,6 +717,7 @@ class Layout:
         padding=None,
         alignment=None,
         webvtt_positioning=None,
+        writing_direction=None,
         inherit_from=None,
     ):
         """
@@ -729,8 +738,10 @@ class Layout:
         :type webvtt_positioning: str
         :param webvtt_positioning: A string with the raw WebVTT cue settings.
             This is used so that WebVTT positioning isn't lost on conversion
-            from WebVTT to WebVTT. It is needed only because pycaption
-            currently doesn't support reading positioning from WebVTT.
+            from WebVTT to WebVTT.
+
+        :type writing_direction: WritingDirectionEnum
+        :param writing_direction: WebVTT vertical writing direction (rl or lr).
 
         :type inherit_from: Layout
         :param inherit_from: A Layout with the positioning parameters to be
@@ -742,9 +753,13 @@ class Layout:
         self.padding = padding
         self.alignment = alignment
         self.webvtt_positioning = webvtt_positioning
+        self.writing_direction = writing_direction
 
         if inherit_from:
-            for attr_name in ["origin", "extent", "padding", "alignment"]:
+            for attr_name in [
+                "origin", "extent", "padding", "alignment",
+                "writing_direction",
+            ]:
                 attr = getattr(self, attr_name)
                 if not attr:
                     setattr(self, attr_name, getattr(inherit_from, attr_name))
@@ -757,6 +772,7 @@ class Layout:
                 self.padding,
                 self.alignment,
                 self.webvtt_positioning,
+                self.writing_direction,
             ]
         )
 
@@ -773,6 +789,7 @@ class Layout:
             None if not self.extent else self.extent.serialized(),
             None if not self.padding else self.padding.serialized(),
             None if not self.alignment else self.alignment.serialized(),
+            self.writing_direction,
         )
 
     def __eq__(self, other):
@@ -782,6 +799,7 @@ class Layout:
             and self.extent == other.extent
             and self.padding == other.padding
             and self.alignment == other.alignment
+            and self.writing_direction == other.writing_direction
         )
 
     def __ne__(self, other):
@@ -793,6 +811,7 @@ class Layout:
             + hash(self.extent) * 11
             + hash(self.padding) * 13
             + hash(self.alignment) * 5
+            + hash(self.writing_direction) * 19
             + 17
         )
 

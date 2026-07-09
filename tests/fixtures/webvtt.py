@@ -415,3 +415,125 @@ WEBVTT
 00:00:10.000 --> 00:00:15.000
 Hello <00:00:12.000>world
 """
+
+
+@pytest.fixture(scope="session")
+def sample_webvtt_with_position_and_line():
+    return """\
+WEBVTT
+
+00:00:01.000 --> 00:00:03.000 position:50% line:75%
+Hello world
+"""
+
+
+@pytest.fixture(scope="session")
+def sample_webvtt_with_line_integer():
+    return """\
+WEBVTT
+
+00:00:01.000 --> 00:00:03.000 line:3
+Line three
+
+00:00:04.000 --> 00:00:06.000 line:-1
+Last line
+"""
+
+
+@pytest.fixture(scope="session")
+def sample_webvtt_with_size_and_align():
+    return """\
+WEBVTT
+
+00:00:01.000 --> 00:00:03.000 size:80% align:center
+Centered text
+"""
+
+
+@pytest.fixture(scope="session")
+def sample_webvtt_with_vertical():
+    return """\
+WEBVTT
+
+00:00:01.000 --> 00:00:03.000 vertical:rl
+Vertical text
+"""
+
+
+@pytest.fixture(scope="session")
+def sample_webvtt_with_combined_settings():
+    return """\
+WEBVTT
+
+00:00:01.000 --> 00:00:03.000 position:10% line:80% size:60% align:start
+Combined settings
+"""
+
+
+@pytest.fixture(scope="session")
+def sample_webvtt_with_style_block_class():
+    return """\
+WEBVTT
+
+STYLE
+::cue(.yellow) { color: yellow }
+
+00:00:01.000 --> 00:00:03.000
+<c.yellow>Hello world</c>
+"""
+
+
+@pytest.fixture(scope="session")
+def sample_webvtt_with_style_block_base():
+    return """\
+WEBVTT
+
+STYLE
+::cue { color: white; background-color: black }
+
+00:00:01.000 --> 00:00:03.000
+<c.any>Hello world</c>
+"""
+
+
+@pytest.fixture(scope="session")
+def sample_webvtt_with_style_block_cascade():
+    return """\
+WEBVTT
+
+STYLE
+::cue { color: white }
+::cue(.highlight) { color: red }
+
+00:00:01.000 --> 00:00:03.000
+<c.highlight>Highlighted</c>
+
+00:00:04.000 --> 00:00:06.000
+<c.other>Other</c>
+"""
+
+
+@pytest.fixture(scope="session")
+def sample_webvtt_with_style_and_class_span():
+    return """\
+WEBVTT
+
+STYLE
+::cue(.yellow) { color: yellow; font-style: italic }
+
+00:00:01.000 --> 00:00:03.000
+<c.yellow>Styled text</c> plain text
+"""
+
+
+@pytest.fixture(scope="session")
+def sample_webvtt_with_style_block_tag_selector():
+    return """\
+WEBVTT
+
+STYLE
+::cue(b) { color: red }
+
+00:00:01.000 --> 00:00:03.000
+<b>Bold text</b>
+"""
