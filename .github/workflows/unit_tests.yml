@@ -23,7 +23,7 @@ jobs:
         python-version: ["py310", "py311", "py312"]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Run Test
         id: tests
@@ -32,13 +32,13 @@ jobs:
         continue-on-error: true
 
       - name: Archive production artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: test-report-${{ matrix.python-version }}
           path: junit.xml
 
       - name: Archive code coverage results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: code-coverage-report-${{ matrix.python-version }}
           path: coverage.xml
@@ -60,7 +60,7 @@ jobs:
           echo "BRANCH=${BRANCH#refs/*/}" >> $GITHUB_ENV
 
       - name: Notify if test FAILED
-        uses: slackapi/slack-github-action@v3.0.2
+        uses: slackapi/slack-github-action@45a88b9581bfab2566dc881e2cd66d334e621e2c # v3.0.3
         with:
           method: chat.postMessage
           token: ${{ secrets.SLACK_BOT_TOKEN }}
@@ -74,7 +74,7 @@ jobs:
         if: steps.tests.outcome == 'failure'
 
       - name: Slack notify tests PASSED
-        uses: slackapi/slack-github-action@v3.0.2
+        uses: slackapi/slack-github-action@45a88b9581bfab2566dc881e2cd66d334e621e2c # v3.0.3
         with:
           method: chat.postMessage
           token: ${{ secrets.SLACK_BOT_TOKEN }}

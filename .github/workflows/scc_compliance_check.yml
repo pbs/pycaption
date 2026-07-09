@@ -22,10 +22,10 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.11'
 
@@ -66,7 +66,7 @@ jobs:
           fi
 
       - name: Upload compliance report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: env.REPORT_EXISTS == 'true'
         with:
           name: scc-compliance-report
@@ -74,7 +74,7 @@ jobs:
           retention-days: 90
 
       - name: Upload full compliance folder
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: env.REPORT_EXISTS == 'true'
         with:
           name: scc-compliance-full
@@ -99,7 +99,7 @@ jobs:
           SLACK_CHANNEL: ${{ secrets.SLACK_CHANNEL_ID }}
 
       - name: Notify Slack - Success
-        uses: archive/github-actions-slack@f530f3aa696b2eef0e5aba82450e387bd7723903 # v2.0.0
+        uses: archive/github-actions-slack@433fef9978d3adae73168bfc9c5a7ce722780231 # v3.1.0
         if: env.REPORT_EXISTS == 'true' && env.SCRIPT_CRASHED != 'true' && github.event.inputs.notify_slack == 'true' && steps.slack_check.outputs.available == 'true'
         with:
           slack-bot-user-oauth-access-token: ${{ secrets.SLACK_BOT_TOKEN }}
@@ -119,7 +119,7 @@ jobs:
             Triggered by: *${{ github.actor }}*
 
       - name: Notify Slack - Failure
-        uses: archive/github-actions-slack@f530f3aa696b2eef0e5aba82450e387bd7723903 # v2.0.0
+        uses: archive/github-actions-slack@433fef9978d3adae73168bfc9c5a7ce722780231 # v3.1.0
         if: env.REPORT_EXISTS == 'false' && github.event.inputs.notify_slack == 'true' && steps.slack_check.outputs.available == 'true'
         with:
           slack-bot-user-oauth-access-token: ${{ secrets.SLACK_BOT_TOKEN }}

@@ -157,4 +157,17 @@ if: env.REPORT_EXISTS == 'true' && env.SCRIPT_CRASHED != 'true'
 
 ---
 
-*Last updated: 2026-04-30*
+## 13. Module-to-package refactors flagged as removed public API
+
+**What happened:** PR #387 split `pycaption/webvtt.py` into `pycaption/webvtt/` package (reader.py, writer.py, constants.py, __init__.py with re-exports). The review tool compared the old single file against `reader.py` only and flagged `microseconds`, `WebVTTWriter`, and `write` as "REMOVED_PUBLIC_DEF/CLASS" — all critical. In reality they were moved to sibling files and re-exported from `__init__.py`.
+
+**Rule:** When reviewing a diff that deletes a module and adds a same-named package directory:
+- Check `__init__.py` re-exports before flagging anything as removed
+- Verify import paths still work (`from pycaption import X` and `from pycaption.subpackage import Y`)
+- Only flag as "removed" if the symbol is genuinely absent from all new files AND not re-exported
+
+**Applies to:** `check-last-pr`
+
+---
+
+*Last updated: 2026-07-09*

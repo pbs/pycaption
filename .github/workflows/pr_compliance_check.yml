@@ -29,12 +29,12 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0  # Full history for proper diff
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.11'
 
@@ -112,7 +112,7 @@ jobs:
           fi
 
       - name: Upload PR review report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: env.ANALYSIS_NEEDED == 'true'
         with:
           name: pr-compliance-report
@@ -136,7 +136,7 @@ jobs:
           SLACK_CHANNEL: ${{ secrets.SLACK_CHANNEL_ID }}
 
       - name: Notify Slack - Results
-        uses: archive/github-actions-slack@f530f3aa696b2eef0e5aba82450e387bd7723903 # v2.0.0
+        uses: archive/github-actions-slack@433fef9978d3adae73168bfc9c5a7ce722780231 # v3.1.0
         if: env.ANALYSIS_NEEDED == 'true' && (github.event.inputs.notify_slack || 'true') == 'true' && steps.slack_check.outputs.available == 'true'
         with:
           slack-bot-user-oauth-access-token: ${{ secrets.SLACK_BOT_TOKEN }}
@@ -156,7 +156,7 @@ jobs:
             Triggered by: *${{ github.actor }}*
 
       - name: Notify Slack - No Changes
-        uses: archive/github-actions-slack@f530f3aa696b2eef0e5aba82450e387bd7723903 # v2.0.0
+        uses: archive/github-actions-slack@433fef9978d3adae73168bfc9c5a7ce722780231 # v3.1.0
         if: env.ANALYSIS_NEEDED == 'false' && (github.event.inputs.notify_slack || 'true') == 'true' && steps.slack_check.outputs.available == 'true'
         with:
           slack-bot-user-oauth-access-token: ${{ secrets.SLACK_BOT_TOKEN }}
@@ -176,7 +176,7 @@ jobs:
       - name: Comment on PR
         if: env.ANALYSIS_NEEDED == 'true' && github.event.pull_request.number
         continue-on-error: true
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const fs = require('fs');
