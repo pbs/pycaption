@@ -520,7 +520,7 @@ class SAMIWriter(BaseWriter):
         stylesheet = "<!--"
 
         for attr, value in caption_set.get_styles():
-            if value != {}:
+            if value != {} and not attr.startswith("::"):
                 stylesheet += self._recreate_style_block(
                     attr, value, caption_set.layout_info
                 )

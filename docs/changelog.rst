@@ -1,5 +1,23 @@
 Changelog
 ---------
+2.2.28
+^^^^^^
+  - Parse WebVTT cue settings (position, line, size, align, vertical)
+    into structured Layout objects. Integer line numbers (line:3) and
+    percentage values (line:75%) are both converted to viewport
+    percentages; vertical:rl|lr is stored as WritingDirectionEnum.
+  - Parse STYLE blocks: extract ::cue CSS rules (font-style,
+    font-weight, text-decoration, color, background-color) and resolve
+    them onto <c.classname> spans at read time with correct cascade
+    (::cue base < ::cue(.class) specificity).
+  - Add WritingDirectionEnum to geometry.py and extend Layout with
+    writing_direction field (included in __eq__, __hash__, __bool__,
+    serialized()).
+  - Filter ::cue-prefixed style keys from DFXP and SAMI writers to
+    prevent invalid selectors in output.
+  - Tag selectors (::cue(b)) are intentionally skipped — only bare
+    ::cue and class selectors are supported.
+
 2.2.27
 ^^^^^^
   - Implement WebVTT inline markup tag parsing in the reader. The

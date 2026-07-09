@@ -9,6 +9,13 @@ from pycaption import (
     WebVTTReader,
     WebVTTWriter,
 )
+from pycaption.base import CaptionNode
+from pycaption.geometry import (
+    HorizontalAlignmentEnum,
+    Size,
+    UnitEnum,
+    WritingDirectionEnum,
+)
 from tests.mixins import ReaderTestingMixIn
 
 
@@ -712,3 +719,183 @@ class TestWebVTTInlineMarkupParsing:
         # Auto-closed at cue end
         assert nodes[4].content == {"italics": True}
         assert nodes[4].start is False
+
+
+class TestWebVTTCueSettingsParsing:
+    def setup_method(self):
+        self.reader = WebVTTReader()
+
+    def test_position_and_line_percent(
+        self, sample_webvtt_with_position_and_line
+    ):
+        captions = self.reader.read(
+            sample_webvtt_with_position_and_line
+        )
+        cue = captions.get_captions("en-US")[0]
+        layout = cue.layout_info
+
+        assert layout.origin is not None
+        assert layout.origin.x == Size(50, UnitEnum.PERCENT)
+        assert layout.origin.y == Size(75, UnitEnum.PERCENT)
+
+    def test_line_integer_positive(self, sample_webvtt_with_line_integer):
+        captions = self.reader.read(sample_webvtt_with_line_integer)
+        cue = captions.get_captions("en-US")[0]
+        layout = cue.layout_info
+
+        assert layout.origin is not None
+        assert layout.origin.y == Size(20.0, UnitEnum.PERCENT)
+
+    def test_line_integer_negative(self, sample_webvtt_with_line_integer):
+        captions = self.reader.read(sample_webvtt_with_line_integer)
+        cue = captions.get_captions("en-US")[1]
+        layout = cue.layout_info
+
+        expected_pct = (15 + (-1)) / 15 * 100  # ~93.33
+        assert layout.origin is not None
+        assert layout.origin.y.unit == UnitEnum.PERCENT
+        assert abs(layout.origin.y.value - expected_pct) < 0.01
+
+    def test_size_percent(self, sample_webvtt_with_size_and_align):
+        captions = self.reader.read(sample_webvtt_with_size_and_align)
+        cue = captions.get_captions("en-US")[0]
+        layout = cue.layout_info
+
+        assert layout.extent is not None
+        assert layout.extent.horizontal == Size(80, UnitEnum.PERCENT)
+
+    def test_align_center(self, sample_webvtt_with_size_and_align):
+        captions = self.reader.read(sample_webvtt_with_size_and_align)
+        cue = captions.get_captions("en-US")[0]
+        layout = cue.layout_info
+
+        assert layout.alignment is not None
+        assert layout.alignment.horizontal == HorizontalAlignmentEnum.CENTER
+
+    def test_vertical_rl(self, sample_webvtt_with_vertical):
+        captions = self.reader.read(sample_webvtt_with_vertical)
+        cue = captions.get_captions("en-US")[0]
+        layout = cue.layout_info
+
+        assert layout.writing_direction == WritingDirectionEnum.VERTICAL_RL
+
+    def test_combined_settings(self, sample_webvtt_with_combined_settings):
+        captions = self.reader.read(sample_webvtt_with_combined_settings)
+        cue = captions.get_captions("en-US")[0]
+        layout = cue.layout_info
+
+        assert layout.origin.x == Size(10, UnitEnum.PERCENT)
+        assert layout.origin.y == Size(80, UnitEnum.PERCENT)
+        assert layout.extent.horizontal == Size(60, UnitEnum.PERCENT)
+        assert layout.alignment.horizontal == HorizontalAlignmentEnum.START
+
+    def test_raw_string_preserved(self, sample_webvtt_with_combined_settings):
+        captions = self.reader.read(sample_webvtt_with_combined_settings)
+        cue = captions.get_captions("en-US")[0]
+        layout = cue.layout_info
+
+        expected = "position:10% line:80% size:60% align:start"
+        assert layout.webvtt_positioning == expected
+
+    def test_position_only_no_origin(self):
+        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000 position:50%\nHello\n"
+        captions = self.reader.read(vtt)
+        cue = captions.get_captions("en-US")[0]
+        layout = cue.layout_info
+
+        assert layout.origin is None
+        assert layout.webvtt_positioning == "position:50%"
+
+    def test_region_with_cue_override(self):
+        vtt = """\
+WEBVTT
+
+REGION
+id:region1
+width:50%
+viewportanchor:25%,75%
+regionanchor:0%,0%
+
+00:00:01.000 --> 00:00:03.000 region:region1 align:end
+Hello
+"""
+        captions = self.reader.read(vtt)
+        cue = captions.get_captions("en-US")[0]
+        layout = cue.layout_info
+
+        assert layout.alignment.horizontal == HorizontalAlignmentEnum.END
+        assert layout.origin is not None
+
+
+class TestWebVTTStyleBlockParsing:
+    def setup_method(self):
+        self.reader = WebVTTReader()
+
+    def test_class_style_parsed(self, sample_webvtt_with_style_block_class):
+        captions = self.reader.read(sample_webvtt_with_style_block_class)
+        styles = dict(captions.get_styles())
+
+        assert "yellow" in styles
+        assert styles["yellow"] == {"color": "yellow"}
+
+    def test_base_style_parsed(self, sample_webvtt_with_style_block_base):
+        captions = self.reader.read(sample_webvtt_with_style_block_base)
+        styles = dict(captions.get_styles())
+
+        assert "::cue" in styles
+        assert styles["::cue"] == {
+            "color": "white", "background-color": "black"
+        }
+
+    def test_multiple_properties(self, sample_webvtt_with_style_and_class_span):
+        captions = self.reader.read(sample_webvtt_with_style_and_class_span)
+        styles = dict(captions.get_styles())
+
+        assert "yellow" in styles
+        assert styles["yellow"] == {"color": "yellow", "italics": True}
+
+    def test_cascade_specificity(self, sample_webvtt_with_style_block_cascade):
+        captions = self.reader.read(sample_webvtt_with_style_block_cascade)
+        cue = captions.get_captions("en-US")[0]
+
+        for node in cue.nodes:
+            if node.type_ == CaptionNode.STYLE and node.start:
+                assert node.content.get("color") == "red"
+                break
+
+    def test_base_style_applied_to_all_classes(
+        self, sample_webvtt_with_style_block_cascade
+    ):
+        captions = self.reader.read(sample_webvtt_with_style_block_cascade)
+        cue = captions.get_captions("en-US")[1]
+
+        for node in cue.nodes:
+            if node.type_ == CaptionNode.STYLE and node.start:
+                assert node.content.get("color") == "white"
+                break
+
+    def test_class_resolved_into_node(
+        self, sample_webvtt_with_style_block_class
+    ):
+        captions = self.reader.read(
+            sample_webvtt_with_style_block_class
+        )
+        cue = captions.get_captions("en-US")[0]
+
+        for node in cue.nodes:
+            if node.type_ == CaptionNode.STYLE and node.start:
+                assert "color" in node.content
+                assert node.content["color"] == "yellow"
+                assert node.content["classes"] == ["yellow"]
+                break
+
+    def test_tag_selector_ignored(
+        self, sample_webvtt_with_style_block_tag_selector
+    ):
+        captions = self.reader.read(
+            sample_webvtt_with_style_block_tag_selector
+        )
+        styles = dict(captions.get_styles())
+
+        assert "b" not in styles
+        assert "::cue(b)" not in styles
