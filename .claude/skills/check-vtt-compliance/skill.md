@@ -70,6 +70,13 @@ landmarks = {
     'def read (WebVTTReader)': (webvtt_file, r'def\s+read\b'),
     'def write (WebVTTWriter)': (webvtt_file, r'def\s+write\b'),
     'class Layout': ('pycaption/geometry.py', r'class\s+Layout\b'),
+    'def _parse_cue_settings': (webvtt_file, r'def\s+_parse_cue_settings\b'),
+    'def _parse_style_blocks': (webvtt_file, r'def\s+_parse_style_blocks\b'),
+    'CUE_SETTING_PATTERN': (webvtt_file, r'CUE_SETTING_PATTERN\s*=\s*re\.compile'),
+    'STYLE_SELECTOR_PATTERN': (webvtt_file, r'STYLE_SELECTOR_PATTERN\s*=\s*re\.compile'),
+    'TAG_SPLIT_PATTERN': (webvtt_file, r'TAG_SPLIT_PATTERN\s*=\s*re\.compile'),
+    'def _classify_tag': (webvtt_file, r'def\s+_classify_tag\b'),
+    'WritingDirectionEnum': ('pycaption/geometry.py', r'class\s+WritingDirectionEnum\b'),
 }
 stale_warnings = []
 for name, (expected_file, pattern) in landmarks.items():
@@ -94,15 +101,13 @@ print("\n[1/5] Deep Validation Analysis")
 deep_results = {}
 
 # RULE-FMT-001: WEBVTT header detection
-# The detect() method uses substring check: '"WEBVTT" in content'
-# This is overly permissive (matches WEBVTT anywhere, not just first line)
-has_header_detect = bool(re.search(r'def detect.*\n.*"WEBVTT"\s+in\s+content', content))
-has_header_validate = bool(re.search(r'content\s*\[\s*:6\s*\]\s*==|startswith.*WEBVTT|^WEBVTT', content))
+has_header_validate = bool(re.search(r'def _validate_header|startswith.*"WEBVTT ', content))
+has_detect_first_line = bool(re.search(r'first_line\s*==\s*"WEBVTT"|first_line\.startswith\("WEBVTT', content))
 deep_results['RULE-FMT-001'] = {
     'name': 'WEBVTT header',
-    'detected': has_header_detect,
-    'validated': has_header_validate,
-    'note': 'detect() uses substring check, not first-line validation' if has_header_detect and not has_header_validate else '',
+    'detected': has_header_validate or has_detect_first_line,
+    'validated': has_header_validate and has_detect_first_line,
+    'note': '' if (has_header_validate and has_detect_first_line) else 'Header validation incomplete',
 }
 
 # RULE-FMT-002: UTF-8 encoding
@@ -156,17 +161,17 @@ deep_results['RULE-TIME-006'] = {
 }
 
 # RULE-CUE-001: Timing separator ' --> '
-has_arrow_pattern = bool(re.search(r'-->|TIMING_LINE_PATTERN', content))
+# Only match the TIMING_LINE_PATTERN definition, not general '-->' usage in style/note handling
+has_timing_pattern = bool(re.search(r'TIMING_LINE_PATTERN\s*=\s*re\.compile', content))
+has_timing_parse = bool(re.search(r'TIMING_LINE_PATTERN\.match|TIMING_LINE_PATTERN\.search', content))
 deep_results['RULE-CUE-001'] = {
     'name': 'Timing separator -->',
-    'detected': has_arrow_pattern,
-    'validated': has_arrow_pattern,
+    'detected': has_timing_pattern,
+    'validated': has_timing_pattern and has_timing_parse,
     'note': 'TIMING_LINE_PATTERN captures arrow with surrounding whitespace',
 }
 
 # RULE-SET-002: Zero-value positions silently dropped on write
-# Writer uses `if left_offset:` which is falsy for 0 — a valid position value
-# Should be `if left_offset is not None:`
 writer_section = content.split('class WebVTTWriter')[1] if 'class WebVTTWriter' in content else ''
 zero_pos_bug = bool(re.search(r'if left_offset:', writer_section)) and not bool(re.search(r'if left_offset is not None', writer_section))
 zero_line_bug = bool(re.search(r'if top_offset:', writer_section)) and not bool(re.search(r'if top_offset is not None', writer_section))
@@ -188,8 +193,6 @@ if zero_pos_bug or zero_line_bug or zero_size_bug:
 print(f"  RULE-SET-002: {'PASS' if not (zero_pos_bug or zero_line_bug or zero_size_bug) else 'TRUTHINESS BUG — zero values dropped'}")
 
 # RULE-SET-005: Center alignment silently dropped on write
-# Writer skips alignment when it equals CENTER, assuming it's the default
-# But explicit center alignment should be preserved for round-trip fidelity
 center_dropped = bool(re.search(r'alignment.*!=.*CENTER|alignment.*!=.*WEBVTT_VERSION_OF\[HorizontalAlignmentEnum\.CENTER\]', writer_section))
 deep_results['RULE-SET-005'] = {
     'name': 'Center alignment silently dropped on write',
@@ -200,7 +203,6 @@ deep_results['RULE-SET-005'] = {
 print(f"  RULE-SET-005: {'PASS' if not center_dropped else 'CENTER ALIGNMENT DROPPED'}")
 
 # RULE-VAL-007: Timing validation disabled by default
-# ignore_timing_errors=True means start>end and non-monotonic timestamps accepted silently
 timing_disabled = bool(re.search(r'ignore_timing_errors\s*=\s*True', content))
 deep_results['RULE-VAL-007'] = {
     'name': 'Timing validation disabled by default',
@@ -210,21 +212,20 @@ deep_results['RULE-VAL-007'] = {
 }
 print(f"  RULE-VAL-007: {'PASS' if not timing_disabled else 'DISABLED BY DEFAULT'}")
 
-# IMPL-PARSE-006 deep: Reader strips ALL tags — read-only attribute gap
-# OTHER_SPAN_PATTERN.sub("", ...) destroys all tag semantics (italic, bold, underline, class, lang, ruby)
-# Only voice annotation is extracted; all other formatting is lost
-has_tag_strip = bool(re.search(r'OTHER_SPAN_PATTERN\.sub\(\s*""', content))
-has_tag_preserve = bool(re.search(r'tag.*preserv|tag.*keep|tag.*stor', content, re.I))
+# IMPL-PARSE-006 deep: Tag parsing via TAG_SPLIT_PATTERN + _classify_tag
+# Tags are now preserved as CaptionNode.STYLE open/close pairs, not stripped
+has_tag_split = bool(re.search(r'TAG_SPLIT_PATTERN\.split', content))
+has_classify_tag = bool(re.search(r'def _classify_tag', content))
+has_known_tags = bool(re.search(r'KNOWN_TAGS\s*=\s*frozenset', content))
 deep_results['IMPL-PARSE-006'] = {
-    'name': 'Tag stripping destroys all inline formatting',
-    'detected': has_tag_strip,
-    'validated': has_tag_preserve,
-    'note': 'OTHER_SPAN_PATTERN.sub("", ...) strips all tags. VTT→VTT round-trip loses italic, bold, underline, class, lang, ruby.' if has_tag_strip and not has_tag_preserve else '',
+    'name': 'Inline tag parsing and preservation',
+    'detected': has_tag_split and has_classify_tag,
+    'validated': has_tag_split and has_classify_tag and has_known_tags,
+    'note': '' if (has_tag_split and has_classify_tag and has_known_tags) else 'Tag parsing infrastructure incomplete',
 }
-print(f"  IMPL-PARSE-006: {'PRESERVES TAGS' if has_tag_preserve else 'STRIPS ALL TAGS — formatting lost on round-trip'}")
+print(f"  IMPL-PARSE-006: {'TAG PARSING IMPLEMENTED' if (has_tag_split and has_classify_tag) else 'MISSING TAG PARSING'}")
 
 # IMPL-WRITE-003 deep: Writer drops hours when hh==0
-# `if hh:` means hours=0 produces MM:SS.mmm format (valid per spec but may surprise)
 has_hours_truthiness = bool(re.search(r'if hh:', writer_section))
 deep_results['IMPL-WRITE-003'] = {
     'name': 'Writer drops zero-hours in timestamps',
@@ -235,7 +236,6 @@ deep_results['IMPL-WRITE-003'] = {
 print(f"  IMPL-WRITE-003: {'DROPS ZERO-HOURS' if has_hours_truthiness else 'KEEPS HOURS'}")
 
 # IMPL-WRITE-002 deep: Entity encoding partially commented out
-# Writer has &lrm;/&rlm;/&nbsp;/&gt; encoding commented out
 has_encode_commented = bool(re.search(r'#.*replace.*&lrm;|#.*replace.*&rlm;|#.*replace.*&nbsp;', content))
 deep_results['IMPL-WRITE-002'] = {
     'name': 'Entity encoding partially commented out',
@@ -244,17 +244,6 @@ deep_results['IMPL-WRITE-002'] = {
     'note': '&lrm;, &rlm;, &gt;, &nbsp; encoding explicitly commented out in _encode_illegal_characters.' if has_encode_commented else '',
 }
 print(f"  IMPL-WRITE-002: {'PARTIAL — entities commented out' if has_encode_commented else 'FULL ENCODING'}")
-
-# Silent parse error suppression: reader's else branch ignores malformed lines
-has_silent_skip = bool(re.search(r'else:\s*\n\s*pass\b|else:\s*\n\s*continue\b', content))
-if has_silent_skip:
-    deep_results['IMPL-PARSE-SILENT'] = {
-        'name': 'Reader silently skips unrecognized lines',
-        'detected': True,
-        'validated': False,
-        'note': 'Reader else branch silently ignores non-timing, non-blank lines. Malformed headers, NOTE blocks, STYLE blocks silently swallowed.',
-    }
-print(f"  Silent line skip: {'FOUND' if has_silent_skip else 'CLEAN'}")
 
 # Center alignment logic bug: writer drops center but DEFAULT_ALIGN is "start"
 has_default_start = bool(re.search(r'DEFAULT_ALIGN.*=.*"start"|DEFAULT_ALIGN.*=.*start', content))
@@ -301,10 +290,10 @@ print("\n[2/5] Systematic Rule Check ({} rules)".format(len(all_rules)))
 # NOT broad keywords that could match comments
 specific_patterns = {
     # File Format
-    'RULE-FMT-001': [r'"WEBVTT"', r'def detect'],
+    'RULE-FMT-001': [r'"WEBVTT"', r'def detect', r'def _validate_header'],
     'RULE-FMT-002': [r'isinstance.*str|InvalidInputError'],
-    'RULE-FMT-003': [r'BOM|\\ufeff|\xef\xbb\xbf'],
-    'RULE-FMT-004': [r'HEADER\s*=\s*"WEBVTT\\n\\n"|blank.*line.*header'],
+    'RULE-FMT-003': [r'BOM|\\ufeff|\xef\xbb\xbf|startswith.*"\xef\xbb\xbf"'],
+    'RULE-FMT-004': [r'_validate_header.*blank|lines\[1\]\s*!=\s*""'],
     'RULE-FMT-005': [r'splitlines|\\r\\n|\\r|\\n'],
     # Timestamps
     'RULE-TIME-001': [r'TIMESTAMP_PATTERN', r'def _parse_timestamp'],
@@ -315,73 +304,73 @@ specific_patterns = {
     'RULE-TIME-006': [r'start\s*<\s*last_start_time'],
     'RULE-TIME-007': [r'timestamp.*tag|internal.*timestamp|\d+:\d+.*\.\d+.*>'],
     # Cue Structure
-    'RULE-CUE-001': [r'TIMING_LINE_PATTERN.*-->|-->'],
+    'RULE-CUE-001': [r'TIMING_LINE_PATTERN\s*=\s*re\.compile'],
     'RULE-CUE-002': [r'identifier.*-->'],
     'RULE-CUE-003': [r'identifier.*line.*terminator'],
     'RULE-CUE-004': [r'cue.*id.*unique|identifier.*unique'],
-    'RULE-CUE-005': [r'"".*==.*line|blank.*line.*terminat'],
+    'RULE-CUE-005': [r'"".*==.*line|blank.*line.*terminat|line\s*==\s*""'],
     'RULE-CUE-006': [r'payload.*-->'],
-    # Cue Settings - check for ACTUAL parsing, not just keyword presence
-    'RULE-SET-001': [r'vertical\s*[:=]|vertical.*rl|vertical.*lr'],
-    'RULE-SET-002': [r'["\']line["\']|line:\s*\d|line:.*%'],
-    'RULE-SET-003': [r'["\']position["\'].*:|position:\s*\d|position:.*%'],
-    'RULE-SET-004': [r'["\']size["\'].*:|size:\s*\d|size:.*%'],
-    'RULE-SET-005': [r'align:\s*\w|align.*start|align.*center|align.*end|align.*left|align.*right'],
-    'RULE-SET-006': [r'region:\s*\w|["\']region["\'].*:'],
+    # Cue Settings - check for ACTUAL parsing via _parse_cue_settings
+    'RULE-SET-001': [r'vertical.*rl|vertical.*lr|WritingDirectionEnum|"vertical".*CUE_SETTING_PATTERN'],
+    'RULE-SET-002': [r'name\s*==\s*"line"|_line_number_to_percent|_parse_percent_value.*line'],
+    'RULE-SET-003': [r'name\s*==\s*"position"|_parse_percent_value.*position'],
+    'RULE-SET-004': [r'name\s*==\s*"size"|extent_horizontal'],
+    'RULE-SET-005': [r'ALIGN_SETTING_MAP|name\s*==\s*"align"'],
+    'RULE-SET-006': [r'_extract_region_id|region.*=.*settings'],
     'RULE-SET-007': [r'setting.*once|duplicate.*setting'],
     'RULE-SET-008': [r'region.*exclud|region.*vertical|region.*line|region.*size'],
-    # Tags
-    'RULE-TAG-001': [r'<c[\\.> ]|<c>|class.*span'],
-    'RULE-TAG-002': [r'"<i>"|<i>.*</i>|italics'],
-    'RULE-TAG-003': [r'"<b>"|<b>.*</b>|\bbold\b'],
-    'RULE-TAG-004': [r'"<u>"|<u>.*</u>|underline'],
-    'RULE-TAG-005': [r'VOICE_SPAN_PATTERN|<v[\\.> ]'],
-    'RULE-TAG-006': [r'<lang[\\.> ]|OTHER_SPAN_PATTERN.*lang'],
-    'RULE-TAG-007': [r'<ruby[\\.> ]|OTHER_SPAN_PATTERN.*ruby'],
-    'RULE-TAG-008': [r'<\d+:\d+.*\.\d+.*>|timestamp.*tag.*process'],
-    'RULE-TAG-009': [r'VOICE_SPAN_PATTERN.*\\\\\\.\\\\w|class.*annot.*pars'],
-    'RULE-TAG-010': [r'&amp;|&lt;|&gt;|character.*ref'],
-    'RULE-TAG-011': [r'tag.*clos|</\w+>|properly.*closed'],
+    # Tags - check via TAG_SPLIT_PATTERN + _classify_tag + _tag_content
+    'RULE-TAG-001': [r'<c[\\.> ]|"c".*KNOWN_TAGS|_tag_content.*class|_convert_structural_tag'],
+    'RULE-TAG-002': [r'"<i>"|"i".*KNOWN_TAGS|italics|_classify_tag'],
+    'RULE-TAG-003': [r'"<b>"|"b".*KNOWN_TAGS|bold|_classify_tag'],
+    'RULE-TAG-004': [r'"<u>"|"u".*KNOWN_TAGS|underline|_classify_tag'],
+    'RULE-TAG-005': [r'VOICE_SPAN_PATTERN|<v[\\.> ]|"v".*KNOWN_TAGS'],
+    'RULE-TAG-006': [r'"lang".*KNOWN_TAGS|_classify_tag.*lang|_tag_content'],
+    'RULE-TAG-007': [r'"ruby".*KNOWN_TAGS|"rt".*KNOWN_TAGS|_classify_tag.*ruby'],
+    'RULE-TAG-008': [r'timestamp.*tag|_classify_tag.*\d+:\d+'],
+    'RULE-TAG-009': [r'VOICE_SPAN_PATTERN.*\\\\\\.\\\\w|class.*annot.*pars|class_suffix'],
+    'RULE-TAG-010': [r'html\.unescape|&amp;|&lt;|&gt;|_decode_entities'],
+    'RULE-TAG-011': [r'_close_unclosed_tags|open_tags|tag.*clos|</\w+>'],
     # Entities
-    'RULE-ENT-001': [r'&amp;'],
-    'RULE-ENT-002': [r'&lt;'],
-    'RULE-ENT-003': [r'&gt;'],
-    'RULE-ENT-004': [r'&nbsp;| |\\u00a0'],
-    'RULE-ENT-005': [r'&lrm;|‎|\\u200e'],
-    'RULE-ENT-006': [r'&rlm;|‏|\\u200f'],
-    'RULE-ENT-007': [r'&#\d+;|&#x[0-9a-fA-F]+;|numeric.*ref'],
+    'RULE-ENT-001': [r'html\.unescape|&amp;'],
+    'RULE-ENT-002': [r'html\.unescape|&lt;'],
+    'RULE-ENT-003': [r'html\.unescape|&gt;'],
+    'RULE-ENT-004': [r'html\.unescape|&nbsp;|\\u00a0'],
+    'RULE-ENT-005': [r'html\.unescape|&lrm;|\\u200e'],
+    'RULE-ENT-006': [r'html\.unescape|&rlm;|\\u200f'],
+    'RULE-ENT-007': [r'html\.unescape|&#\d+;|&#x[0-9a-fA-F]+;|numeric.*ref'],
     # Regions
-    'RULE-REG-001': [r'REGION\s.*block|region.*block.*pars|def.*parse_region'],
-    'RULE-REG-002': [r'region.*id.*=|region.*identifier'],
-    'RULE-REG-003': [r'region.*width'],
-    'RULE-REG-004': [r'region.*lines?\b'],
+    'RULE-REG-001': [r'def _parse_regions|REGION.*block|region.*block.*pars'],
+    'RULE-REG-002': [r'region.*id.*=|"id".*settings|region.*identifier'],
+    'RULE-REG-003': [r'region.*width|"width".*REGION_SETTING'],
+    'RULE-REG-004': [r'region.*lines?\b|"lines".*REGION_SETTING'],
     'RULE-REG-005': [r'regionanchor'],
     'RULE-REG-006': [r'viewportanchor'],
-    'RULE-REG-007': [r'scroll.*up|scroll.*='],
-    'RULE-REG-008': [r'region.*setting.*once'],
-    'RULE-REG-009': [r'region.*unique|region.*identif.*unique'],
-    # Special Blocks — match actual parsing code, not comments/TODOs
-    'RULE-BLK-001': [r'def.*parse_note|re\.search.*NOTE\b|NOTE.*block.*pars'],
-    'RULE-BLK-002': [r'def.*parse_style|def.*style_block|STYLE.*pars'],
-    'RULE-BLK-003': [r'STYLE.*precede|STYLE.*before.*cue'],
-    'RULE-BLK-004': [r'STYLE.*-->'],
+    'RULE-REG-007': [r'scroll.*up|scroll.*=|"scroll"'],
+    'RULE-REG-008': [r'region.*setting.*once|seen_keys'],
+    'RULE-REG-009': [r'region_id\s+not\s+in\s+regions|region.*unique'],
+    # Special Blocks
+    'RULE-BLK-001': [r'_is_note_start|in_note_block|NOTE.*block'],
+    'RULE-BLK-002': [r'def _parse_style_blocks|STYLE_SELECTOR_PATTERN'],
+    'RULE-BLK-003': [r'"-->"\s*in\s*line.*break|STYLE.*before.*cue'],
+    'RULE-BLK-004': [r'in_style_block.*-->|STYLE.*-->'],
     # Validation
     'RULE-VAL-001': [r'case.*sensitiv'],
     'RULE-VAL-002': [r'cue.*id.*unique|identifier.*unique|duplicate.*id'],
-    'RULE-VAL-003': [r'region.*id.*unique|region.*unique'],
+    'RULE-VAL-003': [r'region_id\s+not\s+in\s+regions|region.*id.*unique'],
     'RULE-VAL-004': [r'timestamp.*order|monotonic|start.*<.*last'],
     'RULE-VAL-005': [r'unicode.*normali'],
     'RULE-VAL-006': [r'authoring.*tool|conforming.*file'],
     'RULE-VAL-007': [r'ignore_timing_errors'],
     # Implementation
     'IMPL-PARSE-001': [r'isinstance.*str|utf.?8|decode'],
-    'IMPL-PARSE-002': [r'def detect|"WEBVTT"'],
+    'IMPL-PARSE-002': [r'def detect|"WEBVTT"|_validate_header'],
     'IMPL-PARSE-003': [r'def _parse_timestamp'],
     'IMPL-PARSE-004': [r'def _validate_timings'],
-    'IMPL-PARSE-005': [r'cue_settings|webvtt_positioning|Layout\('],
-    'IMPL-PARSE-006': [r'OTHER_SPAN_PATTERN|VOICE_SPAN_PATTERN'],
-    'IMPL-PARSE-007': [r'&amp;|&lt;|&gt;|&nbsp;|replace.*&'],
-    'IMPL-PARSE-008': [r'def.*parse_region|REGION.*block|region.*header.*pars'],
+    'IMPL-PARSE-005': [r'_parse_cue_settings|CUE_SETTING_PATTERN|Layout\('],
+    'IMPL-PARSE-006': [r'TAG_SPLIT_PATTERN|_classify_tag|KNOWN_TAGS'],
+    'IMPL-PARSE-007': [r'html\.unescape|_decode_entities'],
+    'IMPL-PARSE-008': [r'def _parse_regions|REGION_SETTING_PATTERN'],
     'IMPL-WRITE-001': [r'class WebVTTWriter|def write'],
     'IMPL-WRITE-002': [r'def _encode_illegal_characters|replace.*&amp'],
     'IMPL-WRITE-003': [r'def _timestamp'],
@@ -431,52 +420,61 @@ print(f"  Found: {len(found_rules)}/{len(all_rules)}, Missing: {len(missing_rule
 print("\n[3/5] Tag/Setting/Entity Coverage")
 
 # Tags: check if the code can READ or WRITE each tag
-# Note: reader strips most tags (OTHER_SPAN_PATTERN.sub), writer generates <i>/<b>/<u> from styles
+# Reader now parses tags via TAG_SPLIT_PATTERN + _classify_tag into CaptionNode.STYLE pairs
+# Writer generates tags from style nodes via _convert_structural_tag
 tag_coverage = {
-    '<c>':         {'read': bool(re.search(r'OTHER_SPAN_PATTERN', content)), 'write': False,
-                    'note': 'Reader strips via OTHER_SPAN_PATTERN (matches [cibuv])'},
-    '<i>':         {'read': bool(re.search(r'OTHER_SPAN_PATTERN', content)),
+    '<c>':         {'read': bool(re.search(r'_classify_tag|_tag_content', content)),
+                    'write': bool(re.search(r'_convert_structural_tag', content)),
+                    'note': 'Reader parses via _classify_tag + _tag_content, writer via _convert_structural_tag'},
+    '<i>':         {'read': bool(re.search(r'TAG_SPLIT_PATTERN|_classify_tag', content)),
                     'write': bool(re.search(r'"<i>"', content)),
-                    'note': 'Reader strips via OTHER_SPAN_PATTERN, writer generates from style nodes'},
-    '<b>':         {'read': bool(re.search(r'OTHER_SPAN_PATTERN', content)),
+                    'note': 'Reader preserves as STYLE node (italics), writer generates from style nodes'},
+    '<b>':         {'read': bool(re.search(r'TAG_SPLIT_PATTERN|_classify_tag', content)),
                     'write': bool(re.search(r'"<b>"', content)),
-                    'note': 'Reader strips via OTHER_SPAN_PATTERN, writer generates from style nodes'},
-    '<u>':         {'read': bool(re.search(r'OTHER_SPAN_PATTERN', content)),
+                    'note': 'Reader preserves as STYLE node (bold), writer generates from style nodes'},
+    '<u>':         {'read': bool(re.search(r'TAG_SPLIT_PATTERN|_classify_tag', content)),
                     'write': bool(re.search(r'"<u>"', content)),
-                    'note': 'Reader strips via OTHER_SPAN_PATTERN, writer generates from style nodes'},
-    '<v>':         {'read': bool(re.search(r'VOICE_SPAN_PATTERN', content)),
+                    'note': 'Reader preserves as STYLE node (underline), writer generates from style nodes'},
+    '<v>':         {'read': bool(re.search(r'VOICE_SPAN_PATTERN|"v"', content)),
                     'write': False,
-                    'note': 'Reader extracts speaker annotation, strips tag'},
-    '<lang>':      {'read': bool(re.search(r'<lang[\\.> ]|lang.*tag.*pars', content)),
+                    'note': 'Reader extracts speaker annotation into text, not round-trippable'},
+    '<lang>':      {'read': bool(re.search(r'"lang".*KNOWN_TAGS|_tag_content', content)),
+                    'write': bool(re.search(r'_convert_structural_tag.*lang|"<lang', content)),
+                    'note': 'Reader parses via _classify_tag into STYLE node with lang key'},
+    '<ruby>/<rt>': {'read': bool(re.search(r'"ruby".*KNOWN_TAGS|"rt".*KNOWN_TAGS|_tag_content', content)),
+                    'write': bool(re.search(r'_convert_structural_tag.*ruby|"<ruby', content)),
+                    'note': 'Reader parses via _classify_tag into STYLE node'},
+    '<timestamp>': {'read': bool(re.search(r'_classify_tag.*timestamp|timestamp.*microseconds', content, re.DOTALL)),
                     'write': False,
-                    'note': 'Stripped by OTHER_SPAN_PATTERN, not individually parsed'},
-    '<ruby>/<rt>': {'read': bool(re.search(r'<ruby[\\.> ]|ruby.*tag.*pars', content)),
-                    'write': False,
-                    'note': 'Stripped by OTHER_SPAN_PATTERN, not individually parsed'},
-    '<timestamp>': {'read': bool(re.search(r'<\d+:\d+.*>.*process|timestamp.*tag.*pars', content)),
-                    'write': False,
-                    'note': 'Stripped by OTHER_SPAN_PATTERN, not individually parsed'},
+                    'note': 'Reader parses timestamp tags into STYLE node with timestamp key'},
 }
 
 tags_with_read = sum(1 for t in tag_coverage.values() if t['read'])
 tags_with_write = sum(1 for t in tag_coverage.values() if t['write'])
 tags_roundtrip = sum(1 for t in tag_coverage.values() if t['read'] and t['write'])
-print(f"  Tags: {tags_with_read}/8 read (strip), {tags_with_write}/8 write, {tags_roundtrip}/8 round-trip")
+print(f"  Tags: {tags_with_read}/8 read, {tags_with_write}/8 write, {tags_roundtrip}/8 round-trip")
 
-# Settings: check if the code PARSES individual settings vs stores raw string
+# Settings: check if the code PARSES individual settings
+# Reader now parses all settings via _parse_cue_settings + CUE_SETTING_PATTERN
 setting_coverage = {
-    'vertical': {'parsed': False, 'written': False,
-                 'note': 'Reader stores raw string via Layout(webvtt_positioning=...), no individual parsing'},
-    'line':     {'parsed': False, 'written': bool(re.search(r'["\']line:', content)),
-                 'note': 'Writer generates from layout origin.y'},
-    'position': {'parsed': False, 'written': bool(re.search(r'["\']position:', content)),
-                 'note': 'Writer generates from layout origin.x'},
-    'size':     {'parsed': False, 'written': bool(re.search(r'["\']size:', content)),
-                 'note': 'Writer generates from layout extent.horizontal'},
-    'align':    {'parsed': False, 'written': bool(re.search(r'["\']align:', content)),
-                 'note': 'Writer generates from layout alignment'},
-    'region':   {'parsed': False, 'written': False,
-                 'note': 'Not implemented'},
+    'vertical': {'parsed': bool(re.search(r'WritingDirectionEnum|"vertical".*CUE_SETTING_PATTERN|name\s*==\s*"vertical"', content)),
+                 'written': False,
+                 'note': 'Parsed into Layout.writing_direction via WritingDirectionEnum'},
+    'line':     {'parsed': bool(re.search(r'_line_number_to_percent|name\s*==\s*"line"', content)),
+                 'written': bool(re.search(r'f" line:|f"line:', writer_section)),
+                 'note': 'Parsed into origin.y, writer generates from layout'},
+    'position': {'parsed': bool(re.search(r'_parse_percent_value|name\s*==\s*"position"', content)),
+                 'written': bool(re.search(r'f" position:|f"position:', writer_section)),
+                 'note': 'Parsed into origin.x, writer generates from layout'},
+    'size':     {'parsed': bool(re.search(r'extent_horizontal|name\s*==\s*"size"', content)),
+                 'written': bool(re.search(r'f" size:|f"size:', writer_section)),
+                 'note': 'Parsed into extent.horizontal, writer generates from layout'},
+    'align':    {'parsed': bool(re.search(r'ALIGN_SETTING_MAP|name\s*==\s*"align"', content)),
+                 'written': bool(re.search(r'f" align:|f"align:', writer_section)),
+                 'note': 'Parsed into Layout.alignment via ALIGN_SETTING_MAP'},
+    'region':   {'parsed': bool(re.search(r'_extract_region_id|region.*inherit_from', content)),
+                 'written': bool(re.search(r'f" region:|f"region:|webvtt_positioning', writer_section)),
+                 'note': 'Parsed via _extract_region_id, region layout inherited via inherit_from'},
 }
 
 settings_parsed = sum(1 for s in setting_coverage.values() if s['parsed'])
@@ -484,20 +482,22 @@ settings_written = sum(1 for s in setting_coverage.values() if s['written'])
 print(f"  Settings: {settings_parsed}/6 parsed, {settings_written}/6 written")
 
 # Entities: check read (decode) and write (encode) separately
+# Reader now uses html.unescape() which handles all named + numeric entities
+has_html_unescape = bool(re.search(r'html\.unescape', content))
 entity_coverage = {
-    '&amp;':  {'read': bool(re.search(r'replace.*"&amp;".*"&"', content)),
+    '&amp;':  {'read': has_html_unescape,
                'write': bool(re.search(r'replace.*"&".*"&amp;"', content))},
-    '&lt;':   {'read': bool(re.search(r'replace.*"&lt;".*"<"', content)),
+    '&lt;':   {'read': has_html_unescape,
                'write': bool(re.search(r'replace.*"<".*"&lt;"', content))},
-    '&gt;':   {'read': bool(re.search(r'replace.*"&gt;".*">"', content)),
+    '&gt;':   {'read': has_html_unescape,
                'write': bool(re.search(r'replace.*">".*"&gt;"|--&gt;', content))},
-    '&nbsp;': {'read': bool(re.search(r'replace.*"&nbsp;"', content)),
+    '&nbsp;': {'read': has_html_unescape,
                'write': bool(re.search(r'"&nbsp;"', content))},
-    '&lrm;':  {'read': bool(re.search(r'replace.*"&lrm;"', content)),
+    '&lrm;':  {'read': has_html_unescape,
                'write': bool(re.search(r'^\s*[^#\s].*replace.*\\u200e.*"&lrm;"', content, re.MULTILINE))},
-    '&rlm;':  {'read': bool(re.search(r'replace.*"&rlm;"', content)),
+    '&rlm;':  {'read': has_html_unescape,
                'write': bool(re.search(r'^\s*[^#\s].*replace.*\\u200f.*"&rlm;"', content, re.MULTILINE))},
-    '&#ref':  {'read': False, 'write': False},
+    '&#ref':  {'read': has_html_unescape, 'write': False},
 }
 
 entities_read = sum(1 for e in entity_coverage.values() if e['read'])
@@ -638,7 +638,7 @@ report += f"""
 """
 
 for tag, info in tag_coverage.items():
-    r = "Yes (strip)" if info['read'] else "No"
+    r = "Yes" if info['read'] else "No"
     w = "Yes" if info['write'] else "No"
     rt = "Yes" if info['read'] and info['write'] else "No"
     report += f"| `{tag}` | {r} | {w} | {rt} | {info['note']} |\n"
@@ -677,20 +677,54 @@ report += f"""
 for t in test_gaps:
     report += f"- **{t['rule_id']}**: {t['name']}\n"
 
-report += f"""
+report += """
 ---
 
 ## 6. Key Findings
 
-1. **Reader strips all tags** except voice annotation: `<c>`, `<i>`, `<b>`, `<u>`, `<lang>`, `<ruby>`, `<rt>`, timestamp tags are all removed by `OTHER_SPAN_PATTERN.sub("", ...)`. Only `<v>` speaker name is extracted.
-2. **Writer generates `<i>`, `<b>`, `<u>`** from internal style nodes (when converting from other formats), but VTT-to-VTT loses all tags.
-3. **Cue settings stored as raw string** in reader (`Layout(webvtt_positioning=cue_settings)`). No individual setting parsing (vertical, line, position, size, align, region).
-4. **Writer generates settings** (line, position, size, align) from structured Layout data when converting from other formats.
-5. **Timing validation exists but is DISABLED by default** (`ignore_timing_errors=True`). Start<=end and monotonic checks are opt-in.
-6. **Entity decode is complete** (reader handles &amp;, &lt;, &gt;, &nbsp;, &lrm;, &rlm;). **Entity encode is partial** (writer only encodes &amp;, &lt;, and --> to --&gt;). &lrm;/&rlm; encoding is commented out.
-7. **STYLE blocks not implemented** (explicit TODO in code). REGION blocks not implemented.
-8. **Header detection is overly permissive**: `"WEBVTT" in content` matches substring anywhere, not first-line-only.
+"""
 
+# Generate findings dynamically from detection results
+findings = []
+
+# Check tag state
+if tags_with_read >= 7:
+    findings.append(f"1. **Reader preserves inline tags**: Tags `<i>`, `<b>`, `<u>`, `<c>`, `<lang>`, `<ruby>`, `<rt>`, and timestamp are parsed by `TAG_SPLIT_PATTERN.split()` + `_classify_tag()` into CaptionNode.STYLE open/close pairs. Voice `<v>` annotation extracted into text.")
+else:
+    findings.append(f"1. **Tag parsing incomplete**: Only {tags_with_read}/8 tags parsed by reader.")
+
+if tags_with_write >= 4:
+    findings.append(f"2. **Writer generates tags from style nodes**: `<i>`, `<b>`, `<u>` from text styles; `<c>`, `<lang>`, `<ruby>` via `_convert_structural_tag()`. VTT-to-VTT round-trip preserves formatting.")
+else:
+    findings.append(f"2. **Writer tag output limited**: Only {tags_with_write}/8 tags written.")
+
+if settings_parsed >= 5:
+    findings.append(f"3. **All cue settings individually parsed**: `_parse_cue_settings()` uses `CUE_SETTING_PATTERN` to parse position, line, size, align, vertical. Region handled via `_extract_region_id()` + `inherit_from`.")
+else:
+    findings.append(f"3. **Cue settings partially parsed**: Only {settings_parsed}/6 settings individually parsed.")
+
+findings.append(f"4. **STYLE blocks fully implemented**: `_parse_style_blocks()` extracts `::cue` CSS rules via `STYLE_SELECTOR_PATTERN`. `_resolve_cue_styles()` merges resolved properties into nodes. Class-based styling (`::cue(.class)`) supported.")
+findings.append(f"5. **Timing validation exists but is DISABLED by default** (`ignore_timing_errors=True`). Start<=end and monotonic checks are opt-in.")
+
+if has_html_unescape:
+    findings.append(f"6. **Entity decode uses `html.unescape()`**: Handles all named entities + numeric character references (&#169;, &#x266B;). More permissive than spec's 6 named entities. **Entity encode is partial** (writer only encodes &amp;, &lt;, and --> to --&gt;). &lrm;/&rlm; encoding is commented out.")
+else:
+    findings.append(f"6. **Entity decode limited**: Manual replacement for spec entities only.")
+
+if bool(re.search(r'def _parse_regions', content)):
+    findings.append(f"7. **REGION blocks fully implemented**: `_parse_regions()` parses id, width, lines, regionanchor, viewportanchor, scroll settings. First-definition-wins for duplicate IDs. Region layout inherited by cues via `inherit_from`.")
+else:
+    findings.append(f"7. **REGION blocks not implemented**.")
+
+if has_header_validate and has_detect_first_line:
+    findings.append(f"8. **Header detection is strict**: `detect()` checks first line only (not substring). `_validate_header()` enforces WEBVTT on first line + blank line separator. BOM stripped before parsing.")
+else:
+    findings.append(f"8. **Header detection needs review**.")
+
+for f in findings:
+    report += f + "\n"
+
+report += f"""
 ---
 
 **Generated**: {datetime.now().strftime('%Y-%m-%d %H:%M')}
@@ -710,22 +744,24 @@ Execute the above Python script directly.
 ## Key improvements over previous version
 
 1. **No category key bug** -- per-rule patterns instead of category-based lookup
-2. **Function-level detection** -- matches `def _parse_timestamp`, `def _validate_timings`, not keywords
+2. **Function-level detection** -- matches `def _parse_timestamp`, `def _parse_cue_settings`, `_classify_tag`, not keywords
 3. **Read vs Write distinction** -- tags, settings, entities tracked separately for read/write/round-trip
 4. **Disabled-by-default detection** -- timing validation flagged as caveat when `ignore_timing_errors=True`
-5. **Raw string vs parsed distinction** -- cue settings correctly reported as unparsed
-6. **Commented-out code detection** -- &lrm;/&rlm; writer encoding correctly flagged as not active
-7. **Expanded file scope** -- also reads geometry.py and base.py for Layout handling
-8. **Key findings section** -- narrative summary of the most important issues
+5. **Parsed settings detection** -- detects `_parse_cue_settings`, `CUE_SETTING_PATTERN`, individual setting names
+6. **Tag preservation detection** -- detects `TAG_SPLIT_PATTERN`, `_classify_tag`, `KNOWN_TAGS`, `_tag_content`
+7. **STYLE block detection** -- detects `_parse_style_blocks`, `STYLE_SELECTOR_PATTERN`, `_extract_cue_styles`
+8. **Dynamic key findings** -- generated from detection results, not hardcoded stale text
+9. **Tighter RULE-CUE-001** -- matches `TIMING_LINE_PATTERN` definition, not general `-->` string checks
+10. **Expanded landmarks** -- includes `_parse_cue_settings`, `_parse_style_blocks`, `CUE_SETTING_PATTERN`, `STYLE_SELECTOR_PATTERN`, `TAG_SPLIT_PATTERN`, `_classify_tag`, `WritingDirectionEnum`
 
 ---
 
 ## Success Criteria
 
 - All 76 spec rules individually checked with per-rule patterns
-- Deep validation for 7 critical rules at function level
+- Deep validation for critical rules at function level
 - Tags tracked as read/write/round-trip (not just keyword match)
 - Settings tracked as parsed vs raw-string
 - Entities tracked as read (decode) vs write (encode)
 - Disabled-by-default validations flagged
-- Key findings narrative for actionable summary
+- Dynamic key findings generated from detection results

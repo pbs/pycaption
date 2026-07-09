@@ -1,4 +1,5 @@
 import datetime
+import html
 import re
 import sys
 from copy import deepcopy
@@ -68,16 +69,12 @@ Matches two percentage values (integer or decimal) separated by a comma:
 0%,0%
 100%,100%
 """
-CUE_SETTING_PATTERN = re.compile(
-    r"(position|line|size|align|vertical):([\w.%-]+)"
-)
+CUE_SETTING_PATTERN = re.compile(r"(position|line|size|align|vertical):([\w.%-]+)")
 """
 Matches individual cue settings from the timing line:
 position:50%  line:75%  size:80%  align:center  vertical:rl
 """
-STYLE_SELECTOR_PATTERN = re.compile(
-    r"::cue(?:\((\.?[\w-]+)\))?\s*\{([^}]*)\}"
-)
+STYLE_SELECTOR_PATTERN = re.compile(r"::cue(?:\((\.?[\w-]+)\))?\s*\{([^}]*)\}")
 """
 Matches ::cue selectors with their declaration blocks:
 ::cue { color: white }           -> group(1)=None
@@ -110,6 +107,10 @@ ALIGN_SETTING_MAP = {
 }
 
 
+def _is_note_start(line):
+    return line == "NOTE" or line.startswith("NOTE ") or line.startswith("NOTE\t")
+
+
 def microseconds(h, m, s, f):
     """
     Returns an integer representing a number of microseconds
@@ -125,20 +126,33 @@ class WebVTTReader(BaseReader):
         """
         :param ignore_timing_errors: Whether to ignore timing checks
         :type ignore_timing_errors: bool
-        :param time_shift_milliseconds: Move all the timestamps forward/backward with this number of milliseconds
+        :param time_shift_milliseconds: Move all the timestamps
+        forward/backward with this number of milliseconds
         :type time_shift_milliseconds: int
         """
         self.ignore_timing_errors = ignore_timing_errors
         self.time_shift_microseconds = time_shift_milliseconds * 1000
 
     def detect(self, content):
-        return "WEBVTT" in content
+        if content.startswith("﻿"):
+            content = content[1:]
+        first_line = content.splitlines()[0] if content.strip() else ""
+        return (
+            first_line == "WEBVTT"
+            or first_line.startswith("WEBVTT ")
+            or first_line.startswith("WEBVTT\t")
+        )
 
     def read(self, content, lang="en-US"):
         if not isinstance(content, str):
             raise InvalidInputError("The content is not a unicode string.")
 
+        if content.startswith("﻿"):
+            content = content[1:]
+
+        # str.splitlines() handles CR, LF, CRLF (RULE-FMT-005)
         lines = content.splitlines()
+        self._validate_header(lines)
         styles = self._parse_style_blocks(lines)
         captions = self._parse(lines)
         self._resolve_cue_styles(captions, styles)
@@ -149,9 +163,25 @@ class WebVTTReader(BaseReader):
 
         return caption_set
 
+    @staticmethod
+    def _validate_header(lines):
+        if not lines:
+            raise CaptionReadSyntaxError("WebVTT file is empty.")
+
+        first_line = lines[0]
+        if not (
+            first_line == "WEBVTT"
+            or first_line.startswith("WEBVTT ")
+            or first_line.startswith("WEBVTT\t")
+        ):
+            raise CaptionReadSyntaxError(
+                "WebVTT file must start with 'WEBVTT' on the first line."
+            )
+
+        if len(lines) > 1 and lines[1] != "":
+            raise CaptionReadSyntaxError("Missing blank line after WebVTT header.")
+
     def _parse(self, lines):
-        # State machine: cycles through waiting-for-timing → collecting-text
-        # → emit-caption-on-blank-line, repeat.
         captions = CaptionList()
         start = None
         end = None
@@ -159,14 +189,31 @@ class WebVTTReader(BaseReader):
         open_tags = []
         layout_info = None
         found_timing = False
+        in_note_block = False
+        in_style_block = False
 
-        # Parse REGION blocks from the header area before processing cues
         self._regions = self._parse_regions(lines)
 
         for i, line in enumerate(lines):
+            if in_note_block:
+                if line == "":
+                    in_note_block = False
+                continue
+
+            if in_style_block:
+                if line == "":
+                    in_style_block = False
+                continue
+
+            if not found_timing and _is_note_start(line):
+                in_note_block = True
+                continue
+
+            if not found_timing and line.strip() == "STYLE":
+                in_style_block = True
+                continue
+
             if "-->" in line:
-                # Timing line found (e.g. "00:00:01.000 --> 00:00:03.000")
-                # marks the start of a new cue
                 found_timing = True
                 timing_line = i
                 last_start_time = captions[-1].start if captions else 0
@@ -179,9 +226,7 @@ class WebVTTReader(BaseReader):
                     tb = sys.exc_info()[2]
                     raise type(e)(new_msg).with_traceback(tb) from None
 
-            elif "" == line:
-                # Blank line = block separator in WebVTT.
-                # If we were collecting a cue, finalize and store it.
+            elif line == "":
                 if found_timing and nodes:
                     found_timing = False
                     self._close_unclosed_tags(nodes, open_tags)
@@ -191,17 +236,10 @@ class WebVTTReader(BaseReader):
                     open_tags = []
             else:
                 if found_timing:
-                    # We're inside a cue — this line is cue text.
-                    # Add a line break between multi-line cue text.
                     if nodes:
                         nodes.append(CaptionNode.create_break())
                     nodes.extend(self._parse_cue_text(line, open_tags))
-                else:
-                    # Outside a cue: cue identifiers, NOTE blocks,
-                    # or other metadata — skip silently.
-                    pass
 
-        # File may not end with a blank line — emit any remaining cue
         if nodes:
             self._close_unclosed_tags(nodes, open_tags)
             caption = Caption(start, end, nodes, layout_info=layout_info)
@@ -240,12 +278,8 @@ class WebVTTReader(BaseReader):
         layout_info = None
         if cue_settings:
             region_id = self._extract_region_id(cue_settings)
-            region = (
-                self._regions.get(region_id) if region_id else None
-            )
-            layout_info = self._parse_cue_settings(
-                cue_settings, inherit_from=region
-            )
+            region = self._regions.get(region_id) if region_id else None
+            layout_info = self._parse_cue_settings(cue_settings, inherit_from=region)
 
         return start, end, layout_info
 
@@ -260,10 +294,8 @@ class WebVTTReader(BaseReader):
         m = m.groups()
 
         if m[2]:
-            # Timestamp of the form [hours]:[minutes]:[seconds].[milliseconds]
             return microseconds(m[0], m[1], m[2].replace(":", ""), m[3])
         else:
-            # Timestamp of the form [minutes]:[seconds].[milliseconds]
             return microseconds(0, m[0], m[1], m[3])
 
     def _parse_cue_text(self, line, open_tags=None):
@@ -370,9 +402,7 @@ class WebVTTReader(BaseReader):
             groups = m.groups()
             if groups[2] is not None:
                 secs = groups[2].replace(":", "")
-                us = microseconds(
-                    groups[0], groups[1], secs, groups[3]
-                )
+                us = microseconds(groups[0], groups[1], secs, groups[3])
             else:
                 us = microseconds(0, groups[0], groups[1], groups[3])
             return CaptionNode.create_style(True, {"timestamp": us})
@@ -440,18 +470,12 @@ class WebVTTReader(BaseReader):
 
     @staticmethod
     def _decode_entities(text):
-        """Decode WebVTT character entities in a text segment.
+        """Decode HTML character entities in a text segment.
 
         :type text: str
         :rtype: str
         """
-        text = text.replace("&lt;", "<")
-        text = text.replace("&gt;", ">")
-        text = text.replace("&lrm;", "‎")
-        text = text.replace("&rlm;", "‏")
-        text = text.replace("&nbsp;", " ")
-        text = text.replace("&amp;", "&")
-        return text
+        return html.unescape(text)
 
     def _parse_regions(self, lines):
         """Parse REGION blocks from the file header area.
@@ -478,16 +502,24 @@ class WebVTTReader(BaseReader):
         :returns: dict mapping region id -> Layout
         """
         regions = {}
+        in_note_block = False
         i = 0
         while i < len(lines):
             line = lines[i].strip()
+            if in_note_block:
+                if line == "":
+                    in_note_block = False
+                i += 1
+                continue
+            if _is_note_start(line):
+                in_note_block = True
+                i += 1
+                continue
             if line == "REGION" or line.startswith(("REGION\t", "REGION ")):
                 i += 1
                 settings = {}
                 seen_keys = set()
-                # Read settings until a blank line (block separator in WebVTT)
                 while i < len(lines) and lines[i].strip() != "":
-                    # Match key:value pair (e.g. "width:50%")
                     m = REGION_SETTING_PATTERN.match(lines[i].strip())
                     if m:
                         key, value = m.group(1), m.group(2)
@@ -497,14 +529,11 @@ class WebVTTReader(BaseReader):
                         seen_keys.add(key)
                         settings[key] = value
                     i += 1
-                # Skip regions without id (spec requires it; cues can't reference them)
                 if "id" in settings:
                     region_id = settings["id"]
-                    # First definition wins; duplicates are ignored (RULE-REG-009)
                     if region_id not in regions:
                         regions[region_id] = self._region_to_layout(settings)
             elif "-->" in line:
-                # REGIONs only appear before cues; stop scanning once cues begin
                 break
             else:
                 i += 1
@@ -569,10 +598,7 @@ class WebVTTReader(BaseReader):
             Size(height, UnitEnum.PERCENT),
         )
 
-        return Layout(
-            origin=origin,
-            extent=extent
-        )
+        return Layout(origin=origin, extent=extent)
 
     @staticmethod
     def _extract_region_id(cue_settings):
@@ -671,16 +697,15 @@ class WebVTTReader(BaseReader):
         """Extract ::cue rules from STYLE blocks before the first cue."""
         styles = {}
         in_style_block = False
+        in_note_block = False
         css_text = ""
 
         for line in lines:
-            if "-->" in line:
-                break
-
-            if line.strip() == "STYLE":
-                in_style_block = True
-                css_text = ""
-            elif in_style_block:
+            if in_note_block:
+                if line == "":
+                    in_note_block = False
+                continue
+            if in_style_block:
                 if line == "":
                     if css_text:
                         self._extract_cue_styles(css_text, styles)
@@ -688,6 +713,13 @@ class WebVTTReader(BaseReader):
                     css_text = ""
                 else:
                     css_text += line + "\n"
+            elif _is_note_start(line):
+                in_note_block = True
+            elif "-->" in line:
+                break
+            elif line.strip() == "STYLE":
+                in_style_block = True
+                css_text = ""
 
         if in_style_block and css_text:
             self._extract_cue_styles(css_text, styles)
@@ -1030,9 +1062,7 @@ class WebVTTWriter(BaseWriter):
                                 s += tags[1]
 
                 if not has_text_style:
-                    s += self._convert_structural_tag(
-                        node.content, node.start
-                    )
+                    s += self._convert_structural_tag(node.content, node.start)
             elif node.type_ == CaptionNode.BREAK:
                 if i > 0 and nodes[i - 1].type_ != CaptionNode.TEXT:
                     s += "&nbsp;"

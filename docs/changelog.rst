@@ -17,6 +17,21 @@ Changelog
     prevent invalid selectors in output.
   - Tag selectors (::cue(b)) are intentionally skipped — only bare
     ::cue and class selectors are supported.
+  - Harden WebVTT header validation: detect() now checks the first
+    line only (not substring match anywhere in file) and _validate_header()
+    enforces a blank line after the WEBVTT signature.
+  - Strip UTF-8 BOM (U+FEFF) in both detect() and read() so
+    BOM-prefixed files no longer fail to parse.
+  - Track NOTE blocks with in_note_block state in _parse(),
+    _parse_regions(), and _parse_style_blocks() so that "-->" inside
+    comments no longer crashes the parser or triggers false timing lines.
+  - Reorder condition checks in _parse_style_blocks() so that "-->"
+    inside STYLE block CSS content does not prematurely terminate
+    style parsing.
+  - Replace manual entity .replace() calls with html.unescape() to
+    support numeric character references (&#169;, &#x266B;) and all
+    HTML named entities. Note: &nbsp; now correctly decodes to U+00A0
+    (non-breaking space) per spec, rather than U+0020.
 
 2.2.27
 ^^^^^^
