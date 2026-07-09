@@ -2,19 +2,32 @@ import datetime
 from copy import deepcopy
 
 from ..base import BaseWriter, CaptionNode
-from ..geometry import HorizontalAlignmentEnum, WritingDirectionEnum
+from ..geometry import WritingDirectionEnum
 from .constants import DEFAULT_ALIGN, WEBVTT_VERSION_OF
 
 
 class WebVTTWriter(BaseWriter):
     HEADER = "WEBVTT\n\n"
 
-    _INTERNAL_STYLE_KEYS = frozenset({
-        "lang", "italics", "bold", "underline", "class", "classes",
-    })
-    _HTML_ELEMENT_NAMES = frozenset({
-        "p", "span", "sync", "body", "div",
-    })
+    _INTERNAL_STYLE_KEYS = frozenset(
+        {
+            "lang",
+            "italics",
+            "bold",
+            "underline",
+            "class",
+            "classes",
+        }
+    )
+    _HTML_ELEMENT_NAMES = frozenset(
+        {
+            "p",
+            "span",
+            "sync",
+            "body",
+            "div",
+        }
+    )
 
     def write(self, caption_set, lang=None):
         """
@@ -244,8 +257,10 @@ class WebVTTWriter(BaseWriter):
             alignment = DEFAULT_ALIGN
         cue_settings = ""
 
-        if (layout.writing_direction
-                and layout.writing_direction != WritingDirectionEnum.HORIZONTAL):
+        if (
+            layout.writing_direction
+            and layout.writing_direction != WritingDirectionEnum.HORIZONTAL
+        ):
             cue_settings += f" vertical:{layout.writing_direction.value}"
         # WebVTT spec default is "center" — omit to keep output minimal
         if alignment and alignment != "center":
@@ -301,7 +316,7 @@ class WebVTTWriter(BaseWriter):
                 is_vtt_class_span = (
                     "classes" in node.content and "class" not in node.content
                 )
-                # VTT class spans (<c.yellow>) → structural tag; others → text-style tags
+                # VTT class spans (<c.yellow>) → structural tag
                 if not is_vtt_class_span:
                     styles = ["italics", "underline", "bold"]
                     if not node.start:

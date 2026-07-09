@@ -73,7 +73,8 @@ WEBVTT_VERSION_OF = {
     HorizontalAlignmentEnum.END: "end",
 }
 
-# Fallback for captions with no alignment info (not the WebVTT spec default, which is "center")
+# Fallback for captions with no alignment info
+# (not the WebVTT spec default, which is "center")
 DEFAULT_ALIGN = "start"
 
 ALIGN_SETTING_MAP = {

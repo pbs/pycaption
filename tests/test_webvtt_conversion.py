@@ -11,7 +11,6 @@ from pycaption import (
     WebVTTReader,
     WebVTTWriter,
 )
-from pycaption.base import CaptionNode
 from tests.mixins import DFXPTestingMixIn, MicroDVDTestingMixIn, WebVTTTestingMixIn
 
 
@@ -146,19 +145,13 @@ class TestWebVTTInlineMarkupRoundTrip:
         assert "<b><i>both</i></b>" in result
 
     def test_class_roundtrip(self):
-        vtt = (
-            "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\n"
-            "<c.yellow>colored</c>\n"
-        )
+        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\n" "<c.yellow>colored</c>\n"
         caption_set = WebVTTReader().read(vtt)
         result = WebVTTWriter().write(caption_set)
         assert "<c.yellow>colored</c>" in result
 
     def test_lang_roundtrip(self):
-        vtt = (
-            "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\n"
-            "<lang fr>Bonjour</lang>\n"
-        )
+        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\n" "<lang fr>Bonjour</lang>\n"
         caption_set = WebVTTReader().read(vtt)
         result = WebVTTWriter().write(caption_set)
         assert "<lang fr>Bonjour</lang>" in result
@@ -173,10 +166,7 @@ class TestWebVTTInlineMarkupRoundTrip:
         assert "<ruby>base<rt>annotation</rt></ruby>" in result
 
     def test_timestamp_roundtrip(self):
-        vtt = (
-            "WEBVTT\n\n00:00:01.000 --> 00:00:05.000\n"
-            "Hello <00:00:02.500>world\n"
-        )
+        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:05.000\n" "Hello <00:00:02.500>world\n"
         caption_set = WebVTTReader().read(vtt)
         result = WebVTTWriter().write(caption_set)
         assert "<00:02.500>" in result
@@ -193,18 +183,14 @@ class TestWebVTTInlineMarkupRoundTrip:
         assert "Normal <i>italic</i> <b>bold</b> end" in result
 
     def test_multiline_style_spanning_lines_roundtrip(self):
-        vtt = (
-            "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\n"
-            "<i>line one\nline two</i>\n"
-        )
+        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\n" "<i>line one\nline two</i>\n"
         caption_set = WebVTTReader().read(vtt)
         result = WebVTTWriter().write(caption_set)
         assert "<i>line one\nline two</i>" in result
 
     def test_unrecognized_tag_preserved_roundtrip(self):
         vtt = (
-            "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\n"
-            "He said <LAUGHING> something\n"
+            "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\n" "He said <LAUGHING> something\n"
         )
         caption_set = WebVTTReader().read(vtt)
         result = WebVTTWriter().write(caption_set)
@@ -234,20 +220,14 @@ class TestWebVTTStyleCrossFormat:
         assert "<i>" not in result
 
     def test_structural_tags_stripped_in_srt(self):
-        vtt = (
-            "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\n"
-            "<c.yellow>Hello</c>\n"
-        )
+        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\n" "<c.yellow>Hello</c>\n"
         caption_set = WebVTTReader().read(vtt)
         result = SRTWriter().write(caption_set)
         assert "<c" not in result
         assert "Hello" in result
 
     def test_structural_tags_stripped_in_dfxp(self):
-        vtt = (
-            "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\n"
-            "<lang fr>Bonjour</lang>\n"
-        )
+        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\n" "<lang fr>Bonjour</lang>\n"
         caption_set = WebVTTReader().read(vtt)
         result = DFXPWriter().write(caption_set)
         assert "<lang" not in result
@@ -310,14 +290,10 @@ class TestWebVTTCueSettingsConversion:
 
         assert "yellow" in result.lower()
 
-    def test_style_block_to_dfxp_valid_xml(
-        self, sample_webvtt_with_style_block_class
-    ):
+    def test_style_block_to_dfxp_valid_xml(self, sample_webvtt_with_style_block_class):
         from lxml import etree
 
-        caption_set = WebVTTReader().read(
-            sample_webvtt_with_style_block_class
-        )
+        caption_set = WebVTTReader().read(sample_webvtt_with_style_block_class)
         result = DFXPWriter().write(caption_set)
 
         etree.fromstring(result.encode("utf-8"))
@@ -394,11 +370,7 @@ class TestWebVTTWriterStyleBlocks:
         assert result.count("vertical:rl") == 1
 
     def test_no_style_block_when_no_styles(self):
-        vtt = (
-            "WEBVTT\n\n"
-            "00:00:01.000 --> 00:00:03.000\n"
-            "Plain text\n"
-        )
+        vtt = "WEBVTT\n\n" "00:00:01.000 --> 00:00:03.000\n" "Plain text\n"
         caption_set = WebVTTReader().read(vtt)
         result = WebVTTWriter().write(caption_set)
 

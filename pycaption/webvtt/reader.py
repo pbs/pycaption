@@ -1,13 +1,7 @@
 import html
 import sys
 
-from ..base import (
-    BaseReader,
-    Caption,
-    CaptionList,
-    CaptionNode,
-    CaptionSet,
-)
+from ..base import BaseReader, Caption, CaptionList, CaptionNode, CaptionSet
 from ..exceptions import (
     CaptionReadError,
     CaptionReadNoCaptions,
@@ -646,7 +640,7 @@ class WebVTTReader(BaseReader):
         if in_style_block and css_text:
             self._extract_cue_styles(css_text, styles)
 
-        # Marker: signals to the writer that these styles originated from a VTT STYLE block
+        # Marker: signals to the writer that styles originated from VTT
         if styles and "::cue" not in styles:
             styles["::cue"] = {}
 
