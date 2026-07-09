@@ -830,11 +830,10 @@ class Layout:
         return is_relative
 
     def as_percentage_of(self, video_width, video_height):
-        params = {"alignment": self.alignment}
-        # We don't need to preserve webvtt_positioning on Layout
-        # transformations because, if it is set, the WebVTT writer
-        # returns as soon as it's found and the transformations are
-        # never triggered.
+        params = {
+            "alignment": self.alignment,
+            "writing_direction": self.writing_direction,
+        }
         for attr_name in ["origin", "extent", "padding"]:
             attr = getattr(self, attr_name)
             if attr:
@@ -895,11 +894,8 @@ class Layout:
                 origin=self.origin,
                 extent=new_extent,
                 padding=self.padding,
-                alignment=self.alignment
-                # We don't need to preserve webvtt_positioning on Layout
-                # transformations because, if it is set, the WebVTT writer
-                # returns as soon as it's found and the transformations are
-                # never triggered.
+                alignment=self.alignment,
+                writing_direction=self.writing_direction,
             )
 
         return self

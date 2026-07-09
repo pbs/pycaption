@@ -5,6 +5,7 @@ from pycaption import (
     MicroDVDWriter,
     SAMIReader,
     SAMIWriter,
+    SCCReader,
     SRTReader,
     SRTWriter,
     WebVTTReader,
@@ -329,3 +330,105 @@ class TestWebVTTCueSettingsConversion:
         result = WebVTTWriter().write(caption_set)
 
         assert "<c.yellow>" in result
+
+
+class TestWebVTTWriterStyleBlocks:
+    def test_style_block_roundtrip(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "STYLE\n"
+            "::cue { color: white }\n"
+            "::cue(.yellow) { color: yellow }\n\n"
+            "00:00:01.000 --> 00:00:03.000\n"
+            "<c.yellow>Hello world</c>\n"
+        )
+        caption_set = WebVTTReader().read(vtt)
+        result = WebVTTWriter().write(caption_set)
+
+        assert "STYLE\n" in result
+        assert "::cue(.yellow)" in result
+        assert "color: yellow" in result
+
+    def test_global_cue_style_roundtrip(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "STYLE\n"
+            "::cue { color: white }\n"
+            "::cue(.yellow) { color: yellow }\n\n"
+            "00:00:01.000 --> 00:00:03.000\n"
+            "<c.yellow>Hello</c>\n"
+        )
+        caption_set = WebVTTReader().read(vtt)
+        result = WebVTTWriter().write(caption_set)
+
+        style_section = result.split("\n\n")[1]
+        lines = style_section.strip().split("\n")
+        assert lines[0] == "STYLE"
+        assert "::cue {" in lines[1]
+        assert "::cue(.yellow)" in lines[2]
+
+    def test_writing_direction_from_layout(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "00:00:01.000 --> 00:00:03.000 vertical:rl line:50%\n"
+            "Hello vertical\n"
+        )
+        caption_set = WebVTTReader().read(vtt)
+        lang = caption_set.get_languages()[0]
+        captions = caption_set.get_captions(lang)
+        captions[0].layout_info.webvtt_positioning = None
+
+        result = WebVTTWriter().write(caption_set)
+
+        assert "vertical:rl" in result
+
+    def test_no_duplicate_vertical_with_passthrough(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "00:00:01.000 --> 00:00:03.000 vertical:rl line:50%\n"
+            "Hello vertical\n"
+        )
+        caption_set = WebVTTReader().read(vtt)
+        result = WebVTTWriter().write(caption_set)
+
+        assert result.count("vertical:rl") == 1
+
+    def test_no_style_block_when_no_styles(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "00:00:01.000 --> 00:00:03.000\n"
+            "Plain text\n"
+        )
+        caption_set = WebVTTReader().read(vtt)
+        result = WebVTTWriter().write(caption_set)
+
+        assert "STYLE" not in result
+
+    def test_sami_lang_style_not_emitted(self):
+        sami = (
+            '<sami><head><style type="text/css">\n'
+            "<!--\n"
+            ".en { lang: en-US; color: white; }\n"
+            "-->\n"
+            "</style></head><body>\n"
+            '<sync start="1000"><p class="en">Hello</p></sync>\n'
+            "</body></sami>"
+        )
+        caption_set = SAMIReader().read(sami)
+        result = WebVTTWriter().write(caption_set)
+
+        assert "::cue(.en)" not in result
+        assert "STYLE" not in result
+
+    def test_scc_to_vtt_no_style_block(self):
+        scc = (
+            "Scenarist_SCC V1.0\n\n"
+            "00:00:00:13\t94ae 94ae 9420 9420 9470 9470 "
+            "c8e5 ecec ef80 942c 942c 942f 942f\n\n"
+            "00:00:02:29\t942c 942c\n\n"
+        )
+        caption_set = SCCReader().read(scc)
+        result = WebVTTWriter().write(caption_set)
+
+        assert "STYLE" not in result
+        assert "Hello" in result
