@@ -413,6 +413,23 @@ for f in py_src_files:
         modified_py_src.add(f)
 
 # --- A. Removed public API ---
+# Build a set of all symbols added anywhere in the PR (handles module splits
+# where a symbol moves to a new file but is re-exported from __init__.py).
+all_added_symbols = set()
+for a in additions:
+    if not a['file'] or not a['file'].endswith('.py'):
+        continue
+    m = re.match(r'^\s*(class|def)\s+(\w+)', a['line'])
+    if m:
+        all_added_symbols.add((m.group(1), m.group(2)))
+    # Also catch re-exports in __init__.py: "from .x import Name"
+    im = re.match(r'^\s*from\s+\S+\s+import\s+(.+)', a['line'])
+    if im:
+        for sym in re.findall(r'\b(\w+)\b', im.group(1)):
+            if not sym.startswith('_'):
+                all_added_symbols.add(('def', sym))
+                all_added_symbols.add(('class', sym))
+
 seen_removed = set()
 for d in deletions:
     if d['file'] not in modified_py_src:
@@ -427,11 +444,9 @@ for d in deletions:
     key = (d['file'], entity_type, name)
     if key in seen_removed:
         continue
-    re_added = any(
-        re.match(rf'^\s*{entity_type}\s+{re.escape(name)}\b', a['line'])
-        for a in additions if a['file'] == d['file']
-    )
-    if re_added:
+    # Check if the symbol was re-added anywhere in the PR (same file,
+    # different file, or re-exported via __init__.py).
+    if (entity_type, name) in all_added_symbols:
         continue
     seen_removed.add(key)
     code_review_findings.append({
@@ -585,14 +600,32 @@ for a in additions:
         if not was_present:
             new_funcs[key] = a['lineno']
 
+# Collect ALL test files in the repo (not just PR-modified ones) so we
+# don't flag functions already tested by existing tests.
+all_test_files_r = run(['find', 'tests', '-name', 'test_*.py', '-type', 'f'])
+all_test_files = [f for f in all_test_files_r.stdout.strip().split('\n') if f]
+
 for (src, func), lineno in new_funcs.items():
     word_re = re.compile(rf'\b{re.escape(func)}\b')
     found_in_any_test = False
+    # First check PR-modified test files (via git show for the PR version)
     for t in py_test_files:
         r = run(['git', 'show', f'{pr_ref}:{t}'])
         if r.returncode == 0 and word_re.search(r.stdout):
             found_in_any_test = True
             break
+    # Then check all existing test files on disk
+    if not found_in_any_test:
+        for t in all_test_files:
+            if t in py_test_files:
+                continue
+            try:
+                with open(t, 'r') as tf:
+                    if word_re.search(tf.read()):
+                        found_in_any_test = True
+                        break
+            except (IOError, OSError):
+                continue
     if not found_in_any_test:
         test = find_test_for(src)
         test_name = os.path.basename(test) if test else 'any test file'

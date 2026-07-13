@@ -152,8 +152,9 @@ class Stretch(TwoDimensionalObject):
         """
         for parameter in [horizontal, vertical]:
             if not isinstance(parameter, Size):
-                raise ValueError("Stretch must be initialized with two valid " 
-                    "Size objects.")
+                raise ValueError(
+                    "Stretch must be initialized with two valid " "Size objects."
+                )
         self.horizontal = horizontal
         self.vertical = vertical
 
@@ -308,8 +309,9 @@ class Point(TwoDimensionalObject):
         """
         for parameter in [x, y]:
             if not isinstance(parameter, Size):
-                raise ValueError("Point must be initialized with two valid " 
-                                 "Size objects.")
+                raise ValueError(
+                    "Point must be initialized with two valid " "Size objects."
+                )
         self.x = x
         self.y = y
 
@@ -455,8 +457,7 @@ class Size:
         # The input must be valid so that any conversion can be done
         if not (video_width or video_height):
             raise RelativizationError(
-                "At least one of video width or height" 
-                " must be given as a reference"
+                "At least one of video width or height" " must be given as a reference"
             )
         elif video_width and video_height:
             raise RelativizationError(
@@ -757,7 +758,10 @@ class Layout:
 
         if inherit_from:
             for attr_name in [
-                "origin", "extent", "padding", "alignment",
+                "origin",
+                "extent",
+                "padding",
+                "alignment",
                 "writing_direction",
             ]:
                 attr = getattr(self, attr_name)
@@ -830,11 +834,10 @@ class Layout:
         return is_relative
 
     def as_percentage_of(self, video_width, video_height):
-        params = {"alignment": self.alignment}
-        # We don't need to preserve webvtt_positioning on Layout
-        # transformations because, if it is set, the WebVTT writer
-        # returns as soon as it's found and the transformations are
-        # never triggered.
+        params = {
+            "alignment": self.alignment,
+            "writing_direction": self.writing_direction,
+        }
         for attr_name in ["origin", "extent", "padding"]:
             attr = getattr(self, attr_name)
             if attr:
@@ -895,11 +898,8 @@ class Layout:
                 origin=self.origin,
                 extent=new_extent,
                 padding=self.padding,
-                alignment=self.alignment
-                # We don't need to preserve webvtt_positioning on Layout
-                # transformations because, if it is set, the WebVTT writer
-                # returns as soon as it's found and the transformations are
-                # never triggered.
+                alignment=self.alignment,
+                writing_direction=self.writing_direction,
             )
 
         return self

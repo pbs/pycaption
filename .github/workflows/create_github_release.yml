@@ -18,7 +18,7 @@ jobs:
     needs: call-unit-tests-workflow
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v7
 
     - name: Extract release notes for current version
       env:
