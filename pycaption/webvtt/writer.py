@@ -19,6 +19,11 @@ class WebVTTWriter(BaseWriter):
             "classes",
         }
     )
+    _INTERNAL_TO_CSS = {
+        "italics": ("font-style", "italic"),
+        "bold": ("font-weight", "bold"),
+        "underline": ("text-decoration", "underline"),
+    }
     _HTML_ELEMENT_NAMES = frozenset(
         {
             "p",
@@ -92,33 +97,42 @@ class WebVTTWriter(BaseWriter):
                 continue
             elif "lang" in props:
                 continue
-            elif self._has_internal_keys(props):
-                continue
             elif props:
                 class_rules.append((key, props))
 
-        if not global_rule and not class_rules:
+        global_css = self._format_css_declarations(global_rule) if global_rule else ""
+        class_outputs = []
+        for class_name, css_props in class_rules:
+            css = self._format_css_declarations(css_props)
+            if css:
+                class_outputs.append((class_name, css))
+
+        if not global_css and not class_outputs:
             return ""
 
         output = "STYLE\n"
-        if global_rule:
-            output += f"::cue {{ {self._format_css_declarations(global_rule)} }}\n"
-        for class_name, css_props in class_rules:
-            output += (
-                f"::cue(.{class_name})"
-                f" {{ {self._format_css_declarations(css_props)} }}\n"
-            )
+        if global_css:
+            output += f"::cue {{ {global_css} }}\n"
+        for class_name, css in class_outputs:
+            output += f"::cue(.{class_name}) {{ {css} }}\n"
         output += "\n"
         return output
 
-    def _has_internal_keys(self, props):
-        """Check if a style dict contains pycaption-internal keys."""
-        return bool(self._INTERNAL_STYLE_KEYS & props.keys())
+    @classmethod
+    def _format_css_declarations(cls, props):
+        """Format a style dict as a CSS declaration string.
 
-    @staticmethod
-    def _format_css_declarations(props):
-        """Format a dict of CSS properties as a declaration string."""
-        return "; ".join(f"{k}: {v}" for k, v in sorted(props.items()))
+        Reverses internal keys (italics → font-style: italic) and
+        skips non-CSS keys (classes, class, lang).
+        """
+        declarations = []
+        for k, v in sorted(props.items()):
+            if k in cls._INTERNAL_TO_CSS:
+                css_prop, css_val = cls._INTERNAL_TO_CSS[k]
+                declarations.append(f"{css_prop}: {css_val}")
+            elif k not in cls._INTERNAL_STYLE_KEYS:
+                declarations.append(f"{k}: {v}")
+        return "; ".join(declarations)
 
     @staticmethod
     def _convert_style_to_text_tag(style):

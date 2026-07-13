@@ -1,5 +1,25 @@
 Changelog
 ---------
+2.2.29
+^^^^^^
+  - Re-emit STYLE blocks on WebVTT→WebVTT conversion. When the
+    CaptionSet has ::cue-prefixed styles, emit them as a STYLE section
+    between the WEBVTT header and the first cue. Global ::cue rules are
+    emitted before class-specific rules.
+  - Emit writing direction from Layout in _convert_positioning(). When
+    layout.writing_direction is set and non-HORIZONTAL, emit vertical:rl
+    or vertical:lr in the cue settings string (only when
+    webvtt_positioning passthrough isn't available).
+  - Preserve writing_direction through Layout.as_percentage_of() and
+    Layout.fit_to_screen() so it survives intermediate transformations.
+  - Fix _format_css_declarations to reverse-map internal style keys
+    (italics → font-style: italic, bold → font-weight: bold,
+    underline → text-decoration: underline) instead of emitting invalid
+    CSS like "italics: True".
+  - Split pycaption/webvtt.py into pycaption/webvtt/ package
+    (reader.py, writer.py, constants.py) for maintainability. Public
+    API unchanged.
+
 2.2.28
 ^^^^^^
   - Parse WebVTT cue settings (position, line, size, align, vertical)
