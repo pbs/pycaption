@@ -1,5 +1,4 @@
 import os
-from collections import defaultdict
 from datetime import timedelta
 from numbers import Number
 
@@ -7,15 +6,6 @@ from .exceptions import CaptionReadError, CaptionReadTimingError
 
 # `und` a special identifier for an undetermined language according to ISO 639-2
 DEFAULT_LANGUAGE_CODE = os.getenv("PYCAPTION_DEFAULT_LANG", "und")
-
-
-def force_byte_string(content):
-    try:
-        return content.encode("UTF-8")
-    except UnicodeEncodeError:
-        raise RuntimeError("Invalid content encoding")
-    except UnicodeDecodeError:
-        return content
 
 
 class CaptionConverter:
@@ -41,10 +31,7 @@ class BaseReader:
         pass
 
     def detect(self, content):
-        if content:
-            return True
-        else:
-            return False
+        return bool(content)
 
     def read(self, content):
         return CaptionSet({DEFAULT_LANGUAGE_CODE: []})
@@ -92,11 +79,6 @@ class BaseWriter:
 
     def write(self, content):
         return content
-
-
-class Style:
-    def __init__(self):
-        pass
 
 
 class CaptionNode:
@@ -175,7 +157,7 @@ class Caption:
     for its display.
     """
 
-    def __init__(self, start, end, nodes, style={}, layout_info=None):
+    def __init__(self, start, end, nodes, style=None, layout_info=None):
         """
         Initialize the Caption object
         :param start: The start time in microseconds
@@ -192,22 +174,22 @@ class Caption:
         """
         if not isinstance(start, Number):
             raise CaptionReadTimingError(
-                "Captions must be initialized with a" " valid start time"
+                "Captions must be initialized with a valid start time"
             )
         if not isinstance(end, Number):
             raise CaptionReadTimingError(
-                "Captions must be initialized with a" " valid end time"
+                "Captions must be initialized with a valid end time"
             )
         if not nodes:
             raise CaptionReadError("Node list cannot be empty")
         self.start = start
         self.end = end
         self.nodes = nodes
-        self.style = style
+        self.style = style or {}
         self.layout_info = layout_info
 
     def is_empty(self):
-        return len(self.nodes) == 0
+        return not self.nodes
 
     def format_start(self, msec_separator=None):
         """
@@ -228,18 +210,13 @@ class Caption:
         return repr(f"{self.format_start()} --> {self.format_end()}\n{self.get_text()}")
 
     def get_text_nodes(self):
-        """
-        Get the text of the caption.
-        """
-
-        def get_text_for_node(node):
+        result = []
+        for node in self.nodes:
             if node.type_ == CaptionNode.TEXT:
-                return node.content
-            if node.type_ == CaptionNode.BREAK:
-                return "\n"
-            return ""
-
-        return [get_text_for_node(node) for node in self.nodes]
+                result.append(node.content)
+            elif node.type_ == CaptionNode.BREAK:
+                result.append("\n")
+        return result
 
     def get_text(self):
         text_nodes = self.get_text_nodes()
@@ -268,9 +245,6 @@ class CaptionList(list):
         self.layout_info = layout_info
         args = [iterable] if iterable else []
         super().__init__(*args)
-
-    def __getslice__(self, i, j):
-        return CaptionList(list.__getslice__(self, i, j), layout_info=self.layout_info)
 
     def __getitem__(self, y):
         item = list.__getitem__(self, y)
@@ -306,14 +280,14 @@ class CaptionSet:
     by all the children.
     """
 
-    def __init__(self, captions, styles={}, layout_info=None):
+    def __init__(self, captions, styles=None, layout_info=None):
         """
         :param captions: A dictionary of the format {'language': CaptionList}
         :param styles: A dictionary with CSS-like styling rules
         :param Layout layout_info: A Layout object with the positioning info
         """
         self._captions = captions
-        self._styles = styles
+        self._styles = styles or {}
         self.layout_info = layout_info
 
     def set_captions(self, lang, captions):

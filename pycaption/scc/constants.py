@@ -1626,3 +1626,60 @@ PLAIN_TEXT_COMMANDS = {
 STYLE_SETTING_COMMANDS = {
     **ITALICS_COMMANDS, **UNDERLINE_COMMANDS, **PLAIN_TEXT_COMMANDS
 }
+
+# --- Writer PAC lookup table ---
+# Built from COMMAND_LABELS: maps (row, column, style) -> code
+# style is one of: "plain", "underline", "italic", "italic_underline"
+# Only column 0 has italic/italic_underline PAC codes;
+# columns 4-28 only have plain and underline.
+import re as _re
+
+WRITER_PAC_CODES = {}
+
+
+def _build_writer_pac_codes():
+    """Populate WRITER_PAC_CODES by reversing COMMAND_LABELS.
+
+    COMMAND_LABELS maps hex codes to human-readable descriptions like
+    "row 15, column 00, with plain white text." This function parses those
+    descriptions with a regex to extract (row, column, style) and builds
+    the inverse mapping: (row, col, style) -> hex code.
+
+    First match wins per key, so channel 1 codes take priority over
+    channel 2 duplicates.
+    """
+    _pac_pattern = _re.compile(
+        r"row (\d+), column (\d+), with (.+)\."
+    )
+    for code, label in COMMAND_LABELS.items():
+        m = _pac_pattern.match(label)
+        if not m:
+            continue
+        row = int(m.group(1))
+        col = int(m.group(2))
+        desc = m.group(3)
+        if "italic" in desc and "underline" in desc:
+            style = "italic_underline"
+        elif "italic" in desc:
+            style = "italic"
+        elif "underline" in desc:
+            style = "underline"
+        elif "plain" in desc:
+            style = "plain"
+        else:
+            continue
+        key = (row, col, style)
+        if key not in WRITER_PAC_CODES:
+            WRITER_PAC_CODES[key] = code
+
+
+_build_writer_pac_codes()
+
+# Mid-row codes for the writer
+MID_ROW_ITALIC = "91ae"
+MID_ROW_ITALIC_UNDERLINE = "912f"
+MID_ROW_UNDERLINE = "91a1"
+MID_ROW_PLAIN = "9120"
+
+# Tab offset codes (writer direction: offset -> code)
+TAB_OFFSET_CODES = {1: "97a1", 2: "97a2", 3: "9723"}
