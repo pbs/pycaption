@@ -1,9 +1,12 @@
+import warnings
+
 import pytest
 
 from pycaption import (
     CaptionReadError,
     CaptionReadNoCaptions,
     CaptionReadSyntaxError,
+    CaptionReadWarning,
     DFXPReader,
     SAMIReader,
     WebVTTReader,
@@ -1008,3 +1011,297 @@ class TestWebVTTInputValidation:
         text = captions.get_captions("en-US")[0].get_text()
         assert precomposed in text
         assert decomposed in text
+
+
+class TestWebVTTCueBaseStylePropagation:
+    """Change 1: ::cue base style wraps bare text in STYLE nodes."""
+
+    def setup_method(self):
+        self.reader = WebVTTReader()
+
+    def test_bare_text_gets_italic_from_base_cue(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "STYLE\n"
+            "::cue { font-style: italic }\n\n"
+            "00:00:01.000 --> 00:00:03.000\n"
+            "Plain text\n"
+        )
+        caption_set = self.reader.read(vtt)
+        result = WebVTTWriter().write(caption_set)
+        assert "<i>Plain text</i>" in result
+
+    def test_bare_text_gets_bold_underline_from_base_cue(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "STYLE\n"
+            "::cue { font-weight: bold; text-decoration: underline }\n\n"
+            "00:00:01.000 --> 00:00:03.000\n"
+            "Text\n"
+        )
+        caption_set = self.reader.read(vtt)
+        result = WebVTTWriter().write(caption_set)
+        assert "<b>" in result
+        assert "<u>" in result
+        assert "</b>" in result
+        assert "</u>" in result
+
+    def test_style_nodes_created_in_internal_model(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "STYLE\n"
+            "::cue { font-style: italic }\n\n"
+            "00:00:01.000 --> 00:00:03.000\n"
+            "Hello\n"
+        )
+        caption_set = self.reader.read(vtt)
+        nodes = caption_set.get_captions("en-US")[0].nodes
+        style_nodes = [n for n in nodes if n.type_ == CaptionNode.STYLE]
+        assert len(style_nodes) == 2
+        assert style_nodes[0].start is True
+        assert style_nodes[0].content == {"italics": True}
+        assert style_nodes[1].start is False
+
+    def test_no_double_wrap_when_already_italic(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "STYLE\n"
+            "::cue { font-style: italic }\n\n"
+            "00:00:01.000 --> 00:00:03.000\n"
+            "<i>Already italic</i>\n"
+        )
+        caption_set = self.reader.read(vtt)
+        result = WebVTTWriter().write(caption_set)
+        assert result.count("<i>") == 1
+
+    def test_wraps_when_mixed_bare_and_span(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "STYLE\n"
+            "::cue { font-style: italic }\n"
+            "::cue(.yellow) { color: yellow }\n\n"
+            "00:00:01.000 --> 00:00:03.000\n"
+            "<c.yellow>Hello</c> world\n"
+        )
+        caption_set = self.reader.read(vtt)
+        result = WebVTTWriter().write(caption_set)
+        assert "<i>" in result
+
+    def test_color_only_base_style_no_wrap(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "STYLE\n"
+            "::cue { color: white }\n\n"
+            "00:00:01.000 --> 00:00:03.000\n"
+            "Plain text\n"
+        )
+        caption_set = self.reader.read(vtt)
+        nodes = caption_set.get_captions("en-US")[0].nodes
+        style_nodes = [n for n in nodes if n.type_ == CaptionNode.STYLE]
+        assert len(style_nodes) == 0
+
+
+class TestWebVTTRoundtripPreservation:
+    """Change 2: VTT→VTT roundtrip preserves positioning and styles."""
+
+    def setup_method(self):
+        self.reader = WebVTTReader()
+
+    def test_positioning_roundtrip(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "00:00:01.000 --> 00:00:03.000 line:50% align:start position:25%\n"
+            "Hello world\n"
+        )
+        caption_set = self.reader.read(vtt)
+        result = WebVTTWriter().write(caption_set)
+        assert "line:50%" in result
+        assert "align:start" in result
+        assert "position:25%" in result
+
+    def test_inline_style_roundtrip(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "00:00:01.000 --> 00:00:03.000\n"
+            "<i>italic</i> <b>bold</b> <u>underline</u>\n"
+        )
+        caption_set = self.reader.read(vtt)
+        result = WebVTTWriter().write(caption_set)
+        assert "<i>italic</i>" in result
+        assert "<b>bold</b>" in result
+        assert "<u>underline</u>" in result
+
+    def test_style_block_roundtrip(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "STYLE\n"
+            "::cue { font-style: italic }\n"
+            "::cue(.yellow) { color: yellow }\n\n"
+            "00:00:01.000 --> 00:00:03.000 line:80%\n"
+            "<c.yellow>highlighted</c>\n"
+        )
+        caption_set = self.reader.read(vtt)
+        result = WebVTTWriter().write(caption_set)
+        assert "line:80%" in result
+        assert "::cue { font-style: italic }" in result
+        assert "::cue(.yellow)" in result
+        assert "color: yellow" in result
+
+    def test_base_style_roundtrip_with_bare_text(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "STYLE\n"
+            "::cue { font-style: italic }\n\n"
+            "00:00:01.000 --> 00:00:03.000 line:50%\n"
+            "Hello world\n"
+        )
+        caption_set = self.reader.read(vtt)
+        result = WebVTTWriter().write(caption_set)
+        assert "line:50%" in result
+        assert "::cue { font-style: italic }" in result
+        assert "<i>" in result
+
+
+class TestWebVTTLineOverflowWarning:
+    """Change 3: Warn when line:% would place text off-screen."""
+
+    def setup_method(self):
+        self.reader = WebVTTReader()
+
+    def test_warns_on_overflow(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "00:00:01.000 --> 00:00:03.000 line:90%\n"
+            "Line one\n"
+            "Line two\n"
+            "Line three\n"
+        )
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            self.reader.read(vtt)
+            caption_warnings = [
+                x for x in w if issubclass(x.category, CaptionReadWarning)
+            ]
+            assert len(caption_warnings) == 1
+            assert "90%" in str(caption_warnings[0].message)
+            assert "3 lines" in str(caption_warnings[0].message)
+
+    def test_no_warning_within_bounds(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "00:00:01.000 --> 00:00:03.000 line:50%\n"
+            "Single line\n"
+        )
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            self.reader.read(vtt)
+            caption_warnings = [
+                x for x in w if issubclass(x.category, CaptionReadWarning)
+            ]
+            assert len(caption_warnings) == 0
+
+    def test_no_warning_without_line_setting(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "00:00:01.000 --> 00:00:03.000\n"
+            "Line one\n"
+            "Line two\n"
+            "Line three\n"
+        )
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            self.reader.read(vtt)
+            caption_warnings = [
+                x for x in w if issubclass(x.category, CaptionReadWarning)
+            ]
+            assert len(caption_warnings) == 0
+
+    def test_no_warning_at_boundary(self):
+        # line:80% + 2 lines × 6.67% = 93.3% — within bounds
+        vtt = (
+            "WEBVTT\n\n"
+            "00:00:01.000 --> 00:00:03.000 line:80%\n"
+            "Line one\n"
+            "Line two\n"
+        )
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            self.reader.read(vtt)
+            caption_warnings = [
+                x for x in w if issubclass(x.category, CaptionReadWarning)
+            ]
+            assert len(caption_warnings) == 0
+
+
+class TestWebVTTRegionRoundtrip:
+    """Change 4: REGION blocks are preserved through read→write."""
+
+    def setup_method(self):
+        self.reader = WebVTTReader()
+
+    def test_region_block_roundtrip(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "REGION\n"
+            "id:r1\n"
+            "width:40%\n"
+            "lines:3\n"
+            "regionanchor:0%,100%\n"
+            "viewportanchor:10%,90%\n"
+            "scroll:up\n\n"
+            "00:00:01.000 --> 00:00:03.000 region:r1\n"
+            "Hello\n"
+        )
+        caption_set = self.reader.read(vtt)
+        result = WebVTTWriter().write(caption_set)
+        assert "REGION" in result
+        assert "id:r1" in result
+        assert "width:40%" in result
+        assert "lines:3" in result
+        assert "regionanchor:0%,100%" in result
+        assert "viewportanchor:10%,90%" in result
+        assert "scroll:up" in result
+
+    def test_multiple_regions(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "REGION\n"
+            "id:top\n"
+            "width:50%\n"
+            "lines:2\n\n"
+            "REGION\n"
+            "id:bottom\n"
+            "width:80%\n"
+            "lines:4\n\n"
+            "00:00:01.000 --> 00:00:03.000 region:top\n"
+            "Hello\n"
+        )
+        caption_set = self.reader.read(vtt)
+        result = WebVTTWriter().write(caption_set)
+        assert "id:top" in result
+        assert "id:bottom" in result
+        assert "width:50%" in result
+        assert "width:80%" in result
+
+    def test_no_region_block_when_none_defined(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "00:00:01.000 --> 00:00:03.000\n"
+            "Hello\n"
+        )
+        caption_set = self.reader.read(vtt)
+        result = WebVTTWriter().write(caption_set)
+        assert "REGION" not in result
+
+    def test_region_reference_still_in_cue_settings(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "REGION\n"
+            "id:r1\n"
+            "width:40%\n\n"
+            "00:00:01.000 --> 00:00:03.000 region:r1\n"
+            "Hello\n"
+        )
+        caption_set = self.reader.read(vtt)
+        result = WebVTTWriter().write(caption_set)
+        assert "region:r1" in result

@@ -50,6 +50,10 @@ class WebVTTWriter(BaseWriter):
         if style_block:
             output += style_block
 
+        region_blocks = self._build_region_blocks(caption_set)
+        if region_blocks:
+            output += region_blocks
+
         if lang is None:
             lang = caption_set.get_languages()[0]
 
@@ -116,6 +120,25 @@ class WebVTTWriter(BaseWriter):
         for class_name, css in class_outputs:
             output += f"::cue(.{class_name}) {{ {css} }}\n"
         output += "\n"
+        return output
+
+    @staticmethod
+    def _build_region_blocks(caption_set):
+        """Build REGION blocks from the raw settings stored by the reader.
+
+        Reconstructs the original REGION text so that cue settings like
+        region:r1 remain valid references in the output.
+        """
+        regions = caption_set.get_regions()
+        if not regions:
+            return ""
+        output = ""
+        for region_id, settings in regions.items():
+            output += "REGION\n"
+            output += f"id:{region_id}\n"
+            for key, value in settings.items():
+                output += f"{key}:{value}\n"
+            output += "\n"
         return output
 
     @classmethod

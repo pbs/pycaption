@@ -2,23 +2,24 @@ Changelog
 ---------
 2.2.29
 ^^^^^^
-  - Re-emit STYLE blocks on WebVTT→WebVTT conversion. When the
-    CaptionSet has ::cue-prefixed styles, emit them as a STYLE section
-    between the WEBVTT header and the first cue. Global ::cue rules are
-    emitted before class-specific rules.
-  - Emit writing direction from Layout in _convert_positioning(). When
-    layout.writing_direction is set and non-HORIZONTAL, emit vertical:rl
-    or vertical:lr in the cue settings string (only when
-    webvtt_positioning passthrough isn't available).
-  - Preserve writing_direction through Layout.as_percentage_of() and
-    Layout.fit_to_screen() so it survives intermediate transformations.
-  - Fix _format_css_declarations to reverse-map internal style keys
-    (italics → font-style: italic, bold → font-weight: bold,
-    underline → text-decoration: underline) instead of emitting invalid
-    CSS like "italics: True".
+  - Re-emit STYLE blocks on WebVTT→WebVTT roundtrip (global ::cue
+    rules before class-specific rules).
+  - Emit writing direction (vertical:rl|lr) from Layout when
+    webvtt_positioning passthrough isn't available; preserve it through
+    as_percentage_of() and fit_to_screen().
+  - Fix _format_css_declarations to reverse-map internal keys
+    (italics → font-style: italic, etc.) instead of emitting invalid CSS.
   - Split pycaption/webvtt.py into pycaption/webvtt/ package
-    (reader.py, writer.py, constants.py) for maintainability. Public
-    API unchanged.
+    (reader.py, writer.py, constants.py). Public API unchanged.
+  - Propagate ::cue base text-decoration (italic/bold/underline) onto
+    bare text as STYLE node wrappers so all writers emit inline
+    formatting. Already-styled cues are not double-wrapped.
+  - Add CaptionReadWarning (non-fatal) when a multiline cue's line:%
+    would place text partially off-screen.
+  - Preserve REGION blocks through VTT→VTT roundtrip via raw settings
+    on CaptionSet; region:id cue references stay valid.
+  - Add ``regions`` param to CaptionSet (defaults to {}) with
+    get_regions()/set_regions().
 
 2.2.28
 ^^^^^^
