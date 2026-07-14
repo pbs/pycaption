@@ -1,11 +1,13 @@
 import html
 import sys
+import warnings
 
 from ..base import BaseReader, Caption, CaptionList, CaptionNode, CaptionSet
 from ..exceptions import (
     CaptionReadError,
     CaptionReadNoCaptions,
     CaptionReadSyntaxError,
+    CaptionReadWarning,
     InvalidInputError,
 )
 from ..geometry import (
@@ -72,7 +74,12 @@ class WebVTTReader(BaseReader):
         styles = self._parse_style_blocks(lines)
         captions = self._parse(lines)
         self._resolve_cue_styles(captions, styles)
-        caption_set = CaptionSet({lang: captions}, styles=styles)
+        # regions_raw carries the original REGION settings so the writer
+        # can re-emit them (regions_layout is only used internally for
+        # position inheritance during parsing).
+        caption_set = CaptionSet(
+            {lang: captions}, styles=styles, regions=self._regions_raw
+        )
 
         if caption_set.is_empty():
             raise CaptionReadNoCaptions("empty caption file")
@@ -108,7 +115,10 @@ class WebVTTReader(BaseReader):
         in_note_block = False
         in_style_block = False
 
-        self._regions = self._parse_regions(lines)
+        # Two dicts: _regions has computed Layouts (for inherit_from when
+        # a cue references region:id), _regions_raw has the verbatim
+        # key:value pairs (for the writer to reproduce REGION blocks).
+        self._regions, self._regions_raw = self._parse_regions(lines)
 
         for i, line in enumerate(lines):
             if in_note_block:
@@ -147,6 +157,7 @@ class WebVTTReader(BaseReader):
                     found_timing = False
                     self._close_unclosed_tags(nodes, open_tags)
                     caption = Caption(start, end, nodes, layout_info=layout_info)
+                    self._check_line_overflow(caption)
                     captions.append(caption)
                     nodes = []
                     open_tags = []
@@ -159,9 +170,39 @@ class WebVTTReader(BaseReader):
         if nodes:
             self._close_unclosed_tags(nodes, open_tags)
             caption = Caption(start, end, nodes, layout_info=layout_info)
+            self._check_line_overflow(caption)
             captions.append(caption)
 
         return captions
+
+    @staticmethod
+    def _check_line_overflow(caption):
+        """Emit a warning if a multiline cue's line:% would place text
+        partially off-screen.
+
+        Uses WebVTT's 15-line grid (~6.67% per line) to estimate whether
+        the cue's starting position plus its line count exceeds 100% of
+        the viewport height.
+        """
+        layout = caption.layout_info
+        if not layout or not layout.origin:
+            return
+        origin_y = layout.origin.y
+        if origin_y is None or origin_y.unit != UnitEnum.PERCENT:
+            return
+        line_pct = origin_y.value
+        if line_pct <= 0:
+            return
+        # BREAK nodes separate lines, so count + 1 = total lines
+        num_lines = sum(1 for n in caption.nodes if n.type_ == CaptionNode.BREAK) + 1
+        line_height = 100.0 / LINE_GRID_SIZE
+        if line_pct + num_lines * line_height > 100.0:
+            warnings.warn(
+                f"Cue at {caption.format_start()} has line:{line_pct:.0f}% "
+                f"with {num_lines} lines — extends beyond viewport.",
+                CaptionReadWarning,
+                stacklevel=4,
+            )
 
     def _validate_timings(self, start, end, last_start_time):
         if start is None:
@@ -415,9 +456,12 @@ class WebVTTReader(BaseReader):
             viewportanchor - anchor point on viewport as x%,y% (default: 0%,100%)
             scroll         - scroll behavior, only "up" is valid (default: none)
 
-        :returns: dict mapping region id -> Layout
+        :returns: tuple (regions_layout, regions_raw)
+            regions_layout: dict mapping region id -> Layout (for inherit_from)
+            regions_raw: dict mapping region id -> {key: value} (for writer)
         """
-        regions = {}
+        regions_layout = {}
+        regions_raw = {}
         in_note_block = False
         i = 0
         while i < len(lines):
@@ -447,13 +491,18 @@ class WebVTTReader(BaseReader):
                     i += 1
                 if "id" in settings:
                     region_id = settings["id"]
-                    if region_id not in regions:
-                        regions[region_id] = self._region_to_layout(settings)
+                    if region_id not in regions_layout:
+                        regions_layout[region_id] = self._region_to_layout(settings)
+                        # Store raw settings (minus id) for the writer to
+                        # reconstruct the REGION block verbatim.
+                        regions_raw[region_id] = {
+                            k: v for k, v in settings.items() if k != "id"
+                        }
             elif "-->" in line:
                 break
             else:
                 i += 1
-        return regions
+        return regions_layout, regions_raw
 
     def _region_to_layout(self, settings):
         """Convert parsed region settings dict into a Layout with origin/extent.
@@ -734,3 +783,49 @@ class WebVTTReader(BaseReader):
                     for key, value in resolved.items():
                         if key not in content:
                             content[key] = value
+
+        # Wrap bare text in STYLE nodes when a ::cue base rule has
+        # text-decoration properties (italic/bold/underline). This ensures
+        # downstream writers (SCC, DFXP, VTT) all see the styling — they
+        # iterate caption.nodes looking for STYLE nodes to trigger
+        # formatting. Only text-style keys are used; color/background-color
+        # can't be represented as inline tags and stay in the STYLE block.
+        _TEXT_STYLE_KEYS = {"italics", "bold", "underline"}
+        base_text_props = {
+            k: v for k, v in base_style.items() if k in _TEXT_STYLE_KEYS and v
+        }
+        if base_text_props:
+            for caption in captions:
+                if WebVTTReader._caption_needs_base_wrap(
+                    caption.nodes, base_text_props
+                ):
+                    caption.nodes.insert(
+                        0,
+                        CaptionNode.create_style(True, dict(base_text_props)),
+                    )
+                    caption.nodes.append(
+                        CaptionNode.create_style(False, dict(base_text_props))
+                    )
+
+    @staticmethod
+    def _caption_needs_base_wrap(nodes, base_props):
+        """Return True if any TEXT node is not fully covered by a STYLE
+        opener carrying all base_props.
+
+        Tracks a "depth" of open STYLE nodes that carry the required
+        properties. A TEXT node at depth 0 means it's unstyled and needs
+        wrapping. This avoids double-wrapping captions that are already
+        entirely inside e.g. <i>...</i>.
+        """
+        depth = 0
+        for node in nodes:
+            if node.type_ == CaptionNode.STYLE:
+                if node.start:
+                    if all(node.content.get(k) == v for k, v in base_props.items()):
+                        depth += 1
+                else:
+                    if depth > 0:
+                        depth -= 1
+            elif node.type_ == CaptionNode.TEXT and depth == 0:
+                return True
+        return False
