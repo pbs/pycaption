@@ -281,13 +281,17 @@ class CaptionSet:
     """
 
     def __init__(self, captions, styles=None, layout_info=None):
+    def __init__(self, captions, styles={}, layout_info=None, regions=None):
         """
         :param captions: A dictionary of the format {'language': CaptionList}
         :param styles: A dictionary with CSS-like styling rules
         :param Layout layout_info: A Layout object with the positioning info
+        :param regions: A dictionary mapping region id to raw settings dict
         """
         self._captions = captions
         self._styles = styles or {}
+        self._styles = styles
+        self._regions = regions or {}
         self.layout_info = layout_info
 
     def set_captions(self, lang, captions):
@@ -320,6 +324,14 @@ class CaptionSet:
 
     def set_styles(self, styles):
         self._styles = styles
+
+    def get_regions(self):
+        """Return raw region definitions {id: {setting: value}} for the
+        writer to re-emit REGION blocks."""
+        return self._regions
+
+    def set_regions(self, regions):
+        self._regions = regions
 
     def is_empty(self):
         return all([len(captions) == 0 for captions in list(self._captions.values())])

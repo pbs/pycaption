@@ -42,3 +42,8 @@ class CaptionLineLengthError(CaptionReadError):
     """
     Error raised when a Caption has a line longer than 32 characters.
     """
+
+
+class CaptionReadWarning(UserWarning):
+    """Warning emitted when caption content is parseable but may cause
+    rendering issues (e.g. cue positioned partially off-screen)."""

@@ -2,6 +2,24 @@ Changelog
 ---------
 2.2.29
 ^^^^^^
+  - Re-emit STYLE blocks on WebVTT→WebVTT roundtrip (global ::cue
+    rules before class-specific rules).
+  - Emit writing direction (vertical:rl|lr) from Layout when
+    webvtt_positioning passthrough isn't available; preserve it through
+    as_percentage_of() and fit_to_screen().
+  - Fix _format_css_declarations to reverse-map internal keys
+    (italics → font-style: italic, etc.) instead of emitting invalid CSS.
+  - Split pycaption/webvtt.py into pycaption/webvtt/ package
+    (reader.py, writer.py, constants.py). Public API unchanged.
+  - Propagate ::cue base text-decoration (italic/bold/underline) onto
+    bare text as STYLE node wrappers so all writers emit inline
+    formatting. Already-styled cues are not double-wrapped.
+  - Add CaptionReadWarning (non-fatal) when a multiline cue's line:%
+    would place text partially off-screen.
+  - Preserve REGION blocks through VTT→VTT roundtrip via raw settings
+    on CaptionSet; region:id cue references stay valid.
+  - Add ``regions`` param to CaptionSet (defaults to {}) with
+    get_regions()/set_regions().
   - SCC writer: map WebVTT positioning and styles to CEA-608 codes
     (line:% → PAC rows, align → column indents + tab offsets,
     italics/underline → mid-row codes, unsupported styles dropped).

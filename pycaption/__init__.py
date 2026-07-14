@@ -5,6 +5,7 @@ from .exceptions import (
     CaptionReadError,
     CaptionReadNoCaptions,
     CaptionReadSyntaxError,
+    CaptionReadWarning,
 )
 from .microdvd import MicroDVDReader, MicroDVDWriter
 from .sami import SAMIReader, SAMIWriter
@@ -32,6 +33,7 @@ __all__ = [
     "CaptionReadError",
     "CaptionReadNoCaptions",
     "CaptionReadSyntaxError",
+    "CaptionReadWarning",
     "detect_format",
     "CaptionNode",
     "Caption",
