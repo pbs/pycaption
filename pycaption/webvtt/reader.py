@@ -37,6 +37,32 @@ from .constants import (
 )
 
 
+def _flush_css_block(css_lines, blocks):
+    if css_lines:
+        blocks.append("\n".join(css_lines) + "\n")
+
+
+def _covers_base(content, base_props):
+    return all(content.get(k) == v for k, v in base_props.items())
+
+
+class _ParseState:
+    __slots__ = (
+        "start", "end", "nodes", "open_tags", "layout_info",
+        "found_timing", "in_note_block", "in_style_block",
+    )
+
+    def __init__(self):
+        self.start = None
+        self.end = None
+        self.nodes = []
+        self.open_tags = []
+        self.layout_info = None
+        self.found_timing = False
+        self.in_note_block = False
+        self.in_style_block = False
+
+
 class WebVTTReader(BaseReader):
     def __init__(
         self, ignore_timing_errors=True, time_shift_milliseconds=0, *args, **kwargs
@@ -48,6 +74,7 @@ class WebVTTReader(BaseReader):
         forward/backward with this number of milliseconds
         :type time_shift_milliseconds: int
         """
+        super().__init__(*args, **kwargs)
         self.ignore_timing_errors = ignore_timing_errors
         self.time_shift_microseconds = time_shift_milliseconds * 1000
 
@@ -105,75 +132,92 @@ class WebVTTReader(BaseReader):
             raise CaptionReadSyntaxError("Missing blank line after WebVTT header.")
 
     def _parse(self, lines):
-        captions = CaptionList()
-        start = None
-        end = None
-        nodes = []
-        open_tags = []
-        layout_info = None
-        found_timing = False
-        in_note_block = False
-        in_style_block = False
-
         # Two dicts: _regions has computed Layouts (for inherit_from when
         # a cue references region:id), _regions_raw has the verbatim
         # key:value pairs (for the writer to reproduce REGION blocks).
         self._regions, self._regions_raw = self._parse_regions(lines)
 
+        captions = CaptionList()
+        state = _ParseState()
+
         for i, line in enumerate(lines):
-            if in_note_block:
-                if line == "":
-                    in_note_block = False
-                continue
+            self._parse_line(line, i, state, captions)
 
-            if in_style_block:
-                if line == "":
-                    in_style_block = False
-                continue
-
-            if not found_timing and _is_note_start(line):
-                in_note_block = True
-                continue
-
-            if not found_timing and line.strip() == "STYLE":
-                in_style_block = True
-                continue
-
-            if "-->" in line:
-                found_timing = True
-                timing_line = i
-                last_start_time = captions[-1].start if captions else 0
-                try:
-                    start, end, layout_info = self._parse_timing_line(
-                        line, last_start_time
-                    )
-                except CaptionReadError as e:
-                    new_msg = f"{e.args[0]} (line {timing_line})"
-                    tb = sys.exc_info()[2]
-                    raise type(e)(new_msg).with_traceback(tb) from None
-
-            elif line == "":
-                if found_timing and nodes:
-                    found_timing = False
-                    self._close_unclosed_tags(nodes, open_tags)
-                    caption = Caption(start, end, nodes, layout_info=layout_info)
-                    self._check_line_overflow(caption)
-                    captions.append(caption)
-                    nodes = []
-                    open_tags = []
-            else:
-                if found_timing:
-                    if nodes:
-                        nodes.append(CaptionNode.create_break())
-                    nodes.extend(self._parse_cue_text(line, open_tags))
-
-        if nodes:
-            self._close_unclosed_tags(nodes, open_tags)
-            caption = Caption(start, end, nodes, layout_info=layout_info)
-            self._check_line_overflow(caption)
-            captions.append(caption)
+        if state.nodes:
+            captions.append(
+                self._build_cue(
+                    state.nodes, state.open_tags,
+                    state.start, state.end, state.layout_info,
+                )
+            )
 
         return captions
+
+    def _parse_line(self, line, line_index, state, captions):
+        if state.in_note_block:
+            state.in_note_block = line != ""
+            return
+
+        if state.in_style_block:
+            state.in_style_block = line != ""
+            return
+
+        if self._check_block_start(line, state):
+            return
+
+        if "-->" in line:
+            state.found_timing = True
+            last_start_time = captions[-1].start if captions else 0
+            state.start, state.end, state.layout_info = self._read_timing(
+                line, line_index, last_start_time
+            )
+            return
+
+        if line == "" and state.found_timing and state.nodes:
+            self._finalize_cue(state, captions)
+            return
+
+        if state.found_timing and line != "":
+            if state.nodes:
+                state.nodes.append(CaptionNode.create_break())
+            state.nodes.extend(self._parse_cue_text(line, state.open_tags))
+
+    @staticmethod
+    def _check_block_start(line, state):
+        if state.found_timing:
+            return False
+        if _is_note_start(line):
+            state.in_note_block = True
+            return True
+        if line.strip() == "STYLE":
+            state.in_style_block = True
+            return True
+        return False
+
+    def _finalize_cue(self, state, captions):
+        state.found_timing = False
+        captions.append(
+            self._build_cue(
+                state.nodes, state.open_tags,
+                state.start, state.end, state.layout_info,
+            )
+        )
+        state.nodes = []
+        state.open_tags = []
+
+    def _read_timing(self, line, line_index, last_start_time):
+        try:
+            return self._parse_timing_line(line, last_start_time)
+        except CaptionReadError as e:
+            new_msg = f"{e.args[0]} (line {line_index})"
+            tb = sys.exc_info()[2]
+            raise type(e)(new_msg).with_traceback(tb) from None
+
+    def _build_cue(self, nodes, open_tags, start, end, layout_info):
+        self._close_unclosed_tags(nodes, open_tags)
+        caption = Caption(start, end, nodes, layout_info=layout_info)
+        self._check_line_overflow(caption)
+        return caption
 
     @staticmethod
     def _check_line_overflow(caption):
@@ -204,7 +248,8 @@ class WebVTTReader(BaseReader):
                 stacklevel=4,
             )
 
-    def _validate_timings(self, start, end, last_start_time):
+    @staticmethod
+    def _validate_timings(start, end, last_start_time):
         if start is None:
             raise CaptionReadSyntaxError("Invalid cue start timestamp.")
         if end is None:
@@ -240,7 +285,8 @@ class WebVTTReader(BaseReader):
 
         return start, end, layout_info
 
-    def _parse_timestamp(self, timestamp):
+    @staticmethod
+    def _parse_timestamp(timestamp):
         """Returns an integer representing a number of microseconds
         :rtype: int
         """
@@ -284,24 +330,27 @@ class WebVTTReader(BaseReader):
                 continue
 
             if i % 2 == 0:
-                # Even indices are plain text — decode entities and store
                 text = self._decode_entities(part)
                 if text:
                     nodes.append(CaptionNode.create_text(text))
             else:
-                # Odd indices are tags — classify into style/text nodes
                 node = self._classify_tag(part)
                 if node is not None:
                     nodes.append(node)
-                    if open_tags is not None and node.type_ == CaptionNode.STYLE:
-                        if "timestamp" in node.content:
-                            pass
-                        elif node.start:
-                            open_tags.append(node.content)
-                        else:
-                            self._pop_matching_tag(open_tags, node.content)
+                    self._track_open_tag(node, open_tags)
 
         return nodes
+
+    @staticmethod
+    def _track_open_tag(node, open_tags):
+        if open_tags is None or node.type_ != CaptionNode.STYLE:
+            return
+        if "timestamp" in node.content:
+            return
+        if node.start:
+            open_tags.append(node.content)
+        else:
+            WebVTTReader._pop_matching_tag(open_tags, node.content)
 
     @staticmethod
     def _pop_matching_tag(open_tags, content):
@@ -437,25 +486,6 @@ class WebVTTReader(BaseReader):
     def _parse_regions(self, lines):
         """Parse REGION blocks from the file header area.
 
-        A WebVTT region defines a named rectangular area on screen where cues
-        can be rendered. Regions appear before any cues with the syntax:
-
-            REGION
-            id:subtitle_area
-            width:50%
-            lines:3
-            regionanchor:0%,100%
-            viewportanchor:10%,90%
-            scroll:up
-
-        Supported settings:
-            id             - unique identifier (required)
-            width          - region width as percentage (default: 100%)
-            lines          - visible line count (default: 3)
-            regionanchor   - anchor point within region as x%,y% (default: 0%,100%)
-            viewportanchor - anchor point on viewport as x%,y% (default: 0%,100%)
-            scroll         - scroll behavior, only "up" is valid (default: none)
-
         :returns: tuple (regions_layout, regions_raw)
             regions_layout: dict mapping region id -> Layout (for inherit_from)
             regions_raw: dict mapping region id -> {key: value} (for writer)
@@ -467,8 +497,7 @@ class WebVTTReader(BaseReader):
         while i < len(lines):
             line = lines[i].strip()
             if in_note_block:
-                if line == "":
-                    in_note_block = False
+                in_note_block = line != ""
                 i += 1
                 continue
             if _is_note_start(line):
@@ -476,35 +505,41 @@ class WebVTTReader(BaseReader):
                 i += 1
                 continue
             if line == "REGION" or line.startswith(("REGION\t", "REGION ")):
-                i += 1
-                settings = {}
-                seen_keys = set()
-                while i < len(lines) and lines[i].strip() != "":
-                    m = REGION_SETTING_PATTERN.match(lines[i].strip())
-                    if m:
-                        key, value = m.group(1), m.group(2)
-                        if key in seen_keys:
-                            i += 1
-                            continue
-                        seen_keys.add(key)
-                        settings[key] = value
-                    i += 1
-                if "id" in settings:
-                    region_id = settings["id"]
-                    if region_id not in regions_layout:
-                        regions_layout[region_id] = self._region_to_layout(settings)
-                        # Store raw settings (minus id) for the writer to
-                        # reconstruct the REGION block verbatim.
-                        regions_raw[region_id] = {
-                            k: v for k, v in settings.items() if k != "id"
-                        }
+                i = self._collect_region_block(
+                    lines, i + 1, regions_layout, regions_raw
+                )
             elif "-->" in line:
                 break
             else:
                 i += 1
         return regions_layout, regions_raw
 
-    def _region_to_layout(self, settings):
+    def _collect_region_block(self, lines, i, regions_layout, regions_raw):
+        """Parse a single REGION block starting at line index i.
+
+        Reads key:value pairs until a blank line, then registers the region
+        if it has a valid id not already seen. Returns the updated line index.
+        """
+        settings = {}
+        while i < len(lines) and lines[i].strip() != "":
+            m = REGION_SETTING_PATTERN.match(lines[i].strip())
+            if m:
+                settings.setdefault(m.group(1), m.group(2))
+            i += 1
+        self._register_region(settings, regions_layout, regions_raw)
+        return i
+
+    def _register_region(self, settings, regions_layout, regions_raw):
+        region_id = settings.get("id")
+        if not region_id or region_id in regions_layout:
+            return
+        regions_layout[region_id] = self._region_to_layout(settings)
+        regions_raw[region_id] = {
+            k: v for k, v in settings.items() if k != "id"
+        }
+
+    @staticmethod
+    def _region_to_layout(settings):
         """Convert parsed region settings dict into a Layout with origin/extent.
 
         Uses W3C TTML-WebVTT mapping formulas:
@@ -606,40 +641,19 @@ class WebVTTReader(BaseReader):
 
         Also preserves the raw string in webvtt_positioning for VTT round-trip.
         """
-        origin_x = None
-        origin_y = None
-        extent_horizontal = None
-        alignment = None
-        writing_direction = None
-
+        parsed = {}
         for match in CUE_SETTING_PATTERN.finditer(cue_settings):
             name, value = match.group(1), match.group(2)
+            parsed[name] = value
 
-            if name == "position":
-                origin_x = WebVTTReader._parse_percent_value(value)
+        origin_x = WebVTTReader._parse_percent_value(parsed.get("position", ""))
+        origin_y = WebVTTReader._parse_line_value(parsed.get("line", ""))
+        extent_horizontal = WebVTTReader._parse_percent_value(parsed.get("size", ""))
+        alignment = WebVTTReader._parse_align_value(parsed.get("align", ""))
+        writing_direction = WebVTTReader._parse_vertical_value(
+            parsed.get("vertical", "")
+        )
 
-            elif name == "line":
-                origin_y = WebVTTReader._parse_percent_value(value)
-                if origin_y is None:
-                    pct = WebVTTReader._line_number_to_percent(value)
-                    if pct is not None:
-                        origin_y = Size(pct, UnitEnum.PERCENT)
-
-            elif name == "size":
-                extent_horizontal = WebVTTReader._parse_percent_value(value)
-
-            elif name == "align":
-                if value in ALIGN_SETTING_MAP:
-                    alignment = Alignment(ALIGN_SETTING_MAP[value], None)
-
-            elif name == "vertical":
-                if value == "rl":
-                    writing_direction = WritingDirectionEnum.VERTICAL_RL
-                elif value == "lr":
-                    writing_direction = WritingDirectionEnum.VERTICAL_LR
-
-        # Only create origin when line: is present — position: alone leaves
-        # y unspecified (WebVTT default is "auto"/bottom, not 0%).
         origin = None
         if origin_y is not None:
             x = origin_x if origin_x is not None else Size(0, UnitEnum.PERCENT)
@@ -658,42 +672,78 @@ class WebVTTReader(BaseReader):
             inherit_from=inherit_from,
         )
 
+    @staticmethod
+    def _parse_line_value(value):
+        if not value:
+            return None
+        result = WebVTTReader._parse_percent_value(value)
+        if result is not None:
+            return result
+        pct = WebVTTReader._line_number_to_percent(value)
+        if pct is not None:
+            return Size(pct, UnitEnum.PERCENT)
+        return None
+
+    @staticmethod
+    def _parse_align_value(value):
+        if value in ALIGN_SETTING_MAP:
+            return Alignment(ALIGN_SETTING_MAP[value], None)
+        return None
+
+    @staticmethod
+    def _parse_vertical_value(value):
+        if value == "rl":
+            return WritingDirectionEnum.VERTICAL_RL
+        if value == "lr":
+            return WritingDirectionEnum.VERTICAL_LR
+        return None
+
     def _parse_style_blocks(self, lines):
         """Extract ::cue rules from STYLE blocks before the first cue."""
         styles = {}
+        blocks = self._collect_style_blocks(lines)
+        for css_text in blocks:
+            self._extract_cue_styles(css_text, styles)
+
+        if styles and "::cue" not in styles:
+            styles["::cue"] = {}
+
+        return styles
+
+    @staticmethod
+    def _collect_style_blocks(lines):
+        """Collect CSS text from each STYLE block in the header area."""
+        blocks = []
         in_style_block = False
         in_note_block = False
-        css_text = ""
+        css_lines = []
 
         for line in lines:
             if in_note_block:
-                if line == "":
-                    in_note_block = False
+                in_note_block = line != ""
                 continue
+
             if in_style_block:
-                if line == "":
-                    if css_text:
-                        self._extract_cue_styles(css_text, styles)
-                    in_style_block = False
-                    css_text = ""
-                else:
-                    css_text += line + "\n"
-            elif _is_note_start(line):
+                if line != "":
+                    css_lines.append(line)
+                    continue
+                _flush_css_block(css_lines, blocks)
+                css_lines = []
+                in_style_block = False
+                continue
+
+            if _is_note_start(line):
                 in_note_block = True
             elif "-->" in line:
                 break
             elif line.strip() == "STYLE":
                 in_style_block = True
-                css_text = ""
+                css_lines = []
 
-        if in_style_block and css_text:
-            self._extract_cue_styles(css_text, styles)
+        if in_style_block:
+            _flush_css_block(css_lines, blocks)
 
-        # Marker: signals to the writer that styles originated from VTT
-        if styles and "::cue" not in styles:
-            styles["::cue"] = {}
-
-        return styles
+        return blocks
 
     @staticmethod
     def _extract_cue_styles(css_text, styles):
@@ -758,54 +808,58 @@ class WebVTTReader(BaseReader):
             return
 
         base_style = styles.get("::cue", {})
+        WebVTTReader._cascade_class_styles(captions, styles, base_style)
+        WebVTTReader._wrap_bare_text_with_base(captions, base_style)
 
+    @staticmethod
+    def _cascade_class_styles(captions, styles, base_style):
+        """Apply cascaded ::cue base and class styles onto STYLE open nodes."""
         for caption in captions:
             for node in caption.nodes:
                 if node.type_ != CaptionNode.STYLE or not node.start:
                     continue
+                WebVTTReader._apply_cascade(node.content, styles, base_style)
 
-                content = node.content
-                classes = content.get("classes", [])
-                if not classes and not base_style:
-                    continue
+    @staticmethod
+    def _apply_cascade(content, styles, base_style):
+        classes = content.get("classes", [])
+        if not classes and not base_style:
+            return
 
-                # Cascade: ::cue base < ::cue(.class)
-                resolved = {}
-                if base_style:
-                    resolved.update(base_style)
-                for class_name in classes:
-                    class_style = styles.get(class_name, {})
-                    if class_style:
-                        resolved.update(class_style)
+        resolved = {}
+        if base_style:
+            resolved.update(base_style)
+        for class_name in classes:
+            class_style = styles.get(class_name, {})
+            if class_style:
+                resolved.update(class_style)
 
-                # Preserve existing keys ("classes" needed for round-trip)
-                if resolved:
-                    for key, value in resolved.items():
-                        if key not in content:
-                            content[key] = value
+        for key, value in resolved.items():
+            if key not in content:
+                content[key] = value
 
-        # Wrap bare text in STYLE nodes when a ::cue base rule has
-        # text-decoration properties (italic/bold/underline). This ensures
-        # downstream writers (SCC, DFXP, VTT) all see the styling — they
-        # iterate caption.nodes looking for STYLE nodes to trigger
-        # formatting. Only text-style keys are used; color/background-color
-        # can't be represented as inline tags and stay in the STYLE block.
-        _TEXT_STYLE_KEYS = {"italics", "bold", "underline"}
+    @staticmethod
+    def _wrap_bare_text_with_base(captions, base_style):
+        """Wrap bare text nodes with base style when ::cue declares
+        text-decoration properties (italic/bold/underline)."""
+        text_style_keys = {"italics", "bold", "underline"}
         base_text_props = {
-            k: v for k, v in base_style.items() if k in _TEXT_STYLE_KEYS and v
+            k: v for k, v in base_style.items() if k in text_style_keys and v
         }
-        if base_text_props:
-            for caption in captions:
-                if WebVTTReader._caption_needs_base_wrap(
-                    caption.nodes, base_text_props
-                ):
-                    caption.nodes.insert(
-                        0,
-                        CaptionNode.create_style(True, dict(base_text_props)),
-                    )
-                    caption.nodes.append(
-                        CaptionNode.create_style(False, dict(base_text_props))
-                    )
+        if not base_text_props:
+            return
+
+        for caption in captions:
+            if not WebVTTReader._caption_needs_base_wrap(
+                caption.nodes, base_text_props
+            ):
+                continue
+            caption.nodes.insert(
+                0, CaptionNode.create_style(True, dict(base_text_props))
+            )
+            caption.nodes.append(
+                CaptionNode.create_style(False, dict(base_text_props))
+            )
 
     @staticmethod
     def _caption_needs_base_wrap(nodes, base_props):
@@ -819,13 +873,12 @@ class WebVTTReader(BaseReader):
         """
         depth = 0
         for node in nodes:
-            if node.type_ == CaptionNode.STYLE:
-                if node.start:
-                    if all(node.content.get(k) == v for k, v in base_props.items()):
-                        depth += 1
-                else:
-                    if depth > 0:
-                        depth -= 1
-            elif node.type_ == CaptionNode.TEXT and depth == 0:
+            if node.type_ == CaptionNode.TEXT and depth == 0:
                 return True
+            if node.type_ != CaptionNode.STYLE:
+                continue
+            if node.start and _covers_base(node.content, base_props):
+                depth += 1
+            elif not node.start and depth > 0:
+                depth -= 1
         return False

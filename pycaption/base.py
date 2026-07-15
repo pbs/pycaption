@@ -280,8 +280,7 @@ class CaptionSet:
     by all the children.
     """
 
-    def __init__(self, captions, styles=None, layout_info=None):
-    def __init__(self, captions, styles={}, layout_info=None, regions=None):
+    def __init__(self, captions, styles=None, layout_info=None, regions=None):
         """
         :param captions: A dictionary of the format {'language': CaptionList}
         :param styles: A dictionary with CSS-like styling rules
@@ -290,7 +289,6 @@ class CaptionSet:
         """
         self._captions = captions
         self._styles = styles or {}
-        self._styles = styles
         self._regions = regions or {}
         self.layout_info = layout_info
 

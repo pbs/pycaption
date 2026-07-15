@@ -280,14 +280,14 @@ class TestSCCWriterPositioning:
         pac_row_15 = WRITER_PAC_CODES[(15, 0, "plain")]
         assert pac_row_15 in output
 
-    def test_vtt_line_middle_maps_to_row_8(self):
+    def test_vtt_line_middle_maps_to_row_9(self):
         vtt = (
             "WEBVTT\n\n" "00:00:01.000 --> 00:00:03.000 line:50%\n" "Middle of screen\n"
         )
         captions = WebVTTReader().read(vtt)
         output = SCCWriter().write(captions)
-        pac_row_8 = WRITER_PAC_CODES[(8, 0, "plain")]
-        assert pac_row_8 in output
+        pac_row_9 = WRITER_PAC_CODES[(9, 0, "plain")]
+        assert pac_row_9 in output
 
     def test_vtt_no_position_defaults_to_bottom(self):
         vtt = "WEBVTT\n\n" "00:00:01.000 --> 00:00:03.000\n" "Default position\n"
@@ -419,3 +419,126 @@ class TestSCCWriterPositioningAndStylesCombined:
         text = result.get_captions("en-US")[0].get_text()
         assert "Line one" in text
         assert "Line two" in text
+
+
+class TestSCCWriterRollUp:
+    def test_scroll_up_region_emits_roll_up_commands(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "REGION\n"
+            "id:scroll\n"
+            "width:40%\n"
+            "lines:3\n"
+            "scroll:up\n\n"
+            "00:00:01.000 --> 00:00:03.000 region:scroll\n"
+            "First line\n\n"
+            "00:00:03.000 --> 00:00:05.000 region:scroll\n"
+            "Second line\n"
+        )
+        captions = WebVTTReader().read(vtt)
+        output = SCCWriter().write(captions)
+        assert "9426 9426" in output  # RU3
+        assert "94ad 94ad" in output  # CR
+
+    def test_scroll_up_uses_region_lines_for_depth(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "REGION\n"
+            "id:r2\n"
+            "lines:2\n"
+            "scroll:up\n\n"
+            "00:00:01.000 --> 00:00:03.000 region:r2\n"
+            "Text\n"
+        )
+        captions = WebVTTReader().read(vtt)
+        output = SCCWriter().write(captions)
+        assert "9425 9425" in output  # RU2
+
+    def test_scroll_up_4_lines(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "REGION\n"
+            "id:r4\n"
+            "lines:4\n"
+            "scroll:up\n\n"
+            "00:00:01.000 --> 00:00:03.000 region:r4\n"
+            "Text\n"
+        )
+        captions = WebVTTReader().read(vtt)
+        output = SCCWriter().write(captions)
+        assert "94a7 94a7" in output  # RU4
+
+    def test_mixed_scroll_and_pop_on(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "REGION\n"
+            "id:scroll\n"
+            "lines:3\n"
+            "scroll:up\n\n"
+            "00:00:01.000 --> 00:00:03.000 region:scroll\n"
+            "Roll-up text\n\n"
+            "00:00:05.000 --> 00:00:07.000\n"
+            "Pop-on text\n"
+        )
+        captions = WebVTTReader().read(vtt)
+        output = SCCWriter().write(captions)
+        assert "9426 9426" in output  # RU3 for scroll caption
+        assert "9420 9420" in output  # RCL for pop-on caption
+
+    def test_non_scroll_region_stays_pop_on(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "REGION\n"
+            "id:static\n"
+            "width:40%\n"
+            "lines:3\n\n"
+            "00:00:01.000 --> 00:00:03.000 region:static\n"
+            "No scroll\n"
+        )
+        captions = WebVTTReader().read(vtt)
+        output = SCCWriter().write(captions)
+        assert "9420 9420" in output  # Pop-on (RCL)
+        assert "9426" not in output  # No roll-up
+
+    def test_scroll_text_survives_roundtrip(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "REGION\n"
+            "id:scroll\n"
+            "lines:2\n"
+            "scroll:up\n\n"
+            "00:00:01.000 --> 00:00:03.000 region:scroll\n"
+            "Hello world\n"
+        )
+        captions = WebVTTReader().read(vtt)
+        output = SCCWriter().write(captions)
+        result = SCCReader().read(output)
+        assert not result.is_empty()
+        text = result.get_captions("en-US")[0].get_text()
+        assert "Hello world" in text
+
+
+class TestSCCWriterPaintOn:
+    def test_paint_on_emits_rdc_preamble(self):
+        scc = (
+            "Scenarist_SCC V1.0\n\n"
+            "00:00:00;00\t9429 54e5 73f4\n\n"
+            "00:00:04;00\t942c\n\n"
+        )
+        captions = SCCReader().read(scc)
+        output = SCCWriter().write(captions)
+        assert "9429 9429" in output
+        assert "9420 9420" not in output
+
+    def test_paint_on_text_survives_roundtrip(self):
+        scc = (
+            "Scenarist_SCC V1.0\n\n"
+            "00:00:00;00\t9429 54e5 73f4\n\n"
+            "00:00:04;00\t942c\n\n"
+        )
+        captions = SCCReader().read(scc)
+        output = SCCWriter().write(captions)
+        result = SCCReader().read(output)
+        assert not result.is_empty()
+        text = result.get_captions("en-US")[0].get_text()
+        assert "Test" in text

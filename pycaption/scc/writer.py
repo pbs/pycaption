@@ -26,6 +26,35 @@ _SCC_PREFIX = ["94ae", "94ae", "9420", "9420"]
 _SCC_SUFFIX = ["942c", "942c", "942f", "942f"]
 _SCC_OVERHEAD = len(_SCC_PREFIX) + len(_SCC_SUFFIX)
 
+_ROLL_UP_COMMANDS = {2: "9425", 3: "9426", 4: "94a7"}
+_CARRIAGE_RETURN = "94ad"
+_RESUME_DIRECT_CAPTIONING = "9429"
+
+
+def _update_style(node, italic, underline):
+    """Update italic/underline state from a STYLE node."""
+    content = node.content
+    if not isinstance(content, dict):
+        return italic, underline
+    if node.start:
+        italic = italic or bool(content.get("italics"))
+        underline = underline or bool(content.get("underline"))
+    else:
+        if content.get("italics"):
+            italic = False
+        if content.get("underline"):
+            underline = False
+    return italic, underline
+
+
+def _skip_consumed_spaces(line_text, offset, wrap_line):
+    """Advance offset past spaces that textwrap consumed at a break point."""
+    while offset < len(line_text) and line_text[offset] == " ":
+        if line_text[offset: offset + len(wrap_line)] == wrap_line:
+            break
+        offset += 1
+    return offset
+
 
 class SCCWriter(BaseWriter):
     def __init__(self, *args, drop_frame=False, **kw):
@@ -35,9 +64,8 @@ class SCCWriter(BaseWriter):
     def write(self, caption_set):
         """Convert a CaptionSet to SCC format string.
 
-        Runs a 4-pass pipeline: encode captions to hex codes, adjust timing
-        to account for buffer write time, deduplicate timestamps, then
-        serialize to the final SCC text.
+        Captions are emitted in chronological order. Each caption's mode
+        (pop-on, roll-up, paint-on) determines its CEA-608 preamble.
         """
         output = HEADER + "\n\n"
 
@@ -48,53 +76,90 @@ class SCCWriter(BaseWriter):
 
         lang = list(caption_set.get_languages())[0]
         captions = caption_set.get_captions(lang)
+        regions = caption_set.get_regions()
+        scroll_regions = {
+            rid for rid, settings in regions.items()
+            if settings.get("scroll") == "up"
+        }
 
-        codes = self._compute_caption_codes(captions)
+        classified = self._classify_captions(captions, scroll_regions, regions)
+        codes = self._encode_all(classified)
         codes = self._adjust_timing(codes)
         codes = self._deduplicate_timestamps(codes)
-        output += self._render_output(codes)
+        output += self._render_mixed(codes)
 
         return output
 
-    def _compute_caption_codes(self, captions):
-        """Encode each caption's text, positioning, and styling into SCC hex
-        code sequences. Returns a list of (code, start, end) tuples."""
+    def _classify_captions(self, captions, scroll_regions, regions):
+        """Assign a mode and depth to each caption, preserving input order."""
+        result = []
+        for caption in captions:
+            mode = getattr(caption, "caption_mode", None)
+            if mode == "roll_up":
+                depth = getattr(caption, "roll_up_rows", None) or 3
+                result.append((caption, "roll_up", depth))
+            elif mode == "paint_on":
+                result.append((caption, "paint_on", 0))
+            else:
+                region_id = self._get_caption_region_id(caption)
+                if region_id and region_id in scroll_regions:
+                    depth = int(regions[region_id].get("lines", "3"))
+                    result.append((caption, "roll_up", depth))
+                else:
+                    result.append((caption, "pop_on", 0))
+        return result
+
+    def _encode_all(self, classified):
+        """Encode all captions into (code, start, end, mode, depth) tuples."""
         return [
-            (self._text_to_code(caption), caption.start, caption.end)
-            for caption in captions
+            (self._text_to_code(cap), cap.start, cap.end, mode, depth)
+            for cap, mode, depth in classified
         ]
 
-    def _adjust_timing(self, codes):
-        """Shift each cue's start time earlier to account for pop-on buffer
-        write time. SCC decoders need time to receive all code words before
+    @staticmethod
+    def _get_caption_region_id(caption):
+        """Extract region id from a caption's webvtt_positioning string."""
+        layout = caption.layout_info
+        if not layout or not layout.webvtt_positioning:
+            return None
+        for setting in layout.webvtt_positioning.split():
+            if setting.startswith("region:"):
+                return setting[7:]
+        return None
+
+
+    @staticmethod
+    def _adjust_timing(codes):
+        """Shift each cue's start time earlier to account for buffer write
+        time. SCC decoders need time to receive all code words before
         displaying; this backshift ensures the caption appears on screen at
         the intended moment. Also suppresses the previous cue's clear-screen
         command (sets end=None) when two cues would overlap in the stream."""
-        for index, (code, start, end) in enumerate(codes):
+        for index, (code, start, end, mode, depth) in enumerate(codes):
             code_words = len(code.split()) + _SCC_OVERHEAD
             code_time_microseconds = code_words * MICROSECONDS_PER_CODEWORD
             code_start = max(0, start - code_time_microseconds)
 
             if index == 0:
-                codes[index] = (code, code_start, end)
+                codes[index] = (code, code_start, end, mode, depth)
                 continue
 
-            previous_code, previous_start, previous_end = codes[index - 1]
-            if code_start <= previous_start + MICROSECONDS_PER_CODEWORD:
-                prev_words = len(previous_code.split()) + _SCC_OVERHEAD
+            prev_code, prev_start, prev_end, prev_mode, prev_depth = codes[index - 1]
+            if code_start <= prev_start + MICROSECONDS_PER_CODEWORD:
+                prev_words = len(prev_code.split()) + _SCC_OVERHEAD
                 code_start = max(
                     code_start,
-                    previous_start + prev_words * MICROSECONDS_PER_CODEWORD,
+                    prev_start + prev_words * MICROSECONDS_PER_CODEWORD,
                 )
-                codes[index] = (code, code_start, end)
-                codes[index - 1] = (previous_code, previous_start, None)
+                codes[index] = (code, code_start, end, mode, depth)
+                codes[index - 1] = (prev_code, prev_start, None, prev_mode, prev_depth)
             else:
                 if (
-                    previous_end is not None
-                    and previous_end + 3 * MICROSECONDS_PER_CODEWORD >= code_start
+                    prev_end is not None
+                    and prev_end + 3 * MICROSECONDS_PER_CODEWORD >= code_start
                 ):
-                    codes[index - 1] = (previous_code, previous_start, None)
-                codes[index] = (code, code_start, end)
+                    codes[index - 1] = (prev_code, prev_start, None, prev_mode, prev_depth)
+                codes[index] = (code, code_start, end, mode, depth)
 
         return codes
 
@@ -103,43 +168,68 @@ class SCCWriter(BaseWriter):
         If two cues would land on the same frame, nudge the later one
         forward by one codeword duration until it occupies a unique frame."""
         last_emitted_frame = -1
-        for index, (code, start, end) in enumerate(codes):
+        for index, (code, start, end, mode, depth) in enumerate(codes):
             cur_frame = self._microseconds_to_frame(start)
             if cur_frame <= last_emitted_frame:
                 while self._microseconds_to_frame(start) <= last_emitted_frame:
                     start += MICROSECONDS_PER_CODEWORD
-                codes[index] = (code, start, end)
+                codes[index] = (code, start, end, mode, depth)
             last_emitted_frame = self._microseconds_to_frame(start)
         return codes
 
-    def _render_output(self, codes):
-        """Serialize encoded cues to SCC text lines. Each cue is wrapped with
-        the standard prefix (ENM + RCL) and suffix (EDM + EOC). Cues exceeding
-        SCC_TOKENS_PER_CAPTION_MAX are split across multiple timestamp lines."""
+    def _render_mixed(self, codes):
+        """Serialize all cues in chronological order, emitting mode-appropriate
+        preambles inline. Handles pop-on (ENM+RCL...EDM+EOC), roll-up
+        (EDM on mode entry, RU+CR), and paint-on (RDC) seamlessly."""
         output = ""
         max_payload = SCC_TOKENS_PER_CAPTION_MAX - _SCC_OVERHEAD
+        prev_mode = None
 
-        for code, start, end in codes:
-            code_tokens = code.split()
-            if len(code_tokens) + _SCC_OVERHEAD <= SCC_TOKENS_PER_CAPTION_MAX:
-                output += f"{self._format_timestamp(start)}\t"
-                output += "94ae 94ae 9420 9420 "
+        for code, start, end, mode, depth in codes:
+            ts = self._format_timestamp(start)
+
+            if mode == "pop_on":
+                code_tokens = code.split()
+                if len(code_tokens) + _SCC_OVERHEAD <= SCC_TOKENS_PER_CAPTION_MAX:
+                    output += f"{ts}\t"
+                    output += "94ae 94ae 9420 9420 "
+                    output += code
+                    output += "942c 942c 942f 942f\n\n"
+                else:
+                    offset = 0
+                    while offset < len(code_tokens):
+                        chunk = code_tokens[offset : offset + max_payload]
+                        line = _SCC_PREFIX + chunk + _SCC_SUFFIX
+                        output += (
+                            f"{self._format_timestamp(start)}\t"
+                            + " ".join(line) + "\n\n"
+                        )
+                        offset += max_payload
+                        if offset < len(code_tokens):
+                            start += MICROSECONDS_PER_CODEWORD
+
+            elif mode == "roll_up":
+                cap_ru = _ROLL_UP_COMMANDS.get(min(max(depth, 2), 4), "9426")
+                output += f"{ts}\t"
+                if prev_mode != "roll_up":
+                    output += "942c 942c "
+                output += f"{cap_ru} {cap_ru} "
+                output += f"{_CARRIAGE_RETURN} {_CARRIAGE_RETURN} "
                 output += code
-                output += "942c 942c 942f 942f\n\n"
-            else:
-                offset = 0
-                while offset < len(code_tokens):
-                    chunk = code_tokens[offset : offset + max_payload]
-                    line = _SCC_PREFIX + chunk + _SCC_SUFFIX
-                    output += (
-                        f"{self._format_timestamp(start)}\t" + " ".join(line) + "\n\n"
-                    )
-                    offset += max_payload
-                    if offset < len(code_tokens):
-                        start += MICROSECONDS_PER_CODEWORD
+                output += "\n\n"
+
+            elif mode == "paint_on":
+                output += f"{ts}\t"
+                output += (
+                    f"{_RESUME_DIRECT_CAPTIONING} {_RESUME_DIRECT_CAPTIONING} "
+                )
+                output += code
+                output += "\n\n"
 
             if end is not None:
                 output += f"{self._format_timestamp(end)}\t942c 942c\n\n"
+
+            prev_mode = mode
 
         return output
 
@@ -190,15 +280,15 @@ class SCCWriter(BaseWriter):
     @staticmethod
     def _compute_scc_row(caption, num_lines, line_index):
         """Map a caption's vertical position to a CEA-608 row (1-15).
-        If layout info has a Y percentage, maps 0%->row 1 through
-        100%->row 15. Multi-line captions (up to 4 lines per CEA-608
-        convention) stack downward from the base row, clamped at row 15.
+        If layout info has a Y percentage, reverses the reader's formula
+        (y% = 90*(row-1)/15 + 5) to recover the original row. Multi-line
+        captions stack downward from the base row, clamped at row 15.
         Without layout info, uses bottom-up placement from row 15."""
         layout = caption.layout_info
         if layout and layout.origin and layout.origin.y:
             y = layout.origin.y
             if y.unit == UnitEnum.PERCENT:
-                base_row = max(1, min(15, round(y.value / 100.0 * 14) + 1))
+                base_row = max(1, min(15, round((y.value - 5) / 90.0 * 15) + 1))
             else:
                 base_row = 15
             row = base_row + line_index
@@ -207,12 +297,24 @@ class SCCWriter(BaseWriter):
 
     @staticmethod
     def _compute_scc_indent(caption, line_text):
-        """Map horizontal alignment to a CEA-608 column position.
-        Returns (base_col, tab_offset) where base_col is a multiple of 4
-        (the PAC grid) and tab_offset is 0-3 for fine positioning via
-        Tab Offset commands. Left-aligned or unspecified returns (0, 0)."""
+        """Map horizontal position to a CEA-608 column (0-31).
+        Reverses the reader's formula (x% = 80*col/32 + 10) to recover
+        the original column. Falls back to alignment-based centering/right
+        for non-SCC sources. Returns (base_col, tab_offset) where base_col
+        is a multiple of 4 and tab_offset is 0-3."""
         layout = caption.layout_info
-        if not layout or not layout.alignment:
+        if not layout:
+            return 0, 0
+
+        if layout.origin and layout.origin.x:
+            x = layout.origin.x
+            if x.unit == UnitEnum.PERCENT and x.value > 10:
+                raw_col = max(0, min(31, round((x.value - 10) / 80.0 * 32)))
+                base_col = (raw_col // 4) * 4
+                tab_offset = raw_col - base_col
+                return min(base_col, 28), tab_offset
+
+        if not layout.alignment:
             return 0, 0
 
         h_align = layout.alignment.horizontal
@@ -320,15 +422,9 @@ class SCCWriter(BaseWriter):
             wrapped = textwrap.fill(line_text, max_width).split("\n")
             global_offset = 0
             for wrap_line in wrapped:
-                while (
-                    global_offset < len(line_text) and line_text[global_offset] == " "
-                ):
-                    if (
-                        line_text[global_offset : global_offset + len(wrap_line)]
-                        == wrap_line
-                    ):
-                        break
-                    global_offset += 1
+                global_offset = _skip_consumed_spaces(
+                    line_text, global_offset, wrap_line
+                )
                 wrap_segments = SCCWriter._slice_segments(
                     segments, global_offset, len(wrap_line)
                 )
@@ -373,29 +469,16 @@ class SCCWriter(BaseWriter):
         (text, italic, underline) tuples. Tracks style state by watching
         STYLE open/close nodes. Filters out empty lines."""
         lines = [[]]
-        current_italic = False
-        current_underline = False
+        italic = False
+        underline = False
 
         for node in nodes:
             if node.type_ == CaptionNode.BREAK:
                 lines.append([])
             elif node.type_ == CaptionNode.STYLE:
-                content = node.content
-                if not isinstance(content, dict):
-                    continue
-                if node.start:
-                    if content.get("italics"):
-                        current_italic = True
-                    if content.get("underline"):
-                        current_underline = True
-                else:
-                    if content.get("italics"):
-                        current_italic = False
-                    if content.get("underline"):
-                        current_underline = False
-            elif node.type_ == CaptionNode.TEXT:
-                if node.content:
-                    lines[-1].append((node.content, current_italic, current_underline))
+                italic, underline = _update_style(node, italic, underline)
+            elif node.type_ == CaptionNode.TEXT and node.content:
+                lines[-1].append((node.content, italic, underline))
 
         return [line for line in lines if line]
 

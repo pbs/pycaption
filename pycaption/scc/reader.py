@@ -157,6 +157,7 @@ class SCCReader(BaseReader):
     """
 
     def __init__(self, *args, **kw):
+        super().__init__(*args, **kw)
         self.caption_stash = CaptionCreator()
         self.time_translator = _SccTimeTranslator()
 
@@ -296,10 +297,10 @@ class SCCReader(BaseReader):
 
         elif old_key == "paint":
             if not self.buffer.is_empty():
-                self.caption_stash.create_and_store(self.buffer, self.time)
-                self.buffer = self.node_creator_factory.new_creator()
-                # Reset positioning state for new caption boundary
-                self.node_creator_factory.position_tracker.reset_for_new_caption()
+                self.caption_stash.create_and_store(
+                    self.buffer, self.time, caption_mode="paint_on"
+                )
+                self._reset_buffer()
 
     def _translate_line(self, line):
         # ignore blank lines
@@ -406,91 +407,97 @@ class SCCReader(BaseReader):
         # add to buffer
         self.buffer.add_chars(EXTENDED_CHARS[word])
 
+    _ROLL_UP_DEPTH = {"9425": 2, "9426": 3, "94a7": 4}
+
     def _translate_command(self, word, next_command=None):
-        # if command is pop_up
         if word == "9420":
-            self.buffer_dict.set_active("pop")
-
-        # command is paint_on [Resume Direct Captioning]
+            self._cmd_pop_on()
         elif word == "9429":
-            self.buffer_dict.set_active("paint")
-
-            self.roll_rows_expected = 1
-            if not self.buffer.is_empty():
-                self.caption_stash.create_and_store(self.buffer, self.time)
-                self.buffer = self.node_creator_factory.new_creator()
-                # Reset positioning state for new caption boundary
-                self.node_creator_factory.position_tracker.reset_for_new_caption()
-
-            self.time = self.time_translator.get_time()
-
-        # if command is roll_up 2, 3 or 4 rows
-        elif word in ("9425", "9426", "94a7"):
-            self.buffer_dict.set_active("roll")
-
-            # count how many lines are expected
-            if word == "9425":
-                self.roll_rows_expected = 2
-            elif word == "9426":
-                self.roll_rows_expected = 3
-            elif word == "94a7":
-                self.roll_rows_expected = 4
-
-            # if content is in the queue, turn it into a caption
-            if not self.buffer.is_empty():
-                self.caption_stash.create_and_store(self.buffer, self.time)
-                self.buffer = self.node_creator_factory.new_creator()
-                # Reset positioning state for new caption boundary
-                self.node_creator_factory.position_tracker.reset_for_new_caption()
-
-            # set rows to empty, configure start time for caption
-            self.roll_rows = []
-            self.time = self.time_translator.get_time()
-
-        # clear pop_on buffer
+            self._cmd_paint_on()
+        elif word in self._ROLL_UP_DEPTH:
+            self._cmd_roll_up(word)
         elif word == "94ae":
-            self.buffer = self.node_creator_factory.new_creator()
-            # Reset positioning state for new caption boundary
-            self.node_creator_factory.position_tracker.reset_for_new_caption()
-
-        # display pop_on buffer [End Of Caption]
+            self._cmd_erase_non_displayed()
         elif word == "942f":
-            self.time = self.time_translator.get_time()
-            if self.pop_ons_queue:
-                # there's a pop-on cue not ended by the 942c command
-                self._pop_on(end=self.time)
-            if self.buffer.is_empty():
-                return
-            cue = PopOnCue(buffer=deepcopy(self.buffer), start=self.time, end=0)
-            self.pop_ons_queue.appendleft(cue)
-            self.buffer = self.node_creator_factory.new_creator()
-            # Reset positioning state for new caption boundary
-            self.node_creator_factory.position_tracker.reset_for_new_caption()
-
-        # roll up captions [Carriage Return]
+            self._cmd_end_of_caption()
         elif word == "94ad":
-            # display roll-up buffer
-            if not self.buffer.is_empty():
-                self._roll_up()
-
-        # 942c - Erase Displayed Memory - Clear the current screen of any
-        # displayed captions or text.
+            self._cmd_carriage_return()
         elif word == "942c":
-            edm_time = self.time_translator.get_time()
-            if self.pop_ons_queue:
-                self._pop_on(end=edm_time)
-            if (
-                self.buffer_dict.active_key in ("paint", "roll")
-                and not self.buffer.is_empty()
-            ):
-                self.caption_stash.create_and_store(self.buffer, self.time, edm_time)
-                self.buffer = self.node_creator_factory.new_creator()
-                self.node_creator_factory.position_tracker.reset_for_new_caption()
-                self.time = edm_time
-
-        # If command is not one of the aforementioned, add it to buffer
+            self._cmd_erase_displayed()
         else:
             self.buffer.interpret_command(command=word, next_command=next_command)
+
+    def _cmd_pop_on(self):
+        self.buffer_dict.set_active("pop")
+
+    def _cmd_paint_on(self):
+        self.buffer_dict.set_active("paint")
+        self.roll_rows_expected = 1
+        if not self.buffer.is_empty():
+            self.caption_stash.create_and_store(
+                self.buffer, self.time, caption_mode="paint_on"
+            )
+            self._reset_buffer()
+        self.time = self.time_translator.get_time()
+
+    def _cmd_roll_up(self, word):
+        self.buffer_dict.set_active("roll")
+        prev_rows = self.roll_rows_expected
+        self.roll_rows_expected = self._ROLL_UP_DEPTH[word]
+
+        if not self.buffer.is_empty():
+            self.caption_stash.create_and_store(
+                self.buffer, self.time, caption_mode="roll_up",
+                roll_up_rows=prev_rows or self.roll_rows_expected,
+            )
+            self._reset_buffer()
+
+        self.roll_rows = []
+        self.time = self.time_translator.get_time()
+
+    def _cmd_erase_non_displayed(self):
+        self._reset_buffer()
+
+    def _cmd_end_of_caption(self):
+        self.time = self.time_translator.get_time()
+        if self.pop_ons_queue:
+            self._pop_on(end=self.time)
+        if self.buffer.is_empty():
+            return
+        cue = PopOnCue(buffer=deepcopy(self.buffer), start=self.time, end=0)
+        self.pop_ons_queue.appendleft(cue)
+        self._reset_buffer()
+
+    def _cmd_carriage_return(self):
+        if not self.buffer.is_empty():
+            self._roll_up()
+
+    def _cmd_erase_displayed(self):
+        edm_time = self.time_translator.get_time()
+        if self.pop_ons_queue:
+            self._pop_on(end=edm_time)
+        if (
+            self.buffer_dict.active_key in ("paint", "roll")
+            and not self.buffer.is_empty()
+        ):
+            mode = (
+                "paint_on" if self.buffer_dict.active_key == "paint" else "roll_up"
+            )
+            roll_rows = (
+                self.roll_rows_expected
+                if self.buffer_dict.active_key == "roll"
+                else None
+            )
+            self.caption_stash.create_and_store(
+                self.buffer, self.time, edm_time,
+                caption_mode=mode, roll_up_rows=roll_rows,
+            )
+            self._reset_buffer()
+            self.time = edm_time
+
+    def _reset_buffer(self):
+        self.buffer = self.node_creator_factory.new_creator()
+        self.node_creator_factory.position_tracker.reset_for_new_caption()
 
     def _translate_characters(self, word):
         # split word into the 2 bytes
@@ -531,10 +538,11 @@ class SCCReader(BaseReader):
                 self.buffer = self.node_creator_factory.from_list(self.roll_rows)
 
         # convert buffer and empty
-        self.caption_stash.create_and_store(self.buffer, self.time)
-        self.buffer = self.node_creator_factory.new_creator()
-        # Reset positioning state for new caption boundary
-        self.node_creator_factory.position_tracker.reset_for_new_caption()
+        self.caption_stash.create_and_store(
+            self.buffer, self.time, caption_mode="roll_up",
+            roll_up_rows=self.roll_rows_expected,
+        )
+        self._reset_buffer()
 
         # configure time
         self.time = self.time_translator.get_time()
@@ -544,7 +552,9 @@ class SCCReader(BaseReader):
 
     def _pop_on(self, end=0):
         pop_on_cue = self.pop_ons_queue.pop()
-        self.caption_stash.create_and_store(pop_on_cue.buffer, pop_on_cue.start, end)
+        self.caption_stash.create_and_store(
+            pop_on_cue.buffer, pop_on_cue.start, end, caption_mode="pop_on"
+        )
 
 
 class _SccTimeTranslator:

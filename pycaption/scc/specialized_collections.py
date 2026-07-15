@@ -39,6 +39,8 @@ class PreCaption:
     used to eventually instantiate an actual Caption object.
     """
 
+    _INTERNAL_STYLE_KEYS = {"caption_mode", "roll_up_rows"}
+
     def __init__(self, start=0, end=0):
         self.start = start
         self.end = end
@@ -47,7 +49,16 @@ class PreCaption:
         self.layout_info = None
 
     def to_real_caption(self):
-        return Caption(self.start, self.end, self.nodes, self.style, self.layout_info)
+        display_style = {
+            k: v for k, v in self.style.items()
+            if k not in self._INTERNAL_STYLE_KEYS
+        }
+        caption = Caption(
+            self.start, self.end, self.nodes, display_style, self.layout_info
+        )
+        caption.caption_mode = self.style.get("caption_mode")
+        caption.roll_up_rows = self.style.get("roll_up_rows")
+        return caption
 
 
 class TimingCorrectingCaptionList(list):
@@ -208,7 +219,9 @@ class CaptionCreator:
         for caption in captions_to_correct:
             caption.end = end_time
 
-    def create_and_store(self, node_buffer, start, end=0):
+    def create_and_store(
+        self, node_buffer, start, end=0, caption_mode=None, roll_up_rows=None
+    ):
         """Interpreter method, will convert the buffer into one or more Caption
         objects, storing them internally.
 
@@ -222,6 +235,10 @@ class CaptionCreator:
         :param start: the start time in microseconds
         :type end: float
         :param end: the end time in microseconds
+        :type caption_mode: str or None
+        :param caption_mode: CEA-608 mode ("pop_on", "roll_up", "paint_on")
+        :type roll_up_rows: int or None
+        :param roll_up_rows: roll-up depth (2, 3, or 4) when mode is roll_up
         """
         if node_buffer.is_empty():
             return
@@ -229,6 +246,10 @@ class CaptionCreator:
         caption = PreCaption()
         caption.start = start
         caption.end = end
+        if caption_mode:
+            caption.style["caption_mode"] = caption_mode
+        if roll_up_rows:
+            caption.style["roll_up_rows"] = roll_up_rows
         self._still_editing = [caption]
 
         for instruction in node_buffer:
@@ -240,6 +261,10 @@ class CaptionCreator:
                 caption = PreCaption()
                 caption.start = start
                 caption.end = end
+                if caption_mode:
+                    caption.style["caption_mode"] = caption_mode
+                if roll_up_rows:
+                    caption.style["roll_up_rows"] = roll_up_rows
                 self._still_editing.append(caption)
 
             # handle line breaks

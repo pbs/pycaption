@@ -5,6 +5,11 @@ from ..base import BaseWriter, CaptionNode
 from ..geometry import WritingDirectionEnum
 from .constants import DEFAULT_ALIGN, WEBVTT_VERSION_OF
 
+_SIMPLE_STRUCTURAL_TAGS = {
+    "ruby": ("<ruby>", "</ruby>"),
+    "ruby_text": ("<rt>", "</rt>"),
+}
+
 
 class WebVTTWriter(BaseWriter):
     HEADER = "WEBVTT\n\n"
@@ -24,6 +29,7 @@ class WebVTTWriter(BaseWriter):
         "bold": ("font-weight", "bold"),
         "underline": ("text-decoration", "underline"),
     }
+    _CUE_SELECTOR = "::cue"
     _HTML_ELEMENT_NAMES = frozenset(
         {
             "p",
@@ -46,6 +52,14 @@ class WebVTTWriter(BaseWriter):
 
         caption_set = deepcopy(caption_set)
 
+        if lang is None:
+            lang = caption_set.get_languages()[0]
+
+        captions = caption_set.get_captions(lang)
+        self._roll_up_region_map = self._inject_scroll_regions(
+            captions, caption_set
+        )
+
         style_block = self._build_style_block(caption_set)
         if style_block:
             output += style_block
@@ -54,12 +68,7 @@ class WebVTTWriter(BaseWriter):
         if region_blocks:
             output += region_blocks
 
-        if lang is None:
-            lang = caption_set.get_languages()[0]
-
         self.global_layout = caption_set.get_layout_info(lang)
-
-        captions = caption_set.get_captions(lang)
 
         return output + "\n".join(
             [self._convert_caption(caption_set, caption) for caption in captions]
@@ -86,41 +95,68 @@ class WebVTTWriter(BaseWriter):
             return ""
 
         style_dict = dict(styles)
-        if "::cue" not in style_dict:
+        if self._CUE_SELECTOR not in style_dict:
             return ""
 
-        global_rule = style_dict["::cue"] or None
-        class_rules = []
-
-        for key, props in styles:
-            if key == "::cue":
-                continue
-            elif key.startswith("::"):
-                continue
-            elif key in self._HTML_ELEMENT_NAMES:
-                continue
-            elif "lang" in props:
-                continue
-            elif props:
-                class_rules.append((key, props))
+        global_rule = style_dict[self._CUE_SELECTOR] or None
+        class_rules = self._collect_class_rules(styles)
 
         global_css = self._format_css_declarations(global_rule) if global_rule else ""
-        class_outputs = []
-        for class_name, css_props in class_rules:
-            css = self._format_css_declarations(css_props)
-            if css:
-                class_outputs.append((class_name, css))
+        class_outputs = [
+            (name, css) for name, props in class_rules
+            if (css := self._format_css_declarations(props))
+        ]
 
         if not global_css and not class_outputs:
             return ""
 
         output = "STYLE\n"
         if global_css:
-            output += f"::cue {{ {global_css} }}\n"
+            output += f"{self._CUE_SELECTOR} {{ {global_css} }}\n"
         for class_name, css in class_outputs:
             output += f"::cue(.{class_name}) {{ {css} }}\n"
         output += "\n"
         return output
+
+    def _collect_class_rules(self, styles):
+        """Filter styles to only class-based rules suitable for STYLE output."""
+        rules = []
+        for key, props in styles:
+            if key == self._CUE_SELECTOR or key.startswith("::"):
+                continue
+            if key in self._HTML_ELEMENT_NAMES:
+                continue
+            if "lang" in props:
+                continue
+            if props:
+                rules.append((key, props))
+        return rules
+
+    @staticmethod
+    def _inject_scroll_regions(captions, caption_set):
+        """Create REGION blocks for roll-up captions that lack one.
+
+        Returns a dict mapping roll_up_rows depth -> region id for use
+        by _convert_caption when emitting cue settings.
+        """
+        existing_regions = caption_set.get_regions()
+        depth_to_region = {}
+        for cap in captions:
+            if getattr(cap, "caption_mode", None) != "roll_up":
+                continue
+            depth = getattr(cap, "roll_up_rows", None) or 3
+            if depth in depth_to_region:
+                continue
+            region_id = f"scroll{depth}"
+            if region_id not in existing_regions:
+                existing_regions[region_id] = {
+                    "lines": str(depth),
+                    "scroll": "up",
+                }
+            depth_to_region[depth] = region_id
+        if existing_regions:
+            caption_set.set_regions(existing_regions)
+        return depth_to_region
 
     @staticmethod
     def _build_region_blocks(caption_set):
@@ -209,14 +245,25 @@ class WebVTTWriter(BaseWriter):
                 cue_style_tags[0] += tags[0]
                 cue_style_tags[1] = tags[1] + cue_style_tags[1]
 
+        region_suffix = self._get_roll_up_region_setting(caption)
+
         for cue_text, layout in layout_groups:
             if not layout:
                 layout = caption.layout_info or self.global_layout
-            cue_settings = self._convert_positioning(layout)
+            cue_settings = self._convert_positioning(layout) + region_suffix
             output += timespan + cue_settings + "\n"
             output += cue_style_tags[0] + cue_text + cue_style_tags[1] + "\n"
 
         return output
+
+    def _get_roll_up_region_setting(self, caption):
+        if getattr(caption, "caption_mode", None) != "roll_up":
+            return ""
+        depth = getattr(caption, "roll_up_rows", None) or 3
+        region_id = self._roll_up_region_map.get(depth)
+        if region_id:
+            return f" region:{region_id}"
+        return ""
 
     def _convert_positioning(self, layout):
         """
@@ -227,79 +274,76 @@ class WebVTTWriter(BaseWriter):
         if not layout:
             return ""
 
-        # If it's converting from WebVTT to WebVTT, keep positioning info
-        # unchanged
         if layout.webvtt_positioning:
             return f" {layout.webvtt_positioning}"
 
-        left_offset = None
-        top_offset = None
-        cue_width = None
+        resolved = self._resolve_layout(layout)
+        if resolved is None:
+            return ""
 
+        left_offset = resolved.origin.x if resolved.origin else None
+        top_offset = resolved.origin.y if resolved.origin else None
+        cue_width = resolved.extent.horizontal if resolved.extent else None
+
+        left_offset, top_offset, cue_width = self._apply_padding(
+            resolved.padding, left_offset, top_offset, cue_width
+        )
+
+        return self._format_cue_settings(resolved, left_offset, top_offset, cue_width)
+
+    def _resolve_layout(self, layout):
+        """Normalize layout to relative percentages. Returns None if
+        the writer is configured not to relativize absolute values."""
         already_relative = False
         if not self.relativize:
             if layout.is_relative():
                 already_relative = True
             else:
-                # There are absolute positioning values for this cue but the
-                # Writer is explicitly configured not to do any relativization.
-                # Ignore all positioning for this cue.
-                return ""
+                return None
 
-        # Ensure that all positioning values are measured using percentage.
-        # This may raise an exception if layout.is_relative() == False
-        # If you want to avoid it, you have to turn off relativization by
-        # initializing this Writer with relativize=False.
         if not already_relative:
             layout = layout.as_percentage_of(self.video_width, self.video_height)
 
-        # Ensure that when there's a left offset the caption is not pushed out
-        # of the screen. If the execution got this far it means origin and
-        # extent are already relative by now.
         if self.fit_to_screen:
             layout = layout.fit_to_screen()
 
-        if layout.origin:
-            left_offset = layout.origin.x
-            top_offset = layout.origin.y
+        return layout
 
-        if layout.extent:
-            cue_width = layout.extent.horizontal
+    @staticmethod
+    def _apply_padding(padding, left_offset, top_offset, cue_width):
+        """Fold padding into offset/width since WebVTT has no padding."""
+        if not padding:
+            return left_offset, top_offset, cue_width
 
-        if layout.padding:
-            if layout.padding.start and left_offset:
-                # Since there is no padding in WebVTT, the left padding is
-                # added to the total left offset (if it is defined and not
-                # relative),
-                left_offset += layout.padding.start
-                # and removed from the total cue width
-                if cue_width:
-                    cue_width -= layout.padding.start
-            # the right padding is cut out of the total cue width,
-            if layout.padding.end and cue_width:
-                cue_width -= layout.padding.end
-            # the top padding is added to the top offset
-            # (if it is defined and not relative)
-            if layout.padding.before and top_offset:
-                top_offset += layout.padding.before
-            # and the bottom padding is ignored because the cue box is only as
-            # long vertically as the text it contains and nothing can be cut
-            # out
+        if padding.start and left_offset:
+            left_offset += padding.start
+            if cue_width:
+                cue_width -= padding.start
 
+        if padding.end and cue_width:
+            cue_width -= padding.end
+
+        if padding.before and top_offset:
+            top_offset += padding.before
+
+        return left_offset, top_offset, cue_width
+
+    @staticmethod
+    def _format_cue_settings(layout, left_offset, top_offset, cue_width):
+        """Build the cue settings string from resolved values."""
         if layout.alignment:
             alignment = WEBVTT_VERSION_OF.get(
                 layout.alignment.horizontal, DEFAULT_ALIGN
             )
         else:
             alignment = DEFAULT_ALIGN
-        cue_settings = ""
 
+        cue_settings = ""
         if (
             layout.writing_direction
             and layout.writing_direction != WritingDirectionEnum.HORIZONTAL
         ):
             cue_settings += f" vertical:{layout.writing_direction.value}"
-        # WebVTT spec default is "center" — omit to keep output minimal
         if alignment and alignment != "center":
             cue_settings += f" align:{alignment}"
         if left_offset:
@@ -320,89 +364,73 @@ class WebVTTWriter(BaseWriter):
             return []
 
         current_layout = None
-
-        # A list with layout groups. Since WebVTT only support positioning
-        # for different cues, each layout group has to be represented in a
-        # new cue with the same timing but different positioning settings.
         layout_groups = []
-        # A properly encoded WebVTT string (plain unicode must be properly
-        # escaped before being appended to this string)
         s = ""
+
         for i, node in enumerate(nodes):
             if node.type_ == CaptionNode.TEXT:
                 if s and current_layout and node.layout_info != current_layout:
-                    # If the positioning changes from one text node to
-                    # another, a new WebVTT cue has to be created.
                     layout_groups.append((s, current_layout))
                     s = ""
-                # ATTENTION: This is where the plain unicode node content is
-                # finally encoded as WebVTT.
                 s += self._encode_illegal_characters(node.content) or "&nbsp;"
                 current_layout = node.layout_info
             elif node.type_ == CaptionNode.STYLE:
-                resulting_style = self._calculate_resulting_style(
-                    node.content, caption_set
-                )
-
-                has_text_style = False
-                # VTT <c.class> nodes have "classes" but not "class".
-                # Preserve them as structural tags even if they carry
-                # resolved text-style properties from STYLE blocks.
-                # DFXP nodes have both "classes" and "class" — those
-                # should resolve to text tags (<i>, <b>, <u>).
-                is_vtt_class_span = (
-                    "classes" in node.content and "class" not in node.content
-                )
-                # VTT class spans (<c.yellow>) → structural tag
-                if not is_vtt_class_span:
-                    styles = ["italics", "underline", "bold"]
-                    if not node.start:
-                        styles.reverse()
-
-                    for style in styles:
-                        if style in resulting_style and resulting_style[style]:
-                            has_text_style = True
-                            tags = self._convert_style_to_text_tag(style)
-                            if node.start:
-                                s += tags[0]
-                            else:
-                                s += tags[1]
-
-                if not has_text_style:
-                    s += self._convert_structural_tag(node.content, node.start)
+                s += self._render_style_node(node, caption_set)
             elif node.type_ == CaptionNode.BREAK:
-                if i > 0 and nodes[i - 1].type_ != CaptionNode.TEXT:
-                    s += "&nbsp;"
-                if i == 0:  # cue text starts with a break
-                    s += "&nbsp;"
-                s += "\n"
+                s += self._render_break_node(nodes, i)
 
         if s:
             layout_groups.append((s, current_layout))
         return layout_groups
 
-    def _encode_illegal_characters(self, s):
-        """
-        Convert cue text from plain unicode to WebVTT XML-like format
-        escaping illegal characters. For a list of illegal characters see:
-            - http://dev.w3.org/html5/webvtt/#dfn-webvtt-cue-text-span
-        :type s: str
-        """
+    def _render_style_node(self, node, caption_set):
+        """Convert a STYLE node into WebVTT text (inline tags or structural)."""
+        resulting_style = self._calculate_resulting_style(
+            node.content, caption_set
+        )
+
+        # VTT <c.class> nodes have "classes" but not "class".
+        # Preserve them as structural tags even if they carry
+        # resolved text-style properties from STYLE blocks.
+        is_vtt_class_span = (
+            "classes" in node.content and "class" not in node.content
+        )
+
+        if not is_vtt_class_span:
+            text_tags = self._emit_text_style_tags(resulting_style, node.start)
+            if text_tags:
+                return text_tags
+
+        return self._convert_structural_tag(node.content, node.start)
+
+    def _emit_text_style_tags(self, resulting_style, is_start):
+        """Emit <i>/<u>/<b> open or close tags for active text styles."""
+        styles = ["italics", "underline", "bold"]
+        if not is_start:
+            styles.reverse()
+
+        output = ""
+        for style in styles:
+            if resulting_style.get(style):
+                tags = self._convert_style_to_text_tag(style)
+                output += tags[0] if is_start else tags[1]
+        return output
+
+    @staticmethod
+    def _render_break_node(nodes, i):
+        """Convert a BREAK node, prepending &nbsp; if needed."""
+        s = ""
+        if i == 0 or nodes[i - 1].type_ != CaptionNode.TEXT:
+            s += "&nbsp;"
+        s += "\n"
+        return s
+
+    @staticmethod
+    def _encode_illegal_characters(s):
+        """Escape characters illegal in WebVTT cue text."""
         s = s.replace("&", "&amp;")
         s = s.replace("<", "&lt;")
-
-        # The substring "-->" is also not allowed according to this:
-        #   - http://dev.w3.org/html5/webvtt/#dfn-webvtt-cue-block
         s = s.replace("-->", "--&gt;")
-
-        # The following characters have escaping codes for some reason, but
-        # they're not illegal, so for now I'll leave this commented out so that
-        # we stay as close as possible to the specification and avoid doing
-        # extra stuff "just to be safe".
-        # s = s.replace('>', '&gt;')
-        # s = s.replace('‎', '&lrm;')
-        # s = s.replace('‏', '&rlm;')
-        # s = s.replace(' ', '&nbsp;')
         return s
 
     def _convert_structural_tag(self, content, is_start):
@@ -410,28 +438,27 @@ class WebVTTWriter(BaseWriter):
 
         Structural tags are WebVTT-specific (class, lang, ruby, timestamp).
         Other writers silently ignore these keys.
-
-        :param content: The style node's content dict
-        :param is_start: True for opening tag, False for closing
-        :returns: str
         """
         if "lang" in content:
-            if is_start:
-                lang = content["lang"]
-                return f"<lang {lang}>" if lang else "<lang>"
-            return "</lang>"
-        elif "classes" in content:
-            if is_start:
-                classes = content["classes"]
-                class_str = "." + ".".join(classes) if classes else ""
-                return f"<c{class_str}>"
-            return "</c>"
-        elif "ruby" in content:
-            return "<ruby>" if is_start else "</ruby>"
-        elif "ruby_text" in content:
-            return "<rt>" if is_start else "</rt>"
-        elif "timestamp" in content:
-            if is_start:
-                return f"<{self._timestamp(content['timestamp'])}>"
-            return ""
+            return self._lang_tag(content["lang"], is_start)
+        if "classes" in content:
+            return self._class_tag(content["classes"], is_start)
+        for key, (open_tag, close_tag) in _SIMPLE_STRUCTURAL_TAGS.items():
+            if key in content:
+                return open_tag if is_start else close_tag
+        if "timestamp" in content:
+            return f"<{self._timestamp(content['timestamp'])}>" if is_start else ""
         return ""
+
+    @staticmethod
+    def _lang_tag(lang, is_start):
+        if not is_start:
+            return "</lang>"
+        return f"<lang {lang}>" if lang else "<lang>"
+
+    @staticmethod
+    def _class_tag(classes, is_start):
+        if not is_start:
+            return "</c>"
+        class_str = "." + ".".join(classes) if classes else ""
+        return f"<c{class_str}>"
