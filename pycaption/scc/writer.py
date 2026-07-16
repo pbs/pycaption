@@ -203,14 +203,20 @@ class SCCWriter(BaseWriter):
                     offset = 0
                     while offset < len(code_tokens):
                         chunk = code_tokens[offset : offset + max_payload]
-                        line = _SCC_PREFIX + chunk + _SCC_SUFFIX
+                        if offset == 0:
+                            line = ["94ae", "94ae", "9420", "9420"] + chunk
+                        else:
+                            line = chunk
+                        is_last = offset + max_payload >= len(code_tokens)
+                        if is_last:
+                            line = line + ["942c", "942c", "942f", "942f"]
                         output += (
                             f"{self._format_timestamp(start)}\t"
                             + " ".join(line)
                             + "\n\n"
                         )
                         offset += max_payload
-                        if offset < len(code_tokens):
+                        if not is_last:
                             start += MICROSECONDS_PER_CODEWORD
 
             elif mode == "roll_up":
@@ -256,8 +262,8 @@ class SCCWriter(BaseWriter):
         """Encode a single character and append it to the code string.
         Looks up the character in the standard table first, then
         special/extended characters. Falls back to the pound sign (£)
-        for unmapped characters. Aligns to word boundary before emitting
-        4-byte special/extended character codes."""
+        for unmapped characters. Special/extended chars (4-byte codes)
+        are control-like and must be doubled per CEA-608."""
         try:
             char_code = CHARACTER_TO_CODE[char]
         except KeyError:
@@ -269,7 +275,9 @@ class SCCWriter(BaseWriter):
         if len(char_code) == 2:
             return code + char_code
         elif len(char_code) == 4:
-            return self._maybe_align(code) + char_code
+            code = self._maybe_align(code)
+            code += f"{char_code} {char_code} "
+            return code
         else:
             return code
 
@@ -400,7 +408,10 @@ class SCCWriter(BaseWriter):
                     code += f"{tab_code} {tab_code} "
 
             if col > 0 and initial_italic:
-                code = self._emit_command(code, MID_ROW_ITALIC)
+                mid_row = (
+                    MID_ROW_ITALIC_UNDERLINE if initial_underline else MID_ROW_ITALIC
+                )
+                code = self._emit_command(code, mid_row)
 
             code = self._emit_styled_segments(
                 code, segments, initial_italic, initial_underline
@@ -498,13 +509,17 @@ class SCCWriter(BaseWriter):
     def _emit_styled_segments(self, code, segments, current_italic, current_underline):
         """Encode a line's styled segments into SCC hex, emitting mid-row
         codes at style transitions. Tracks the running style state and only
-        emits a mid-row code when the style actually changes between segments."""
+        emits a mid-row code when the style actually changes between segments.
+        Strips one leading space from text after a mid-row code since the
+        code itself produces a visible space on screen."""
         for text, seg_italic, seg_underline in segments:
             if seg_italic != current_italic or seg_underline != current_underline:
                 mid_row = self._get_mid_row_code(seg_italic, seg_underline)
                 code = self._emit_command(code, mid_row)
                 current_italic = seg_italic
                 current_underline = seg_underline
+                if text.startswith(" "):
+                    text = text[1:]
 
             for char in text:
                 code = self._print_character(code, char)
