@@ -12,14 +12,12 @@ from ..geometry import (
 )
 from .constants import (
     BACKGROUND_COLOR_CODES,
-    COMMANDS,
     EXTENDED_CHARS,
     ITALICS_COMMANDS,
     MICROSECONDS_PER_CODEWORD,
     MID_ROW_CODES,
     PAC_BYTES_TO_POSITIONING_MAP,
     PAC_TAB_OFFSET_COMMANDS,
-    PLAIN_TEXT_COMMANDS,
     STYLE_SETTING_COMMANDS,
     UNDERLINE_COMMANDS,
 )
@@ -50,8 +48,7 @@ class PreCaption:
 
     def to_real_caption(self):
         display_style = {
-            k: v for k, v in self.style.items()
-            if k not in self._INTERNAL_STYLE_KEYS
+            k: v for k, v in self.style.items() if k not in self._INTERNAL_STYLE_KEYS
         }
         caption = Caption(
             self.start, self.end, self.nodes, display_style, self.layout_info

@@ -50,7 +50,7 @@ def _update_style(node, italic, underline):
 def _skip_consumed_spaces(line_text, offset, wrap_line):
     """Advance offset past spaces that textwrap consumed at a break point."""
     while offset < len(line_text) and line_text[offset] == " ":
-        if line_text[offset: offset + len(wrap_line)] == wrap_line:
+        if line_text[offset : offset + len(wrap_line)] == wrap_line:
             break
         offset += 1
     return offset
@@ -78,8 +78,7 @@ class SCCWriter(BaseWriter):
         captions = caption_set.get_captions(lang)
         regions = caption_set.get_regions()
         scroll_regions = {
-            rid for rid, settings in regions.items()
-            if settings.get("scroll") == "up"
+            rid for rid, settings in regions.items() if settings.get("scroll") == "up"
         }
 
         classified = self._classify_captions(captions, scroll_regions, regions)
@@ -127,7 +126,6 @@ class SCCWriter(BaseWriter):
                 return setting[7:]
         return None
 
-
     @staticmethod
     def _adjust_timing(codes):
         """Shift each cue's start time earlier to account for buffer write
@@ -158,7 +156,13 @@ class SCCWriter(BaseWriter):
                     prev_end is not None
                     and prev_end + 3 * MICROSECONDS_PER_CODEWORD >= code_start
                 ):
-                    codes[index - 1] = (prev_code, prev_start, None, prev_mode, prev_depth)
+                    codes[index - 1] = (
+                        prev_code,
+                        prev_start,
+                        None,
+                        prev_mode,
+                        prev_depth,
+                    )
                 codes[index] = (code, code_start, end, mode, depth)
 
         return codes
@@ -202,7 +206,8 @@ class SCCWriter(BaseWriter):
                         line = _SCC_PREFIX + chunk + _SCC_SUFFIX
                         output += (
                             f"{self._format_timestamp(start)}\t"
-                            + " ".join(line) + "\n\n"
+                            + " ".join(line)
+                            + "\n\n"
                         )
                         offset += max_payload
                         if offset < len(code_tokens):
@@ -220,9 +225,7 @@ class SCCWriter(BaseWriter):
 
             elif mode == "paint_on":
                 output += f"{ts}\t"
-                output += (
-                    f"{_RESUME_DIRECT_CAPTIONING} {_RESUME_DIRECT_CAPTIONING} "
-                )
+                output += f"{_RESUME_DIRECT_CAPTIONING} {_RESUME_DIRECT_CAPTIONING} "
                 output += code
                 output += "\n\n"
 

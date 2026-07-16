@@ -12,6 +12,12 @@ _SIMPLE_STRUCTURAL_TAGS = {
 
 
 class WebVTTWriter(BaseWriter):
+    """Writer that serializes a CaptionSet into WebVTT format.
+
+    Produces a complete WebVTT file with STYLE blocks, REGION blocks,
+    timing lines with cue settings, and inline markup tags.
+    """
+
     HEADER = "WEBVTT\n\n"
 
     _INTERNAL_STYLE_KEYS = frozenset(
@@ -41,9 +47,15 @@ class WebVTTWriter(BaseWriter):
     )
 
     def write(self, caption_set, lang=None):
-        """
-        :type caption_set: CaptionSet
-        :type lang: str
+        """Serialize a CaptionSet into a WebVTT string.
+
+        Pipeline: header → STYLE block → REGION blocks → cues.
+        Deep-copies the caption_set to avoid mutating the caller's data.
+
+        :param caption_set: The CaptionSet to serialize.
+        :param lang: BCP-47 language code. If None, uses the first
+            language in the set.
+        :returns: Complete WebVTT file content as a string.
         """
         output = self.HEADER
 
@@ -56,9 +68,7 @@ class WebVTTWriter(BaseWriter):
             lang = caption_set.get_languages()[0]
 
         captions = caption_set.get_captions(lang)
-        self._roll_up_region_map = self._inject_scroll_regions(
-            captions, caption_set
-        )
+        self._roll_up_region_map = self._inject_scroll_regions(captions, caption_set)
 
         style_block = self._build_style_block(caption_set)
         if style_block:
@@ -75,6 +85,13 @@ class WebVTTWriter(BaseWriter):
         )
 
     def _timestamp(self, ts):
+        """Format microseconds as a WebVTT timestamp string.
+
+        Produces MM:SS.mmm when hours are zero, HH:MM:SS.mmm otherwise.
+
+        :param ts: Time in microseconds.
+        :returns: Formatted timestamp string.
+        """
         td = datetime.timedelta(microseconds=ts)
         mm, ss = divmod(td.seconds, 60)
         hh, mm = divmod(mm, 60)
@@ -84,11 +101,13 @@ class WebVTTWriter(BaseWriter):
         return s
 
     def _build_style_block(self, caption_set):
-        """Build a STYLE section from the CaptionSet's styles.
+        """Build the STYLE section from the CaptionSet's styles.
 
-        Only emits styles that originated from a WebVTT STYLE block.
-        The reader always stores a '::cue' key (even if empty) when a
-        STYLE block is parsed — its presence reliably signals VTT origin.
+        Only emits when styles originated from a WebVTT STYLE block
+        (detected by the presence of a '::cue' key — the reader always
+        stores it when parsing a STYLE block, even if empty).
+
+        :returns: STYLE block string, or empty string if not applicable.
         """
         styles = caption_set.get_styles()
         if not styles:
@@ -103,7 +122,8 @@ class WebVTTWriter(BaseWriter):
 
         global_css = self._format_css_declarations(global_rule) if global_rule else ""
         class_outputs = [
-            (name, css) for name, props in class_rules
+            (name, css)
+            for name, props in class_rules
             if (css := self._format_css_declarations(props))
         ]
 
@@ -119,7 +139,15 @@ class WebVTTWriter(BaseWriter):
         return output
 
     def _collect_class_rules(self, styles):
-        """Filter styles to only class-based rules suitable for STYLE output."""
+        """Filter styles to only class-based rules suitable for STYLE output.
+
+        Excludes: the global ::cue rule, other pseudo-selectors (::),
+        HTML element name keys (from DFXP/SAMI sources), and lang-only
+        entries (which map to <lang> tags, not CSS classes).
+
+        :param styles: Iterable of (key, props) pairs.
+        :returns: List of (class_name, props) tuples.
+        """
         rules = []
         for key, props in styles:
             if key == self._CUE_SELECTOR or key.startswith("::"):
@@ -136,8 +164,13 @@ class WebVTTWriter(BaseWriter):
     def _inject_scroll_regions(captions, caption_set):
         """Create REGION blocks for roll-up captions that lack one.
 
-        Returns a dict mapping roll_up_rows depth -> region id for use
-        by _convert_caption when emitting cue settings.
+        Roll-up mode captions need a region with scroll:up to display
+        correctly. This creates one region per unique roll_up_rows depth
+        (e.g. "scroll3" for 3-row roll-up).
+
+        :param captions: List of Caption objects to scan.
+        :param caption_set: CaptionSet to register new regions on.
+        :returns: Dict mapping roll_up_rows depth → region id.
         """
         existing_regions = caption_set.get_regions()
         depth_to_region = {}
@@ -160,10 +193,12 @@ class WebVTTWriter(BaseWriter):
 
     @staticmethod
     def _build_region_blocks(caption_set):
-        """Build REGION blocks from the raw settings stored by the reader.
+        """Serialize REGION blocks from the CaptionSet's raw region settings.
 
-        Reconstructs the original REGION text so that cue settings like
+        Reproduces the original REGION text so that cue settings like
         region:r1 remain valid references in the output.
+
+        :returns: Concatenated REGION block strings, or empty string.
         """
         regions = caption_set.get_regions()
         if not regions:
@@ -179,10 +214,14 @@ class WebVTTWriter(BaseWriter):
 
     @classmethod
     def _format_css_declarations(cls, props):
-        """Format a style dict as a CSS declaration string.
+        """Format a style properties dict as a CSS declaration string.
 
-        Reverses internal keys (italics → font-style: italic) and
-        skips non-CSS keys (classes, class, lang).
+        Converts internal keys (italics → "font-style: italic") and
+        passes through CSS-native keys (color, background-color).
+        Skips non-CSS internal keys (classes, class, lang).
+
+        :param props: Dict of style properties.
+        :returns: Semicolon-separated CSS declarations string.
         """
         declarations = []
         for k, v in sorted(props.items()):
@@ -195,6 +234,11 @@ class WebVTTWriter(BaseWriter):
 
     @staticmethod
     def _convert_style_to_text_tag(style):
+        """Map an internal style key to its WebVTT open/close tag pair.
+
+        :param style: One of "italics", "underline", "bold".
+        :returns: List of [open_tag, close_tag] strings.
+        """
         if style == "italics":
             return ["<i>", "</i>"]
         elif style == "underline":
@@ -205,6 +249,16 @@ class WebVTTWriter(BaseWriter):
             return ["", ""]
 
     def _calculate_resulting_style(self, style, caption_set):
+        """Resolve a style dict by cascading class references.
+
+        Recursively looks up styles referenced by "classes" or "class"
+        keys, merging them bottom-up so that the node's own properties
+        take precedence over inherited class properties.
+
+        :param style: Style dict (may contain "classes" or "class" keys).
+        :param caption_set: CaptionSet providing class definitions.
+        :returns: Fully resolved style dict.
+        """
         resulting_style = {}
 
         style_classes = []
@@ -224,8 +278,15 @@ class WebVTTWriter(BaseWriter):
         return resulting_style
 
     def _convert_caption(self, caption_set, caption):
-        """
-        :type caption: Caption
+        """Serialize a single Caption into one or more WebVTT cues.
+
+        Multiple cues are emitted when nodes within the caption have
+        different layout_info (each unique layout becomes a separate cue
+        sharing the same timing).
+
+        :param caption_set: CaptionSet for style lookups.
+        :param caption: Caption to serialize.
+        :returns: Multi-line string containing one or more cues.
         """
         layout_groups = self._group_cues_by_layout(caption.nodes, caption_set)
 
@@ -237,7 +298,6 @@ class WebVTTWriter(BaseWriter):
 
         cue_style_tags = ["", ""]
 
-        # Text styling
         style = self._calculate_resulting_style(caption.style, caption_set)
         for key, value in sorted(style.items()):
             if value:
@@ -257,6 +317,10 @@ class WebVTTWriter(BaseWriter):
         return output
 
     def _get_roll_up_region_setting(self, caption):
+        """Return the region:id cue setting suffix for roll-up captions.
+
+        :returns: " region:<id>" string, or empty string if not roll-up.
+        """
         if getattr(caption, "caption_mode", None) != "roll_up":
             return ""
         depth = getattr(caption, "roll_up_rows", None) or 3
@@ -266,10 +330,14 @@ class WebVTTWriter(BaseWriter):
         return ""
 
     def _convert_positioning(self, layout):
-        """
-        Return WebVTT cue settings string based on layout info
-        :type layout: Layout
-        :rtype: str
+        """Convert a Layout into a WebVTT cue settings string.
+
+        If the layout carries a webvtt_positioning string (from VTT
+        round-trip), uses it verbatim. Otherwise computes settings from
+        origin, extent, alignment, and writing direction.
+
+        :param layout: Layout object (may be None).
+        :returns: Cue settings string with leading space, or empty string.
         """
         if not layout:
             return ""
@@ -292,8 +360,15 @@ class WebVTTWriter(BaseWriter):
         return self._format_cue_settings(resolved, left_offset, top_offset, cue_width)
 
     def _resolve_layout(self, layout):
-        """Normalize layout to relative percentages. Returns None if
-        the writer is configured not to relativize absolute values."""
+        """Normalize a Layout to relative percentages for cue settings.
+
+        Respects the writer's relativize flag — if disabled and the
+        layout is already relative, passes it through; otherwise returns
+        None to suppress positioning output.
+
+        :param layout: Layout to resolve.
+        :returns: Resolved Layout in percentages, or None if not applicable.
+        """
         already_relative = False
         if not self.relativize:
             if layout.is_relative():
@@ -311,7 +386,17 @@ class WebVTTWriter(BaseWriter):
 
     @staticmethod
     def _apply_padding(padding, left_offset, top_offset, cue_width):
-        """Fold padding into offset/width since WebVTT has no padding."""
+        """Fold padding into position/size values.
+
+        WebVTT has no padding concept, so padding is absorbed by
+        adjusting the origin offset and shrinking the cue width.
+
+        :param padding: Padding object (or None).
+        :param left_offset: Horizontal origin (Size or None).
+        :param top_offset: Vertical origin (Size or None).
+        :param cue_width: Cue width (Size or None).
+        :returns: Tuple of (left_offset, top_offset, cue_width) adjusted.
+        """
         if not padding:
             return left_offset, top_offset, cue_width
 
@@ -330,7 +415,17 @@ class WebVTTWriter(BaseWriter):
 
     @staticmethod
     def _format_cue_settings(layout, left_offset, top_offset, cue_width):
-        """Build the cue settings string from resolved values."""
+        """Build the cue settings string from resolved positioning values.
+
+        Emits only non-default settings: vertical (if not horizontal),
+        align (if not center), position, line, size.
+
+        :param layout: Resolved Layout (for alignment and writing direction).
+        :param left_offset: Horizontal position (Size or None).
+        :param top_offset: Vertical line position (Size or None).
+        :param cue_width: Cue width (Size or None).
+        :returns: Cue settings string with leading space, or empty string.
+        """
         if layout.alignment:
             alignment = WEBVTT_VERSION_OF.get(
                 layout.alignment.horizontal, DEFAULT_ALIGN
@@ -356,9 +451,16 @@ class WebVTTWriter(BaseWriter):
         return cue_settings
 
     def _group_cues_by_layout(self, nodes, caption_set):
-        """
-        Convert a Caption's nodes to WebVTT cue or cues (depending on
-        whether they have the same positioning or not).
+        """Split a caption's nodes into groups sharing the same layout.
+
+        Each group becomes a separate WebVTT cue in the output (same
+        timing, different positioning). This handles captions where
+        individual text nodes carry different layout_info (e.g. from
+        DFXP sources with per-span positioning).
+
+        :param nodes: List of CaptionNode from a single Caption.
+        :param caption_set: CaptionSet for style resolution.
+        :returns: List of (cue_text, layout) tuples.
         """
         if not nodes:
             return []
@@ -384,17 +486,22 @@ class WebVTTWriter(BaseWriter):
         return layout_groups
 
     def _render_style_node(self, node, caption_set):
-        """Convert a STYLE node into WebVTT text (inline tags or structural)."""
-        resulting_style = self._calculate_resulting_style(
-            node.content, caption_set
-        )
+        """Convert a STYLE CaptionNode into WebVTT inline markup.
 
-        # VTT <c.class> nodes have "classes" but not "class".
-        # Preserve them as structural tags even if they carry
-        # resolved text-style properties from STYLE blocks.
-        is_vtt_class_span = (
-            "classes" in node.content and "class" not in node.content
-        )
+        Distinguishes between VTT class spans (<c.name>) which are
+        preserved as structural tags, and text-formatting styles
+        (italic/bold/underline) which become <i>/<b>/<u> tags.
+
+        :param node: A CaptionNode of type STYLE.
+        :param caption_set: CaptionSet for style resolution.
+        :returns: Tag string to insert into cue text.
+        """
+        resulting_style = self._calculate_resulting_style(node.content, caption_set)
+
+        # VTT <c.class> nodes carry "classes" (list) but not "class" (string).
+        # Preserve as structural tags even when they also resolve to
+        # text-style properties via STYLE block cascade.
+        is_vtt_class_span = "classes" in node.content and "class" not in node.content
 
         if not is_vtt_class_span:
             text_tags = self._emit_text_style_tags(resulting_style, node.start)
@@ -404,7 +511,15 @@ class WebVTTWriter(BaseWriter):
         return self._convert_structural_tag(node.content, node.start)
 
     def _emit_text_style_tags(self, resulting_style, is_start):
-        """Emit <i>/<u>/<b> open or close tags for active text styles."""
+        """Emit <i>/<u>/<b> open or close tags for active text styles.
+
+        Order is italics→underline→bold for opening, reversed for closing,
+        to produce properly nested markup.
+
+        :param resulting_style: Resolved style dict.
+        :param is_start: True for opening tags, False for closing.
+        :returns: Concatenated tag strings, or empty string.
+        """
         styles = ["italics", "underline", "bold"]
         if not is_start:
             styles.reverse()
@@ -418,7 +533,15 @@ class WebVTTWriter(BaseWriter):
 
     @staticmethod
     def _render_break_node(nodes, i):
-        """Convert a BREAK node, prepending &nbsp; if needed."""
+        """Render a BREAK node as a newline, with &nbsp; guard.
+
+        Prepends &nbsp; when the break is at position 0 or follows a
+        non-TEXT node, preventing empty lines from being collapsed.
+
+        :param nodes: Full node list (for look-back).
+        :param i: Index of the current BREAK node.
+        :returns: String to append to cue text.
+        """
         s = ""
         if i == 0 or nodes[i - 1].type_ != CaptionNode.TEXT:
             s += "&nbsp;"
@@ -427,17 +550,29 @@ class WebVTTWriter(BaseWriter):
 
     @staticmethod
     def _encode_illegal_characters(s):
-        """Escape characters illegal in WebVTT cue text."""
+        """Escape characters that are illegal in WebVTT cue text.
+
+        Escapes: & → &amp;, < → &lt;, --> → --&gt; (the timing arrow
+        is forbidden inside cue payloads).
+
+        :param s: Raw text content.
+        :returns: Escaped string safe for WebVTT cue text.
+        """
         s = s.replace("&", "&amp;")
         s = s.replace("<", "&lt;")
         s = s.replace("-->", "--&gt;")
         return s
 
     def _convert_structural_tag(self, content, is_start):
-        """Convert a structural style node back into a WebVTT tag string.
+        """Convert a structural style node into a WebVTT tag string.
 
-        Structural tags are WebVTT-specific (class, lang, ruby, timestamp).
-        Other writers silently ignore these keys.
+        Handles WebVTT-specific structural tags: <lang>, <c.class>,
+        <ruby>, <rt>, and timestamp tags. Returns empty string for
+        unrecognized content keys.
+
+        :param content: Style node content dict.
+        :param is_start: True for opening tag, False for closing.
+        :returns: WebVTT tag string.
         """
         if "lang" in content:
             return self._lang_tag(content["lang"], is_start)
@@ -452,12 +587,24 @@ class WebVTTWriter(BaseWriter):
 
     @staticmethod
     def _lang_tag(lang, is_start):
+        """Format a <lang> open or close tag.
+
+        :param lang: Language code string (e.g. "en-US").
+        :param is_start: True for opening, False for closing.
+        :returns: Tag string.
+        """
         if not is_start:
             return "</lang>"
         return f"<lang {lang}>" if lang else "<lang>"
 
     @staticmethod
     def _class_tag(classes, is_start):
+        """Format a <c.class> open or close tag.
+
+        :param classes: List of class name strings.
+        :param is_start: True for opening, False for closing.
+        :returns: Tag string (e.g. "<c.yellow.highlight>" or "</c>").
+        """
         if not is_start:
             return "</c>"
         class_str = "." + ".".join(classes) if classes else ""

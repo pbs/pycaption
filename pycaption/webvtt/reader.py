@@ -38,18 +38,34 @@ from .constants import (
 
 
 def _flush_css_block(css_lines, blocks):
+    """Join accumulated CSS lines into a single block string and append
+    to the blocks list. No-op if css_lines is empty."""
     if css_lines:
         blocks.append("\n".join(css_lines) + "\n")
 
 
 def _covers_base(content, base_props):
+    """Return True if content dict contains all key-value pairs from
+    base_props (i.e. the style node already carries the base styling)."""
     return all(content.get(k) == v for k, v in base_props.items())
 
 
 class _ParseState:
+    """Mutable state container for the line-by-line cue parser.
+
+    Tracks the current cue being assembled (timestamps, nodes, open tags)
+    and whether we're inside a NOTE or STYLE block that should be skipped.
+    """
+
     __slots__ = (
-        "start", "end", "nodes", "open_tags", "layout_info",
-        "found_timing", "in_note_block", "in_style_block",
+        "start",
+        "end",
+        "nodes",
+        "open_tags",
+        "layout_info",
+        "found_timing",
+        "in_note_block",
+        "in_style_block",
     )
 
     def __init__(self):
@@ -64,21 +80,35 @@ class _ParseState:
 
 
 class WebVTTReader(BaseReader):
+    """Reader for the WebVTT (Web Video Text Tracks) caption format.
+
+    Parses a WebVTT file into a CaptionSet containing captions with
+    timing, positioning, inline styling, region definitions, and
+    STYLE block declarations.
+    """
+
+    _CUE_SELECTOR = "::cue"
+
     def __init__(
         self, ignore_timing_errors=True, time_shift_milliseconds=0, *args, **kwargs
     ):
         """
-        :param ignore_timing_errors: Whether to ignore timing checks
-        :type ignore_timing_errors: bool
-        :param time_shift_milliseconds: Move all the timestamps
-        forward/backward with this number of milliseconds
-        :type time_shift_milliseconds: int
+        :param ignore_timing_errors: When False, raises on non-monotonic
+            or inverted timestamps. Default True for lenient parsing.
+        :param time_shift_milliseconds: Offset applied to all timestamps
+            (positive = shift forward, negative = shift backward).
         """
         super().__init__(*args, **kwargs)
         self.ignore_timing_errors = ignore_timing_errors
         self.time_shift_microseconds = time_shift_milliseconds * 1000
 
     def detect(self, content):
+        """Return True if content looks like a WebVTT file.
+
+        Checks the first line for the required "WEBVTT" signature,
+        optionally followed by a space or tab and header metadata.
+        Handles BOM-prefixed content.
+        """
         if content.startswith("﻿"):
             content = content[1:]
         first_line = content.splitlines()[0] if content.strip() else ""
@@ -89,21 +119,30 @@ class WebVTTReader(BaseReader):
         )
 
     def read(self, content, lang="en-US"):
+        """Parse a WebVTT string into a CaptionSet.
+
+        Pipeline: validate header → parse STYLE blocks → parse REGION
+        blocks and cues → cascade styles onto nodes → build CaptionSet.
+
+        :param content: Full WebVTT file content as a unicode string.
+        :param lang: BCP-47 language code for the caption track.
+        :returns: CaptionSet with captions, styles, and regions.
+        :raises InvalidInputError: If content is not a string.
+        :raises CaptionReadNoCaptions: If no cues are found.
+        """
         if not isinstance(content, str):
             raise InvalidInputError("The content is not a unicode string.")
 
         if content.startswith("﻿"):
             content = content[1:]
 
-        # str.splitlines() handles CR, LF, CRLF (RULE-FMT-005)
+        # str.splitlines() handles CR, LF, CRLF (W3C WebVTT §3 RULE-FMT-005)
         lines = content.splitlines()
         self._validate_header(lines)
         styles = self._parse_style_blocks(lines)
         captions = self._parse(lines)
         self._resolve_cue_styles(captions, styles)
-        # regions_raw carries the original REGION settings so the writer
-        # can re-emit them (regions_layout is only used internally for
-        # position inheritance during parsing).
+
         caption_set = CaptionSet(
             {lang: captions}, styles=styles, regions=self._regions_raw
         )
@@ -115,6 +154,11 @@ class WebVTTReader(BaseReader):
 
     @staticmethod
     def _validate_header(lines):
+        """Enforce WebVTT header requirements.
+
+        :raises CaptionReadSyntaxError: If file is empty, doesn't start
+            with WEBVTT, or is missing the blank line after the header.
+        """
         if not lines:
             raise CaptionReadSyntaxError("WebVTT file is empty.")
 
@@ -132,9 +176,14 @@ class WebVTTReader(BaseReader):
             raise CaptionReadSyntaxError("Missing blank line after WebVTT header.")
 
     def _parse(self, lines):
-        # Two dicts: _regions has computed Layouts (for inherit_from when
-        # a cue references region:id), _regions_raw has the verbatim
-        # key:value pairs (for the writer to reproduce REGION blocks).
+        """Parse all cues from the file lines into a CaptionList.
+
+        Also parses REGION blocks (stored on self._regions and
+        self._regions_raw) since regions must be resolved before cues
+        that reference them.
+
+        :returns: CaptionList of Caption objects.
+        """
         self._regions, self._regions_raw = self._parse_regions(lines)
 
         captions = CaptionList()
@@ -143,17 +192,26 @@ class WebVTTReader(BaseReader):
         for i, line in enumerate(lines):
             self._parse_line(line, i, state, captions)
 
+        # Flush the last cue if file doesn't end with a blank line
         if state.nodes:
             captions.append(
                 self._build_cue(
-                    state.nodes, state.open_tags,
-                    state.start, state.end, state.layout_info,
+                    state.nodes,
+                    state.open_tags,
+                    state.start,
+                    state.end,
+                    state.layout_info,
                 )
             )
 
         return captions
 
     def _parse_line(self, line, line_index, state, captions):
+        """Process a single line through the parsing state machine.
+
+        Transitions: skip NOTE/STYLE blocks → detect timing line →
+        accumulate cue text → finalize cue on blank line.
+        """
         if state.in_note_block:
             state.in_note_block = line != ""
             return
@@ -184,6 +242,10 @@ class WebVTTReader(BaseReader):
 
     @staticmethod
     def _check_block_start(line, state):
+        """Detect the start of a NOTE or STYLE block before any cue.
+
+        :returns: True if the line starts a block (and state was updated).
+        """
         if state.found_timing:
             return False
         if _is_note_start(line):
@@ -195,17 +257,26 @@ class WebVTTReader(BaseReader):
         return False
 
     def _finalize_cue(self, state, captions):
+        """Close the current cue, append it to captions, and reset state
+        for the next cue."""
         state.found_timing = False
         captions.append(
             self._build_cue(
-                state.nodes, state.open_tags,
-                state.start, state.end, state.layout_info,
+                state.nodes,
+                state.open_tags,
+                state.start,
+                state.end,
+                state.layout_info,
             )
         )
         state.nodes = []
         state.open_tags = []
 
     def _read_timing(self, line, line_index, last_start_time):
+        """Parse a timing line, re-raising errors with line number context.
+
+        :returns: Tuple of (start_us, end_us, Layout or None).
+        """
         try:
             return self._parse_timing_line(line, last_start_time)
         except CaptionReadError as e:
@@ -214,6 +285,12 @@ class WebVTTReader(BaseReader):
             raise type(e)(new_msg).with_traceback(tb) from None
 
     def _build_cue(self, nodes, open_tags, start, end, layout_info):
+        """Assemble a Caption from accumulated nodes.
+
+        Closes any unclosed tags and checks for viewport overflow.
+
+        :returns: Caption instance.
+        """
         self._close_unclosed_tags(nodes, open_tags)
         caption = Caption(start, end, nodes, layout_info=layout_info)
         self._check_line_overflow(caption)
@@ -221,12 +298,10 @@ class WebVTTReader(BaseReader):
 
     @staticmethod
     def _check_line_overflow(caption):
-        """Emit a warning if a multiline cue's line:% would place text
-        partially off-screen.
+        """Emit a CaptionReadWarning if a multiline cue's line:%
+        positioning would place text partially outside the viewport.
 
-        Uses WebVTT's 15-line grid (~6.67% per line) to estimate whether
-        the cue's starting position plus its line count exceeds 100% of
-        the viewport height.
+        Estimates using WebVTT's 15-line grid (~6.67vh per line).
         """
         layout = caption.layout_info
         if not layout or not layout.origin:
@@ -237,7 +312,6 @@ class WebVTTReader(BaseReader):
         line_pct = origin_y.value
         if line_pct <= 0:
             return
-        # BREAK nodes separate lines, so count + 1 = total lines
         num_lines = sum(1 for n in caption.nodes if n.type_ == CaptionNode.BREAK) + 1
         line_height = 100.0 / LINE_GRID_SIZE
         if line_pct + num_lines * line_height > 100.0:
@@ -250,6 +324,12 @@ class WebVTTReader(BaseReader):
 
     @staticmethod
     def _validate_timings(start, end, last_start_time):
+        """Enforce WebVTT timing constraints: valid timestamps,
+        end > start, and monotonically non-decreasing start times.
+
+        :raises CaptionReadSyntaxError: On invalid/missing timestamps.
+        :raises CaptionReadError: On inverted or non-monotonic timings.
+        """
         if start is None:
             raise CaptionReadSyntaxError("Invalid cue start timestamp.")
         if end is None:
@@ -263,8 +343,13 @@ class WebVTTReader(BaseReader):
             )
 
     def _parse_timing_line(self, line, last_start_time):
-        """
-        :returns: Tuple (int, int, Layout or None)
+        """Parse a complete timing line (timestamps + optional cue settings).
+
+        :param line: Raw timing line, e.g.
+            "00:00:01.000 --> 00:00:05.000 line:80%"
+        :param last_start_time: Start time of previous cue (for validation).
+        :returns: Tuple of (start_us, end_us, Layout or None).
+        :raises CaptionReadSyntaxError: On unparseable timing format.
         """
         m = TIMING_LINE_PATTERN.search(line)
         if not m:
@@ -287,8 +372,13 @@ class WebVTTReader(BaseReader):
 
     @staticmethod
     def _parse_timestamp(timestamp):
-        """Returns an integer representing a number of microseconds
-        :rtype: int
+        """Convert a WebVTT timestamp string to microseconds.
+
+        Accepts both HH:MM:SS.mmm and MM:SS.mmm formats.
+
+        :param timestamp: e.g. "00:01:23.456" or "01:23.456"
+        :returns: Integer microseconds.
+        :raises CaptionReadSyntaxError: On invalid format.
         """
         m = TIMESTAMP_PATTERN.search(timestamp)
         if not m:
@@ -302,27 +392,24 @@ class WebVTTReader(BaseReader):
             return microseconds(0, m[0], m[1], m[3])
 
     def _parse_cue_text(self, line, open_tags=None):
-        """Parse a single line of WebVTT cue text into a list of CaptionNodes.
+        """Parse a single line of WebVTT cue text into CaptionNodes.
 
-        Converts inline markup tags into CaptionNode.STYLE open/close pairs
-        and text content into CaptionNode.TEXT nodes.
+        Splits on angle-bracket tags, converting recognized tags into
+        STYLE open/close nodes, timestamp tags into timestamp STYLE nodes,
+        and unrecognized tags (e.g. "<LAUGHING>") into literal TEXT nodes.
+        Voice spans are flattened to "Speaker: " text prefixes.
 
-        Voice tags are handled before splitting (baked into text as
-        "Speaker: " prefix), matching the legacy behavior.
-
-        :param line: A single line of cue text (raw WebVTT)
-        :param open_tags: Mutable list tracking unclosed tag content dicts
-            across lines within a cue. Callers pass the same list for each
-            line so unclosed tags can be auto-closed at cue end.
-        :returns: list of CaptionNode
+        :param line: Raw cue text line.
+        :param open_tags: Mutable stack tracking unclosed tags across
+            lines within a cue (for auto-close at cue end).
+        :returns: List of CaptionNode.
         """
         line = line.strip()
         line = VOICE_SPAN_PATTERN.sub(r"\2: ", line)
 
         nodes = []
-        # re.split() with a capturing group guarantees alternating segments:
-        # even indices = text (possibly ""), odd indices = captured tags.
-        # e.g. "Hello <i>world</i>" -> ["Hello ", "<i>", "world", "</i>", ""]
+        # re.split() with a capturing group produces alternating segments:
+        # even indices = text, odd indices = captured tag strings.
         parts = TAG_SPLIT_PATTERN.split(line)
 
         for i, part in enumerate(parts):
@@ -343,6 +430,11 @@ class WebVTTReader(BaseReader):
 
     @staticmethod
     def _track_open_tag(node, open_tags):
+        """Update the open-tag stack when a STYLE node is emitted.
+
+        Opening tags push; closing tags pop the most recent match.
+        Timestamp nodes are excluded from tracking.
+        """
         if open_tags is None or node.type_ != CaptionNode.STYLE:
             return
         if "timestamp" in node.content:
@@ -356,9 +448,9 @@ class WebVTTReader(BaseReader):
     def _pop_matching_tag(open_tags, content):
         """Remove the most recent matching open tag from the stack.
 
-        Matches by tag-type key (e.g. "classes", "lang") rather than full
-        dict equality, because closing tags lack the opener's value
-        (</c> -> {'classes': []} vs <c.yellow> -> {'classes': ['yellow']}).
+        Matches by key set (e.g. {"classes"}) rather than full dict
+        equality, because closing tags lack the opener's value
+        (</c> produces {'classes': []} vs <c.yellow> {'classes': ['yellow']}).
         """
         keys = set(content.keys())
         for j in range(len(open_tags) - 1, -1, -1):
@@ -368,29 +460,27 @@ class WebVTTReader(BaseReader):
 
     @staticmethod
     def _close_unclosed_tags(nodes, open_tags):
-        """Emit closing STYLE nodes for any tags left open at cue end.
+        """Emit closing STYLE nodes for tags left open at cue end.
 
-        Per W3C WebVTT spec, unclosed tags are implicitly closed at the
-        end of the cue. Closing order is reverse of opening (LIFO).
+        Per W3C WebVTT spec, unclosed tags are implicitly closed at
+        cue boundaries. Closing order is reverse of opening (LIFO).
         """
         for content in reversed(open_tags):
             nodes.append(CaptionNode.create_style(False, content))
 
     def _classify_tag(self, tag_str):
-        """Classify a captured tag string and return the appropriate
-        CaptionNode.
+        """Route a captured tag string to the appropriate CaptionNode type.
 
-        Returns a STYLE node for recognized tags, a TEXT node for
-        unrecognized angle-bracket content (e.g. "<LAUGHING>"), so that
-        arbitrary text in angle brackets is preserved rather than dropped.
+        - Recognized closing tags (e.g. "</i>") → STYLE close node
+        - Timestamp tags (e.g. "<00:01:23.456>") → STYLE timestamp node
+        - Recognized opening tags (e.g. "<c.yellow>") → STYLE open node
+        - Unrecognized (e.g. "<LAUGHING>") → TEXT node (preserves content)
 
-        :param tag_str: The raw tag string, e.g. "<i>", "</b>", "<c.yellow>"
-        :returns: CaptionNode or None
+        :param tag_str: Raw tag with angle brackets, e.g. "<i>", "</b>".
+        :returns: CaptionNode, or None if the tag produces no output.
         """
-        # Strip the angle brackets: "<i>" -> "i", "</b>" -> "/b"
         inner = tag_str[1:-1]
 
-        # Closing tag: starts with "/"
         if inner.startswith("/"):
             tag_name = inner[1:]
             if tag_name in KNOWN_TAGS:
@@ -402,7 +492,6 @@ class WebVTTReader(BaseReader):
                 text = self._decode_entities(tag_str)
                 return CaptionNode.create_text(text)
 
-        # Timestamp tag: e.g. "00:01:23.456"
         m = TIMESTAMP_PATTERN.match(inner)
         if m:
             groups = m.groups()
@@ -413,37 +502,32 @@ class WebVTTReader(BaseReader):
                 us = microseconds(0, groups[0], groups[1], groups[3])
             return CaptionNode.create_style(True, {"timestamp": us})
 
-        # Opening tag: extract tag name, optional .classes, optional annotation
-        # Examples: "i", "c.yellow", "lang en"
         tag_name, class_suffix, annotation = self._parse_opening_tag(inner)
         if tag_name in KNOWN_TAGS:
             content = self._tag_content(tag_name, class_suffix, annotation)
             return CaptionNode.create_style(True, content)
 
-        # Unrecognized — treat as literal text (e.g. "<LAUGHING & WHOOPS!>")
         text = self._decode_entities(tag_str)
         return CaptionNode.create_text(text)
 
     @staticmethod
     def _parse_opening_tag(inner):
-        """Parse the inside of an opening tag into
-        (name, class_suffix, annotation).
+        """Decompose an opening tag's inner text into components.
 
-        "i"          -> ("i", None, None)
-        "c.yellow"   -> ("c", "yellow", None)
-        "lang en"    -> ("lang", None, "en")
-        "c.a.b"      -> ("c", "a.b", None)
+        Examples:
+            "i"        → ("i", None, None)
+            "c.yellow" → ("c", "yellow", None)
+            "c.a.b"   → ("c", "a.b", None)
+            "lang en"  → ("lang", None, "en")
 
-        :param inner: Tag content without angle brackets
-        :returns: tuple (tag_name, class_suffix, annotation)
+        :param inner: Tag content without angle brackets.
+        :returns: Tuple of (tag_name, class_suffix, annotation).
         """
-        # Split on first space for annotation (e.g. "lang en-US")
         if " " in inner:
             tag_part, annotation = inner.split(" ", 1)
         else:
             tag_part, annotation = inner, None
 
-        # Split on first dot for class suffix (e.g. "c.yellow.highlight")
         if "." in tag_part:
             tag_name, class_suffix = tag_part.split(".", 1)
         else:
@@ -453,9 +537,13 @@ class WebVTTReader(BaseReader):
 
     @staticmethod
     def _tag_content(tag_name, class_suffix=None, annotation=None):
-        """Build the style content dict for a tag.
+        """Build the internal style content dict for a recognized tag.
 
-        :returns: dict
+        Maps WebVTT tag names to pycaption's style representation:
+        i→italics, b→bold, u→underline, c→classes list,
+        lang→language, ruby/rt→ruby markers.
+
+        :returns: Dict suitable for CaptionNode.create_style content.
         """
         if tag_name == "i":
             return {"italics": True}
@@ -476,19 +564,22 @@ class WebVTTReader(BaseReader):
 
     @staticmethod
     def _decode_entities(text):
-        """Decode HTML character entities in a text segment.
+        """Decode HTML character entities (e.g. &amp; → &, &#x27; → ').
 
-        :type text: str
-        :rtype: str
+        :param text: Raw text possibly containing HTML entities.
+        :returns: Decoded string.
         """
         return html.unescape(text)
 
     def _parse_regions(self, lines):
-        """Parse REGION blocks from the file header area.
+        """Parse all REGION blocks from the file header area.
 
-        :returns: tuple (regions_layout, regions_raw)
-            regions_layout: dict mapping region id -> Layout (for inherit_from)
-            regions_raw: dict mapping region id -> {key: value} (for writer)
+        Scans lines before the first cue, collecting REGION definitions.
+        Skips NOTE blocks encountered along the way.
+
+        :returns: Tuple of (regions_layout, regions_raw) where:
+            - regions_layout: {id: Layout} for cue setting inheritance
+            - regions_raw: {id: {key: value}} for writer round-trip
         """
         regions_layout = {}
         regions_raw = {}
@@ -515,10 +606,12 @@ class WebVTTReader(BaseReader):
         return regions_layout, regions_raw
 
     def _collect_region_block(self, lines, i, regions_layout, regions_raw):
-        """Parse a single REGION block starting at line index i.
+        """Parse a single REGION block's key:value settings.
 
-        Reads key:value pairs until a blank line, then registers the region
-        if it has a valid id not already seen. Returns the updated line index.
+        Reads lines starting at index i until a blank line is reached,
+        then registers the region if it has a valid, unique id.
+
+        :returns: Updated line index (past the blank line).
         """
         settings = {}
         while i < len(lines) and lines[i].strip() != "":
@@ -530,29 +623,37 @@ class WebVTTReader(BaseReader):
         return i
 
     def _register_region(self, settings, regions_layout, regions_raw):
+        """Store a parsed region if it has a valid id not already registered.
+
+        Converts settings to a Layout (for inheritance) and preserves
+        the raw settings dict (for the writer to reproduce REGION blocks).
+        """
         region_id = settings.get("id")
         if not region_id or region_id in regions_layout:
             return
         regions_layout[region_id] = self._region_to_layout(settings)
-        regions_raw[region_id] = {
-            k: v for k, v in settings.items() if k != "id"
-        }
+        regions_raw[region_id] = {k: v for k, v in settings.items() if k != "id"}
 
     @staticmethod
     def _region_to_layout(settings):
-        """Convert parsed region settings dict into a Layout with origin/extent.
+        """Convert region settings into a Layout with origin and extent.
 
-        Uses W3C TTML-WebVTT mapping formulas:
+        Applies W3C WebVTT region positioning formulas:
             origin_x = viewportanchor_x - (regionanchor_x / 100 * width)
             origin_y = viewportanchor_y - (regionanchor_y / 100 * height)
-            height = lines * 5.33
+            height = lines * LINE_HEIGHT_VH (~5.33vh per line)
+
+        Defaults per W3C WebVTT §6: width=100%, lines=3,
+        regionanchor=0%,100%, viewportanchor=0%,100%.
+
+        :param settings: Dict of region key:value pairs.
+        :returns: Layout with origin (top-left corner) and extent.
         """
-        # Spec defaults per W3C WebVTT §6
         width = 100.0
         lines = 3
         regionanchor_x, regionanchor_y = 0.0, 100.0
         viewportanchor_x, viewportanchor_y = 0.0, 100.0
-        # Parse each setting, falling back to defaults on invalid values
+
         if "width" in settings:
             try:
                 width = float(settings["width"].rstrip("%"))
@@ -565,27 +666,19 @@ class WebVTTReader(BaseReader):
             except ValueError:
                 pass
 
-        # regionanchor: which point inside the region is "pinned"
-        # e.g. 0%,100% means the bottom-left corner of the region
         if "regionanchor" in settings:
             m = REGION_ANCHOR_PATTERN.match(settings["regionanchor"])
             if m:
                 regionanchor_x = float(m.group(1))
                 regionanchor_y = float(m.group(2))
 
-        # viewportanchor: where on the screen that pin is placed
-        # e.g. 10%,90% means 10% from left, 90% from top
         if "viewportanchor" in settings:
             m = REGION_ANCHOR_PATTERN.match(settings["viewportanchor"])
             if m:
                 viewportanchor_x = float(m.group(1))
                 viewportanchor_y = float(m.group(2))
 
-        # Calculate the top-left corner (origin) of the region box.
-        # Each line is ~5.33% of viewport height (LINE_HEIGHT_VH).
         height = lines * LINE_HEIGHT_VH
-        # The origin is where the viewport anchor is, offset back by how far
-        # the region anchor is into the box (as a fraction of box dimensions).
         origin_x = viewportanchor_x - (regionanchor_x / 100.0 * width)
         origin_y = viewportanchor_y - (regionanchor_y / 100.0 * height)
 
@@ -602,7 +695,10 @@ class WebVTTReader(BaseReader):
 
     @staticmethod
     def _extract_region_id(cue_settings):
-        """Extract region id from cue settings string, if present."""
+        """Extract the region:id value from a cue settings string.
+
+        :returns: Region id string, or None if not present.
+        """
         for setting in cue_settings.split():
             if setting.startswith("region:"):
                 return setting[7:]
@@ -610,7 +706,10 @@ class WebVTTReader(BaseReader):
 
     @staticmethod
     def _parse_percent_value(value):
-        """Parse "50%" into a Size, or return None if invalid."""
+        """Parse a percentage string (e.g. "50%") into a Size.
+
+        :returns: Size with UnitEnum.PERCENT, or None if invalid.
+        """
         if not value.endswith("%"):
             return None
         try:
@@ -620,8 +719,14 @@ class WebVTTReader(BaseReader):
 
     @staticmethod
     def _line_number_to_percent(value):
-        """Convert integer line number to viewport percentage
-        using a 15-line grid."""
+        """Convert an integer line number to viewport percentage.
+
+        Uses a 15-line grid. Positive values count from top (0=0%),
+        negative values count from bottom (-1=last line).
+
+        :param value: String representation of an integer line number.
+        :returns: Float percentage (0-100), or None if not a valid int.
+        """
         try:
             line_num = int(value)
         except ValueError:
@@ -637,9 +742,15 @@ class WebVTTReader(BaseReader):
 
     @staticmethod
     def _parse_cue_settings(cue_settings, inherit_from=None):
-        """Parse cue settings string into a Layout object.
+        """Parse a cue settings string into a Layout object.
 
-        Also preserves the raw string in webvtt_positioning for VTT round-trip.
+        Handles: line, position, size, align, vertical, region.
+        Preserves the raw settings string in webvtt_positioning for
+        lossless VTT→VTT round-trip.
+
+        :param cue_settings: Raw settings string after the timing arrow.
+        :param inherit_from: Layout from a referenced REGION to inherit.
+        :returns: Layout with parsed positioning values.
         """
         parsed = {}
         for match in CUE_SETTING_PATTERN.finditer(cue_settings):
@@ -674,6 +785,13 @@ class WebVTTReader(BaseReader):
 
     @staticmethod
     def _parse_line_value(value):
+        """Parse the line setting as either a percentage or integer.
+
+        Tries percentage first (e.g. "80%"), then integer line number
+        (converted to percentage via the 15-line grid).
+
+        :returns: Size with UnitEnum.PERCENT, or None if invalid/empty.
+        """
         if not value:
             return None
         result = WebVTTReader._parse_percent_value(value)
@@ -686,12 +804,22 @@ class WebVTTReader(BaseReader):
 
     @staticmethod
     def _parse_align_value(value):
+        """Map an align setting string to an Alignment object.
+
+        :param value: One of "start", "center", "end", "left", "right".
+        :returns: Alignment, or None if value is unrecognized/empty.
+        """
         if value in ALIGN_SETTING_MAP:
             return Alignment(ALIGN_SETTING_MAP[value], None)
         return None
 
     @staticmethod
     def _parse_vertical_value(value):
+        """Map a vertical setting to a WritingDirectionEnum.
+
+        :param value: "rl" (right-to-left) or "lr" (left-to-right).
+        :returns: WritingDirectionEnum, or None if not vertical.
+        """
         if value == "rl":
             return WritingDirectionEnum.VERTICAL_RL
         if value == "lr":
@@ -699,20 +827,34 @@ class WebVTTReader(BaseReader):
         return None
 
     def _parse_style_blocks(self, lines):
-        """Extract ::cue rules from STYLE blocks before the first cue."""
+        """Extract and parse all STYLE blocks from the header area.
+
+        Collects CSS text, then parses ::cue and ::cue(.class) selectors
+        into a styles dict. Tag selectors (::cue(b)) are skipped.
+
+        :returns: Dict mapping selector keys to property dicts, e.g.
+            {"::cue": {"italics": True}, "yellow": {"color": "yellow"}}.
+            Empty dict if no STYLE blocks found.
+        """
         styles = {}
         blocks = self._collect_style_blocks(lines)
         for css_text in blocks:
             self._extract_cue_styles(css_text, styles)
 
-        if styles and "::cue" not in styles:
-            styles["::cue"] = {}
+        if styles and self._CUE_SELECTOR not in styles:
+            styles[self._CUE_SELECTOR] = {}
 
         return styles
 
     @staticmethod
     def _collect_style_blocks(lines):
-        """Collect CSS text from each STYLE block in the header area."""
+        """Collect raw CSS text from each STYLE block in the header.
+
+        Stops at the first timing line (-->), as STYLE blocks are only
+        valid before cues per the WebVTT spec.
+
+        :returns: List of CSS text strings (one per STYLE block).
+        """
         blocks = []
         in_style_block = False
         in_note_block = False
@@ -747,17 +889,21 @@ class WebVTTReader(BaseReader):
 
     @staticmethod
     def _extract_cue_styles(css_text, styles):
-        """Extract ::cue rules from CSS text into the styles dict.
+        """Parse ::cue rules from a CSS text block into the styles dict.
 
-        Tag selectors (::cue(b)) are skipped — only bare ::cue and
-        class selectors (::cue(.name)) are supported.
+        Supports bare ::cue (global) and ::cue(.className) selectors.
+        Tag selectors like ::cue(b) are skipped since pycaption
+        represents tag styling via inline STYLE nodes instead.
+
+        :param css_text: Raw CSS from a STYLE block.
+        :param styles: Accumulator dict (mutated in place).
         """
         for match in STYLE_SELECTOR_PATTERN.finditer(css_text):
             selector_inner = match.group(1)
             declarations = match.group(2)
 
             if selector_inner is None:
-                key = "::cue"
+                key = WebVTTReader._CUE_SELECTOR
             elif selector_inner.startswith("."):
                 key = selector_inner[1:]
             else:
@@ -772,9 +918,14 @@ class WebVTTReader(BaseReader):
 
     @staticmethod
     def _parse_css_declarations(declarations):
-        """Parse CSS declarations into pycaption's internal style dict.
+        """Parse CSS declaration text into pycaption's style dict.
 
-        Only maps the 5 properties pycaption can represent; others are ignored.
+        Only maps properties pycaption can represent: font-style,
+        font-weight, text-decoration, color, background-color.
+        All other properties are silently ignored.
+
+        :param declarations: CSS declarations string (between braces).
+        :returns: Dict of recognized style properties.
         """
         props = {}
         for declaration in declarations.split(";"):
@@ -802,18 +953,23 @@ class WebVTTReader(BaseReader):
 
     @staticmethod
     def _resolve_cue_styles(captions, styles):
-        """Merge ::cue styles into STYLE nodes so all writers
-        get resolved values."""
+        """Cascade STYLE block declarations into the caption node tree.
+
+        Two-phase resolution:
+        1. Merge ::cue base + class-specific styles onto STYLE open nodes.
+        2. Wrap bare text with base style if ::cue declares italic/bold/underline.
+        """
         if not styles:
             return
 
-        base_style = styles.get("::cue", {})
+        base_style = styles.get(WebVTTReader._CUE_SELECTOR, {})
         WebVTTReader._cascade_class_styles(captions, styles, base_style)
         WebVTTReader._wrap_bare_text_with_base(captions, base_style)
 
     @staticmethod
     def _cascade_class_styles(captions, styles, base_style):
-        """Apply cascaded ::cue base and class styles onto STYLE open nodes."""
+        """Apply cascaded ::cue base and class styles onto STYLE open
+        nodes that carry class selectors."""
         for caption in captions:
             for node in caption.nodes:
                 if node.type_ != CaptionNode.STYLE or not node.start:
@@ -822,6 +978,15 @@ class WebVTTReader(BaseReader):
 
     @staticmethod
     def _apply_cascade(content, styles, base_style):
+        """Merge base and class-resolved styles into a node's content dict.
+
+        Resolution order: base (::cue) → each class in order. Existing
+        keys in content are not overwritten (inline > cascade).
+
+        :param content: The STYLE node's content dict (mutated in place).
+        :param styles: Full styles dict with class entries.
+        :param base_style: The ::cue base properties.
+        """
         classes = content.get("classes", [])
         if not classes and not base_style:
             return
@@ -840,8 +1005,15 @@ class WebVTTReader(BaseReader):
 
     @staticmethod
     def _wrap_bare_text_with_base(captions, base_style):
-        """Wrap bare text nodes with base style when ::cue declares
-        text-decoration properties (italic/bold/underline)."""
+        """Wrap captions containing unstyled text with ::cue base styles.
+
+        Only applies when ::cue declares text-formatting properties
+        (italic/bold/underline). Inserts synthetic STYLE open/close
+        nodes around the entire caption content.
+
+        :param captions: CaptionList to process.
+        :param base_style: The ::cue base properties dict.
+        """
         text_style_keys = {"italics", "bold", "underline"}
         base_text_props = {
             k: v for k, v in base_style.items() if k in text_style_keys and v
@@ -857,19 +1029,15 @@ class WebVTTReader(BaseReader):
             caption.nodes.insert(
                 0, CaptionNode.create_style(True, dict(base_text_props))
             )
-            caption.nodes.append(
-                CaptionNode.create_style(False, dict(base_text_props))
-            )
+            caption.nodes.append(CaptionNode.create_style(False, dict(base_text_props)))
 
     @staticmethod
     def _caption_needs_base_wrap(nodes, base_props):
-        """Return True if any TEXT node is not fully covered by a STYLE
-        opener carrying all base_props.
+        """Return True if any TEXT node exists outside a STYLE scope
+        that already provides the base properties.
 
-        Tracks a "depth" of open STYLE nodes that carry the required
-        properties. A TEXT node at depth 0 means it's unstyled and needs
-        wrapping. This avoids double-wrapping captions that are already
-        entirely inside e.g. <i>...</i>.
+        Tracks nesting depth of qualifying STYLE openers. A TEXT node
+        at depth 0 means it's not covered and the caption needs wrapping.
         """
         depth = 0
         for node in nodes:

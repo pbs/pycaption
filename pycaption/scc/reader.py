@@ -447,7 +447,9 @@ class SCCReader(BaseReader):
 
         if not self.buffer.is_empty():
             self.caption_stash.create_and_store(
-                self.buffer, self.time, caption_mode="roll_up",
+                self.buffer,
+                self.time,
+                caption_mode="roll_up",
                 roll_up_rows=prev_rows or self.roll_rows_expected,
             )
             self._reset_buffer()
@@ -480,17 +482,18 @@ class SCCReader(BaseReader):
             self.buffer_dict.active_key in ("paint", "roll")
             and not self.buffer.is_empty()
         ):
-            mode = (
-                "paint_on" if self.buffer_dict.active_key == "paint" else "roll_up"
-            )
+            mode = "paint_on" if self.buffer_dict.active_key == "paint" else "roll_up"
             roll_rows = (
                 self.roll_rows_expected
                 if self.buffer_dict.active_key == "roll"
                 else None
             )
             self.caption_stash.create_and_store(
-                self.buffer, self.time, edm_time,
-                caption_mode=mode, roll_up_rows=roll_rows,
+                self.buffer,
+                self.time,
+                edm_time,
+                caption_mode=mode,
+                roll_up_rows=roll_rows,
             )
             self._reset_buffer()
             self.time = edm_time
@@ -539,7 +542,9 @@ class SCCReader(BaseReader):
 
         # convert buffer and empty
         self.caption_stash.create_and_store(
-            self.buffer, self.time, caption_mode="roll_up",
+            self.buffer,
+            self.time,
+            caption_mode="roll_up",
             roll_up_rows=self.roll_rows_expected,
         )
         self._reset_buffer()
