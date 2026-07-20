@@ -1,6 +1,5 @@
 import re
 
-
 from pycaption import SCCReader, SCCWriter, SRTReader, WebVTTReader
 
 
@@ -253,3 +252,293 @@ class TestSCCWriterRoundTrip:
 
 
 from pycaption.scc import SCC_TOKENS_PER_CAPTION_MAX  # noqa: E402
+from pycaption.scc.constants import (  # noqa: E402
+    MID_ROW_ITALIC,
+    MID_ROW_ITALIC_UNDERLINE,
+    MID_ROW_PLAIN,
+    MID_ROW_UNDERLINE,
+    WRITER_PAC_CODES,
+)
+
+
+class TestSCCWriterPositioning:
+    def test_vtt_line_top_maps_to_row_1(self):
+        vtt = "WEBVTT\n\n" "00:00:01.000 --> 00:00:03.000 line:0%\n" "Top of screen\n"
+        captions = WebVTTReader().read(vtt)
+        output = SCCWriter().write(captions)
+        pac_row_1 = WRITER_PAC_CODES[(1, 0, "plain")]
+        assert pac_row_1 in output
+
+    def test_vtt_line_bottom_maps_to_row_15(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "00:00:01.000 --> 00:00:03.000 line:100%\n"
+            "Bottom of screen\n"
+        )
+        captions = WebVTTReader().read(vtt)
+        output = SCCWriter().write(captions)
+        pac_row_15 = WRITER_PAC_CODES[(15, 0, "plain")]
+        assert pac_row_15 in output
+
+    def test_vtt_line_middle_maps_to_row_9(self):
+        vtt = (
+            "WEBVTT\n\n" "00:00:01.000 --> 00:00:03.000 line:50%\n" "Middle of screen\n"
+        )
+        captions = WebVTTReader().read(vtt)
+        output = SCCWriter().write(captions)
+        pac_row_9 = WRITER_PAC_CODES[(9, 0, "plain")]
+        assert pac_row_9 in output
+
+    def test_vtt_no_position_defaults_to_bottom(self):
+        vtt = "WEBVTT\n\n" "00:00:01.000 --> 00:00:03.000\n" "Default position\n"
+        captions = WebVTTReader().read(vtt)
+        output = SCCWriter().write(captions)
+        pac_row_15 = WRITER_PAC_CODES[(15, 0, "plain")]
+        assert pac_row_15 in output
+
+    def test_vtt_align_left_indent_zero(self):
+        vtt = "WEBVTT\n\n" "00:00:01.000 --> 00:00:03.000 align:left\n" "Left aligned\n"
+        captions = WebVTTReader().read(vtt)
+        output = SCCWriter().write(captions)
+        pac_col_0 = WRITER_PAC_CODES[(15, 0, "plain")]
+        assert pac_col_0 in output
+
+    def test_vtt_align_center_computes_indent(self):
+        vtt = "WEBVTT\n\n" "00:00:01.000 --> 00:00:03.000 align:center\n" "Hi\n"
+        captions = WebVTTReader().read(vtt)
+        output = SCCWriter().write(captions)
+        # "Hi" is 2 chars, center = (32-2)//2 = 15, base_col=12, tab=3
+        pac_col_12 = WRITER_PAC_CODES[(15, 12, "plain")]
+        assert pac_col_12 in output
+
+    def test_vtt_align_right_computes_indent(self):
+        vtt = "WEBVTT\n\n" "00:00:01.000 --> 00:00:03.000 align:right\n" "Hi\n"
+        captions = WebVTTReader().read(vtt)
+        output = SCCWriter().write(captions)
+        # "Hi" is 2 chars, right = 32-2 = 30 -> clamped to 28
+        pac_col_28 = WRITER_PAC_CODES[(15, 28, "plain")]
+        assert pac_col_28 in output
+
+
+class TestSCCWriterStyles:
+    def test_vtt_italic_emits_mid_row_code(self):
+        vtt = "WEBVTT\n\n" "00:00:01.000 --> 00:00:03.000\n" "Hello <i>world</i>\n"
+        captions = WebVTTReader().read(vtt)
+        output = SCCWriter().write(captions)
+        assert MID_ROW_ITALIC in output
+
+    def test_vtt_underline_emits_mid_row_code(self):
+        vtt = "WEBVTT\n\n" "00:00:01.000 --> 00:00:03.000\n" "Hello <u>world</u>\n"
+        captions = WebVTTReader().read(vtt)
+        output = SCCWriter().write(captions)
+        assert MID_ROW_UNDERLINE in output
+
+    def test_vtt_italic_underline_combined(self):
+        vtt = (
+            "WEBVTT\n\n" "00:00:01.000 --> 00:00:03.000\n" "Hello <i><u>world</u></i>\n"
+        )
+        captions = WebVTTReader().read(vtt)
+        output = SCCWriter().write(captions)
+        assert MID_ROW_ITALIC_UNDERLINE in output
+
+    def test_vtt_italic_ends_with_plain_code(self):
+        vtt = "WEBVTT\n\n" "00:00:01.000 --> 00:00:03.000\n" "<i>hello</i> world\n"
+        captions = WebVTTReader().read(vtt)
+        output = SCCWriter().write(captions)
+        assert MID_ROW_PLAIN in output
+
+    def test_vtt_bold_silently_dropped(self):
+        vtt = "WEBVTT\n\n" "00:00:01.000 --> 00:00:03.000\n" "<b>bold text</b>\n"
+        captions = WebVTTReader().read(vtt)
+        output = SCCWriter().write(captions)
+        assert MID_ROW_ITALIC not in output
+        assert MID_ROW_UNDERLINE not in output
+        # Still produces valid output with the text
+        result = SCCReader().read(output)
+        assert not result.is_empty()
+
+    def test_vtt_class_span_silently_dropped(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "00:00:01.000 --> 00:00:03.000\n"
+            "<c.yellow>colored text</c>\n"
+        )
+        captions = WebVTTReader().read(vtt)
+        output = SCCWriter().write(captions)
+        assert MID_ROW_ITALIC not in output
+        result = SCCReader().read(output)
+        assert not result.is_empty()
+
+    def test_vtt_italic_at_line_start_uses_pac(self):
+        vtt = "WEBVTT\n\n" "00:00:01.000 --> 00:00:03.000\n" "<i>all italic</i>\n"
+        captions = WebVTTReader().read(vtt)
+        output = SCCWriter().write(captions)
+        pac_italic = WRITER_PAC_CODES[(15, 0, "italic")]
+        assert pac_italic in output
+
+
+class TestSCCWriterPositioningAndStylesCombined:
+    def test_position_and_italic(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "00:00:01.000 --> 00:00:03.000 line:0% align:left\n"
+            "<i>top italic</i>\n"
+        )
+        captions = WebVTTReader().read(vtt)
+        output = SCCWriter().write(captions)
+        pac_row_1_italic = WRITER_PAC_CODES[(1, 0, "italic")]
+        assert pac_row_1_italic in output
+
+    def test_plain_text_roundtrip_unchanged(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "00:00:01.000 --> 00:00:03.000\n"
+            "Hello world\n\n"
+            "00:00:05.000 --> 00:00:07.000\n"
+            "Second caption\n"
+        )
+        captions = WebVTTReader().read(vtt)
+        output = SCCWriter().write(captions)
+        result = SCCReader().read(output)
+        assert not result.is_empty()
+        caps = result.get_captions("en-US")
+        assert len(caps) == 2
+        assert "Hello world" in caps[0].get_text()
+        assert "Second caption" in caps[1].get_text()
+
+    def test_multiline_with_position(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "00:00:01.000 --> 00:00:03.000 line:20%\n"
+            "Line one\nLine two\n"
+        )
+        captions = WebVTTReader().read(vtt)
+        output = SCCWriter().write(captions)
+        result = SCCReader().read(output)
+        assert not result.is_empty()
+        text = result.get_captions("en-US")[0].get_text()
+        assert "Line one" in text
+        assert "Line two" in text
+
+
+class TestSCCWriterRollUp:
+    def test_scroll_up_region_emits_roll_up_commands(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "REGION\n"
+            "id:scroll\n"
+            "width:40%\n"
+            "lines:3\n"
+            "scroll:up\n\n"
+            "00:00:01.000 --> 00:00:03.000 region:scroll\n"
+            "First line\n\n"
+            "00:00:03.000 --> 00:00:05.000 region:scroll\n"
+            "Second line\n"
+        )
+        captions = WebVTTReader().read(vtt)
+        output = SCCWriter().write(captions)
+        assert "9426 9426" in output  # RU3
+        assert "94ad 94ad" in output  # CR
+
+    def test_scroll_up_uses_region_lines_for_depth(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "REGION\n"
+            "id:r2\n"
+            "lines:2\n"
+            "scroll:up\n\n"
+            "00:00:01.000 --> 00:00:03.000 region:r2\n"
+            "Text\n"
+        )
+        captions = WebVTTReader().read(vtt)
+        output = SCCWriter().write(captions)
+        assert "9425 9425" in output  # RU2
+
+    def test_scroll_up_4_lines(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "REGION\n"
+            "id:r4\n"
+            "lines:4\n"
+            "scroll:up\n\n"
+            "00:00:01.000 --> 00:00:03.000 region:r4\n"
+            "Text\n"
+        )
+        captions = WebVTTReader().read(vtt)
+        output = SCCWriter().write(captions)
+        assert "94a7 94a7" in output  # RU4
+
+    def test_mixed_scroll_and_pop_on(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "REGION\n"
+            "id:scroll\n"
+            "lines:3\n"
+            "scroll:up\n\n"
+            "00:00:01.000 --> 00:00:03.000 region:scroll\n"
+            "Roll-up text\n\n"
+            "00:00:05.000 --> 00:00:07.000\n"
+            "Pop-on text\n"
+        )
+        captions = WebVTTReader().read(vtt)
+        output = SCCWriter().write(captions)
+        assert "9426 9426" in output  # RU3 for scroll caption
+        assert "9420 9420" in output  # RCL for pop-on caption
+
+    def test_non_scroll_region_stays_pop_on(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "REGION\n"
+            "id:static\n"
+            "width:40%\n"
+            "lines:3\n\n"
+            "00:00:01.000 --> 00:00:03.000 region:static\n"
+            "No scroll\n"
+        )
+        captions = WebVTTReader().read(vtt)
+        output = SCCWriter().write(captions)
+        assert "9420 9420" in output  # Pop-on (RCL)
+        assert "9426" not in output  # No roll-up
+
+    def test_scroll_text_survives_roundtrip(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "REGION\n"
+            "id:scroll\n"
+            "lines:2\n"
+            "scroll:up\n\n"
+            "00:00:01.000 --> 00:00:03.000 region:scroll\n"
+            "Hello world\n"
+        )
+        captions = WebVTTReader().read(vtt)
+        output = SCCWriter().write(captions)
+        result = SCCReader().read(output)
+        assert not result.is_empty()
+        text = result.get_captions("en-US")[0].get_text()
+        assert "Hello world" in text
+
+
+class TestSCCWriterPaintOn:
+    def test_paint_on_emits_rdc_preamble(self):
+        scc = (
+            "Scenarist_SCC V1.0\n\n"
+            "00:00:00;00\t9429 54e5 73f4\n\n"
+            "00:00:04;00\t942c\n\n"
+        )
+        captions = SCCReader().read(scc)
+        output = SCCWriter().write(captions)
+        assert "9429 9429" in output
+        assert "9420 9420" not in output
+
+    def test_paint_on_text_survives_roundtrip(self):
+        scc = (
+            "Scenarist_SCC V1.0\n\n"
+            "00:00:00;00\t9429 54e5 73f4\n\n"
+            "00:00:04;00\t942c\n\n"
+        )
+        captions = SCCReader().read(scc)
+        output = SCCWriter().write(captions)
+        result = SCCReader().read(output)
+        assert not result.is_empty()
+        text = result.get_captions("en-US")[0].get_text()
+        assert "Test" in text

@@ -75,26 +75,48 @@ pr_number = None
 pr_title = "Unknown"
 pr_ref = None
 
-remote_url = run(['git', 'remote', 'get-url', 'origin']).stdout.strip()
-repo_match = re.search(r'[:/]([^/]+/[^/]+?)(?:\.git)?$', remote_url)
-repo_slug = repo_match.group(1) if repo_match else None
+current_branch = run(['git', 'branch', '--show-current']).stdout.strip()
 
-if repo_slug:
-    base_branch = detect_base_branch()
-    api_url = f'https://api.github.com/repos/{repo_slug}/pulls?state=open&base={base_branch}&sort=created&direction=desc&per_page=1'
-    curl_cmd = ['curl', '-s', '-f', api_url]
-    gh_token = os.environ.get('GH_TOKEN') or os.environ.get('GITHUB_TOKEN')
-    if gh_token:
-        curl_cmd[2:2] = ['-H', f'Authorization: Bearer {gh_token}']
-    r = run(curl_cmd)
-    if r.returncode == 0 and r.stdout.strip():
+# Use gh CLI to find the PR for the CURRENT branch (not just the latest PR)
+gh_r = run(['gh', 'pr', 'view', '--json', 'number,title', '-q', '.number,.title'])
+if gh_r.returncode == 0 and gh_r.stdout.strip():
+    parts = gh_r.stdout.strip().split('\n')
+    if len(parts) >= 2:
         try:
-            data = json.loads(r.stdout)
-            if data and isinstance(data, list) and len(data) > 0:
-                pr_number = data[0]['number']
-                pr_title = data[0].get('title', f'PR #{pr_number}')
-        except (json.JSONDecodeError, KeyError, IndexError):
+            pr_number = int(parts[0])
+            pr_title = parts[1]
+        except (ValueError, IndexError):
             pass
+    elif len(parts) == 1 and ',' in parts[0]:
+        try:
+            num_str, title = parts[0].split(',', 1)
+            pr_number = int(num_str)
+            pr_title = title
+        except (ValueError, IndexError):
+            pass
+
+# Fallback: use GitHub API filtered by head branch
+if not pr_number:
+    remote_url = run(['git', 'remote', 'get-url', 'origin']).stdout.strip()
+    repo_match = re.search(r'[:/]([^/]+/[^/]+?)(?:\.git)?$', remote_url)
+    repo_slug = repo_match.group(1) if repo_match else None
+
+    if repo_slug and current_branch:
+        base_branch = detect_base_branch()
+        api_url = f'https://api.github.com/repos/{repo_slug}/pulls?state=open&head={repo_slug.split("/")[0]}:{current_branch}&base={base_branch}&per_page=1'
+        curl_cmd = ['curl', '-s', '-f', api_url]
+        gh_token = os.environ.get('GH_TOKEN') or os.environ.get('GITHUB_TOKEN')
+        if gh_token:
+            curl_cmd[2:2] = ['-H', f'Authorization: Bearer {gh_token}']
+        r = run(curl_cmd)
+        if r.returncode == 0 and r.stdout.strip():
+            try:
+                data = json.loads(r.stdout)
+                if data and isinstance(data, list) and len(data) > 0:
+                    pr_number = data[0]['number']
+                    pr_title = data[0].get('title', f'PR #{pr_number}')
+            except (json.JSONDecodeError, KeyError, IndexError):
+                pass
 
 if pr_number:
     local_ref = f'pr-{pr_number}'
@@ -104,7 +126,6 @@ if pr_number:
 
 if not pr_ref:
     pr_ref = 'HEAD'
-    current_branch = run(['git', 'branch', '--show-current']).stdout.strip()
     if not pr_number:
         pr_number = current_branch
         pr_title = "Current branch"
@@ -403,6 +424,7 @@ def normalize_sig(params):
     s = re.sub(r'\s+', ' ', params.replace("'", '"')).strip()
     s = re.sub(r'\s*=\s*', '=', s)
     s = re.sub(r'\s*,\s*', ',', s)
+    s = s.rstrip(',')
     return s
 
 sig_pattern = re.compile(r'^\s*def\s+(\w+)\s*\((.*?)\)\s*(?:->.*?)?:')
@@ -415,13 +437,16 @@ for f in py_src_files:
 # --- A. Removed public API ---
 # Build a set of all symbols added anywhere in the PR (handles module splits
 # where a symbol moves to a new file but is re-exported from __init__.py).
+# Use strict patterns to avoid matching "class"/"def" keywords in docstrings.
+class_def_pattern = re.compile(r'^(\s*)(class|def)\s+(\w+)\s*[\(:]')
+
 all_added_symbols = set()
 for a in additions:
     if not a['file'] or not a['file'].endswith('.py'):
         continue
-    m = re.match(r'^\s*(class|def)\s+(\w+)', a['line'])
+    m = class_def_pattern.match(a['line'])
     if m:
-        all_added_symbols.add((m.group(1), m.group(2)))
+        all_added_symbols.add((m.group(2), m.group(3)))
     # Also catch re-exports in __init__.py: "from .x import Name"
     im = re.match(r'^\s*from\s+\S+\s+import\s+(.+)', a['line'])
     if im:
@@ -434,11 +459,13 @@ seen_removed = set()
 for d in deletions:
     if d['file'] not in modified_py_src:
         continue
-    stripped = d['line'].lstrip()
-    m = re.match(r'^(class|def)\s+(\w+)', stripped)
+    m = class_def_pattern.match(d['line'])
     if not m:
         continue
-    entity_type, name = m.group(1), m.group(2)
+    indent, entity_type, name = m.group(1), m.group(2), m.group(3)
+    # Skip nested definitions (indent > 4 spaces = inside a function/method)
+    if len(indent) > 4:
+        continue
     if name.startswith('_'):
         continue
     key = (d['file'], entity_type, name)
@@ -458,7 +485,48 @@ for d in deletions:
         'impact': 'Breaking API change - external callers will break'})
 
 # --- B. Changed function signatures ---
+# Skip private/protected methods — callers shouldn't rely on those.
+# For __init__ / __dunder__ methods, scope comparison to the same class
+# so that deleting ClassA.__init__ and adding ClassB.__init__ aren't confused.
 seen_sig = set()
+
+# Pre-index: additions by file with pre-matched sig_pattern results
+adds_by_file_sig = {}
+for a in additions:
+    if not a['file']:
+        continue
+    m = sig_pattern.match(a['line'])
+    if m:
+        adds_by_file_sig.setdefault(a['file'], []).append((a, m))
+
+# Pre-build class ownership index: sorted list of (lineno, classname) per file
+def _build_class_index(lines_list):
+    idx = {}
+    for item in lines_list:
+        if not item['file']:
+            continue
+        cls_m = re.match(r'^class\s+(\w+)', item['line'].lstrip())
+        if cls_m:
+            idx.setdefault(item['file'], []).append((item['lineno'], cls_m.group(1)))
+    for v in idx.values():
+        v.sort()
+    return idx
+
+_del_class_idx = _build_class_index(deletions)
+_add_class_idx = _build_class_index(additions)
+
+def _find_owning_class_fast(file, lineno, class_idx):
+    """Find the nearest class definition above `lineno` using pre-built index."""
+    entries = class_idx.get(file)
+    if not entries:
+        return None
+    best = None
+    for ln, name in entries:
+        if ln < lineno:
+            best = name
+        else:
+            break
+    return best
 
 for d in deletions:
     if d['file'] not in modified_py_src:
@@ -467,17 +535,29 @@ for d in deletions:
     if not m:
         continue
     func_name, old_params = m.group(1), m.group(2)
+    # Skip private/protected methods entirely
+    if func_name.startswith('_') and not func_name.startswith('__'):
+        continue
     old_norm = normalize_sig(old_params)
 
     same_func_adds = [
-        (a, sig_pattern.match(a['line']))
-        for a in additions
-        if a['file'] == d['file'] and sig_pattern.match(a['line'])
-        and sig_pattern.match(a['line']).group(1) == func_name
+        (a, am) for a, am in adds_by_file_sig.get(d['file'], [])
+        if am.group(1) == func_name
     ]
 
     if not same_func_adds:
         continue
+
+    # For dunder methods, only compare within the same class
+    if func_name.startswith('__') and func_name.endswith('__'):
+        del_class = _find_owning_class_fast(d['file'], d['lineno'], _del_class_idx)
+        same_func_adds = [
+            (a, am) for a, am in same_func_adds
+            if _find_owning_class_fast(a['file'], a['lineno'], _add_class_idx) == del_class
+        ]
+        if not same_func_adds:
+            continue
+
     has_exact = any(normalize_sig(am.group(2)) == old_norm for _, am in same_func_adds)
     if has_exact:
         continue
@@ -497,9 +577,20 @@ for d in deletions:
         'impact': 'May break callers that rely on parameter names/defaults'})
 
 # --- C. Removed validation (raise/assert) without replacement ---
-add_by_file = {}
+# Check ALL added source lines across the PR (not just same file) to handle
+# code moved between files during module splits.
+# Pre-compute normalized set and raise-type set for O(1) lookups.
+all_added_src_lines = []
+all_added_src_normalized = set()
+all_added_src_raise_types = set()
 for a in additions:
-    add_by_file.setdefault(a['file'], []).append(a['line'])
+    if a['file'] and a['file'].endswith('.py') and not is_test_file(a['file']):
+        line = a['line']
+        all_added_src_lines.append(line)
+        all_added_src_normalized.add(re.sub(r'["\']', '"', re.sub(r'\s+', ' ', line.strip())))
+        rm = re.search(r'raise\s+(\w+)', line)
+        if rm:
+            all_added_src_raise_types.add(rm.group(1))
 
 for d in deletions:
     if d['file'] not in modified_py_src:
@@ -508,14 +599,11 @@ for d in deletions:
     if not re.match(r'^(raise|assert)\b', stripped):
         continue
     norm = re.sub(r'["\']', '"', re.sub(r'\s+', ' ', stripped))
-    file_adds = add_by_file.get(d['file'], [])
-    if any(re.sub(r'["\']', '"', re.sub(r'\s+', ' ', a.strip())) == norm for a in file_adds):
+    if norm in all_added_src_normalized:
         continue
     exc_m = re.match(r'raise\s+(\w+)', stripped)
-    if exc_m:
-        exc_type = exc_m.group(1)
-        if any(f'raise {exc_type}' in a for a in file_adds):
-            continue
+    if exc_m and exc_m.group(1) in all_added_src_raise_types:
+        continue
     code_review_findings.append({
         'category': 'REGRESSION',
         'type': 'REMOVED_VALIDATION',
@@ -540,10 +628,15 @@ def extract_module_name(src_path):
 
 def find_test_for(src):
     base = os.path.basename(src).replace('.py', '')
+    # Also try the parent directory name (e.g., webvtt/reader.py → "webvtt")
+    parent_dir = os.path.basename(os.path.dirname(src))
 
     for t in py_test_files:
         tbase = os.path.basename(t).replace('.py', '').replace('test_', '')
         if tbase == base or base in tbase or tbase in base:
+            return t
+        # Match by parent package: webvtt/reader.py → test_webvtt.py
+        if parent_dir and (tbase == parent_dir or parent_dir in tbase):
             return t
 
     src_symbols = extract_public_symbols(src)
@@ -583,6 +676,16 @@ for src in modified_py_src:
             'impact': 'Regression risk - changes are not verified by tests'})
 
 # --- E. New public functions without tests ---
+# Build set of ALL function names that were deleted anywhere in the PR
+# (handles module splits where code moves from one file to another).
+all_deleted_func_names = set()
+for d in deletions:
+    if not d['file'] or not d['file'].endswith('.py'):
+        continue
+    dm = sig_pattern.match(d['line'])
+    if dm:
+        all_deleted_func_names.add(dm.group(1))
+
 new_funcs = {}
 for a in additions:
     if a['file'] not in py_src_files or is_test_file(a['file']):
@@ -595,10 +698,10 @@ for a in additions:
         continue
     key = (a['file'], name)
     if key not in new_funcs:
-        was_present = any(sig_pattern.match(d['line']) and sig_pattern.match(d['line']).group(1) == name
-                          for d in deletions if d['file'] == a['file'])
-        if not was_present:
-            new_funcs[key] = a['lineno']
+        # Check if the function existed in ANY deleted content (cross-file)
+        if name in all_deleted_func_names:
+            continue
+        new_funcs[key] = a['lineno']
 
 # Collect ALL test files in the repo (not just PR-modified ones) so we
 # don't flag functions already tested by existing tests.
@@ -657,8 +760,8 @@ for add in additions:
             'detail': 'Bare except clause catches all exceptions',
             'recommendation': 'Use specific exception types'})
 
-    # Magic numbers (only flag when used inline, not in constants/comments/strings/imports)
-    if re.search(r'\b(32|15|30|29\.97)\b', line):
+    # Magic numbers (only flag when used inline, not in constants/comments/strings/imports/tests)
+    if re.search(r'\b(32|15|30|29\.97)\b', line) and not is_test_file(add['file']):
         skip_magic = (
             '#' in line
             or 'SPEC' in line
@@ -666,6 +769,9 @@ for add in additions:
             or re.match(r'^\s*(import|from)\s', line)
             or re.match(r'^\s*def\s', line)
             or re.search(r'range\(', line)
+            or re.match(r'\s*("""|\'\'\'|"|\')', line)  # string/docstring line
+            or re.search(r'("""|\'\'\')', line)  # multi-line string
+            or line.lstrip().startswith(('#', '"', "'"))  # comment or string start
         )
         if not skip_magic:
             quality_issues.append({
