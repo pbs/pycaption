@@ -323,6 +323,9 @@ class WebVTTWriter(BaseWriter):
         """
         if getattr(caption, "caption_mode", None) != "roll_up":
             return ""
+        if caption.layout_info and caption.layout_info.webvtt_positioning:
+            if "region:" in caption.layout_info.webvtt_positioning:
+                return ""
         depth = getattr(caption, "roll_up_rows", None) or 3
         region_id = self._roll_up_region_map.get(depth)
         if region_id:

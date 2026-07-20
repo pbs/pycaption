@@ -99,8 +99,12 @@ from .constants import (
     PAC_TAB_OFFSET_COMMANDS,
     SPECIAL_CHARS,
 )
-from .specialized_collections import CaptionCreator  # noqa: F401
-from .specialized_collections import InstructionNodeCreator, NotifyingDict, PopOnCue
+from .specialized_collections import (
+    CaptionCreator,
+    InstructionNodeCreator,
+    NotifyingDict,
+    PopOnCue,
+)
 from .state_machines import DefaultProvidingPositionTracker
 
 
@@ -332,9 +336,6 @@ class SCCReader(BaseReader):
             # count frames for timing
             self.time_translator.increment_frames()
             return
-        # first check if word is a command
-        # TODO - check that all the positioning commands are here, or use
-        # some other strategy to determine if the word is a command.
         if word in COMMANDS or _is_pac_command(word):
             self._translate_command(word=word, next_command=next_command)
 
