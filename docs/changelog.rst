@@ -13,10 +13,15 @@ Changelog
   - SCC writer: map positioning and styles to CEA-608 codes (line:% →
     PAC rows, align → column indents + tab offsets, italics/underline →
     mid-row codes, unsupported styles silently dropped).
-  - Split pycaption/scc/ and pycaption/webvtt/ into reader.py +
-    writer.py packages. Public API unchanged.
-  - base.py: fix mutable default args (style={} → style=None), remove
-    dead code (force_byte_string, Style, CaptionList.__getslice__).
+  - DFXP writer: emit ``tts:writingMode`` on regions (vertical:rl →
+    tbrl, vertical:lr → tblr, horizontal omitted); include
+    writing_direction in "has positioning data" check so vertical-only
+    captions get a dedicated region.
+  - DFXP writer: emit ``tts:backgroundColor`` on spans/styles from
+    WebVTT/SAMI sources.
+  - Split pycaption/dfxp/ into constants.py, reader.py, writer.py
+    (same pattern as scc/ and webvtt/). Public API unchanged —
+    ``__init__.py`` re-exports all symbols.
 
 2.2.28
 ^^^^^^

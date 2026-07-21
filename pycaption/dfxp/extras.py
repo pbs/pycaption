@@ -1,13 +1,11 @@
-# We thought about making pycaption.base objects immutable. This would be nice
-# in a lot of cases, but since the transformations on them could be quite
-# complex, the deepcopy method is good enough sometimes.
 from copy import deepcopy
 from xml.sax.saxutils import escape
 
 from bs4 import BeautifulSoup
 
 from ..base import BaseWriter, CaptionNode, merge_concurrent_captions
-from .base import DFXP_DEFAULT_REGION, DFXPWriter
+from .constants import DFXP_DEFAULT_REGION
+from .writer import DFXPWriter
 
 LEGACY_DFXP_BASE_MARKUP = """
 <tt xmlns="http://www.w3.org/ns/ttml"
@@ -33,11 +31,12 @@ LEGACY_DFXP_DEFAULT_REGION = {"text-align": "center", "display-align": "after"}
 
 
 class SinglePositioningDFXPWriter(DFXPWriter):
-    """
-    A dfxp writer, that ignores all positioning, using a single provided value
-    """
+    """DFXP writer that overrides all positioning with a single Layout value."""
 
     def __init__(self, default_positioning=DFXP_DEFAULT_REGION, *args, **kwargs):
+        """
+        :param default_positioning: the Layout to apply to every element
+        """
         super().__init__(*args, **kwargs)
         self.default_positioning = default_positioning
 
@@ -56,16 +55,12 @@ class SinglePositioningDFXPWriter(DFXPWriter):
 
     @staticmethod
     def _create_single_positioning_caption_set(caption_set, positioning):
-        """Return a caption where all the positioning information was
-        replaced from positioning
+        """Return a deep copy of caption_set with all positioning replaced.
 
-        :type caption_set: pycaption.base.CaptionSet
-        :rtype: pycaption.base.CaptionSet
+        :type caption_set: CaptionSet
+        :param positioning: the Layout to assign to every element
+        :rtype: CaptionSet
         """
-        # If SinglePositioningDFXPWriter would modify the state of the caption
-        # set, any writer using the same caption_set thereafter would be
-        # affected. At the moment we know we don't use any other writers, but
-        # this is important and mustn't be neglected
         caption_set = deepcopy(caption_set)
         caption_set = merge_concurrent_captions(caption_set)
         caption_set.layout_info = positioning
@@ -89,13 +84,21 @@ class SinglePositioningDFXPWriter(DFXPWriter):
 
 
 class LegacyDFXPWriter(BaseWriter):
-    """Ported the legacy DFXPWriter from 0.4.5"""
+    """Frozen legacy DFXP writer ported from pycaption 0.4.5.
+
+    Used by skylab.  Do not modify behavior — only cosmetic changes allowed.
+    """
 
     def __init__(self, *args, **kw):
-        self.p_style = False
         self.open_span = False
 
     def write(self, caption_set, force=""):
+        """Serialize a CaptionSet into legacy DFXP format.
+
+        :type caption_set: CaptionSet
+        :param force: if set, output only this language (falls back to last)
+        :rtype: str
+        """
         caption_set = deepcopy(caption_set)
         caption_set = merge_concurrent_captions(caption_set)
 
@@ -110,8 +113,6 @@ class LegacyDFXPWriter(BaseWriter):
                 LEGACY_DFXP_DEFAULT_STYLE_ID, LEGACY_DFXP_DEFAULT_STYLE, dfxp
             )
 
-        # XXX For now we will always use this default region. In the future if
-        # regions are provided, they will be kept
         dfxp = self._recreate_region_tag(
             LEGACY_DFXP_DEFAULT_REGION_ID, LEGACY_DFXP_DEFAULT_REGION, dfxp
         )
@@ -141,18 +142,20 @@ class LegacyDFXPWriter(BaseWriter):
 
             body.append(div)
 
-        caption_content = dfxp.prettify(formatter=None)
-        return caption_content
+        return dfxp.prettify(formatter=None)
 
-    # force the DFXP to only have one language, trying to match on "force"
     def _force_language(self, force, langs):
+        """Return force if it exists in langs, otherwise return the last language."""
         for lang in langs:
             if force == lang:
                 return lang
-
         return langs[-1]
 
     def _recreate_region_tag(self, region_id, styling, dfxp):
+        """Create and append a <region> tag if it has style attributes.
+
+        :rtype: BeautifulSoup
+        """
         dfxp_region = dfxp.new_tag("region")
         dfxp_region.attrs.update({"xml:id": region_id})
 
@@ -166,6 +169,10 @@ class LegacyDFXPWriter(BaseWriter):
         return dfxp
 
     def _recreate_styling_tag(self, style, content, dfxp):
+        """Create and append a <style> tag if it has style attributes.
+
+        :rtype: BeautifulSoup
+        """
         dfxp_style = dfxp.new_tag("style")
         dfxp_style.attrs.update({"xml:id": style})
 
@@ -180,6 +187,10 @@ class LegacyDFXPWriter(BaseWriter):
         return dfxp
 
     def _recreate_p_tag(self, caption, caption_style, dfxp):
+        """Build a <p> element for a single caption cue.
+
+        :rtype: bs4.element.Tag
+        """
         start = caption.format_start()
         end = caption.format_end()
         p = dfxp.new_tag("p", begin=start, end=end)
@@ -193,6 +204,10 @@ class LegacyDFXPWriter(BaseWriter):
         return p
 
     def _recreate_text(self, caption, dfxp):
+        """Serialize caption nodes into inline DFXP markup.
+
+        :rtype: str
+        """
         line = ""
 
         for node in caption.nodes:
@@ -208,6 +223,10 @@ class LegacyDFXPWriter(BaseWriter):
         return line.rstrip()
 
     def _recreate_span(self, line, node, dfxp):
+        """Open or close a <span> element for a style node.
+
+        :rtype: str
+        """
         if node.start:
             styles = ""
 
@@ -228,6 +247,11 @@ class LegacyDFXPWriter(BaseWriter):
         return line
 
     def _recreate_style(self, content, dfxp):
+        """Convert an internal style dict to DFXP/TTS attributes.
+
+        :type content: dict
+        :rtype: dict
+        """
         dfxp_style = {}
 
         if "region" in content:

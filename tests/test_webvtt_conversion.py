@@ -404,3 +404,119 @@ class TestWebVTTWriterStyleBlocks:
 
         assert "STYLE" not in result
         assert "Hello" in result
+
+
+class TestWebVTTtoDFXPWritingDirection:
+    def test_vertical_rl_to_dfxp_writing_mode(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "00:00:01.000 --> 00:00:03.000 vertical:rl line:50%\n"
+            "Hello vertical\n"
+        )
+        caption_set = WebVTTReader().read(vtt)
+        result = DFXPWriter().write(caption_set)
+
+        assert 'tts:writingMode="tbrl"' in result
+
+    def test_vertical_lr_to_dfxp_writing_mode(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "00:00:01.000 --> 00:00:03.000 vertical:lr line:50%\n"
+            "Hello vertical\n"
+        )
+        caption_set = WebVTTReader().read(vtt)
+        result = DFXPWriter().write(caption_set)
+
+        assert 'tts:writingMode="tblr"' in result
+
+    def test_vertical_only_creates_region(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "00:00:01.000 --> 00:00:03.000 vertical:rl\n"
+            "Hello vertical\n"
+        )
+        caption_set = WebVTTReader().read(vtt)
+        result = DFXPWriter().write(caption_set)
+
+        assert 'tts:writingMode="tbrl"' in result
+        assert "region" in result
+
+    def test_combined_positioning_and_writing_direction(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "00:00:01.000 --> 00:00:03.000 vertical:rl position:25% line:10%\n"
+            "Positioned vertical\n"
+        )
+        caption_set = WebVTTReader().read(vtt)
+        result = DFXPWriter().write(caption_set)
+
+        assert 'tts:writingMode="tbrl"' in result
+        assert "tts:origin" in result
+
+    def test_horizontal_omits_writing_mode(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "00:00:01.000 --> 00:00:03.000 line:50%\n"
+            "Hello horizontal\n"
+        )
+        caption_set = WebVTTReader().read(vtt)
+        result = DFXPWriter().write(caption_set)
+
+        assert "tts:writingMode" not in result
+
+
+class TestWebVTTtoDFXPStyles:
+    def test_background_color_to_dfxp(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "STYLE\n"
+            "::cue(.bg) { background-color: black }\n\n"
+            "00:00:01.000 --> 00:00:03.000\n"
+            "<c.bg>Hello styled</c>\n"
+        )
+        caption_set = WebVTTReader().read(vtt)
+        result = DFXPWriter().write(caption_set)
+
+        assert 'tts:backgroundColor="black"' in result
+
+    def test_bold_to_dfxp(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "STYLE\n"
+            "::cue(.strong) { font-weight: bold }\n\n"
+            "00:00:01.000 --> 00:00:03.000\n"
+            "<c.strong>Bold text</c>\n"
+        )
+        caption_set = WebVTTReader().read(vtt)
+        result = DFXPWriter().write(caption_set)
+
+        assert 'tts:fontWeight="bold"' in result
+
+    def test_underline_to_dfxp(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "STYLE\n"
+            "::cue(.uline) { text-decoration: underline }\n\n"
+            "00:00:01.000 --> 00:00:03.000\n"
+            "<c.uline>Underlined text</c>\n"
+        )
+        caption_set = WebVTTReader().read(vtt)
+        result = DFXPWriter().write(caption_set)
+
+        assert 'tts:textDecoration="underline"' in result
+
+    def test_classes_not_in_dfxp_output(self):
+        from lxml import etree
+
+        vtt = (
+            "WEBVTT\n\n"
+            "STYLE\n"
+            "::cue(.yellow) { color: yellow }\n\n"
+            "00:00:01.000 --> 00:00:03.000\n"
+            "<c.yellow>Colored text</c>\n"
+        )
+        caption_set = WebVTTReader().read(vtt)
+        result = DFXPWriter().write(caption_set)
+
+        etree.fromstring(result.encode("utf-8"))
+        assert "classes" not in result

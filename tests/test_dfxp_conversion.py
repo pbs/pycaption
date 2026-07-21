@@ -8,14 +8,13 @@ from pycaption import (
     SRTReader,
     WebVTTWriter,
 )
-from pycaption.dfxp.base import (
+from pycaption.dfxp.constants import (
     DFXP_DEFAULT_REGION,
     DFXP_DEFAULT_REGION_ID,
     DFXP_DEFAULT_STYLE,
     DFXP_DEFAULT_STYLE_ID,
-    _convert_layout_to_attributes,
-    _recreate_style,
 )
+from pycaption.dfxp.writer import _convert_layout_to_attributes, _recreate_style
 from pycaption.dfxp.extras import LegacyDFXPWriter
 
 from .mixins import DFXPTestingMixIn, MicroDVDTestingMixIn, WebVTTTestingMixIn
