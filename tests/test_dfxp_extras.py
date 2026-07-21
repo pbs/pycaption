@@ -9,7 +9,7 @@ from pycaption.dfxp import (
     LegacyDFXPWriter,
     SinglePositioningDFXPWriter,
 )
-from pycaption.dfxp.base import _create_internal_alignment
+from pycaption.dfxp.reader import _create_internal_alignment
 from pycaption.geometry import (
     Alignment,
     HorizontalAlignmentEnum,

@@ -250,7 +250,7 @@ def sample_dfxp_with_relativized_positioning():
     You might not remember us. We are a typical transparent region with centered text that has an outline.
    </p>
    <p begin="00:00:03.500" end="00:00:05.000" region="r1">
-    had <span region="r1">personality.</span>
+    had <span tts:textDecoration="underline" region="r1">personality.</span>
    </p>
    <p begin="00:00:05.500" end="00:00:07.000" region="r2">
     Hello there, children! Have you seen any visitors?
@@ -421,7 +421,7 @@ def sample_dfxp_from_sami_with_margins():
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling">
  <head>
   <styling>
-   <style tts:color="#ffffff" tts:fontFamily="Tahoma" tts:fontSize="24pt" tts:textAlign="center" xml:id="p"/>
+   <style tts:backgroundColor="#000" tts:color="#ffffff" tts:fontFamily="Tahoma" tts:fontSize="24pt" tts:fontWeight="bold" tts:textAlign="center" xml:id="p"/>
   </styling>
   <layout>
    <region tts:padding="0% 29pt 0% 29pt" tts:textAlign="center" xml:id="r0"/>
@@ -445,7 +445,7 @@ def sample_dfxp_from_sami_with_lang_margins():
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling">
  <head>
   <styling>
-   <style tts:color="#ffffff" tts:fontFamily="Tahoma" tts:fontSize="24pt" tts:textAlign="center" xml:id="p"/>
+   <style tts:backgroundColor="#000" tts:color="#ffffff" tts:fontFamily="Tahoma" tts:fontSize="24pt" tts:fontWeight="bold" tts:textAlign="center" xml:id="p"/>
   </styling>
   <layout>
    <region tts:padding="20px 20px 20px 20px" tts:textAlign="center" xml:id="r0"/>
@@ -469,7 +469,7 @@ def sample_dfxp_from_sami_with_span():
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling">
  <head>
   <styling>
-   <style tts:color="#ffffff" tts:fontFamily="Tahoma" tts:fontSize="24pt" tts:textAlign="center" xml:id="p"/>
+   <style tts:backgroundColor="#000" tts:color="#ffffff" tts:fontFamily="Tahoma" tts:fontSize="24pt" tts:fontWeight="bold" tts:textAlign="center" xml:id="p"/>
   </styling>
   <layout>
    <region tts:padding="20px 20px 20px 20px" tts:textAlign="center" xml:id="r0"/>
@@ -478,7 +478,7 @@ def sample_dfxp_from_sami_with_span():
  <body>
   <div region="r0" xml:lang="en-US">
    <p begin="00:00:00.133" end="00:00:04.133" region="r0" style="p">
-    <span tts:fontSize="36pt">we have this vision of Einstein</span>
+    <span tts:fontSize="36pt" region="r0">we have this vision of Einstein</span>
    </p>
   </div>
  </body>
@@ -492,7 +492,7 @@ def sample_dfxp_from_sami_with_bad_span_align():
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling">
  <head>
   <styling>
-   <style tts:color="#ffffff" tts:fontFamily="Tahoma" tts:fontSize="24pt" tts:textAlign="center" xml:id="p"/>
+   <style tts:backgroundColor="#000" tts:color="#ffffff" tts:fontFamily="Tahoma" tts:fontSize="24pt" tts:fontWeight="bold" tts:textAlign="center" xml:id="p"/>
   </styling>
   <layout>
    <region tts:padding="20px 20px 20px 20px" tts:textAlign="center" xml:id="r0"/>
