@@ -14,8 +14,8 @@ from pycaption.dfxp.constants import (
     DFXP_DEFAULT_STYLE,
     DFXP_DEFAULT_STYLE_ID,
 )
-from pycaption.dfxp.writer import _convert_layout_to_attributes, _recreate_style
 from pycaption.dfxp.extras import LegacyDFXPWriter
+from pycaption.dfxp.writer import _convert_layout_to_attributes, _recreate_style
 
 from .mixins import DFXPTestingMixIn, MicroDVDTestingMixIn, WebVTTTestingMixIn
 

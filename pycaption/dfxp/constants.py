@@ -1,11 +1,6 @@
 import re
 
-from ..geometry import (
-    Alignment,
-    HorizontalAlignmentEnum,
-    Layout,
-    VerticalAlignmentEnum,
-)
+from ..geometry import Alignment, HorizontalAlignmentEnum, Layout, VerticalAlignmentEnum
 
 DFXP_BASE_MARKUP = """
 <tt xmlns="http://www.w3.org/ns/ttml"

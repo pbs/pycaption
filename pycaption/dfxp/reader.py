@@ -16,14 +16,7 @@ from ..exceptions import (
     CaptionReadTimingError,
     InvalidInputError,
 )
-from ..geometry import (
-    Alignment,
-    Layout,
-    Padding,
-    Point,
-    Stretch,
-    UnitEnum,
-)
+from ..geometry import Alignment, Layout, Padding, Point, Stretch, UnitEnum
 from ..utils import is_leaf
 from .constants import (
     DFXP_ATTR_XML_ID,
@@ -75,14 +68,16 @@ class DFXPReader(BaseReader):
         if not isinstance(content, str):
             raise InvalidInputError("The content is not a unicode string.")
 
-        dfxp_document = self._get_dfxp_parser_class()(
+        dfxp_document = LayoutAwareDFXPParser(
             content, read_invalid_positioning=self.read_invalid_positioning
         )
 
         caption_dict = {}
         style_dict = {}
 
-        default_language = dfxp_document.tt.attrs.get(DFXP_ATTR_XML_LANG, DEFAULT_LANGUAGE_CODE)
+        default_language = dfxp_document.tt.attrs.get(
+            DFXP_ATTR_XML_LANG, DEFAULT_LANGUAGE_CODE
+        )
 
         for div in dfxp_document.find_all("div"):
             lang = div.attrs.get(DFXP_ATTR_XML_LANG, default_language)
@@ -102,11 +97,6 @@ class DFXPReader(BaseReader):
             raise CaptionReadNoCaptions("empty caption file")
 
         return caption_set
-
-    @staticmethod
-    def _get_dfxp_parser_class():
-        """Hook method for providing a custom DFXP parser"""
-        return LayoutAwareDFXPParser
 
     def _convert_div_to_caption_list(self, div):
         """Convert a <div> element into a CaptionList for one language.
@@ -234,6 +224,7 @@ class DFXPReader(BaseReader):
         """
         value = float(time_count_match.group("time_count"))
         metric = time_count_match.group("metric")
+        microseconds = 0.0
         if metric == "h":
             microseconds = value * MICROSECONDS_PER_UNIT["hours"]
         elif metric == "m":
@@ -246,7 +237,7 @@ class DFXPReader(BaseReader):
             microseconds = value / 30 * MICROSECONDS_PER_UNIT["seconds"]
         elif metric == "t":
             raise NotImplementedError(
-                "The tick metric for time count is " "not currently implemented."
+                "The tick metric for time count is not currently implemented."
             )
         return int(microseconds)
 
@@ -285,22 +276,22 @@ class DFXPReader(BaseReader):
         # Comparison against "" is intentional: args is a dict, so this is
         # always truthy when any attributes are present (empty dict is falsy).
         if args != "":
-            node = CaptionNode.create_style(True, args, layout_info=tag.layout_info)
-            node.start = True
-            node.content = args
-            self.nodes.append(node)
+            self.nodes.append(
+                CaptionNode.create_style(True, args, layout_info=tag.layout_info)
+            )
 
             for a in tag.contents:
                 self._convert_tag_to_node(a)
-            node = CaptionNode.create_style(False, args, layout_info=tag.layout_info)
-            node.start = False
-            node.content = args
-            self.nodes.append(node)
+
+            self.nodes.append(
+                CaptionNode.create_style(False, args, layout_info=tag.layout_info)
+            )
         else:
             for a in tag.contents:
                 self._convert_tag_to_node(a)
 
-    def _convert_style(self, tag):
+    @staticmethod
+    def _convert_style(tag):
         """Convert DFXP/TTS style attributes on a tag to an internal style dict.
 
         Maps tts:fontStyle, tts:fontWeight, tts:textDecoration, tts:textAlign,
@@ -320,8 +311,9 @@ class DFXPReader(BaseReader):
                 attrs["italics"] = True
             elif arg.lower() == "tts:fontweight" and dfxp_attrs[arg] == "bold":
                 attrs["bold"] = True
-            elif (arg.lower() == "tts:textdecoration"
-                  and "underline" in dfxp_attrs[arg].strip().split(" ")):
+            elif arg.lower() == "tts:textdecoration" and "underline" in dfxp_attrs[
+                arg
+            ].strip().split(" "):
                 attrs["underline"] = True
             elif arg.lower() == "tts:textalign":
                 attrs["text-align"] = dfxp_attrs[arg]
@@ -475,26 +467,16 @@ class LayoutAwareDFXPParser(BeautifulSoup):
         if region_id is not None:
             region_tag = self.find("region", {DFXP_ATTR_XML_ID: region_id})
 
-        region_scraper = self._get_layout_info_scraper_class()(self, region_tag)
+        region_scraper = LayoutInfoScraper(self, region_tag)
 
         layout_info = region_scraper.scrape_positioning_info(
             element, self.read_invalid_positioning
         )
 
         if layout_info and any(layout_info):
-            return self._get_layout_class()(*layout_info)
+            return Layout(*layout_info)
         else:
             return self.NO_POSITIONING_INFO
-
-    @staticmethod
-    def _get_layout_info_scraper_class():
-        """Hook method for getting an implementation of a LayoutInfoScraper."""
-        return LayoutInfoScraper
-
-    @staticmethod
-    def _get_layout_class():
-        """Hook method for providing the Layout class to use"""
-        return Layout
 
 
 class LayoutInfoScraper:
@@ -582,7 +564,9 @@ class LayoutInfoScraper:
         reference = style.get("style")
 
         if reference:
-            referenced_styles = styling_tag.findChildren("style", {DFXP_ATTR_XML_ID: reference})
+            referenced_styles = styling_tag.findChildren(
+                "style", {DFXP_ATTR_XML_ID: reference}
+            )
 
             if len(referenced_styles) == 1:
                 return result + cls._get_style_reference_chain(

@@ -455,9 +455,7 @@ class TestWebVTTtoDFXPWritingDirection:
 
     def test_horizontal_omits_writing_mode(self):
         vtt = (
-            "WEBVTT\n\n"
-            "00:00:01.000 --> 00:00:03.000 line:50%\n"
-            "Hello horizontal\n"
+            "WEBVTT\n\n" "00:00:01.000 --> 00:00:03.000 line:50%\n" "Hello horizontal\n"
         )
         caption_set = WebVTTReader().read(vtt)
         result = DFXPWriter().write(caption_set)

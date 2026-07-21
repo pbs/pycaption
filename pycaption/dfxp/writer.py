@@ -63,7 +63,7 @@ class DFXPWriter(BaseWriter):
         self._relativize_layouts(caption_set, langs)
         self._write_styles(caption_set, dfxp)
 
-        self.region_creator = self._get_region_creator_class()(dfxp, caption_set)
+        self.region_creator = RegionCreator(dfxp, caption_set)
         self.region_creator.create_document_regions()
 
         body = dfxp.find("body")
@@ -126,11 +126,6 @@ class DFXPWriter(BaseWriter):
             div.append(p)
 
         return div
-
-    @staticmethod
-    def _get_region_creator_class():
-        """Hook method for providing a custom RegionCreator"""
-        return RegionCreator
 
     def _assign_positioning_data(
         self, tag, lang, caption_set=None, caption=None, caption_node=None
@@ -208,7 +203,7 @@ class DFXPWriter(BaseWriter):
 
         for node in caption.nodes:
             if node.type_ == CaptionNode.TEXT:
-                line += self._encode(node.content)
+                line += escape(node.content)
 
             elif node.type_ == CaptionNode.BREAK:
                 line = line.rstrip() + "<br/>\n    "
@@ -253,16 +248,6 @@ class DFXPWriter(BaseWriter):
             self.open_span = False
 
         return line
-
-    @staticmethod
-    def _encode(s):
-        """Escape XML special characters (&, <, >) in text content.
-
-        :type s: str
-        :param s: the content of a text node
-        :rtype: str
-        """
-        return escape(s)
 
 
 class RegionCreator:
