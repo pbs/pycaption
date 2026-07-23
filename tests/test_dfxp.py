@@ -73,9 +73,9 @@ class TestDFXPReader(ReaderTestingMixIn):
         assert 180000000 == reader._convert_timestamp_to_microseconds("3m")
         assert 14400000000 == reader._convert_timestamp_to_microseconds("4h")
         assert 53333 == reader._convert_timestamp_to_microseconds("1.6f")
-        # Tick values are not supported
-        with pytest.raises(NotImplementedError):
-            reader._convert_timestamp_to_microseconds("2.3t")
+        # Tick time: default tickRate = frameRate(30) * subFrameRate(1) = 30
+        # 2.3 / 30 * 1_000_000 = 76_666
+        assert 76666 == reader._convert_timestamp_to_microseconds("2.3t")
 
     @pytest.mark.parametrize(
         "timestamp, microseconds",
@@ -228,6 +228,110 @@ class TestDFXPReader(ReaderTestingMixIn):
 
         assert caps[0].end == 12233333
         assert caps[0].start == 9666666
+
+    def test_properly_converts_custom_framerate(
+        self, sample_dfxp_with_custom_framerate
+    ):
+        caption_set = DFXPReader().read(sample_dfxp_with_custom_framerate)
+        caps = caption_set.get_captions("en-US")
+
+        # 24 * (1000/1001) = 23.976023976... fps
+        assert caps[0].start == 9834166
+        assert caps[0].end == 12291958
+
+    def test_properly_converts_custom_tickrate(self, sample_dfxp_with_custom_tickrate):
+        caption_set = DFXPReader().read(sample_dfxp_with_custom_tickrate)
+        caps = caption_set.get_captions("en-US")
+
+        # tickRate=10000000: 50000000/10000000 = 5s, 120000000/10000000 = 12s
+        assert caps[0].start == 5000000
+        assert caps[0].end == 12000000
+
+    def test_convert_timestamp_with_custom_framerate(self):
+        reader = DFXPReader()
+        reader.framerate = 24.0
+        # 1.6 frames at 24fps = 1.6/24 * 1_000_000 = 66666
+        assert 66666 == reader._convert_timestamp_to_microseconds("1.6f")
+        # clock-time frames: 15 frames at 24fps = 15/24 * 1_000_000 = 625000
+        assert 625000 == reader._convert_timestamp_to_microseconds("00:00:00:15")
+
+    def test_convert_timestamp_with_custom_tickrate(self):
+        reader = DFXPReader()
+        reader.tickrate = 10.0
+        # 100 ticks at tickRate=10: 100/10 * 1_000_000 = 10_000_000
+        assert 10000000 == reader._convert_timestamp_to_microseconds("100t")
+
+    def test_properly_converts_framerate_without_multiplier(
+        self, sample_dfxp_with_framerate_no_multiplier
+    ):
+        caption_set = DFXPReader().read(sample_dfxp_with_framerate_no_multiplier)
+        caps = caption_set.get_captions("en-US")
+
+        # 24fps, no multiplier (defaults to "1 1"):
+        # begin 00:00:01:12 = 1s + 12/24 = 1.5s = 1_500_000 µs
+        # end   00:00:02:00 = 2s + 0/24  = 2.0s = 2_000_000 µs
+        assert caps[0].start == 1500000
+        assert caps[0].end == 2000000
+
+    def test_default_tickrate_uses_subframerate(self):
+        xml = (
+            '<?xml version="1.0"?>'
+            '<tt xmlns="http://www.w3.org/ns/ttml"'
+            ' xmlns:ttp="http://www.w3.org/ns/ttml#parameter"'
+            ' ttp:frameRate="30" ttp:subFrameRate="2">'
+            "<body><div xml:lang='en'>"
+            '<p begin="60t" end="120t">X</p>'
+            "</div></body></tt>"
+        )
+        caption_set = DFXPReader().read(xml)
+        caps = caption_set.get_captions("en")
+        # default tickRate = frameRate(30) * subFrameRate(2) = 60
+        # 60t / 60 = 1s = 1_000_000 µs; 120t / 60 = 2s = 2_000_000 µs
+        assert caps[0].start == 1000000
+        assert caps[0].end == 2000000
+
+    def test_invalid_framerate_multiplier_single_value(self):
+        xml = (
+            '<?xml version="1.0"?>'
+            '<tt xmlns="http://www.w3.org/ns/ttml"'
+            ' xmlns:ttp="http://www.w3.org/ns/ttml#parameter"'
+            ' ttp:frameRate="24" ttp:frameRateMultiplier="1000">'
+            "<body><div xml:lang='en'>"
+            '<p begin="0s" end="1s">X</p>'
+            "</div></body></tt>"
+        )
+        with pytest.raises(CaptionReadSyntaxError):
+            DFXPReader().read(xml)
+
+    def test_invalid_framerate_multiplier_zero_denominator(self):
+        xml = (
+            '<?xml version="1.0"?>'
+            '<tt xmlns="http://www.w3.org/ns/ttml"'
+            ' xmlns:ttp="http://www.w3.org/ns/ttml#parameter"'
+            ' ttp:frameRate="24" ttp:frameRateMultiplier="1000 0">'
+            "<body><div xml:lang='en'>"
+            '<p begin="0s" end="1s">X</p>'
+            "</div></body></tt>"
+        )
+        with pytest.raises(CaptionReadSyntaxError):
+            DFXPReader().read(xml)
+
+    def test_invalid_tickrate_zero(self):
+        xml = (
+            '<?xml version="1.0"?>'
+            '<tt xmlns="http://www.w3.org/ns/ttml"'
+            ' xmlns:ttp="http://www.w3.org/ns/ttml#parameter"'
+            ' ttp:tickRate="0">'
+            "<body><div xml:lang='en'>"
+            '<p begin="0s" end="1s">X</p>'
+            "</div></body></tt>"
+        )
+        with pytest.raises(CaptionReadSyntaxError):
+            DFXPReader().read(xml)
+
+    def test_negative_answer_for_content_with_closing_tt_only(self):
+        content = "This has </tt> in it but no opening tag"
+        assert self.reader.detect(content) is False
 
     def test_empty_cue(self, sample_dfxp_empty_cue):
         caption_set = DFXPReader().read(sample_dfxp_empty_cue)

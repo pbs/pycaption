@@ -21,6 +21,10 @@ from ..utils import is_leaf
 from .constants import (
     DFXP_ATTR_XML_ID,
     DFXP_ATTR_XML_LANG,
+    DFXP_DEFAULT_FRAMERATE,
+    DFXP_DEFAULT_FRAMERATE_MULTIPLIER,
+    DFXP_DEFAULT_SUBFRAMERATE,
+    DFXP_DEFAULT_TICKRATE,
     DFXP_DEFAULT_REGION,
     HORIZONTAL_ALIGNMENT_TO_DFXP,
     MICROSECONDS_PER_UNIT,
@@ -48,6 +52,37 @@ class DFXPReader(BaseReader):
         super().__init__(*args, **kw)
         self.read_invalid_positioning = kw.get("read_invalid_positioning", False)
         self.nodes = []
+        self.framerate = float(DFXP_DEFAULT_FRAMERATE)
+        self.tickrate = float(DFXP_DEFAULT_TICKRATE)
+
+    @staticmethod
+    def _get_effective_framerate(framerate_str, multiplier_str):
+        """Compute effective frame rate from ttp:frameRate and ttp:frameRateMultiplier.
+
+        :param framerate_str: value of ttp:frameRate (e.g. "24", "30")
+        :param multiplier_str: value of ttp:frameRateMultiplier (e.g. "1000 1001")
+        :rtype: float
+        :raises CaptionReadSyntaxError: if values are malformed or zero
+        """
+        try:
+            framerate = float(framerate_str)
+            parts = multiplier_str.strip().split()
+            if len(parts) != 2:
+                raise ValueError(
+                    f"ttp:frameRateMultiplier must be two integers, got: "
+                    f"'{multiplier_str}'"
+                )
+            result = framerate * (int(parts[0]) / int(parts[1]))
+        except (ValueError, ZeroDivisionError) as err:
+            raise CaptionReadSyntaxError(
+                f"Invalid frame rate parameters (ttp:frameRate='{framerate_str}', "
+                f"ttp:frameRateMultiplier='{multiplier_str}'): {err}"
+            )
+        if result <= 0:
+            raise CaptionReadSyntaxError(
+                f"Effective frame rate must be positive, got {result}"
+            )
+        return result
 
     def detect(self, content):
         """Return True if content looks like a DFXP/TTML document.
@@ -55,7 +90,8 @@ class DFXPReader(BaseReader):
         :type content: str
         :rtype: bool
         """
-        return "</tt>" in content.lower()
+        lowered = content.lower()
+        return bool(re.search(r"<tt[\s>]", lowered)) and "</tt>" in lowered
 
     def read(self, content):
         """Parse a DFXP/TTML string into a CaptionSet.
@@ -72,12 +108,50 @@ class DFXPReader(BaseReader):
             content, read_invalid_positioning=self.read_invalid_positioning
         )
 
+        tt_attrs = dfxp_document.tt.attrs if dfxp_document.tt else {}
+        framerate_str = tt_attrs.get("ttp:framerate", str(DFXP_DEFAULT_FRAMERATE))
+        multiplier_str = tt_attrs.get(
+            "ttp:frameratemultiplier", DFXP_DEFAULT_FRAMERATE_MULTIPLIER
+        )
+        self.framerate = self._get_effective_framerate(framerate_str, multiplier_str)
+
+        if "ttp:tickrate" in tt_attrs:
+            try:
+                tickrate = float(tt_attrs["ttp:tickrate"])
+            except ValueError:
+                raise CaptionReadSyntaxError(
+                    f"ttp:tickRate must be a number, "
+                    f"got '{tt_attrs['ttp:tickrate']}'"
+                )
+            if tickrate <= 0:
+                raise CaptionReadSyntaxError(
+                    f"ttp:tickRate must be positive, got '{tt_attrs['ttp:tickrate']}'"
+                )
+            self.tickrate = tickrate
+        else:
+            # TTML spec 8.2.12: default tickRate = frameRate × subFrameRate
+            try:
+                sub_framerate = int(
+                    tt_attrs.get("ttp:subframerate", DFXP_DEFAULT_SUBFRAMERATE)
+                )
+            except ValueError:
+                raise CaptionReadSyntaxError(
+                    f"ttp:subFrameRate must be a positive integer, "
+                    f"got '{tt_attrs['ttp:subframerate']}'"
+                )
+            try:
+                framerate_int = int(framerate_str)
+            except ValueError:
+                raise CaptionReadSyntaxError(
+                    f"ttp:frameRate must be a positive integer, "
+                    f"got '{framerate_str}'"
+                )
+            self.tickrate = float(framerate_int * sub_framerate)
+
         caption_dict = {}
         style_dict = {}
 
-        default_language = dfxp_document.tt.attrs.get(
-            DFXP_ATTR_XML_LANG, DEFAULT_LANGUAGE_CODE
-        )
+        default_language = tt_attrs.get(DFXP_ATTR_XML_LANG, DEFAULT_LANGUAGE_CODE)
 
         for div in dfxp_document.find_all("div"):
             lang = div.attrs.get(DFXP_ATTR_XML_LANG, default_language)
@@ -184,8 +258,7 @@ class DFXPReader(BaseReader):
         else:
             return self._convert_time_count_to_microseconds(match)
 
-    @staticmethod
-    def _convert_clock_time_to_microseconds(clock_time_match):
+    def _convert_clock_time_to_microseconds(self, clock_time_match):
         """Convert a clock-time regex match to microseconds.
 
         :param clock_time_match: regex match with groups hours, minutes,
@@ -209,18 +282,16 @@ class DFXPReader(BaseReader):
         elif clock_time_match.group("frames"):
             microseconds += (
                 int(clock_time_match.group("frames"))
-                / 30
+                / self.framerate
                 * MICROSECONDS_PER_UNIT["seconds"]
             )
         return int(microseconds)
 
-    @staticmethod
-    def _convert_time_count_to_microseconds(time_count_match):
+    def _convert_time_count_to_microseconds(self, time_count_match):
         """Convert an offset-time regex match to microseconds.
 
         :param time_count_match: regex match with groups time_count and metric
         :rtype: int
-        :raises NotImplementedError: for the tick (t) metric
         """
         value = float(time_count_match.group("time_count"))
         metric = time_count_match.group("metric")
@@ -234,11 +305,9 @@ class DFXPReader(BaseReader):
         elif metric == "ms":
             microseconds = value * MICROSECONDS_PER_UNIT["milliseconds"]
         elif metric == "f":
-            microseconds = value / 30 * MICROSECONDS_PER_UNIT["seconds"]
+            microseconds = value / self.framerate * MICROSECONDS_PER_UNIT["seconds"]
         elif metric == "t":
-            raise NotImplementedError(
-                "The tick metric for time count is not currently implemented."
-            )
+            microseconds = value / self.tickrate * MICROSECONDS_PER_UNIT["seconds"]
         return int(microseconds)
 
     def _convert_tag_to_node(self, tag):

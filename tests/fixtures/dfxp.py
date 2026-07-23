@@ -1549,3 +1549,73 @@ def sample_dfxp_concurrent_with_empty_p():
   </div>
  </body>
 </tt>"""
+
+
+@pytest.fixture(scope="session")
+def sample_dfxp_with_framerate_no_multiplier():
+    return """\
+<?xml version="1.0" encoding="utf-8"?>
+<tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml"
+    xmlns:ttp="http://www.w3.org/ns/ttml#parameter"
+    xmlns:tts="http://www.w3.org/ns/ttml#styling"
+    ttp:frameRate="24">
+ <head>
+  <layout>
+   <region tts:origin="10% 10%" xml:id="b1"/>
+  </layout>
+ </head>
+ <body>
+  <div region="bottom" xml:lang="en-US">
+   <p begin="00:00:01:12" end="00:00:02:00" region="b1">
+    ABC
+   </p>
+  </div>
+ </body>
+</tt>"""
+
+
+@pytest.fixture(scope="session")
+def sample_dfxp_with_custom_framerate():
+    return """\
+<?xml version="1.0" encoding="utf-8"?>
+<tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml"
+    xmlns:ttp="http://www.w3.org/ns/ttml#parameter"
+    xmlns:tts="http://www.w3.org/ns/ttml#styling"
+    ttp:frameRate="24"
+    ttp:frameRateMultiplier="1000 1001">
+ <head>
+  <layout>
+   <region tts:origin="10% 10%" xml:id="b1"/>
+  </layout>
+ </head>
+ <body>
+  <div region="bottom" xml:lang="en-US">
+   <p begin="00:00:09:20" end="00:00:12:07" region="b1">
+    ABC
+   </p>
+  </div>
+ </body>
+</tt>"""
+
+
+@pytest.fixture(scope="session")
+def sample_dfxp_with_custom_tickrate():
+    return """\
+<?xml version="1.0" encoding="utf-8"?>
+<tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml"
+    xmlns:ttp="http://www.w3.org/ns/ttml#parameter"
+    xmlns:tts="http://www.w3.org/ns/ttml#styling"
+    ttp:tickRate="10000000">
+ <head>
+  <layout>
+   <region tts:origin="10% 10%" xml:id="b1"/>
+  </layout>
+ </head>
+ <body>
+  <div region="bottom" xml:lang="en-US">
+   <p begin="50000000t" end="120000000t" region="b1">
+    ABC
+   </p>
+  </div>
+ </body>
+</tt>"""
