@@ -61,6 +61,11 @@ VERTICAL_ALIGNMENT_TO_DFXP = {
     VerticalAlignmentEnum.BOTTOM: "after",
 }
 
+DFXP_DEFAULT_FRAMERATE = 30
+DFXP_DEFAULT_FRAMERATE_MULTIPLIER = "1 1"
+DFXP_DEFAULT_SUBFRAMERATE = 1
+DFXP_DEFAULT_TICKRATE = DFXP_DEFAULT_FRAMERATE * DFXP_DEFAULT_SUBFRAMERATE
+
 
 def _create_external_alignment(alignment):
     """Convert an Alignment object to a dict of DFXP attributes.
