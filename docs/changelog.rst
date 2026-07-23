@@ -22,6 +22,14 @@ Changelog
   - Split pycaption/dfxp/ into constants.py, reader.py, writer.py
     (same pattern as scc/ and webvtt/). Public API unchanged —
     ``__init__.py`` re-exports all symbols.
+  - SAMI writer: align with WebVTT reader's structured output — emit
+    ``classes`` as ``class=`` attribute (not inline CSS), emit text-align
+    from Layout, produce valid CSS in stylesheet for VTT class styles,
+    filter non-CSS keys (webvtt_positioning, writing_direction), silently
+    drop writing direction (SAMI has no writing-mode).
+  - Split pycaption/sami.py into pycaption/sami/ package. Public API
+    unchanged. Reader: inline dead hooks, extract helpers, add docstrings.
+    Writer: fix rules-dict mutation, remove dead ``_encode``, staticmethods.
 
 2.2.28
 ^^^^^^

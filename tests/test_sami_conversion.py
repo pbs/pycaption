@@ -84,10 +84,9 @@ class TestSAMItoSAMI(SAMITestingMixIn):
     ):
         # Absolute positioning settings (e.g. px) are converted to percentages
         caption_set = self.reader.read(sample_sami_partial_margins)
-        result = SAMIWriter(
-            video_width=VIDEO_WIDTH,
-            video_height=VIDEO_HEIGHT
-        ).write(caption_set)
+        result = SAMIWriter(video_width=VIDEO_WIDTH, video_height=VIDEO_HEIGHT).write(
+            caption_set
+        )
 
         self.assert_sami_captions_equal(sample_sami_partial_margins_relativized, result)
 
@@ -109,3 +108,94 @@ class TestWebVTTtoSAMI(SAMITestingMixIn):
 
         assert isinstance(result, str)
         self.assert_sami_captions_equal(sample_sami, result)
+
+
+class TestWebVTTtoSAMIStyles(SAMITestingMixIn):
+    """Tests for WebVTT structured style/layout → SAMI conversion."""
+
+    def test_class_span(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "STYLE\n"
+            "::cue(.yellow) {\n  color: yellow;\n}\n\n"
+            "00:00:01.000 --> 00:00:04.000\n"
+            "<c.yellow>Hello yellow</c>\n"
+        )
+        caption_set = WebVTTReader().read(vtt)
+        result = SAMIWriter().write(caption_set)
+
+        assert 'class="yellow"' in result
+        assert "classes" not in result
+
+    def test_multiple_css_properties(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "STYLE\n"
+            "::cue(.fancy) {\n  color: red;\n}\n\n"
+            "00:00:01.000 --> 00:00:04.000\n"
+            "<c.fancy>Fancy text</c>\n"
+        )
+        caption_set = WebVTTReader().read(vtt)
+        result = SAMIWriter().write(caption_set)
+
+        assert "color:red;" in result or "color: red;" in result
+
+    def test_positioning_alignment(self):
+        vtt = "WEBVTT\n\n" "00:00:01.000 --> 00:00:04.000 align:left\n" "Left aligned\n"
+        caption_set = WebVTTReader().read(vtt)
+        result = SAMIWriter().write(caption_set)
+
+        assert "text-align:left;" in result or "text-align: left;" in result
+
+    def test_writing_direction_dropped(self):
+        vtt = (
+            "WEBVTT\n\n" "00:00:01.000 --> 00:00:04.000 vertical:rl\n" "Vertical text\n"
+        )
+        caption_set = WebVTTReader().read(vtt)
+        result = SAMIWriter().write(caption_set)
+
+        assert "writing-mode" not in result
+        assert "vertical" not in result
+        assert "Vertical text" in result
+
+    def test_plain_cue_regression(self):
+        vtt = "WEBVTT\n\n" "00:00:01.000 --> 00:00:04.000\n" "Plain caption text\n"
+        caption_set = WebVTTReader().read(vtt)
+        result = SAMIWriter().write(caption_set)
+
+        assert "Plain caption text" in result
+        assert "<sync" in result.lower()
+
+    def test_stylesheet_output(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "STYLE\n"
+            "::cue(.yellow) {\n  color: yellow;\n}\n\n"
+            "00:00:01.000 --> 00:00:04.000\n"
+            "<c.yellow>Styled</c>\n"
+        )
+        caption_set = WebVTTReader().read(vtt)
+        result = SAMIWriter().write(caption_set)
+
+        assert ".yellow" in result
+        assert "color: yellow;" in result
+
+    def test_multiple_classes(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "STYLE\n"
+            "::cue(.red) {\n  color: red;\n}\n\n"
+            "STYLE\n"
+            "::cue(.blue) {\n  color: blue;\n}\n\n"
+            "00:00:01.000 --> 00:00:04.000\n"
+            "<c.red>Red</c>\n\n"
+            "00:00:05.000 --> 00:00:08.000\n"
+            "<c.blue>Blue</c>\n"
+        )
+        caption_set = WebVTTReader().read(vtt)
+        result = SAMIWriter().write(caption_set)
+
+        assert ".red" in result
+        assert ".blue" in result
+        assert 'class="red"' in result
+        assert 'class="blue"' in result
