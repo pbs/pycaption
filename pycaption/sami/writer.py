@@ -1,3 +1,9 @@
+"""SAMI caption writer.
+
+Serializes pycaption CaptionSet objects into SAMI markup with CSS
+stylesheets, sync-based timing, and multi-language support.
+"""
+
 from copy import deepcopy
 from xml.sax.saxutils import escape
 
@@ -27,7 +33,7 @@ class SAMIWriter(BaseWriter):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.open_span = False
+        self._span_stack = []
         self.last_time = None
 
     def write(self, caption_set):
@@ -93,7 +99,7 @@ class SAMIWriter(BaseWriter):
                     p_style += f"text-align:{css_align};"
 
         if p_style:
-            p["p_style"] = p_style
+            p["style"] = p_style
 
         p["class"] = self._recreate_p_lang(caption, lang, captions)
         p.string = self._recreate_text(caption.nodes)
@@ -203,6 +209,7 @@ class SAMIWriter(BaseWriter):
     def _recreate_text(self, caption):
         """Serialize caption nodes into an HTML text string with inline markup."""
         line = ""
+        self._span_stack = []
 
         for node in caption:
             if node.type_ == CaptionNode.TEXT:
@@ -212,18 +219,21 @@ class SAMIWriter(BaseWriter):
             elif node.type_ == CaptionNode.STYLE:
                 line = self._recreate_line_style(line, node)
 
+        while self._span_stack:
+            line = line.rstrip() + "</span> "
+            self._span_stack.pop()
+
         return line.rstrip()
 
     def _recreate_line_style(self, line, node):
         """Handle style node transitions, opening and closing <span> tags."""
         if node.start:
-            if self.open_span:
-                line = line.rstrip() + "</span> "
             line = self._recreate_span(line, node.content)
         else:
-            if self.open_span:
-                line = line.rstrip() + "</span> "
-                self.open_span = False
+            if self._span_stack:
+                had_span = self._span_stack.pop()
+                if had_span:
+                    line = line.rstrip() + "</span> "
 
         return line
 
@@ -243,7 +253,9 @@ class SAMIWriter(BaseWriter):
             if style:
                 style = f' style="{style}"'
             line += f"<span{klass}{style}>"
-            self.open_span = True
+            self._span_stack.append(True)
+        else:
+            self._span_stack.append(False)
 
         return line
 

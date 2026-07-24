@@ -1,3 +1,5 @@
+"""SRT (SubRip) caption format reader and writer."""
+
 from copy import deepcopy
 
 from .base import BaseReader, BaseWriter, Caption, CaptionList, CaptionNode, CaptionSet
@@ -5,7 +7,14 @@ from .exceptions import CaptionReadNoCaptions, InvalidInputError
 
 
 class SRTReader(BaseReader):
+    """Reads SRT subtitle files into a CaptionSet."""
+
     def detect(self, content):
+        """Return True if content looks like an SRT file.
+
+        Checks that the first line is a sequence number and the second
+        contains an arrow ('-->').
+        """
         lines = content.splitlines()
         if lines[0].isdigit() and "-->" in lines[1]:
             return True
@@ -13,6 +22,14 @@ class SRTReader(BaseReader):
             return False
 
     def read(self, content, lang="en-US"):
+        """Parse SRT content into a CaptionSet.
+
+        :param content: Raw SRT file content.
+        :param lang: Language code to assign to the captions.
+        :rtype: CaptionSet
+        :raises InvalidInputError: if content is not a string.
+        :raises CaptionReadNoCaptions: if no captions are found.
+        """
         if not isinstance(content, str):
             raise InvalidInputError("The content is not a unicode string.")
 
@@ -54,6 +71,7 @@ class SRTReader(BaseReader):
         return caption_set
 
     def _srttomicro(self, stamp):
+        """Convert an SRT timestamp (HH:MM:SS,mmm) to microseconds."""
         timesplit = stamp.split(":")
         if "," not in timesplit[2]:
             timesplit[2] += ",000"
@@ -68,6 +86,7 @@ class SRTReader(BaseReader):
         return microseconds
 
     def _find_text_line(self, start_line, lines):
+        """Find the line index where the next cue block ends (first blank)."""
         end_line = start_line
 
         found = False
@@ -83,7 +102,14 @@ class SRTReader(BaseReader):
 
 
 class SRTWriter(BaseWriter):
+    """Serializes a CaptionSet to SRT format."""
+
     def write(self, caption_set):
+        """Write a CaptionSet as an SRT string.
+
+        :type caption_set: CaptionSet
+        :rtype: str
+        """
         caption_set = deepcopy(caption_set)
 
         srt_captions = []
@@ -95,9 +121,11 @@ class SRTWriter(BaseWriter):
         return caption_content
 
     def _recreate_lang(self, captions):
-        # Merge caption's that are on the exact same timestamp otherwise some
-        # players will play them in reversed order, libass specifically which is
-        # used quite a lot, including VLC and MPV.
+        """Serialize one language's captions to SRT text.
+
+        Merges consecutive captions with identical timestamps (libass and
+        similar players render duplicates in reverse order otherwise).
+        """
 
         merged_captions = [captions[0]] if captions else []
 
@@ -145,6 +173,7 @@ class SRTWriter(BaseWriter):
         return srt[:-1]  # remove unwanted newline at end of file
 
     def _recreate_line(self, srt, line):
+        """Append a single CaptionNode's content to the SRT output string."""
         if line.type_ == CaptionNode.TEXT:
             return srt + f"{line.content} "
         elif line.type_ == CaptionNode.BREAK:

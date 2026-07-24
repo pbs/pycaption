@@ -1,3 +1,9 @@
+"""DFXP/TTML caption writer.
+
+Serializes pycaption CaptionSet objects into DFXP/TTML XML documents,
+including style elements, region-based positioning, and writing direction.
+"""
+
 from copy import deepcopy
 from xml.sax.saxutils import escape
 
@@ -38,7 +44,7 @@ class DFXPWriter(BaseWriter):
             region reference.
         """
         self.write_inline_positioning = kwargs.pop("write_inline_positioning", False)
-        self.open_span = False
+        self._span_stack = []
         self.region_creator = None
         super().__init__(*args, **kwargs)
 
@@ -200,6 +206,7 @@ class DFXPWriter(BaseWriter):
         :rtype: str
         """
         line = ""
+        self._span_stack = []
 
         for node in caption.nodes:
             if node.type_ == CaptionNode.TEXT:
@@ -211,6 +218,10 @@ class DFXPWriter(BaseWriter):
             elif node.type_ == CaptionNode.STYLE:
                 line = self._recreate_span(line, node, dfxp, caption_set, caption, lang)
 
+        while self._span_stack:
+            line = line.rstrip() + "</span> "
+            self._span_stack.pop()
+
         return line.rstrip()
 
     def _recreate_span(
@@ -218,8 +229,8 @@ class DFXPWriter(BaseWriter):
     ):
         """Open or close a <span> element for a style node.
 
-        When opening, collects style and positioning attributes.  Closes
-        any previously open span before opening a new one.
+        Supports nested spans via a stack.  Opening pushes onto the stack;
+        closing pops the most recent span.
 
         :param line: the accumulated markup string so far
         :type line: str
@@ -237,15 +248,17 @@ class DFXPWriter(BaseWriter):
                     attrs.update(region_attribs)
 
             if attrs:
-                if self.open_span:
-                    line = line.rstrip() + "</span> "
                 attr_str = " ".join(f'{k}="{v}"' for k, v in attrs.items())
                 line += f"<span {attr_str}>"
-                self.open_span = True
+                self._span_stack.append(True)
+            else:
+                self._span_stack.append(False)
 
-        elif self.open_span:
-            line = line.rstrip() + "</span> "
-            self.open_span = False
+        else:
+            if self._span_stack:
+                had_span = self._span_stack.pop()
+                if had_span:
+                    line = line.rstrip() + "</span> "
 
         return line
 

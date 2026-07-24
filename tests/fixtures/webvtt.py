@@ -38,32 +38,32 @@ It's all about an eternal Einstein.
 def sample_webvtt_from_dfxp():
     return """WEBVTT
 
-00:09.209 --> 00:12.312 align:start
+00:00:09.209 --> 00:00:12.312 align:start
 ( clock ticking )
 
-00:14.848 --> 00:17.000 align:start
+00:00:14.848 --> 00:00:17.000 align:start
 MAN:
 When we think
 ♪ ...say bow, wow, ♪
 
-00:17.000 --> 00:18.752 align:right
+00:00:17.000 --> 00:00:18.752 align:right
 we have this vision of Einstein
 
-00:18.752 --> 00:20.887 align:start
+00:00:18.752 --> 00:00:20.887 align:start
 &nbsp;
 as an old, wrinkly man
 with white hair.
 
-00:20.887 --> 00:26.760 align:start
+00:00:20.887 --> 00:00:26.760 align:start
 MAN 2:
 E equals m c-squared is
 not about an old Einstein.
 
-00:26.760 --> 00:32.200 align:start
+00:00:26.760 --> 00:00:32.200 align:start
 MAN 2:
 It's all about an eternal Einstein.
 
-00:32.200 --> 00:36.200 align:start
+00:00:32.200 --> 00:00:36.200 align:start
 &lt;LAUGHING &amp; WHOOPS!>
 """
 
@@ -72,32 +72,32 @@ It's all about an eternal Einstein.
 def sample_webvtt_from_sami():
     return """WEBVTT
 
-00:09.209 --> 00:12.312
+00:00:09.209 --> 00:00:12.312
 ( clock ticking )
 
-00:14.848 --> 00:17.000
+00:00:14.848 --> 00:00:17.000
 MAN:
 When we think
 ♪ ...say bow, wow, ♪
 
-00:17.000 --> 00:18.752 align:right
+00:00:17.000 --> 00:00:18.752 align:right
 we have this vision of Einstein
 
-00:18.752 --> 00:20.887
+00:00:18.752 --> 00:00:20.887
 &nbsp;
 as an old, wrinkly man
 with white hair.
 
-00:20.887 --> 00:26.760
+00:00:20.887 --> 00:00:26.760
 MAN 2:
 E equals m c-squared is
 not about an old Einstein.
 
-00:26.760 --> 00:32.200
+00:00:26.760 --> 00:00:32.200
 MAN 2:
 It's all about an eternal Einstein.
 
-00:32.200 --> 00:36.200
+00:00:32.200 --> 00:00:36.200
 &lt;LAUGHING &amp; WHOOPS!>
 """
 
@@ -106,7 +106,7 @@ It's all about an eternal Einstein.
 def sample_webvtt_from_sami_with_style():
     return """WEBVTT
 
-00:09.209 --> 00:12.312
+00:00:09.209 --> 00:00:12.312
 I <b>do</b> <i>not</i> want to go <u>home</u>.
 I don't like it <i><u><b>there</b></u></i>.
 """
@@ -116,16 +116,16 @@ I don't like it <i><u><b>there</b></u></i>.
 def sample_webvtt_from_sami_with_id_style():
     return """WEBVTT
 
-00:09.209 --> 00:12.312
+00:00:09.209 --> 00:00:12.312
 <i>This is in italics.</i>
 
-00:14.848 --> 00:17.000
+00:00:14.848 --> 00:00:17.000
 <u>This is underlined.</u>
 
-00:17.000 --> 00:18.752
+00:00:17.000 --> 00:00:18.752
 <b>This is bold.</b>
 
-00:20.887 --> 00:26.760
+00:00:20.887 --> 00:00:26.760
 <b><i><u>This is everything together.</u></i></b>
 """
 
@@ -134,7 +134,7 @@ def sample_webvtt_from_sami_with_id_style():
 def sample_webvtt_from_dfxp_with_style():
     return """WEBVTT
 
-00:09.209 --> 00:12.312
+00:00:09.209 --> 00:00:12.312
 This is <i>italic</i>, <b>bold</b>, <u>underline</u>, <i><u><b>everything together in one tag</b></u></i>, and <u><b><i>nested</i></b></u>.
 """  # noqa: E501
 
@@ -143,16 +143,16 @@ This is <i>italic</i>, <b>bold</b>, <u>underline</u>, <i><u><b>everything togeth
 def sample_webvtt_keeps_positioning():
     return """WEBVTT
 
-00:01.000 --> 00:03.000 align:start position:25% line:25% size:50%
+00:00:01.000 --> 00:00:03.000 align:start position:25% line:25% size:50%
 You might not remember us. We are a typical transparent region with centered text that has an outline.
 
-00:03.500 --> 00:05.000 align:right position:25% line:25% size:50%
+00:00:03.500 --> 00:00:05.000 align:right position:25% line:25% size:50%
 had personality.
 
-00:05.500 --> 00:07.000 align:left position:50% line:50% size:25%
+00:00:05.500 --> 00:00:07.000 align:left position:50% line:50% size:25%
 Hello there, children! Have you seen any visitors?
 
-00:07.500 --> 00:09.000 align:right position:25% line:75% size:25%
+00:00:07.500 --> 00:00:09.000 align:right position:25% line:75% size:25%
 This is
 the last cue
 """  # noqa: E501
@@ -162,16 +162,16 @@ the last cue
 def sample_webvtt_from_dfxp_with_positioning_and_style():
     return """WEBVTT
 
-00:01.000 --> 00:03.000 position:25% line:25% size:50%
+00:00:01.000 --> 00:00:03.000 position:25% line:25% size:50%
 You might not remember us. We are a typical transparent region with centered text that has an outline.
 
-00:03.500 --> 00:05.000 align:right position:25% line:25% size:50%
+00:00:03.500 --> 00:00:05.000 align:right position:25% line:25% size:50%
 had <u>personality.</u>
 
-00:05.500 --> 00:07.000 align:left position:50% line:50% size:25%
+00:00:05.500 --> 00:00:07.000 align:left position:50% line:50% size:25%
 Hello there, children! Have you seen any visitors?
 
-00:07.500 --> 00:09.000 align:right position:25% line:75% size:25%
+00:00:07.500 --> 00:00:09.000 align:right position:25% line:75% size:25%
 This is
 the last cue
 """  # noqa: E501
@@ -181,31 +181,31 @@ the last cue
 def sample_webvtt_from_srt():
     return """WEBVTT
 
-00:09.209 --> 00:12.312
+00:00:09.209 --> 00:00:12.312
 ( clock ticking )
 
-00:14.848 --> 00:17.000
+00:00:14.848 --> 00:00:17.000
 MAN:
 When we think
 ♪ ...say bow, wow, ♪
 
-00:17.000 --> 00:18.752
+00:00:17.000 --> 00:00:18.752
 we have this vision of Einstein
 
-00:18.752 --> 00:20.887
+00:00:18.752 --> 00:00:20.887
 as an old, wrinkly man
 with white hair.
 
-00:20.887 --> 00:26.760
+00:00:20.887 --> 00:00:26.760
 MAN 2:
 E equals m c-squared is
 not about an old Einstein.
 
-00:26.760 --> 00:32.200
+00:00:26.760 --> 00:00:32.200
 MAN 2:
 It's all about an eternal Einstein.
 
-00:32.200 --> 00:36.200
+00:00:32.200 --> 00:00:36.200
 &lt;LAUGHING &amp; WHOOPS!>
 """
 
@@ -262,7 +262,7 @@ def sample_webvtt_empty():
 def sample_webvtt_double_br():
     return """WEBVTT
 
-00:14.848 --> 00:18.848
+00:00:14.848 --> 00:00:18.848
 MAN:
 &nbsp;
 When we think
@@ -275,13 +275,13 @@ def sample_webvtt_output_long_cue():
     return """\
 WEBVTT
 
-00:01.000 --> 00:02.000 align:start
+00:00:01.000 --> 00:00:02.000 align:start
 NARRATOR:
 
-00:02.000 --> 00:03.000 position:25% line:25% size:65%
+00:00:02.000 --> 00:00:03.000 position:25% line:25% size:65%
 They built the largest, most incredible, wildest, craziest,
 
-00:03.000 --> 00:04.000 align:start
+00:00:03.000 --> 00:00:04.000 align:start
 most complex machine in history.
 """
 
@@ -290,10 +290,10 @@ most complex machine in history.
 def webvtt_from_dfxp_with_conflicting_align():
     return """WEBVTT
 
-00:04.537 --> 00:07.841
+00:00:04.537 --> 00:00:07.841
 IT'S WORD GIRL♫
 
-00:08.537 --> 00:10.841
+00:00:08.537 --> 00:00:10.841
 ♫WORD UP,
 IT'S WORD GIRL♫
 """
@@ -304,10 +304,10 @@ def sample_webvtt_with_cue_settings():
     return """\
 WEBVTT
 
-00:01.000 --> 00:06.000 align:center position:37% line:74%
+00:00:01.000 --> 00:00:06.000 align:center position:37% line:74%
 37% 74% - NARRATOR:
 
-00:01.000 --> 00:06.000 this is invalid, but will also be kept
+00:00:01.000 --> 00:00:06.000 this is invalid, but will also be kept
 They built the largest,
 """
 
@@ -317,7 +317,7 @@ def sample_webvtt_from_scc_properly_writes_newlines_output():
     return """\
 WEBVTT
 
-21:30.000 --> 21:34.000 align:left position:20% line:83% size:70%
+00:21:30.000 --> 00:21:34.000 align:left position:20% line:83% size:70%
 aa
 bb
 """
@@ -327,7 +327,7 @@ bb
 def sample_webvtt_last_cue_zero_start():
     return """WEBVTT
 
-00:00.000 --> 00:12.312
+00:00:00.000 --> 00:00:12.312
 ( clock ticking )"""
 
 
@@ -347,7 +347,7 @@ Transcribed by Celestials
 def sample_webvtt_multi_lang_en():
     return """WEBVTT
 
-00:14.848 --> 00:18.848
+00:00:14.848 --> 00:00:18.848
 Butterfly.
 """
 
@@ -356,7 +356,7 @@ Butterfly.
 def sample_webvtt_multi_lang_de():
     return """WEBVTT
 
-00:14.848 --> 00:18.848
+00:00:14.848 --> 00:00:18.848
 Schmetterling.
 """
 
@@ -366,7 +366,7 @@ def sample_webvtt_empty_cue_output():
     return """\
 WEBVTT
 
-00:01.209 --> 00:02.312 align:start position:10% line:10% size:80%
+00:00:01.209 --> 00:00:02.312 align:start position:10% line:10% size:80%
 abc
 """
 

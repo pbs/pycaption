@@ -283,7 +283,7 @@ def sample_sami_partial_margins_relativized():
  </head>
  <body>
   <sync start="133">
-   <p class="subttl" p_style="class:subttl;">
+   <p class="subttl" style="class:subttl;">
     &gt;&gt; COMING UP NEXT, IT IS<br/>
     APPLAUSE AMERICA.
    </p>
@@ -637,12 +637,15 @@ def sample_sami_from_dfxp_with_nested_spans():
     .s1 {
      font-style: italic;
     }
+
     .s2 {
      font-weight: bold;
     }
+
     .s3 {
      text-decoration: underline;
     }
+
     .en-US {
      lang: en-US;
     }
@@ -651,8 +654,8 @@ def sample_sami_from_dfxp_with_nested_spans():
  </head>
  <body>
   <sync start="3209">
-   <p class="en-US">
-    That is  <span class="s3" style="classes:['s3'];class:s3;"></span> <span class="s2" style="classes:['s2'];class:s2;"></span> <span class="s1" style="classes:['s1'];class:s1;">nested</span> .
+   <p class="en-US" style="text-align:center;">
+    That is  <span class="s3"><span class="s2"><span class="s1">nested</span></span></span> .
    </p>
   </sync>
  </body>

@@ -1,3 +1,10 @@
+"""DFXP/TTML caption reader.
+
+Parses DFXP/TTML documents into pycaption CaptionSet objects, resolving
+styles, regions, and positioning through LayoutAwareDFXPParser and
+LayoutInfoScraper.
+"""
+
 import re
 
 from bs4 import BeautifulSoup, NavigableString
@@ -16,24 +23,37 @@ from ..exceptions import (
     CaptionReadTimingError,
     InvalidInputError,
 )
-from ..geometry import Alignment, Layout, Padding, Point, Stretch, UnitEnum
+from ..geometry import (
+    Alignment,
+    Layout,
+    Padding,
+    Point,
+    Stretch,
+    UnitEnum,
+    WritingDirectionEnum,
+)
 from ..utils import is_leaf
 from .constants import (
     DFXP_ATTR_XML_ID,
     DFXP_ATTR_XML_LANG,
     DFXP_DEFAULT_FRAMERATE,
     DFXP_DEFAULT_FRAMERATE_MULTIPLIER,
+    DFXP_DEFAULT_REGION,
     DFXP_DEFAULT_SUBFRAMERATE,
     DFXP_DEFAULT_TICKRATE,
-    DFXP_DEFAULT_REGION,
     HORIZONTAL_ALIGNMENT_TO_DFXP,
     MICROSECONDS_PER_UNIT,
     TIME_EXPRESSION_PATTERN,
     VERTICAL_ALIGNMENT_TO_DFXP,
-    _create_external_alignment,
 )
 
 _LEADING_WHITESPACE_RE = re.compile("^(?:[\n\r]+\\s*)?(.+)")
+
+_DFXP_WRITING_MODE_MAP = {
+    "tbrl": WritingDirectionEnum.VERTICAL_RL,
+    "tblr": WritingDirectionEnum.VERTICAL_LR,
+    "tb": WritingDirectionEnum.VERTICAL_RL,
+}
 
 
 class DFXPReader(BaseReader):
@@ -392,6 +412,8 @@ class DFXPReader(BaseReader):
                 attrs["font-size"] = dfxp_attrs[arg]
             elif arg.lower() == "tts:color":
                 attrs["color"] = dfxp_attrs[arg]
+            elif arg.lower() == "tts:backgroundcolor":
+                attrs["background-color"] = dfxp_attrs[arg]
         return attrs
 
 
@@ -538,12 +560,19 @@ class LayoutAwareDFXPParser(BeautifulSoup):
 
         region_scraper = LayoutInfoScraper(self, region_tag)
 
-        layout_info = region_scraper.scrape_positioning_info(
+        positioning = region_scraper.scrape_positioning_info(
             element, self.read_invalid_positioning
         )
 
-        if layout_info and any(layout_info):
-            return Layout(*layout_info)
+        if positioning and any(positioning):
+            origin, extent, padding, alignment, writing_direction = positioning
+            return Layout(
+                origin,
+                extent,
+                padding,
+                alignment,
+                writing_direction=writing_direction,
+            )
         else:
             return self.NO_POSITIONING_INFO
 
@@ -650,8 +679,9 @@ class LayoutInfoScraper:
         return result
 
     def scrape_positioning_info(self, element=None, even_invalid=False):
-        """Resolve positioning attributes into a (origin, extent, padding, alignment) tuple.
+        """Resolve positioning attributes into a positioning tuple.
 
+        Returns (origin, extent, padding, alignment, writing_direction).
         Attributes are resolved from the region, its referenced styles, and
         (when even_invalid=True) from the element itself.  Falls back to
         DFXP_DEFAULT_REGION values when attributes are not found.
@@ -660,7 +690,8 @@ class LayoutInfoScraper:
         :type even_invalid: bool
         :param even_invalid: if True, also check positioning attributes on
             the element (non-standard but common in real files)
-        :rtype: tuple[Point | None, Stretch | None, Padding | None, Alignment | None]
+        :rtype: tuple[Point | None, Stretch | None, Padding | None,
+            Alignment | None, WritingDirectionEnum | None]
         """
         usable_elem = element if even_invalid else None
 
@@ -697,7 +728,10 @@ class LayoutInfoScraper:
         ) or VERTICAL_ALIGNMENT_TO_DFXP.get(DFXP_DEFAULT_REGION.alignment.vertical)
         alignment = _create_internal_alignment(text_align, display_align)
 
-        return origin, extent, padding, alignment
+        writing_mode_raw = self._find_attribute(usable_elem, "tts:writingMode")
+        writing_direction = _DFXP_WRITING_MODE_MAP.get(writing_mode_raw)
+
+        return origin, extent, padding, alignment, writing_direction
 
     def _find_attribute_on_element_or_styles(
         self, attribute_name, element, factory, ignore, ignorecase

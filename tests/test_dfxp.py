@@ -7,7 +7,12 @@ from pycaption.exceptions import (
     CaptionReadSyntaxError,
     CaptionReadTimingError,
 )
-from pycaption.geometry import HorizontalAlignmentEnum, UnitEnum, VerticalAlignmentEnum
+from pycaption.geometry import (
+    HorizontalAlignmentEnum,
+    UnitEnum,
+    VerticalAlignmentEnum,
+    WritingDirectionEnum,
+)
 from tests.mixins import ReaderTestingMixIn
 
 
@@ -107,7 +112,7 @@ class TestDFXPReader(ReaderTestingMixIn):
         ],
     )
     def test_invalid_timestamp(self, timestamp):
-        with pytest.raises(CaptionReadTimingError) as exc_info:
+        with pytest.raises(CaptionReadTimingError):
             DFXPReader()._convert_timestamp_to_microseconds(timestamp)
 
     def test_empty_file(self, sample_dfxp_empty):
@@ -379,3 +384,52 @@ class TestDFXPReader(ReaderTestingMixIn):
         captions = caption_set.get_captions("en-US")
         assert all(c is not None for c in captions)
         assert len(captions) == 6
+
+    def test_background_color_is_read(self):
+        dfxp = """\
+<?xml version="1.0" encoding="utf-8"?>
+<tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml"
+    xmlns:tts="http://www.w3.org/ns/ttml#styling">
+ <head>
+  <styling>
+   <style xml:id="bg" tts:backgroundColor="yellow"/>
+  </styling>
+  <layout/>
+ </head>
+ <body>
+  <div>
+   <p begin="00:00:01.000" end="00:00:02.000" style="bg"
+      tts:backgroundColor="black">Hello</p>
+  </div>
+ </body>
+</tt>"""
+        caption_set = DFXPReader().read(dfxp)
+        styles = dict(caption_set.get_styles())
+        assert styles["bg"]["background-color"] == "yellow"
+        caption = caption_set.get_captions("en")[0]
+        assert caption.style["background-color"] == "black"
+
+    def test_writing_mode_is_read(self):
+        dfxp = """\
+<?xml version="1.0" encoding="utf-8"?>
+<tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml"
+    xmlns:tts="http://www.w3.org/ns/ttml#styling">
+ <head>
+  <styling/>
+  <layout>
+   <region xml:id="vertical" tts:writingMode="tbrl"
+           tts:origin="10% 10%" tts:extent="20% 80%"/>
+  </layout>
+ </head>
+ <body>
+  <div>
+   <p begin="00:00:01.000" end="00:00:02.000"
+      region="vertical">Vertical text</p>
+  </div>
+ </body>
+</tt>"""
+        caption_set = DFXPReader().read(dfxp)
+        caption = caption_set.get_captions("en")[0]
+        assert caption.layout_info.writing_direction == (
+            WritingDirectionEnum.VERTICAL_RL
+        )

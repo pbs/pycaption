@@ -1,3 +1,10 @@
+"""WebVTT reader — parses WebVTT files into pycaption CaptionSet objects.
+
+Handles the full WebVTT feature set: header validation, STYLE blocks,
+REGION blocks, cue timing with settings, inline markup tags (bold,
+italic, underline, class spans, lang, ruby, timestamps), and voice spans.
+"""
+
 import html
 import sys
 import warnings
@@ -45,9 +52,12 @@ def _flush_css_block(css_lines, blocks):
 
 
 def _covers_base(content, base_props):
-    """Return True if content dict contains all key-value pairs from
-    base_props (i.e. the style node already carries the base styling)."""
-    return all(content.get(k) == v for k, v in base_props.items())
+    """Return True if the style node provides all base property keys.
+
+    Checks key presence, not value equality — a class-specific override
+    (e.g. color:red vs base color:white) still covers the property.
+    """
+    return all(k in content for k in base_props)
 
 
 class _ParseState:
@@ -66,6 +76,9 @@ class _ParseState:
         "found_timing",
         "in_note_block",
         "in_style_block",
+        "in_region_block",
+        "seen_ids",
+        "pending_id",
     )
 
     def __init__(self):
@@ -77,6 +90,9 @@ class _ParseState:
         self.found_timing = False
         self.in_note_block = False
         self.in_style_block = False
+        self.in_region_block = False
+        self.seen_ids = set()
+        self.pending_id = None
 
 
 class WebVTTReader(BaseReader):
@@ -130,7 +146,16 @@ class WebVTTReader(BaseReader):
         :raises InvalidInputError: If content is not a string.
         :raises CaptionReadNoCaptions: If no cues are found.
         """
-        if not isinstance(content, str):
+        if isinstance(content, bytes):
+            if not content:
+                raise InvalidInputError("The content is not a unicode string.")
+            try:
+                content = content.decode("utf-8")
+            except UnicodeDecodeError as e:
+                raise InvalidInputError(
+                    f"WebVTT content is not valid UTF-8: {e}"
+                ) from e
+        elif not isinstance(content, str):
             raise InvalidInputError("The content is not a unicode string.")
 
         if content.startswith("﻿"):
@@ -209,7 +234,7 @@ class WebVTTReader(BaseReader):
     def _parse_line(self, line, line_index, state, captions):
         """Process a single line through the parsing state machine.
 
-        Transitions: skip NOTE/STYLE blocks → detect timing line →
+        Transitions: skip NOTE/STYLE/REGION blocks → detect timing line →
         accumulate cue text → finalize cue on blank line.
         """
         if state.in_note_block:
@@ -220,15 +245,37 @@ class WebVTTReader(BaseReader):
             state.in_style_block = line != ""
             return
 
+        if state.in_region_block:
+            state.in_region_block = line != ""
+            return
+
         if self._check_block_start(line, state):
             return
 
         if "-->" in line:
+            if state.pending_id is not None:
+                cue_id = state.pending_id
+                state.pending_id = None
+                if cue_id in state.seen_ids:
+                    warnings.warn(
+                        f"Duplicate cue identifier '{cue_id}' " f"(line {line_index}).",
+                        CaptionReadWarning,
+                        stacklevel=4,
+                    )
+                state.seen_ids.add(cue_id)
             state.found_timing = True
             last_start_time = captions[-1].start if captions else 0
             state.start, state.end, state.layout_info = self._read_timing(
                 line, line_index, last_start_time
             )
+            return
+
+        if not state.found_timing and line != "":
+            state.pending_id = line
+            return
+
+        if line == "" and not state.found_timing:
+            state.pending_id = None
             return
 
         if line == "" and state.found_timing and state.nodes:
@@ -242,7 +289,7 @@ class WebVTTReader(BaseReader):
 
     @staticmethod
     def _check_block_start(line, state):
-        """Detect the start of a NOTE or STYLE block before any cue.
+        """Detect the start of a NOTE, STYLE, or REGION block.
 
         :returns: True if the line starts a block (and state was updated).
         """
@@ -250,9 +297,15 @@ class WebVTTReader(BaseReader):
             return False
         if _is_note_start(line):
             state.in_note_block = True
+            state.pending_id = None
             return True
         if line.strip() == "STYLE":
             state.in_style_block = True
+            state.pending_id = None
+            return True
+        if line.strip() == "REGION":
+            state.in_region_block = True
+            state.pending_id = None
             return True
         return False
 
@@ -1007,16 +1060,24 @@ class WebVTTReader(BaseReader):
     def _wrap_bare_text_with_base(captions, base_style):
         """Wrap captions containing unstyled text with ::cue base styles.
 
-        Only applies when ::cue declares text-formatting properties
-        (italic/bold/underline). Inserts synthetic STYLE open/close
-        nodes around the entire caption content.
+        Applies when ::cue declares any visual properties (italic, bold,
+        underline, color, background-color, etc.). Inserts synthetic
+        STYLE open/close nodes around the entire caption content.
 
         :param captions: CaptionList to process.
         :param base_style: The ::cue base properties dict.
         """
-        text_style_keys = {"italics", "bold", "underline"}
+        _VISUAL_KEYS = {
+            "italics",
+            "bold",
+            "underline",
+            "color",
+            "background-color",
+            "font-family",
+            "font-size",
+        }
         base_text_props = {
-            k: v for k, v in base_style.items() if k in text_style_keys and v
+            k: v for k, v in base_style.items() if k in _VISUAL_KEYS and v
         }
         if not base_text_props:
             return

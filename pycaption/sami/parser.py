@@ -1,3 +1,9 @@
+"""SAMI markup parser.
+
+Normalizes raw SAMI HTML into well-formed XML, extracts CSS stylesheets,
+and discovers caption languages in a single parsing pass.
+"""
+
 from collections import deque
 from html.entities import name2codepoint
 from html.parser import HTMLParser

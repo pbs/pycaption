@@ -1,3 +1,9 @@
+"""Shared constants, compiled patterns, and helpers for the WebVTT package.
+
+All regular expressions are pre-compiled at import time. Module-level
+docstrings below each pattern explain what they capture and give examples.
+"""
+
 import re
 
 from ..geometry import HorizontalAlignmentEnum
@@ -62,8 +68,12 @@ Class selectors have a leading dot; tag selectors do not.
 """
 
 LINE_GRID_SIZE = 15
+"""Number of lines in the WebVTT virtual line grid used for integer
+line positioning (W3C WebVTT spec §7.2)."""
 
 LINE_HEIGHT_VH = 5.33
+"""Approximate viewport-height percentage per line (100 / ~18.75),
+used to convert region ``lines`` count into a vh-based extent."""
 
 WEBVTT_VERSION_OF = {
     HorizontalAlignmentEnum.LEFT: "left",
@@ -72,6 +82,8 @@ WEBVTT_VERSION_OF = {
     HorizontalAlignmentEnum.START: "start",
     HorizontalAlignmentEnum.END: "end",
 }
+"""Maps internal HorizontalAlignmentEnum values to their WebVTT
+``align`` cue setting string equivalents."""
 
 # Fallback for captions with no alignment info
 # (not the WebVTT spec default, which is "center")
@@ -84,9 +96,12 @@ ALIGN_SETTING_MAP = {
     "left": HorizontalAlignmentEnum.LEFT,
     "right": HorizontalAlignmentEnum.RIGHT,
 }
+"""Reverse mapping from WebVTT ``align`` setting strings to internal
+HorizontalAlignmentEnum values (used by the reader)."""
 
 
 def _is_note_start(line):
+    """Return True if the line begins a WebVTT NOTE block."""
     return line == "NOTE" or line.startswith("NOTE ") or line.startswith("NOTE\t")
 
 

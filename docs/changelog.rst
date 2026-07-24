@@ -1,7 +1,20 @@
 Changelog
 ---------
-2.2.29
+2.3.0
 ^^^^^^
+  Production-ready WebVTT input: all writers now consume the WebVTT
+  reader's structured output (styles, regions, Layout positioning),
+  completing the work to enable WebVTT as a caption input format in
+  Media Manager.
+
+  - Accommodate all writers (SCC, DFXP, SAMI, SRT) to the WebVTT
+    reader's new structured output (styles dict, regions dict, Layout
+    with positioning/alignment/writing_direction) enabling WebVTT as
+    input format in Media Manager.
+  - DFXP reader: regex-based detect() requiring both <tt> and </tt>
+    to eliminate false positives; implement TTML tick metric (Nt) with
+    ttp:tickRate support; read ttp:frameRate and ttp:frameRateMultiplier
+    from <tt> instead of hardcoding 30fps.
   - WebVTT writer: re-emit STYLE blocks on roundtrip, emit
     vertical:rl|lr from Layout, fix _format_css_declarations to
     reverse-map internal keys to valid CSS.
@@ -30,9 +43,31 @@ Changelog
   - Split pycaption/sami.py into pycaption/sami/ package. Public API
     unchanged. Reader: inline dead hooks, extract helpers, add docstrings.
     Writer: fix rules-dict mutation, remove dead ``_encode``, staticmethods.
+  - WebVTT writer: always emit ``HH:MM:SS.mmm`` timestamps (never
+    ``MM:SS.mmm``); encode ``&nbsp;``, ``&lrm;``, ``&rlm;`` named entities
+    on output; fix ``position:0%`` silently dropped (use ``is not None``
+    instead of truthiness for position/line/size).
+  - WebVTT reader: accept ``bytes`` input (auto-decode UTF-8); track cue
+    identifiers and warn on duplicates; skip REGION blocks during parse
+    (no longer treated as cue text); expand ``_VISUAL_KEYS`` to include
+    color, background-color, font-family, font-size for base-style
+    wrapping; ``_covers_base()`` uses key-presence semantics.
+  - DFXP/SAMI writers: replace ``open_span`` boolean with ``_span_stack``
+    list for proper nested span support — previously a nested style node
+    would prematurely close the outer span.
+  - Remove dead ``Region`` class from geometry.py; remove
+    ``CaptionLineLengthError`` from ``__init__.py`` public re-exports.
+
+  **Breaking:**
+
+  - ``from pycaption import CaptionLineLengthError`` no longer works.
+    Import directly from ``pycaption.exceptions`` if needed. The class
+    was unused within pycaption and is deprecated.
 
 2.2.28
 ^^^^^^
+  - Update WebVTT reader to parse the full VTT feature set, enabling
+    it as a caption input format in Media Manager.
   - Parse WebVTT cue settings (position, line, size, align, vertical)
     into structured Layout objects. Integer line numbers (line:3) and
     percentage values (line:75%) are both converted to viewport

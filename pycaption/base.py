@@ -1,3 +1,10 @@
+"""Core data model for pycaption.
+
+Defines the intermediate representation used by all readers and writers:
+CaptionSet -> CaptionList -> Caption -> CaptionNode.  Also provides the
+CaptionConverter orchestrator and base classes for readers/writers.
+"""
+
 import os
 from datetime import timedelta
 from numbers import Number
@@ -9,10 +16,25 @@ DEFAULT_LANGUAGE_CODE = os.getenv("PYCAPTION_DEFAULT_LANG", "und")
 
 
 class CaptionConverter:
+    """High-level orchestrator: read content with a reader, write with a writer.
+
+    Usage::
+
+        converter = CaptionConverter()
+        converter.read(srt_content, SRTReader())
+        output = converter.write(WebVTTWriter())
+    """
+
     def __init__(self, captions=None):
         self.captions = captions if captions else []
 
     def read(self, content, caption_reader):
+        """Parse caption content using the given reader.
+
+        :param content: Raw caption file content (string).
+        :param caption_reader: A BaseReader subclass instance.
+        :returns: self (for chaining).
+        """
         try:
             self.captions = caption_reader.read(content)
         except AttributeError as e:
@@ -20,6 +42,12 @@ class CaptionConverter:
         return self
 
     def write(self, caption_writer):
+        """Serialize the stored CaptionSet using the given writer.
+
+        :param caption_writer: A BaseWriter subclass instance.
+        :returns: The serialized caption string.
+        :rtype: str
+        """
         try:
             return caption_writer.write(self.captions)
         except AttributeError as e:
@@ -27,17 +55,31 @@ class CaptionConverter:
 
 
 class BaseReader:
+    """Abstract base class for caption format readers."""
+
     def __init__(self, *args, **kwargs):
         pass
 
     def detect(self, content):
+        """Return True if content appears to be in this reader's format.
+
+        :param content: Raw caption file content.
+        :rtype: bool
+        """
         return bool(content)
 
     def read(self, content):
+        """Parse content into a CaptionSet.
+
+        :param content: Raw caption file content.
+        :rtype: CaptionSet
+        """
         return CaptionSet({DEFAULT_LANGUAGE_CODE: []})
 
 
 class BaseWriter:
+    """Abstract base class for caption format writers."""
+
     def __init__(
         self, relativize=True, video_width=None, video_height=None, fit_to_screen=True
     ):
@@ -66,6 +108,11 @@ class BaseWriter:
         self.fit_to_screen = fit_to_screen
 
     def _relativize_and_fit_to_screen(self, layout_info):
+        """Apply relativization and fit-to-screen adjustments to a Layout.
+
+        :param layout_info: A Layout instance (or None).
+        :rtype: Layout | None
+        """
         if layout_info:
             if self.relativize:
                 # Transform absolute values (e.g. px) into percentages
@@ -78,6 +125,11 @@ class BaseWriter:
         return layout_info
 
     def write(self, content):
+        """Serialize a CaptionSet. Subclasses override this.
+
+        :type content: CaptionSet
+        :rtype: str
+        """
         return content
 
 
@@ -128,6 +180,7 @@ class CaptionNode:
 
     @staticmethod
     def create_text(text, layout_info=None, position=None):
+        """Create a TEXT node with the given content string."""
         return CaptionNode(
             type_=CaptionNode.TEXT,
             layout_info=layout_info,
@@ -137,6 +190,7 @@ class CaptionNode:
 
     @staticmethod
     def create_style(start, content, layout_info=None):
+        """Create a STYLE node (start=True opens, start=False closes)."""
         return CaptionNode(
             type_=CaptionNode.STYLE,
             layout_info=layout_info,
@@ -146,6 +200,7 @@ class CaptionNode:
 
     @staticmethod
     def create_break(layout_info=None, content=None):
+        """Create a BREAK (line-break) node."""
         return CaptionNode(
             type_=CaptionNode.BREAK, layout_info=layout_info, content=content
         )
@@ -189,20 +244,24 @@ class Caption:
         self.layout_info = layout_info
 
     def is_empty(self):
+        """Return True if this caption has no nodes."""
         return not self.nodes
 
     def format_start(self, msec_separator=None):
-        """
-        Format the start time value in milliseconds into a string
-        value suitable for some of the supported output formats (ex.
-        SRT, DFXP).
+        """Format start time as HH:MM:SS.mmm string.
+
+        :param msec_separator: Character between seconds and milliseconds
+            (default '.').
+        :rtype: str
         """
         return self._format_timestamp(self.start, msec_separator)
 
     def format_end(self, msec_separator=None):
-        """
-        Format the end time value in milliseconds into a string value suitable
-        for some of the supported output formats (ex. SRT, DFXP).
+        """Format end time as HH:MM:SS.mmm string.
+
+        :param msec_separator: Character between seconds and milliseconds
+            (default '.').
+        :rtype: str
         """
         return self._format_timestamp(self.end, msec_separator)
 
@@ -210,6 +269,10 @@ class Caption:
         return repr(f"{self.format_start()} --> {self.format_end()}\n{self.get_text()}")
 
     def get_text_nodes(self):
+        """Return list of text content strings (with '\\n' for breaks).
+
+        :rtype: list[str]
+        """
         result = []
         for node in self.nodes:
             if node.type_ == CaptionNode.TEXT:
@@ -219,10 +282,15 @@ class Caption:
         return result
 
     def get_text(self):
+        """Return the plain text content of this caption (no markup).
+
+        :rtype: str
+        """
         text_nodes = self.get_text_nodes()
         return "".join(text_nodes).strip()
 
     def _format_timestamp(self, microseconds, msec_separator=None):
+        """Convert microseconds to HH:MM:SS{sep}mmm string."""
         duration = timedelta(microseconds=microseconds)
         hours, rem = divmod(duration.seconds, 3600)
         minutes, seconds = divmod(rem, 60)
@@ -293,12 +361,26 @@ class CaptionSet:
         self.layout_info = layout_info
 
     def set_captions(self, lang, captions):
+        """Replace the caption list for a given language.
+
+        :param lang: Language code (e.g. 'en-US').
+        :param captions: A CaptionList instance.
+        """
         self._captions[lang] = captions
 
     def get_languages(self):
+        """Return list of language codes in this caption set.
+
+        :rtype: list[str]
+        """
         return list(self._captions.keys())
 
     def get_captions(self, lang):
+        """Return the CaptionList for the given language, or empty list.
+
+        :param lang: Language code.
+        :rtype: CaptionList | list
+        """
         return self._captions.get(lang, [])
 
     def add_style(self, selector, rules):
@@ -318,26 +400,51 @@ class CaptionSet:
         return self._styles.get(selector, {})
 
     def get_styles(self):
+        """Return all styles as sorted (selector, rules) pairs.
+
+        :rtype: list[tuple[str, dict]]
+        """
         return sorted(self._styles.items())
 
     def set_styles(self, styles):
+        """Replace all styles with the given dictionary.
+
+        :param styles: dict mapping selectors to rule dictionaries.
+        """
         self._styles = styles
 
     def get_regions(self):
-        """Return raw region definitions {id: {setting: value}} for the
-        writer to re-emit REGION blocks."""
+        """Return raw region definitions for the writer to re-emit.
+
+        :rtype: dict[str, dict[str, str]]
+        """
         return self._regions
 
     def set_regions(self, regions):
+        """Replace all region definitions.
+
+        :param regions: dict mapping region id to settings dict.
+        """
         self._regions = regions
 
     def is_empty(self):
+        """Return True if no language contains any captions."""
         return all([len(captions) == 0 for captions in list(self._captions.values())])
 
     def set_layout_info(self, lang, layout_info):
+        """Set the layout_info on the CaptionList for a given language.
+
+        :param lang: Language code.
+        :param layout_info: A Layout instance.
+        """
         self._captions[lang].layout_info = layout_info
 
     def get_layout_info(self, lang):
+        """Return the layout_info for a given language's CaptionList.
+
+        :param lang: Language code.
+        :rtype: Layout | None
+        """
         caption_list = self._captions.get(lang)
         if caption_list:
             return caption_list.layout_info

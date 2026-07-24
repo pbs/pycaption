@@ -1,3 +1,10 @@
+"""Specialized collections and node creators for SCC caption processing.
+
+Provides mutable caption builders, timing-correcting lists, instruction-node
+buffering, and italics-formatting utilities used by the SCC reader to convert
+raw CEA-608 commands into CaptionNode trees.
+"""
+
 import collections
 
 from ..base import Caption, CaptionList, CaptionNode
@@ -47,6 +54,10 @@ class PreCaption:
         self.layout_info = None
 
     def to_real_caption(self):
+        """Convert this mutable holder into an immutable Caption instance.
+
+        :rtype: Caption
+        """
         display_style = {
             k: v for k, v in self.style.items() if k not in self._INTERNAL_STYLE_KEYS
         }
@@ -392,6 +403,12 @@ class InstructionNodeCreator:
 
     @staticmethod
     def get_style_for_command(command):
+        """Return the style category for a CEA-608 style-setting command.
+
+        :param command: a 4-char hex command string
+        :rtype: str
+        :return: one of "italic", "underline", or "plaintext"
+        """
         if command in ITALICS_COMMANDS:
             return "italic"
         elif command in UNDERLINE_COMMANDS:
@@ -522,6 +539,11 @@ class InstructionNodeCreator:
 
     @staticmethod
     def has_break_before(collection):
+        """Check whether the last non-empty node in collection is a break.
+
+        :type collection: list[_InstructionNode]
+        :rtype: bool
+        """
         if len(collection) == 0:
             return False
         for element in collection[::-1]:
@@ -581,6 +603,10 @@ class InstructionNodeCreator:
             node.text = node.text[:-1]
 
     def get_previous_text_node(self):
+        """Return the last non-empty text node in the collection, or None.
+
+        :rtype: _InstructionNode | None
+        """
         for node in self._collection[::-1]:
             if node.is_text_node() and node.text:
                 return node
@@ -806,6 +832,11 @@ def _format_italics(collection):
 
 
 def _remove_spaces_at_end_of_the_line(collection):
+    """Strip trailing whitespace from text nodes that precede line breaks.
+
+    :type collection: list[_InstructionNode]
+    :rtype: list[_InstructionNode]
+    """
     if not collection:
         return collection
     for idx, node in enumerate(collection):

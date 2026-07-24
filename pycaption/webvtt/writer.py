@@ -1,3 +1,10 @@
+"""WebVTT writer — serializes pycaption CaptionSet objects to WebVTT format.
+
+Produces spec-compliant output including STYLE blocks, REGION blocks,
+cue timing lines with positioning settings, and inline markup tags.
+Supports lossless VTT-to-VTT round-trip via preserved positioning strings.
+"""
+
 import datetime
 from copy import deepcopy
 
@@ -9,6 +16,8 @@ _SIMPLE_STRUCTURAL_TAGS = {
     "ruby": ("<ruby>", "</ruby>"),
     "ruby_text": ("<rt>", "</rt>"),
 }
+"""Maps style content keys to their open/close WebVTT tag pairs for
+structural tags that need no special logic."""
 
 
 class WebVTTWriter(BaseWriter):
@@ -85,9 +94,7 @@ class WebVTTWriter(BaseWriter):
         )
 
     def _timestamp(self, ts):
-        """Format microseconds as a WebVTT timestamp string.
-
-        Produces MM:SS.mmm when hours are zero, HH:MM:SS.mmm otherwise.
+        """Format microseconds as a WebVTT timestamp string (HH:MM:SS.mmm).
 
         :param ts: Time in microseconds.
         :returns: Formatted timestamp string.
@@ -95,10 +102,7 @@ class WebVTTWriter(BaseWriter):
         td = datetime.timedelta(microseconds=ts)
         mm, ss = divmod(td.seconds, 60)
         hh, mm = divmod(mm, 60)
-        s = f"{mm:02}:{ss:02}.{td.microseconds // 1000:03}"
-        if hh:
-            s = f"{hh:02}:{s}"
-        return s
+        return f"{hh:02}:{mm:02}:{ss:02}.{td.microseconds // 1000:03}"
 
     def _build_style_block(self, caption_set):
         """Build the STYLE section from the CaptionSet's styles.
@@ -403,15 +407,15 @@ class WebVTTWriter(BaseWriter):
         if not padding:
             return left_offset, top_offset, cue_width
 
-        if padding.start and left_offset:
+        if padding.start and left_offset is not None:
             left_offset += padding.start
-            if cue_width:
+            if cue_width is not None:
                 cue_width -= padding.start
 
-        if padding.end and cue_width:
+        if padding.end and cue_width is not None:
             cue_width -= padding.end
 
-        if padding.before and top_offset:
+        if padding.before and top_offset is not None:
             top_offset += padding.before
 
         return left_offset, top_offset, cue_width
@@ -444,11 +448,11 @@ class WebVTTWriter(BaseWriter):
             cue_settings += f" vertical:{layout.writing_direction.value}"
         if alignment and alignment != "center":
             cue_settings += f" align:{alignment}"
-        if left_offset:
+        if left_offset is not None:
             cue_settings += f" position:{left_offset}"
-        if top_offset:
+        if top_offset is not None:
             cue_settings += f" line:{top_offset}"
-        if cue_width:
+        if cue_width is not None:
             cue_settings += f" size:{cue_width}"
 
         return cue_settings
@@ -553,10 +557,7 @@ class WebVTTWriter(BaseWriter):
 
     @staticmethod
     def _encode_illegal_characters(s):
-        """Escape characters that are illegal in WebVTT cue text.
-
-        Escapes: & → &amp;, < → &lt;, --> → --&gt; (the timing arrow
-        is forbidden inside cue payloads).
+        """Escape characters that are illegal or special in WebVTT cue text.
 
         :param s: Raw text content.
         :returns: Escaped string safe for WebVTT cue text.
@@ -564,6 +565,9 @@ class WebVTTWriter(BaseWriter):
         s = s.replace("&", "&amp;")
         s = s.replace("<", "&lt;")
         s = s.replace("-->", "--&gt;")
+        s = s.replace(" ", "&nbsp;")
+        s = s.replace("‎", "&lrm;")
+        s = s.replace("‏", "&rlm;")
         return s
 
     def _convert_structural_tag(self, content, is_start):

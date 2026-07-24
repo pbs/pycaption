@@ -659,8 +659,6 @@ class TestWebVTTInlineMarkupParsing:
         assert nodes[2].start is False
 
     def test_multiple_unclosed_tags_closed_in_reverse_order(self):
-        from pycaption.base import CaptionNode
-
         vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\n<b><i>text\n"
         captions = self.reader.read(vtt)
         cue = captions.get_captions("en-US")[0]
@@ -677,8 +675,6 @@ class TestWebVTTInlineMarkupParsing:
         assert nodes[4].start is False
 
     def test_partially_closed_tags_only_unclosed_auto_closed(self):
-        from pycaption.base import CaptionNode
-
         vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\n<b><i>text</i>\n"
         captions = self.reader.read(vtt)
         cue = captions.get_captions("en-US")[0]
@@ -1087,7 +1083,7 @@ class TestWebVTTCueBaseStylePropagation:
         result = WebVTTWriter().write(caption_set)
         assert "<i>" in result
 
-    def test_color_only_base_style_no_wrap(self):
+    def test_color_only_base_style_wraps(self):
         vtt = (
             "WEBVTT\n\n"
             "STYLE\n"
@@ -1098,7 +1094,9 @@ class TestWebVTTCueBaseStylePropagation:
         caption_set = self.reader.read(vtt)
         nodes = caption_set.get_captions("en-US")[0].nodes
         style_nodes = [n for n in nodes if n.type_ == CaptionNode.STYLE]
-        assert len(style_nodes) == 0
+        assert len(style_nodes) == 2
+        assert style_nodes[0].content == {"color": "white"}
+        assert style_nodes[0].start is True
 
 
 class TestWebVTTRoundtripPreservation:
@@ -1187,11 +1185,7 @@ class TestWebVTTLineOverflowWarning:
             assert "3 lines" in str(caption_warnings[0].message)
 
     def test_no_warning_within_bounds(self):
-        vtt = (
-            "WEBVTT\n\n"
-            "00:00:01.000 --> 00:00:03.000 line:50%\n"
-            "Single line\n"
-        )
+        vtt = "WEBVTT\n\n" "00:00:01.000 --> 00:00:03.000 line:50%\n" "Single line\n"
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
             self.reader.read(vtt)
@@ -1284,11 +1278,7 @@ class TestWebVTTRegionRoundtrip:
         assert "width:80%" in result
 
     def test_no_region_block_when_none_defined(self):
-        vtt = (
-            "WEBVTT\n\n"
-            "00:00:01.000 --> 00:00:03.000\n"
-            "Hello\n"
-        )
+        vtt = "WEBVTT\n\n" "00:00:01.000 --> 00:00:03.000\n" "Hello\n"
         caption_set = self.reader.read(vtt)
         result = WebVTTWriter().write(caption_set)
         assert "REGION" not in result
