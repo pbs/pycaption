@@ -1,3 +1,9 @@
+"""Position-tracking state machines for CEA-608 caption decoding.
+
+These trackers determine when cursor movements represent simple line breaks
+versus full repositioning commands that require splitting into a new cue.
+"""
+
 from ..exceptions import CaptionReadSyntaxError
 
 

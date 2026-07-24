@@ -152,6 +152,7 @@ py_test_files = [f for f in py_files if is_test_file(f)]
 scc_files = [f for f in py_files if re.search(r'(pycaption/scc|tests/.*scc)', f, re.I)]
 vtt_files = [f for f in py_files if re.search(r'(pycaption/(webvtt|vtt)|tests/.*(webvtt|vtt))', f, re.I)]
 dfxp_files = [f for f in py_files if re.search(r'(pycaption/(dfxp|geometry)|tests/.*(dfxp|ttml))', f, re.I)]
+sami_files = [f for f in py_files if re.search(r'(pycaption/sami|tests/.*sami)', f, re.I)]
 
 detected_flows = []
 if scc_files:
@@ -160,6 +161,8 @@ if vtt_files:
     detected_flows.append('VTT')
 if dfxp_files:
     detected_flows.append('DFXP')
+if sami_files:
+    detected_flows.append('SAMI')
 
 flow = '+'.join(detected_flows) if detected_flows else 'NONE'
 
@@ -170,6 +173,8 @@ if vtt_files:
     spec_paths['VTT'] = 'ai_artifacts/specs/vtt/vtt_specs_summary.md'
 if dfxp_files:
     spec_paths['DFXP'] = 'ai_artifacts/specs/dfxp/dfxp_specs_summary.md'
+if sami_files:
+    spec_paths['SAMI'] = 'ai_artifacts/specs/SAMI/sami_spec_summary.md'
 
 print(f"  Flow: {flow} | Source: {len(py_src_files)} | Tests: {len(py_test_files)}")
 
@@ -412,6 +417,92 @@ if 'DFXP' in flow:
                 'detail': '"</tt>" in content matches anywhere, not proper XML root validation',
                 'file': add['file'], 'lineno': add['lineno'],
                 'fix': 'Use proper XML parsing or at least check for root <tt> element'})
+
+# --- SAMI compliance checks ---
+if 'SAMI' in flow:
+    for add in scan_adds:
+        if not re.search(r'sami', add['file'].lower()):
+            continue
+        line = add['line']
+        if not is_truly_new(line):
+            continue
+
+        # RULE-TIME-001: SYNC Start attribute must use integer milliseconds
+        if re.search(r'Start\s*=', line) and re.search(r'float|str\(', line):
+            compliance_issues.append({
+                'severity': 'MEDIUM', 'rule': 'RULE-TIME-001', 'flow': 'SAMI',
+                'issue': 'SYNC Start value should be integer milliseconds',
+                'detail': 'SAMI timing uses integer millisecond values in Start= attribute',
+                'file': add['file'], 'lineno': add['lineno'],
+                'fix': 'Ensure Start= values are emitted as integers, not floats or strings'})
+
+        # RULE-TIME-003: Implicit end time — must derive from next SYNC
+        if re.search(r'end.*=.*None|end_time\s*=\s*0', line) and 'caption' in line.lower():
+            compliance_issues.append({
+                'severity': 'HIGH', 'rule': 'RULE-TIME-003', 'flow': 'SAMI',
+                'issue': 'Caption end time not derived from next SYNC block',
+                'detail': 'SAMI has no explicit end time; end must equal next SYNC Start value',
+                'file': add['file'], 'lineno': add['lineno'],
+                'fix': 'Set caption end time to the Start value of the next SYNC block'})
+
+        # RULE-LANG-001: Class attribute for language filtering
+        if re.search(r'<P\b', line, re.I) and not re.search(r'[Cc]lass\s*=', line):
+            if 'write' in add['file'].lower() and 'SYNC' in line:
+                compliance_issues.append({
+                    'severity': 'MEDIUM', 'rule': 'RULE-LANG-001', 'flow': 'SAMI',
+                    'issue': 'P element missing Class attribute for language',
+                    'detail': 'SAMI P elements must include Class= for multi-language support',
+                    'file': add['file'], 'lineno': add['lineno'],
+                    'fix': 'Add Class= attribute to P elements in writer output'})
+
+        # RULE-STY-012: Class-level styles must override P default styles
+        if re.search(r'\.get.*style|update.*style', line) and re.search(r'class', line, re.I):
+            if re.search(r'default|fallback|base', line, re.I):
+                compliance_issues.append({
+                    'severity': 'MEDIUM', 'rule': 'RULE-STY-012', 'flow': 'SAMI',
+                    'issue': 'Class styles must override P default styles',
+                    'detail': 'Per CSS specificity, .ClassName styles override P{} defaults',
+                    'file': add['file'], 'lineno': add['lineno'],
+                    'fix': 'Apply class-specific styles after base P styles to ensure override'})
+
+        # RULE-PARSE-001: Case-insensitive parsing required
+        if re.search(r'==\s*["\']SYNC["\']|==\s*["\']SAMI["\']|==\s*["\']BODY["\']', line):
+            compliance_issues.append({
+                'severity': 'HIGH', 'rule': 'RULE-PARSE-001', 'flow': 'SAMI',
+                'issue': 'Case-sensitive tag comparison',
+                'detail': 'SAMI elements are case-insensitive; comparing against uppercase only misses mixed-case input',
+                'file': add['file'], 'lineno': add['lineno'],
+                'fix': 'Use .lower() comparison or case-insensitive regex/parser'})
+
+        # RULE-ENC-002: HTML entity handling
+        if re.search(r'&amp;|&lt;|&gt;', line) and re.search(r'replace\(', line):
+            if not re.search(r'html\.unescape|unescape', line):
+                compliance_issues.append({
+                    'severity': 'LOW', 'rule': 'RULE-ENC-002', 'flow': 'SAMI',
+                    'issue': 'Manual HTML entity replacement instead of html.unescape()',
+                    'detail': 'Manual .replace() for entities is incomplete; html.unescape handles all named/numeric refs',
+                    'file': add['file'], 'lineno': add['lineno'],
+                    'fix': 'Use html.unescape() for decoding HTML entities'})
+
+        # RULE-TIME-004: nbsp as clear mechanism
+        if re.search(r'strip\(\)|\.text\b', line) and re.search(r'nbsp|\\xa0', line):
+            if re.search(r'skip|ignore|continue|discard', line, re.I):
+                compliance_issues.append({
+                    'severity': 'HIGH', 'rule': 'RULE-TIME-004', 'flow': 'SAMI',
+                    'issue': 'Discarding nbsp clear events instead of processing them',
+                    'detail': '&nbsp; in a P element signals display clear, not empty content to skip',
+                    'file': add['file'], 'lineno': add['lineno'],
+                    'fix': 'Treat &nbsp;-only P elements as caption-clear events'})
+
+        # IMPL-011: Timing order validation
+        if re.search(r'Start\s*=|start_time', line) and re.search(r'<|>', line):
+            if re.search(r'start.*<.*0|negative', line, re.I):
+                compliance_issues.append({
+                    'severity': 'MEDIUM', 'rule': 'IMPL-011', 'flow': 'SAMI',
+                    'issue': 'Negative timing values not validated',
+                    'detail': 'SYNC Start values must be non-negative and monotonically non-decreasing',
+                    'file': add['file'], 'lineno': add['lineno'],
+                    'fix': 'Validate Start >= 0 and Start(n) >= Start(n-1)'})
 
 print(f"  Found: {len(compliance_issues)} NEW compliance issues")
 
@@ -943,7 +1034,7 @@ Pre-existing issues in unchanged code are not reported.
 """
 
 if flow == 'NONE':
-    report += "No SCC/VTT/DFXP source files changed - compliance check not applicable.\n\n"
+    report += "No SCC/VTT/DFXP/SAMI source files changed - compliance check not applicable.\n\n"
 elif compliance_issues:
     report += f"**{len(compliance_issues)} new compliance issue(s) found:**\n\n"
     for i, issue in enumerate(compliance_issues, 1):

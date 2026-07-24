@@ -1,3 +1,9 @@
+"""SCC (Scenarist Closed Captions) writer for CEA-608 caption encoding.
+
+Converts CaptionSet objects to SCC format, supporting pop-on, roll-up,
+and paint-on caption modes with proper timing, positioning, and styling.
+"""
+
 import math
 import textwrap
 from copy import deepcopy
@@ -57,6 +63,14 @@ def _skip_consumed_spaces(line_text, offset, wrap_line):
 
 
 class SCCWriter(BaseWriter):
+    """Converts a CaptionSet into SCC (Scenarist Closed Captions) format.
+
+    Supports pop-on, roll-up, and paint-on CEA-608 modes. Handles
+    timing adjustment (backshift for buffer write time), positioning via PAC
+    codes, text styling via mid-row codes, and both drop-frame and
+    non-drop-frame timecode formats.
+    """
+
     def __init__(self, *args, drop_frame=False, **kw):
         super().__init__(*args, **kw)
         self.drop_frame = drop_frame

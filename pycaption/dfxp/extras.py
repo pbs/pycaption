@@ -1,3 +1,9 @@
+"""Extra DFXP/TTML writer variants.
+
+Provides SinglePositioningDFXPWriter (forces uniform positioning) and
+LegacyDFXPWriter (frozen 0.4.5-era output used by skylab).
+"""
+
 from copy import deepcopy
 from xml.sax.saxutils import escape
 

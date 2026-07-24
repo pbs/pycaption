@@ -1,3 +1,5 @@
+"""Human-readable translation of raw SCC hex codes for debugging purposes."""
+
 from pycaption.scc.constants import ALL_CHARACTERS, COMMAND_LABELS
 
 

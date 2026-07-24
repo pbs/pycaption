@@ -1,3 +1,11 @@
+"""CEA-608 / SCC control codes, character maps, and positioning tables.
+
+This module defines the hex-to-meaning lookup tables used by the SCC reader
+and writer: control commands, printable characters (standard, special, and
+extended), Preamble Address Code (PAC) positioning maps, mid-row style codes,
+background color codes, and derived inverse lookup tables.
+"""
+
 import re as _re
 from itertools import product
 
@@ -1255,6 +1263,11 @@ PAC_TAB_OFFSET_COMMANDS = {"97a1": 1, "97a2": 2, "9723": 3}
 
 
 def _create_position_to_bytes_map(bytes_to_pos):
+    """Invert PAC_BYTES_TO_POSITIONING_MAP so position -> byte pairs.
+
+    Returns a dict keyed by row, then column, whose values are tuples of
+    (high_byte, low_byte) pairs that encode that position.
+    """
     result = {}
     for high_byte, low_byte_dict in list(bytes_to_pos.items()):
         # must contain mappings to column, to the tuple of possible values
@@ -1275,6 +1288,10 @@ POSITIONING_TO_PAC_MAP = _create_position_to_bytes_map(PAC_BYTES_TO_POSITIONING_
 
 
 def _restructure_bytes_to_position_map(byte_to_pos_map):
+    """Flatten the tuple-keyed nested dict into direct lookups.
+
+    Transforms high_byte -> low_byte -> (row, col) for O(1) access.
+    """
     return {
         k_: {
             low_byte: byte_to_pos_map[k_][low_byte_list]

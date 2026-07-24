@@ -1,3 +1,9 @@
+"""MicroDVD caption format reader and writer.
+
+MicroDVD uses frame-based timing: {start_frame}{end_frame}text|text.
+A special line {0}{0}fps_value sets the framerate (default 25 fps).
+"""
+
 import re
 from copy import deepcopy
 
@@ -19,10 +25,19 @@ from .exceptions import (
 
 
 class MicroDVDReader(BaseReader):
+    """Reads MicroDVD subtitle files into a CaptionSet."""
+
     def detect(self, content):
+        """Return True if content starts with MicroDVD frame markers."""
         return re.match(r"{\d+}{\d+}", content) is not None
 
     def read(self, content, lang=DEFAULT_LANGUAGE_CODE):
+        """Parse MicroDVD content into a CaptionSet.
+
+        :param content: Raw MicroDVD file content.
+        :param lang: Language code to assign.
+        :rtype: CaptionSet
+        """
         if not isinstance(content, str):
             raise InvalidInputError("The content is not a unicode string.")
 
@@ -72,11 +87,19 @@ class MicroDVDReader(BaseReader):
         return caption_set
 
     def _framestomicro(self, framenum, fps=25.0):
+        """Convert a frame number to microseconds."""
         return int(framenum / fps * (10**6))
 
 
 class MicroDVDWriter(BaseWriter):
+    """Serializes a CaptionSet to MicroDVD format."""
+
     def write(self, caption_set):
+        """Write a CaptionSet as a MicroDVD string.
+
+        :type caption_set: CaptionSet
+        :rtype: str
+        """
         caption_set = deepcopy(caption_set)
 
         captions = []
@@ -87,9 +110,11 @@ class MicroDVDWriter(BaseWriter):
         return "".join(captions)
 
     def _microtoframes(self, micro, fps=25.0):
+        """Convert microseconds to a frame number."""
         return int(micro * fps / (10**6))
 
     def _recreate_lang(self, captions):
+        """Serialize one language's captions to MicroDVD text."""
         sub = ""
 
         for caption in captions:
@@ -114,6 +139,7 @@ class MicroDVDWriter(BaseWriter):
         return sub
 
     def _recreate_line(self, sub, line):
+        """Append a CaptionNode's content to the output string."""
         if line.type_ == CaptionNode.TEXT:
             return sub + line.content
         elif line.type_ == CaptionNode.BREAK:

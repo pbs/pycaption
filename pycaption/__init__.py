@@ -1,7 +1,13 @@
+"""pycaption — closed caption reading/writing library.
+
+Reads captions from DFXP/TTML, SRT, SAMI, SCC, WebVTT, and MicroDVD into
+a common intermediate representation (CaptionSet), and writes them back
+to any supported format.
+"""
+
 from .base import Caption, CaptionConverter, CaptionList, CaptionNode, CaptionSet
 from .dfxp import DFXPReader, DFXPWriter
 from .exceptions import (
-    CaptionLineLengthError,
     CaptionReadError,
     CaptionReadNoCaptions,
     CaptionReadSyntaxError,
@@ -53,10 +59,15 @@ SUPPORTED_READERS = (
 
 
 def detect_format(caps):
-    """
-    Detect the format of the provided caption string.
+    """Detect the caption format of the provided string.
 
-    :returns: the reader class for the detected format.
+    Tries each reader's ``detect()`` method in order and returns the
+    first matching reader class, or None if no format matches.
+
+    :param caps: Raw caption file content.
+    :returns: The reader class for the detected format, or None.
+    :rtype: type | None
+    :raises CaptionReadNoCaptions: if caps is empty.
     """
     if not len(caps):
         raise CaptionReadNoCaptions("Empty caption file")

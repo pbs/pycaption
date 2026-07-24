@@ -63,6 +63,8 @@ class WritingDirectionEnum(Enum):
 
 
 class Alignment:
+    """Represents horizontal and vertical text alignment within a region."""
+
     def __init__(self, horizontal, vertical):
         """
         :type horizontal: HorizontalAlignmentEnum
@@ -93,6 +95,13 @@ class Alignment:
 
     @classmethod
     def from_horizontal_and_vertical_align(cls, text_align=None, display_align=None):
+        """Create an Alignment from DFXP-style textAlign/displayAlign strings.
+
+        :param text_align: One of 'left', 'start', 'center', 'right', 'end'.
+        :param display_align: One of 'before', 'center', 'after'.
+        :returns: Alignment instance, or None if both params are None.
+        :rtype: Alignment | None
+        """
         horizontal_obj = None
         vertical_obj = None
 
@@ -219,84 +228,6 @@ class Stretch(TwoDimensionalObject):
             self.horizontal.as_percentage_of(video_width=video_width),
             self.vertical.as_percentage_of(video_height=video_height),
         )
-
-
-class Region:
-    """Represents the spatial coordinates of a rectangle.
-
-    NOTE: This class is currently dead code — not imported or used anywhere in
-    the codebase. It also contains known bugs (align_from_origin returns
-    inconsistent types, add_extent method does not exist on Point). We left it
-    here because it may serve as a starting point if we ever need geometric
-    rectangle operations beyond what Layout class provides (e.g. region
-    intersection or point-in-region checks).
-    If we'll ever need it, fix the bugs first.
-    """
-
-    @classmethod
-    def from_points(cls, p1, p2):
-        """Create a rectangle, knowing 2 points on the plane.
-        We assume that p1 is in the upper left (closer to the origin)
-
-        :param p1: Point instance
-        :param p2: Point instance
-        :return: a Point instance
-        """
-        inst = cls()
-        inst._p1 = p1
-        inst._p2 = p2
-        return inst
-
-    @classmethod
-    def from_extent(cls, extent, origin):
-        """Create a rectangle, knowing its upper left origin, and
-        spatial extension
-
-        :type extent: Stretch
-        :type origin: Point
-        :return: a Point instance
-        """
-        inst = cls()
-        inst._extent = extent
-        inst._origin = origin
-        return inst
-
-    @property
-    def extent(self):
-        """How wide this rectangle stretches (horizontally and vertically)"""
-        if hasattr(self, "_extent"):
-            return self._extent
-        else:
-            return self._p1 - self._p2
-
-    @property
-    def origin(self):
-        """Out of its 4 points, returns the one closest to the origin"""
-        if hasattr(self, "_origin"):
-            return self._origin
-        else:
-            return Point.align_from_origin(self._p1, self._p2)[0]
-
-    upper_left_point = origin
-
-    @property
-    def lower_right_point(self):
-        """The point furthest from the origin from the rectangle's 4 points"""
-        if hasattr(self, "_p2"):
-            return Point.align_from_origin(self._p1, self._p2)[1]
-        else:
-            return self.origin.add_extent(self.extent)
-
-    def __eq__(self, other):
-        return (
-            other
-            and type(self) == type(other)
-            and self.extent == other.extent
-            and self.origin == other.origin
-        )
-
-    def __hash__(self):
-        return hash(hash(self.origin) * 71 + hash(self.extent) * 73 + 79)
 
 
 class Point(TwoDimensionalObject):
@@ -683,6 +614,12 @@ class Padding:
         return " ".join(string_list)
 
     def as_percentage_of(self, video_width, video_height):
+        """Convert all padding sizes to percentages of video dimensions.
+
+        :param video_width: Video width in pixels.
+        :param video_height: Video height in pixels.
+        :rtype: Padding
+        """
         return Padding(
             self.before.as_percentage_of(video_height=video_height),
             self.after.as_percentage_of(video_height=video_height),
@@ -691,6 +628,7 @@ class Padding:
         )
 
     def is_relative(self):
+        """Return True if all padding values are expressed as percentages."""
         is_relative = True
         if self.before:
             is_relative &= self.before.is_relative()
@@ -834,6 +772,12 @@ class Layout:
         return is_relative
 
     def as_percentage_of(self, video_width, video_height):
+        """Convert absolute positioning values to percentages.
+
+        :param video_width: Video width in pixels.
+        :param video_height: Video height in pixels.
+        :rtype: Layout
+        """
         params = {
             "alignment": self.alignment,
             "writing_direction": self.writing_direction,

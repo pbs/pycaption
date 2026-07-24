@@ -1,30 +1,23 @@
+"""Exception hierarchy for pycaption read/write errors."""
+
+
 class CaptionReadError(Exception):
-    """
-    Generic error raised when the reading of the caption file failed.
-    """
+    """Generic error raised when reading a caption file fails."""
 
     def __str__(self):
         return f"{self.__class__.__name__}({self.args[0]})"
 
 
 class CaptionReadNoCaptions(CaptionReadError):
-    """
-    Error raised when the provided caption file was not containing any
-    actual captions.
-    """
+    """Error raised when a caption file contains no actual captions."""
 
 
 class CaptionReadSyntaxError(CaptionReadError):
-    """
-    Error raised when the provided caption file has syntax errors and could
-    not be parsed.
-    """
+    """Error raised when a caption file has syntax errors."""
 
 
 class CaptionReadTimingError(CaptionReadError):
-    """
-    Error raised when a Caption is initialized with invalid timings.
-    """
+    """Error raised when a Caption has invalid start/end timings."""
 
 
 class RelativizationError(Exception):

@@ -109,13 +109,12 @@ from .state_machines import DefaultProvidingPositionTracker
 
 
 class NodeCreatorFactory:
-    """Will return instances of the given node_creator.
+    """Factory for InstructionNodeCreator instances sharing a position tracker.
 
-    This is used as a means of creating new InstructionNodeCreator instances,
-    because these need to share state beyond their garbage collection, but
-    storing the information at the class level is not good either, because
-    this information must be erased after the reader's .read() operation
-    completes.
+    InstructionNodeCreator instances need a shared position tracker that
+    persists across buffer resets within a single read() call, but must not
+    leak state between separate read() calls. This factory encapsulates that
+    shared state.
     """
 
     def __init__(self, position_tracker, node_creator=InstructionNodeCreator):
@@ -123,17 +122,17 @@ class NodeCreatorFactory:
         self.node_creator = node_creator
 
     def new_creator(self):
-        """Returns a new instance of self.node_creator, initialized with
-        the same italics_tracker, and position_tracker
+        """Return a new InstructionNodeCreator bound to the shared position tracker.
+
+        :rtype: InstructionNodeCreator
         """
         return self.node_creator(position_tracker=self.position_tracker)
 
     def from_list(self, roll_rows):
-        """Wraps the node_creator's method with the same name
+        """Concatenate multiple node creators into a single one.
 
-        :param roll_rows: list of node_creator instances
-
-        :return: a node_creator instance
+        :param roll_rows: list of InstructionNodeCreator instances
+        :rtype: InstructionNodeCreator
         """
         return self.node_creator.from_list(
             roll_rows, position_tracker=self.position_tracker
@@ -263,6 +262,7 @@ class SCCReader(BaseReader):
                 )
 
     def _validate_line_lengths(self):
+        """Raise CaptionLineLengthError if any line exceeds 32 characters."""
         violations = []
         for caption in self.caption_stash._collection:
             real_caption = caption.to_real_caption()
@@ -307,6 +307,7 @@ class SCCReader(BaseReader):
                 self._reset_buffer()
 
     def _translate_line(self, line):
+        """Parse a single SCC file line into timestamp and word pairs."""
         # ignore blank lines
         if line.strip() == "":
             return
@@ -332,6 +333,7 @@ class SCCReader(BaseReader):
                 self._translate_word(word=word, next_command=next_command)
 
     def _translate_word(self, word, next_command=None):
+        """Dispatch a single 4-char hex word as command, special char, or text."""
         if self._handle_double_command(word):
             # count frames for timing
             self.time_translator.increment_frames()
@@ -354,6 +356,12 @@ class SCCReader(BaseReader):
         self.time_translator.increment_frames()
 
     def _handle_double_command(self, word):
+        """Detect and skip redundant doubled commands used for error correction.
+
+        Returns True if this word is the second copy and should be skipped.
+
+        :rtype: bool
+        """
         # If the caption is to be broadcast, each of the commands are doubled
         # up for redundancy in case the signal is garbled in transmission.
         # The decoder is programmed to ignore a second command when it is the
@@ -394,6 +402,7 @@ class SCCReader(BaseReader):
         return False
 
     def _translate_special_char(self, word):
+        """Decode a special character code and add it to the active buffer."""
         self.buffer.add_chars(SPECIAL_CHARS[word])
 
     def _translate_extended_char(self, word):
@@ -411,6 +420,7 @@ class SCCReader(BaseReader):
     _ROLL_UP_DEPTH = {"9425": 2, "9426": 3, "94a7": 4}
 
     def _translate_command(self, word, next_command=None):
+        """Route a CEA-608 control command to the appropriate handler."""
         if word == "9420":
             self._cmd_pop_on()
         elif word == "9429":
@@ -429,9 +439,11 @@ class SCCReader(BaseReader):
             self.buffer.interpret_command(command=word, next_command=next_command)
 
     def _cmd_pop_on(self):
+        """Handle Resume Caption Loading [RCL] - switch to pop-on mode."""
         self.buffer_dict.set_active("pop")
 
     def _cmd_paint_on(self):
+        """Handle Resume Direct Captioning [RDC] - switch to paint-on mode."""
         self.buffer_dict.set_active("paint")
         self.roll_rows_expected = 1
         if not self.buffer.is_empty():
@@ -442,6 +454,7 @@ class SCCReader(BaseReader):
         self.time = self.time_translator.get_time()
 
     def _cmd_roll_up(self, word):
+        """Handle Roll-Up command [RU2/RU3/RU4] - switch to roll-up mode."""
         self.buffer_dict.set_active("roll")
         prev_rows = self.roll_rows_expected
         self.roll_rows_expected = self._ROLL_UP_DEPTH[word]
@@ -459,9 +472,11 @@ class SCCReader(BaseReader):
         self.time = self.time_translator.get_time()
 
     def _cmd_erase_non_displayed(self):
+        """Handle Erase Non-Displayed Memory [ENM] - clear the write buffer."""
         self._reset_buffer()
 
     def _cmd_end_of_caption(self):
+        """Handle End Of Caption [EOC] - queue buffer for display."""
         self.time = self.time_translator.get_time()
         if self.pop_ons_queue:
             self._pop_on(end=self.time)
@@ -472,10 +487,12 @@ class SCCReader(BaseReader):
         self._reset_buffer()
 
     def _cmd_carriage_return(self):
+        """Handle Carriage Return [CR] - roll up the current buffer."""
         if not self.buffer.is_empty():
             self._roll_up()
 
     def _cmd_erase_displayed(self):
+        """Handle Erase Displayed Memory [EDM] - finalize visible captions."""
         edm_time = self.time_translator.get_time()
         if self.pop_ons_queue:
             self._pop_on(end=edm_time)
@@ -500,10 +517,12 @@ class SCCReader(BaseReader):
             self.time = edm_time
 
     def _reset_buffer(self):
+        """Replace the active buffer with a fresh creator and reset position state."""
         self.buffer = self.node_creator_factory.new_creator()
         self.node_creator_factory.position_tracker.reset_for_new_caption()
 
     def _translate_characters(self, word):
+        """Decode a 4-char hex word as two printable characters."""
         # split word into the 2 bytes
         byte1 = word[:2]
         byte2 = word[2:]
@@ -532,6 +551,7 @@ class SCCReader(BaseReader):
             pass
 
     def _roll_up(self):
+        """Flush the roll-up buffer as a caption and prepare for the next row."""
         # We expect the active buffer to be the roll buffer
         if self.simulate_roll_up:
             if self.roll_rows_expected > 1:
@@ -557,6 +577,7 @@ class SCCReader(BaseReader):
         self.caption_stash.correct_last_timing(self.time, force=True)
 
     def _pop_on(self, end=0):
+        """Dequeue and store the oldest pop-on cue as a finalized caption."""
         pop_on_cue = self.pop_ons_queue.pop()
         self.caption_stash.create_and_store(
             pop_on_cue.buffer, pop_on_cue.start, end, caption_mode="pop_on"

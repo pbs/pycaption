@@ -169,7 +169,7 @@ class TestWebVTTInlineMarkupRoundTrip:
         vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:05.000\n" "Hello <00:00:02.500>world\n"
         caption_set = WebVTTReader().read(vtt)
         result = WebVTTWriter().write(caption_set)
-        assert "<00:02.500>" in result
+        assert "<00:00:02.500>" in result
         assert "Hello" in result
         assert "world" in result
 
@@ -197,6 +197,35 @@ class TestWebVTTInlineMarkupRoundTrip:
         assert "LAUGHING" in result
         assert "He said" in result
         assert "something" in result
+
+    def test_writer_encodes_illegal_characters(self):
+        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\n" "A &amp; B &lt; C\n"
+        caption_set = WebVTTReader().read(vtt)
+        result = WebVTTWriter().write(caption_set)
+        assert "A &amp; B &lt; C" in result
+
+        assert WebVTTWriter._encode_illegal_characters("-->") == "--&gt;"
+
+    def test_writer_encodes_entities_nbsp_lrm_rlm(self):
+        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\n" "word gap ‎ltr ‏rtl\n"
+        caption_set = WebVTTReader().read(vtt)
+        result = WebVTTWriter().write(caption_set)
+        assert "word&nbsp;gap" in result
+        assert "&lrm;ltr" in result
+        assert "&rlm;rtl" in result
+
+    def test_writer_timestamp_always_has_hours(self):
+        vtt = "WEBVTT\n\n00:01.000 --> 00:05.000\nShort\n"
+        caption_set = WebVTTReader().read(vtt)
+        result = WebVTTWriter().write(caption_set)
+        lines = result.strip().splitlines()
+        timing_line = next(line for line in lines if "-->" in line)
+        parts = timing_line.split(" --> ")
+        for ts in parts:
+            ts_clean = ts.split()[0]
+            assert re.match(
+                r"\d{2}:\d{2}:\d{2}\.\d{3}$", ts_clean
+            ), f"Timestamp {ts_clean} missing hours component"
 
 
 class TestWebVTTStyleCrossFormat:
@@ -518,3 +547,123 @@ class TestWebVTTtoDFXPStyles:
 
         etree.fromstring(result.encode("utf-8"))
         assert "classes" not in result
+
+
+class TestNestedSpanSupport:
+    def test_nested_bold_italic_to_dfxp(self):
+        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\n<b><i>both</i></b>\n"
+        caption_set = WebVTTReader().read(vtt)
+        result = DFXPWriter().write(caption_set)
+
+        assert 'tts:fontWeight="bold"' in result
+        assert 'tts:fontStyle="italic"' in result
+        assert "both" in result
+
+    def test_nested_bold_italic_to_sami(self):
+        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\n<b><i>both</i></b>\n"
+        caption_set = WebVTTReader().read(vtt)
+        result = SAMIWriter().write(caption_set)
+
+        assert "font-weight:bold;" in result
+        assert "font-style:italic;" in result
+        assert "both" in result
+
+    def test_nested_class_and_italic_to_dfxp(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "STYLE\n"
+            "::cue(.yellow) { color: yellow }\n\n"
+            "00:00:01.000 --> 00:00:03.000\n"
+            "<c.yellow><i>styled</i></c>\n"
+        )
+        caption_set = WebVTTReader().read(vtt)
+        result = DFXPWriter().write(caption_set)
+
+        assert 'tts:color="yellow"' in result
+        assert 'tts:fontStyle="italic"' in result
+        assert "styled" in result
+
+    def test_nested_class_and_italic_to_sami(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "STYLE\n"
+            "::cue(.yellow) { color: yellow }\n\n"
+            "00:00:01.000 --> 00:00:03.000\n"
+            "<c.yellow><i>styled</i></c>\n"
+        )
+        caption_set = WebVTTReader().read(vtt)
+        result = SAMIWriter().write(caption_set)
+
+        assert 'class="yellow"' in result
+        assert "font-style:italic;" in result
+        assert "styled" in result
+
+    def test_triple_nesting_to_dfxp(self):
+        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\n<b><i><u>all</u></i></b>\n"
+        caption_set = WebVTTReader().read(vtt)
+        result = DFXPWriter().write(caption_set)
+
+        assert 'tts:fontWeight="bold"' in result
+        assert 'tts:fontStyle="italic"' in result
+        assert 'tts:textDecoration="underline"' in result
+        assert "all" in result
+
+
+class TestGlobalCueColorPropagation:
+    def test_global_color_reaches_dfxp(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "STYLE\n"
+            "::cue { color: white }\n\n"
+            "00:00:01.000 --> 00:00:03.000\n"
+            "Plain text\n"
+        )
+        caption_set = WebVTTReader().read(vtt)
+        result = DFXPWriter().write(caption_set)
+
+        assert 'tts:color="white"' in result
+        assert "Plain text" in result
+
+    def test_global_color_reaches_sami(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "STYLE\n"
+            "::cue { color: white }\n\n"
+            "00:00:01.000 --> 00:00:03.000\n"
+            "Plain text\n"
+        )
+        caption_set = WebVTTReader().read(vtt)
+        result = SAMIWriter().write(caption_set)
+
+        assert "color:white;" in result
+        assert "Plain text" in result
+
+    def test_global_background_color_reaches_dfxp(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "STYLE\n"
+            "::cue { background-color: black }\n\n"
+            "00:00:01.000 --> 00:00:03.000\n"
+            "Text on black\n"
+        )
+        caption_set = WebVTTReader().read(vtt)
+        result = DFXPWriter().write(caption_set)
+
+        assert 'tts:backgroundColor="black"' in result
+
+    def test_class_override_not_double_wrapped(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "STYLE\n"
+            "::cue { color: white }\n"
+            "::cue(.highlight) { color: red }\n\n"
+            "00:00:01.000 --> 00:00:03.000\n"
+            "<c.highlight>Highlighted</c>\n"
+        )
+        caption_set = WebVTTReader().read(vtt)
+        nodes = caption_set.get_captions("en-US")[0].nodes
+        from pycaption.base import CaptionNode
+
+        style_opens = [n for n in nodes if n.type_ == CaptionNode.STYLE and n.start]
+        assert len(style_opens) == 1
+        assert style_opens[0].content.get("color") == "red"

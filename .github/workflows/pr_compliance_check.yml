@@ -164,7 +164,7 @@ jobs:
           slack-text: |
             :white_check_mark: *PR #${{ env.PR_NUMBER }} - No Caption Changes*
 
-            No SCC/VTT/DFXP files changed - compliance check skipped
+            No SCC/VTT/DFXP/SAMI files changed - compliance check skipped
 
             Triggered by: *${{ github.actor }}*
 

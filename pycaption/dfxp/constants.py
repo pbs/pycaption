@@ -1,3 +1,9 @@
+"""Constants for the DFXP/TTML reader and writer.
+
+Defines default styles, regions, time-expression patterns, alignment
+mappings, and frame-rate defaults used throughout the DFXP package.
+"""
+
 import re
 
 from ..geometry import Alignment, HorizontalAlignmentEnum, Layout, VerticalAlignmentEnum

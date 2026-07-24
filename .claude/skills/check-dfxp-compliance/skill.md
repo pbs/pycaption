@@ -40,7 +40,9 @@ latest_spec = max(spec_files, key=os.path.getmtime)
 with open(latest_spec) as _f: spec = _f.read()
 
 impl_files = [
-    'pycaption/dfxp/base.py',
+    'pycaption/dfxp/reader.py',
+    'pycaption/dfxp/writer.py',
+    'pycaption/dfxp/constants.py',
     'pycaption/dfxp/extras.py',
     'pycaption/dfxp/__init__.py',
     'pycaption/geometry.py',
@@ -51,8 +53,10 @@ for f in impl_files:
         with open(f) as _fh: impl_content[f] = _fh.read()
 impl = "\n".join(impl_content.values())
 
-# Separate base.py for function-level checks
-base_content = impl_content.get('pycaption/dfxp/base.py', '')
+# Separate reader/writer for function-level checks
+reader_content = impl_content.get('pycaption/dfxp/reader.py', '')
+writer_content = impl_content.get('pycaption/dfxp/writer.py', '')
+base_content = reader_content + "\n" + writer_content
 extras_content = impl_content.get('pycaption/dfxp/extras.py', '')
 geometry_content = impl_content.get('pycaption/geometry.py', '')
 
@@ -75,12 +79,12 @@ print(f"[INIT] Extracted {len(all_rules)} rules from spec")
 
 # ===== SANITY CHECK: Verify expected code landmarks exist =====
 landmarks = {
-    'class DFXPReader': ('pycaption/dfxp/base.py', r'class\s+DFXPReader\b'),
-    'class DFXPWriter': ('pycaption/dfxp/base.py', r'class\s+DFXPWriter\b'),
-    'def detect (DFXPReader)': ('pycaption/dfxp/base.py', r'def\s+detect\b'),
-    'def read (DFXPReader)': ('pycaption/dfxp/base.py', r'def\s+read\b'),
-    '_convert_style function': ('pycaption/dfxp/base.py', r'def\s+_convert_style\b'),
-    '_recreate_style function': ('pycaption/dfxp/base.py', r'def\s+_recreate_style\b'),
+    'class DFXPReader': ('pycaption/dfxp/reader.py', r'class\s+DFXPReader\b'),
+    'class DFXPWriter': ('pycaption/dfxp/writer.py', r'class\s+DFXPWriter\b'),
+    'def detect (DFXPReader)': ('pycaption/dfxp/reader.py', r'def\s+detect\b'),
+    'def read (DFXPReader)': ('pycaption/dfxp/reader.py', r'def\s+read\b'),
+    '_convert_style function': ('pycaption/dfxp/reader.py', r'def\s+_convert_style\b'),
+    '_recreate_style function': ('pycaption/dfxp/writer.py', r'def\s+_recreate_style\b'),
     'class SinglePositioningDFXPWriter': ('pycaption/dfxp/extras.py', r'class\s+SinglePositioningDFXPWriter\b'),
     'class Layout': ('pycaption/geometry.py', r'class\s+Layout\b'),
 }
@@ -115,22 +119,23 @@ print("=" * 60)
 deep_results = {}
 
 # RULE-DOC-001: Root tt element detection
-# detect() uses: "</tt>" in content.lower() — substring check, not XML root validation
-has_detect = bool(re.search(r'def detect.*\n.*</tt>.*in.*content', base_content, re.I))
-has_root_validate = bool(re.search(r'root.*tag.*!=.*tt|getroot.*!=.*tt|raise.*root.*element', base_content))
+# OCTO-11531: detect() now uses regex requiring both <tt> and </tt> to eliminate false positives
+has_detect = bool(re.search(r'def detect', base_content))
+has_regex_detect = bool(re.search(r're\.search.*<tt|re\.compile.*<tt.*</tt>', base_content))
+has_root_validate = bool(re.search(r'root.*tag.*!=.*tt|getroot.*!=.*tt|raise.*root.*element|<tt.*</tt>', base_content))
 deep_results['RULE-DOC-001'] = {
     'name': 'Root tt element detection',
     'detected': has_detect,
-    'validated': has_root_validate,
-    'note': 'detect() uses substring "</tt>" in content.lower() — matches tt anywhere, not root validation',
+    'validated': has_regex_detect or has_root_validate,
+    'note': 'detect() uses regex requiring both <tt> and </tt> (OCTO-11531)' if has_regex_detect else 'detect() uses substring check',
 }
-if has_detect and not has_root_validate:
+if has_detect and not has_regex_detect and not has_root_validate:
     issues['partial_validation'].append({
         'rule_id': 'RULE-DOC-001', 'name': 'Root tt element detection',
         'status': 'DETECTED_NOT_VALIDATED', 'severity': 'SHOULD',
-        'note': 'detect() uses "</tt>" in content.lower() (substring), not proper root element check',
+        'note': 'detect() uses simple substring check, not proper root element validation',
     })
-print(f"  RULE-DOC-001: {'PASS' if has_root_validate else 'DETECTION ONLY'}")
+print(f"  RULE-DOC-001: {'PASS (regex)' if has_regex_detect else 'PASS' if has_root_validate else 'DETECTION ONLY'}")
 
 # RULE-DOC-003: xml:lang attribute
 # Reads: dfxp_document.tt.attrs.get("xml:lang", DEFAULT_LANGUAGE_CODE)
@@ -165,32 +170,33 @@ deep_results['RULE-TIME-001'] = {
 print(f"  RULE-TIME-001: {'PASS' if has_clock_error else 'FAIL'}")
 
 # RULE-TIME-002: Clock-time frames
-# Hardcoded: int(frames) / 30 * MICROSECONDS_PER_UNIT["seconds"]
-# No ttp:frameRate support
+# OCTO-11531: Now reads ttp:frameRate and ttp:frameRateMultiplier from <tt> element
 has_frame_parse = bool(re.search(r'clock_time_match\.group.*"frames"', base_content))
-has_frame_rate_param = bool(re.search(r'frameRate|frame_rate|ttp:frameRate', base_content))
+has_frame_rate_param = bool(re.search(r'ttp:frameRate|frame_rate|_effective_frame_rate', base_content))
+has_dynamic_framerate = bool(re.search(r'frameRateMultiplier|_effective_frame_rate|frame_rate\s*\*', base_content))
 deep_results['RULE-TIME-002'] = {
     'name': 'Clock-time frames',
     'detected': has_frame_parse,
-    'validated': False,
-    'note': 'Frames parsed but divided by hardcoded 30 (not ttp:frameRate). No frame rate parameter support.',
+    'validated': has_frame_rate_param and has_dynamic_framerate,
+    'note': 'Frames parsed using dynamic frame rate from ttp:frameRate * ttp:frameRateMultiplier.' if has_dynamic_framerate else 'Frames parsed but hardcoded /30.',
 }
-if has_frame_parse:
+if has_frame_parse and not has_frame_rate_param:
     issues['validation_gaps'].append({
         'rule_id': 'RULE-TIME-002', 'name': 'Clock-time frames hardcoded to /30',
         'status': 'HARDCODED_FRAME_RATE', 'severity': 'MUST',
         'note': 'int(frames) / 30 * MICROSECONDS_PER_UNIT["seconds"] — ignores ttp:frameRate',
     })
-print(f"  RULE-TIME-002: HARDCODED /30 (no ttp:frameRate)")
+print(f"  RULE-TIME-002: {'DYNAMIC FRAME RATE' if has_dynamic_framerate else 'HARDCODED /30'}")
 
 # RULE-TIME-014: Frame timing requires ttp:frameRate
-# Code never reads ttp:frameRate from the document
-has_framerate_read = bool(re.search(r'ttp:frameRate|attrib.*frameRate|get.*frameRate', base_content))
+# OCTO-11531: Now reads ttp:frameRate and ttp:frameRateMultiplier from <tt> element
+has_framerate_read = bool(re.search(r'ttp:frameRate|attrib.*frameRate|get.*frameRate|frame_rate', base_content))
+has_multiplier_read = bool(re.search(r'frameRateMultiplier|frame_rate_multiplier', base_content))
 deep_results['RULE-TIME-014'] = {
     'name': 'ttp:frameRate parameter',
-    'detected': False,
-    'validated': False,
-    'note': 'ttp:frameRate is never read from the document. Frame division always uses /30.',
+    'detected': has_framerate_read,
+    'validated': has_framerate_read and has_multiplier_read,
+    'note': 'ttp:frameRate and ttp:frameRateMultiplier read from <tt> element, applied to frame-based timestamps.' if has_framerate_read else 'Not read.',
 }
 if not has_framerate_read:
     issues['validation_gaps'].append({
@@ -198,24 +204,26 @@ if not has_framerate_read:
         'status': 'NOT_IMPLEMENTED', 'severity': 'MUST',
         'note': 'Code never reads ttp:frameRate. Default 30fps used always.',
     })
-print(f"  RULE-TIME-014: NOT_IMPLEMENTED")
+print(f"  RULE-TIME-014: {'IMPLEMENTED' if has_framerate_read else 'NOT_IMPLEMENTED'}")
 
 # RULE-TIME-009: Offset tick time
-# _convert_time_count_to_microseconds raises NotImplementedError for metric "t"
+# OCTO-11531: Now implements tick metric with ttp:tickRate support
+has_tick_impl = bool(re.search(r'metric.*==.*"t".*tick_rate|tick_rate.*microseconds|MICROSECONDS_PER_UNIT.*tick', base_content))
 has_tick_error = bool(re.search(r'NotImplementedError.*tick', base_content))
+has_tickrate_read = bool(re.search(r'ttp:tickRate|tickRate|tick_rate', base_content))
 deep_results['RULE-TIME-009'] = {
     'name': 'Offset tick time',
     'detected': True,
-    'validated': False,
-    'note': 'Raises NotImplementedError("The tick metric...is not currently implemented.")',
+    'validated': has_tick_impl or has_tickrate_read,
+    'note': 'Tick metric implemented with ttp:tickRate support.' if (has_tick_impl or has_tickrate_read) else 'Raises NotImplementedError.',
 }
-if has_tick_error:
+if has_tick_error and not has_tick_impl and not has_tickrate_read:
     issues['validation_gaps'].append({
         'rule_id': 'RULE-TIME-009', 'name': 'Offset tick time raises NotImplementedError',
         'status': 'NOT_IMPLEMENTED', 'severity': 'SHOULD',
         'note': 'Code recognizes tick metric but raises NotImplementedError instead of computing',
     })
-print(f"  RULE-TIME-009: NotImplementedError")
+print(f"  RULE-TIME-009: {'IMPLEMENTED' if (has_tick_impl or has_tickrate_read) else 'NotImplementedError'}")
 
 # IMPL-003: Style resolver cascade
 # _get_style_reference_chain follows style references recursively
@@ -348,22 +356,40 @@ m = re.search(r'def _convert_style\b.*?(?=\ndef |\nclass )', base_content, re.DO
 if m:
     convert_style_section = m.group(0)
 
-# RULE-STY-002: tts:backgroundColor — not supported at all
+# RULE-STY-002: tts:backgroundColor
+# OCTO-11514: Writer now emits tts:backgroundColor on spans/styles from WebVTT/SAMI sources
 has_bg_read = bool(re.search(r'tts:backgroundColor|background.?[Cc]olor', convert_style_section if convert_style_section else base_content))
-has_bg_write = bool(re.search(r'tts:backgroundColor|background.?[Cc]olor', recreate_style_code))
+has_bg_write = bool(re.search(r'tts:backgroundColor|background.?[Cc]olor', recreate_style_code + "\n" + writer_content))
 deep_results['RULE-STY-002'] = {
-    'name': 'tts:backgroundColor not implemented',
-    'detected': has_bg_read,
+    'name': 'tts:backgroundColor',
+    'detected': has_bg_read or has_bg_write,
     'validated': has_bg_write,
-    'note': 'tts:backgroundColor not read by _convert_style and not written by _recreate_style. Common TTML attribute entirely missing.',
+    'note': 'Writer emits tts:backgroundColor (OCTO-11514).' if has_bg_write else 'Not implemented.',
 }
-if not has_bg_read:
+if not has_bg_read and not has_bg_write:
     issues['validation_gaps'].append({
         'rule_id': 'RULE-STY-002', 'name': 'tts:backgroundColor not implemented',
         'status': 'NOT_IMPLEMENTED', 'severity': 'SHOULD',
-        'note': '_convert_style has no case for tts:backgroundColor. _recreate_style does not write it. Completely missing.',
+        'note': '_convert_style has no case for tts:backgroundColor. _recreate_style does not write it.',
     })
-print(f"  RULE-STY-002: {'PASS' if has_bg_read else 'NOT IMPLEMENTED'}")
+print(f"  RULE-STY-002: {'PASS' if has_bg_write else 'NOT IMPLEMENTED'}")
+
+# IMPL-SPAN-001: Writer uses stack-based nesting for spans (not flat boolean)
+has_span_stack = bool(re.search(r'_span_stack\s*=\s*\[\]', writer_content))
+has_old_open_span = bool(re.search(r'self\.open_span\s*=\s*(True|False)', writer_content))
+deep_results['IMPL-SPAN-001'] = {
+    'name': 'Writer nested span support (stack-based)',
+    'detected': has_span_stack or has_old_open_span,
+    'validated': has_span_stack and not has_old_open_span,
+    'note': 'Writer uses open_span boolean — nested spans collapse to flat.' if has_old_open_span and not has_span_stack else '',
+}
+if has_old_open_span and not has_span_stack:
+    issues['partial_validation'].append({
+        'rule_id': 'IMPL-SPAN-001', 'name': 'Nested spans not supported in writer',
+        'status': 'FLAT_SPAN_ONLY', 'severity': 'SHOULD',
+        'note': 'Writer uses self.open_span boolean: each new span closes the previous. Nested <b><i>text</i></b> collapses to single span.',
+    })
+print(f"  IMPL-SPAN-001: {'STACK-BASED (nested OK)' if has_span_stack and not has_old_open_span else 'FLAT BOOLEAN — nesting broken'}")
 
 # RULE-STY-005: fontStyle only handles "italic", ignores "oblique"/"normal"
 has_fontstyle_italic = bool(re.search(r'tts:fontstyle.*==.*italic|fontstyle.*italic', base_content, re.I))
@@ -579,9 +605,9 @@ styling_coverage = {
         'note': 'Full round-trip (raw string passthrough)',
     },
     'tts:backgroundColor': {
-        'read': False,
-        'write': False,
-        'note': 'Not implemented',
+        'read': bool(re.search(r'tts:backgroundcolor', reader_section, re.I)),
+        'write': bool(re.search(r'tts:backgroundColor', recreate_fn + base_content)),
+        'note': 'Round-trip via _convert_style + _recreate_style',
     },
     'tts:fontSize':       {
         'read': bool(re.search(r'tts:fontsize', reader_section, re.I)),
@@ -614,7 +640,11 @@ styling_coverage = {
         'note': 'READ-ONLY: Reader detects underline, writer silently drops it',
     },
     'tts:direction':      {'read': False, 'write': False, 'note': 'Not implemented'},
-    'tts:writingMode':    {'read': False, 'write': False, 'note': 'Not implemented'},
+    'tts:writingMode':    {
+        'read': bool(re.search(r'tts:writingMode|writingMode|_DFXP_WRITING_MODE_MAP', base_content, re.I)),
+        'write': bool(re.search(r'tts:writingMode|writing_direction', base_content)),
+        'note': 'Read via _DFXP_WRITING_MODE_MAP, write via _WRITING_DIRECTION_TO_DFXP',
+    },
     'tts:display':        {'read': False, 'write': False, 'note': 'Not implemented (distinct from tts:displayAlign)'},
     'tts:displayAlign':   {
         'read': bool(re.search(r'tts:displayAlign', base_content)),
@@ -661,7 +691,7 @@ time_coverage = {
     },
     'Clock-time frames (HH:MM:SS:FF)': {
         'supported': bool(re.search(r'clock_time_match.*frames', base_content)),
-        'note': 'Parsed but hardcoded /30 (ignores ttp:frameRate)',
+        'note': 'Parsed with dynamic frame rate from ttp:frameRate' if bool(re.search(r'_effective_frame_rate|frame_rate\s*\*', base_content)) else 'Parsed but hardcoded /30',
     },
     'Offset hours (Nh)': {
         'supported': bool(re.search(r'metric.*==.*"h"', base_content)),
@@ -681,11 +711,11 @@ time_coverage = {
     },
     'Offset frames (Nf)': {
         'supported': bool(re.search(r'metric.*==.*"f"', base_content)),
-        'note': 'Parsed but hardcoded /30 (ignores ttp:frameRate)',
+        'note': 'Parsed with dynamic frame rate from ttp:frameRate' if bool(re.search(r'_effective_frame_rate|frame_rate\s*\*', base_content)) else 'Parsed but hardcoded /30',
     },
     'Offset ticks (Nt)': {
-        'supported': False,
-        'note': 'Raises NotImplementedError',
+        'supported': bool(re.search(r'tick_rate|ttp:tickRate', base_content)),
+        'note': 'Supported via ttp:tickRate (OCTO-11531)' if bool(re.search(r'tick_rate|ttp:tickRate', base_content)) else 'Raises NotImplementedError',
     },
 }
 
@@ -714,10 +744,10 @@ print(f"  Content elements: {elem_read}/11 read, {elem_write}/11 write")
 # Parameter attributes — check if actually read FROM document
 param_coverage = {
     'ttp:timeBase':             {'read': False, 'note': 'Not read (media assumed)'},
-    'ttp:frameRate':            {'read': False, 'note': 'Not read (hardcoded /30)'},
+    'ttp:frameRate':            {'read': bool(re.search(r'ttp:frameRate|frame_rate', base_content)), 'note': 'Read from <tt> element (OCTO-11531)' if bool(re.search(r'ttp:frameRate', base_content)) else 'Not read'},
     'ttp:subFrameRate':         {'read': False, 'note': 'Not implemented'},
-    'ttp:frameRateMultiplier':  {'read': False, 'note': 'Not implemented'},
-    'ttp:tickRate':             {'read': False, 'note': 'Not read (tick raises NotImplementedError)'},
+    'ttp:frameRateMultiplier':  {'read': bool(re.search(r'frameRateMultiplier', base_content)), 'note': 'Read from <tt> element (OCTO-11531)' if bool(re.search(r'frameRateMultiplier', base_content)) else 'Not implemented'},
+    'ttp:tickRate':             {'read': bool(re.search(r'ttp:tickRate|tick_rate', base_content)), 'note': 'Read from <tt> element (OCTO-11531)' if bool(re.search(r'tickRate', base_content)) else 'Not read'},
     'ttp:dropMode':             {'read': False, 'note': 'Not implemented'},
     'ttp:clockMode':            {'read': False, 'note': 'Not implemented'},
     'ttp:markerMode':           {'read': False, 'note': 'Not implemented'},
@@ -946,21 +976,57 @@ report += f"""
 
 ## 6. Key Findings
 
-1. **Frame rate hardcoded to /30**: Both clock-time frames (HH:MM:SS:FF) and offset frames (Nf) divide by 30. The code never reads `ttp:frameRate` from the document. This affects any TTML file with non-30fps frame references.
-2. **Tick time raises NotImplementedError**: `_convert_time_count_to_microseconds` recognizes the `t` metric but raises `NotImplementedError` instead of computing. Also can't compute without `ttp:tickRate` (which is never read).
-3. **Zero ttp: parameters read from document**: None of the 11 TTML parameter attributes (ttp:timeBase, ttp:frameRate, ttp:tickRate, ttp:cellResolution, etc.) are actually read from the input. All use hardcoded defaults.
-4. **fontWeight (bold) and textDecoration (underline) are READ-ONLY**: Reader correctly detects these attributes, but `_recreate_style()` has no case for "bold" or "underline" keys — they are silently dropped on write. Round-trip DFXP→pycaption→DFXP loses bold and underline styling.
-5. **tts:display is NOT implemented** (distinct from tts:displayAlign which IS implemented). Previous audit had a false positive where `tts:display` pattern matched `tts:displayAlign` as a substring.
-6. **xml:lang reads with silent fallback**: `dfxp_document.tt.attrs.get("xml:lang", DEFAULT_LANGUAGE_CODE)` falls back to "en" silently. No BCP-47 validation of the language code.
-7. **Color passed through as raw string**: `tts:color` is read and written but never parsed or validated. Named colors, hex, and rgba() formats are all passed through without checking.
-8. **Style chaining IS implemented**: `_get_style_reference_chain` follows style references recursively, with duplicate xml:id detection raising `CaptionReadSyntaxError`.
-9. **Region resolution IS implemented**: Full ancestor→descendant lookup via `_determine_region_id`, region creation via `RegionCreator`, and unused region cleanup.
-10. **detect() uses substring check**: `"</tt>" in content.lower()` matches anywhere in the content, not proper XML root validation.
-11. **Root tt extent validated**: `_find_root_extent` correctly requires root `tts:extent` to be in pixel units, raising `CaptionReadSyntaxError` otherwise.
-12. **Cell resolution uses hardcoded 32x15**: geometry.py's `as_percentage_of` uses 32 columns and 15 rows as default cell resolution instead of reading `ttp:cellResolution`.
-13. **5 length units supported**: px, em, %, c (cell), pt — all via `Size.from_string()` in geometry.py.
-14. **tts:backgroundColor NOT supported**: Despite being one of the most common TTML styling attributes, it's not read or written.
+"""
 
+# Generate dynamic key findings
+key_findings = []
+
+# Frame rate
+if has_dynamic_framerate:
+    key_findings.append("1. **Frame rate is dynamic (OCTO-11531)**: Reads `ttp:frameRate` and `ttp:frameRateMultiplier` from <tt> element. Clock-time frames and offset frames use the document's declared rate.")
+else:
+    key_findings.append("1. **Frame rate hardcoded to /30**: Both clock-time frames (HH:MM:SS:FF) and offset frames (Nf) divide by 30. The code never reads `ttp:frameRate`.")
+
+# Tick time
+if bool(re.search(r'tick_rate|ttp:tickRate', base_content)):
+    key_findings.append("2. **Tick time implemented (OCTO-11531)**: `_convert_time_count_to_microseconds` computes tick metric using `ttp:tickRate` from document.")
+else:
+    key_findings.append("2. **Tick time raises NotImplementedError**: Recognizes `t` metric but raises instead of computing.")
+
+# Parameter attributes
+key_findings.append(f"3. **ttp: parameters read from document**: {param_read}/11 TTML parameter attributes read. Remaining use hardcoded defaults.")
+
+# Bold/underline
+key_findings.append(f"4. **fontWeight (bold)**: read={'YES' if has_bold_read else 'NO'}, write={'YES' if has_bold_in_recreate else 'NO'}. **textDecoration (underline)**: read={'YES' if has_underline_read else 'NO'}, write={'YES' if has_underline_in_recreate else 'NO'}.")
+key_findings.append("5. **tts:display is NOT implemented** (distinct from tts:displayAlign which IS implemented).")
+key_findings.append("6. **xml:lang reads with silent fallback**: Falls back to DEFAULT_LANGUAGE_CODE silently. No BCP-47 validation.")
+key_findings.append("7. **Color passed through as raw string**: `tts:color` is read and written but never parsed or validated.")
+key_findings.append("8. **Style chaining IS implemented**: `_get_style_reference_chain` follows style references recursively.")
+key_findings.append("9. **Region resolution IS implemented**: Full ancestor→descendant lookup via `_determine_region_id`.")
+
+if has_regex_detect:
+    key_findings.append("10. **detect() uses regex (OCTO-11531)**: Requires both `<tt>` and `</tt>` to eliminate false positives on non-TTML content.")
+else:
+    key_findings.append("10. **detect() uses substring check**: Matches anywhere in content, not proper root validation.")
+
+key_findings.append(f"11. **{units_supported} length units supported**: px, em, %, c (cell), pt — all via `Size.from_string()` in geometry.py.")
+
+if has_bg_write:
+    key_findings.append("12. **tts:backgroundColor IS supported**: Writer emits on spans/styles from WebVTT/SAMI sources (OCTO-11514).")
+else:
+    key_findings.append("12. **tts:backgroundColor NOT supported**: Common TTML attribute entirely missing.")
+
+# tts:writingMode
+has_writing_mode_write = bool(re.search(r'tts:writingMode|writingMode', writer_content))
+if has_writing_mode_write:
+    key_findings.append("13. **tts:writingMode IS supported on write (OCTO-11514)**: Writer emits on regions for vertical text.")
+else:
+    key_findings.append("13. **tts:writingMode not implemented**.")
+
+for f in key_findings:
+    report += f + "\n"
+
+report += f"""
 ---
 
 **Generated**: {datetime.now().strftime('%Y-%m-%d %H:%M')}

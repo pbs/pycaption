@@ -1,3 +1,9 @@
+"""Constants for the SAMI reader and writer.
+
+Defines the base SAMI markup template and alignment mappings used when
+serializing Layout objects to inline CSS.
+"""
+
 from logging import FATAL
 
 from cssutils import log

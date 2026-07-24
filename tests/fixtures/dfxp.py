@@ -235,7 +235,9 @@ def sample_dfxp_with_relativized_positioning():
 <?xml version="1.0" encoding="utf-8"?>
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling">
  <head>
-  <styling/>
+  <styling>
+   <style tts:backgroundColor="yellow" xml:id="padded"/>
+  </styling>
   <layout>
    <region tts:displayAlign="after" tts:textAlign="start" xml:id="bottom"/>
    <region tts:displayAlign="after" tts:extent="70% 25%" tts:origin="15% 15%" tts:padding="10% 10% 10% 10%" tts:textAlign="center" xml:id="r0"/>
@@ -246,7 +248,7 @@ def sample_dfxp_with_relativized_positioning():
  </head>
  <body>
   <div region="bottom" xml:lang="en-US">
-   <p begin="00:00:01.000" end="00:00:03.000" region="r0">
+   <p begin="00:00:01.000" end="00:00:03.000" region="r0" tts:backgroundColor="black">
     You might not remember us. We are a typical transparent region with centered text that has an outline.
    </p>
    <p begin="00:00:03.500" end="00:00:05.000" region="r1">
@@ -391,7 +393,7 @@ def sample_dfxp_long_cue_fit_to_screen():
 <tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling">
  <head>
   <styling>
-   <style tts:color="white" tts:fontFamily="monospace" tts:fontSize="8%" xml:id="basic"/>
+   <style tts:backgroundColor="black" tts:color="white" tts:fontFamily="monospace" tts:fontSize="8%" xml:id="basic"/>
   </styling>
   <layout>
    <region tts:displayAlign="after" tts:textAlign="start" xml:id="bottom"/>

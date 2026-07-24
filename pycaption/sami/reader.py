@@ -1,3 +1,9 @@
+"""SAMI caption reader.
+
+Parses SAMI documents into pycaption CaptionSet objects, handling CSS
+styles, margin-based positioning, and multi-language content.
+"""
+
 from bs4 import BeautifulSoup, NavigableString
 
 from ..base import BaseReader, Caption, CaptionList, CaptionNode, CaptionSet

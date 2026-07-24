@@ -6,7 +6,10 @@
 Welcome to pycaption's documentation!
 =====================================
 
-``pycaption`` is a python library for converting caption formats.
+``pycaption`` is a Python library for reading, converting, and writing
+closed caption formats. It supports bidirectional conversion between
+DFXP/TTML, SAMI, SCC, SRT, WebVTT, and MicroDVD — preserving styling,
+positioning, and timing information where the target format allows.
 
 
 Table of contents
