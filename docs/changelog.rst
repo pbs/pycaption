@@ -1,5 +1,16 @@
 Changelog
 ---------
+2.3.1
+^^^^^^
+  - SAMI writer: fix text-align:left regression for SCC-sourced captions.
+    The 2.3.0 SAMI writer emitted text-align from Layout alignment, but
+    SCC's alignment is a positional anchor (origin-based), not a text
+    alignment intent. Skip text-align when the caption has an explicit
+    origin. (OCTO-11538)
+  - SAMI writer: emit integer milliseconds in <sync start> attributes.
+    SCC timing produces floats, causing ``start="1800.0"`` which violates
+    the SAMI spec (integer milliseconds required) and breaks some players.
+
 2.3.0
 ^^^^^^
   Production-ready WebVTT input: all writers now consume the WebVTT

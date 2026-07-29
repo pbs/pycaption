@@ -1,4 +1,11 @@
-from pycaption import DFXPReader, SAMIReader, SAMIWriter, SRTReader, WebVTTReader
+from pycaption import (
+    DFXPReader,
+    SAMIReader,
+    SAMIWriter,
+    SCCReader,
+    SRTReader,
+    WebVTTReader,
+)
 
 from .mixins import SAMITestingMixIn
 
@@ -199,3 +206,11 @@ class TestWebVTTtoSAMIStyles(SAMITestingMixIn):
         assert ".blue" in result
         assert 'class="red"' in result
         assert 'class="blue"' in result
+
+
+class TestSCCtoSAMI(SAMITestingMixIn):
+    def test_scc_to_sami_no_text_align(self, sample_scc_pop_on):
+        caption_set = SCCReader().read(sample_scc_pop_on)
+        result = SAMIWriter().write(caption_set)
+
+        assert "text-align" not in result
