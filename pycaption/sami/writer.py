@@ -76,12 +76,12 @@ class SAMIWriter(BaseWriter):
 
     def _recreate_p_tag(self, caption, sami, lang, primary, captions):
         """Build a <sync><p> block for a single caption with styling and alignment."""
-        time = caption.start // 1000
+        time = int(caption.start // 1000)
 
         if self.last_time and time != self.last_time:
             sami = self._recreate_blank_tag(sami, caption, lang, primary, captions)
 
-        self.last_time = caption.end // 1000
+        self.last_time = int(caption.end // 1000)
 
         sami, sync = self._recreate_sync(sami, lang, primary, time)
 
@@ -92,11 +92,12 @@ class SAMIWriter(BaseWriter):
             p_style += f"{attr}:{value};"
 
         if caption.layout_info and caption.layout_info.alignment:
-            h = caption.layout_info.alignment.horizontal
-            if h:
-                css_align = HORIZONTAL_ALIGNMENT_MAP.get(h)
-                if css_align:
-                    p_style += f"text-align:{css_align};"
+            if not caption.layout_info.origin:
+                h = caption.layout_info.alignment.horizontal
+                if h:
+                    css_align = HORIZONTAL_ALIGNMENT_MAP.get(h)
+                    if css_align:
+                        p_style += f"text-align:{css_align};"
 
         if p_style:
             p["style"] = p_style
