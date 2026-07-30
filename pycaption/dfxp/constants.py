@@ -25,12 +25,20 @@ DFXP_DEFAULT_STYLE = {
     "font-size": "1c",
 }
 
+# Reader default: DFXP spec mandates START/BOTTOM for round-trip fidelity.
 DFXP_DEFAULT_REGION = Layout(
     alignment=Alignment(HorizontalAlignmentEnum.START, VerticalAlignmentEnum.BOTTOM)
 )
 
+# Writer fallback alignment used when layout is None or SCC positional.
 DFXP_WRITER_FALLBACK_ALIGNMENT = Alignment(
     HorizontalAlignmentEnum.CENTER, VerticalAlignmentEnum.BOTTOM
+)
+
+# Writer default region for sources without positioning (VTT/SRT);
+# uses CENTER per RP 2052-10 rather than the spec's START default.
+DFXP_WRITER_DEFAULT_REGION = Layout(
+    alignment=Alignment(HorizontalAlignmentEnum.CENTER, VerticalAlignmentEnum.BOTTOM)
 )
 
 DFXP_DEFAULT_STYLE_ID = "default"

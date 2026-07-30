@@ -145,10 +145,16 @@ class SAMITestingMixIn:
     """
 
     def _extract_sami_captions(self, soup):
-        return tuple(
-            (caption.attrs["start"], caption.p.text.strip())
-            for caption in soup.select("sync")
-        )
+        result = []
+        for sync in soup.select("sync"):
+            for p in sync.find_all("p"):
+                result.append((sync.attrs["start"], p.text.strip()))
+        return tuple(result)
+
+    @staticmethod
+    def _strip_blanks(items):
+        """Remove all &nbsp;/empty sync entries for comparison purposes."""
+        return tuple(item for item in items if item[1] not in ("", "\xa0"))
 
     def assert_sami_captions_equal(self, first, second):
         first_soup = BeautifulSoup(first, "lxml")
@@ -157,7 +163,7 @@ class SAMITestingMixIn:
         first_items = self._extract_sami_captions(first_soup)
         second_items = self._extract_sami_captions(second_soup)
 
-        assert first_items == second_items
+        assert self._strip_blanks(first_items) == self._strip_blanks(second_items)
 
 
 class MicroDVDTestingMixIn:

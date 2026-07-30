@@ -2,15 +2,23 @@ Changelog
 ---------
 2.3.2
 ^^^^^^
-  - DFXP writer: output ``textAlign="center"`` (not ``"start"``) as the
-    fallback alignment for cues that carry no explicit alignment.
-    Separates the writer's fallback (CENTER) from the reader's default
-    region (START) via a new ``DFXP_WRITER_FALLBACK_ALIGNMENT`` constant.
+  - DFXP/SAMI writers: RP 2052-10 compliance — when source format's visual
+    default is CENTER (VTT/SRT/SCC) and target default is LEFT/START
+    (DFXP/SAMI), explicitly emit center alignment. DFXP sources retain
+    their original alignment for round-trip fidelity.
 
-  - SAMI reader: apply the SAMI spec default ``text-align: left`` only at
-    the root layout level (no parent to inherit from). Child layouts
-    without an explicit text-align now correctly inherit from their parent
-    stylesheet rather than being forced to left.
+  - DFXP writer: detect SCC positional layouts (row/column anchors) and
+    suppress ``tts:origin``, mapping them to center alignment instead.
+
+  - SAMI reader: apply ``text-align: left`` only at the root layout level;
+    child layouts now inherit from parent rather than being forced to left.
+
+  - SAMI writer: emit semantic tags (``<i>``, ``<b>``, ``<u>``) instead of
+    ``<span style="...">``. Add trailing ``&nbsp;`` sync to clear the final
+    caption at its end time.
+
+  - Geometry: add ``is_positional_anchor`` flag to ``Layout`` to distinguish
+    SCC coordinate-system positioning from visual text alignment.
 
 2.3.1
 ^^^^^^

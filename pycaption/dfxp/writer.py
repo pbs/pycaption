@@ -20,6 +20,7 @@ from .constants import (
     DFXP_DEFAULT_REGION_ID,
     DFXP_DEFAULT_STYLE,
     DFXP_DEFAULT_STYLE_ID,
+    DFXP_WRITER_DEFAULT_REGION,
     DFXP_WRITER_FALLBACK_ALIGNMENT,
     _create_external_alignment,
 )
@@ -290,8 +291,8 @@ class RegionCreator:
     def _collect_unique_regions(caption_set, ignore_region):
         """Collect all unique Layout objects from the caption set.
 
-        Excludes None and ignore_region (typically the default region) to
-        avoid duplicate region creation.
+        Excludes None, ignore_region (typically the default region), and
+        SCC positional layouts (which map to the default center region).
 
         :type caption_set: CaptionSet
         :param ignore_region: a Layout to exclude from the result
@@ -311,6 +312,9 @@ class RegionCreator:
 
         unique_regions.pop(None, None)
         unique_regions.pop(ignore_region, None)
+        for layout in list(unique_regions):
+            if layout and _is_scc_positional(layout):
+                unique_regions.pop(layout)
         return unique_regions
 
     @staticmethod
@@ -348,18 +352,38 @@ class RegionCreator:
                 layout_section.append(new_region)
         return region_map
 
+    def _has_null_layouts(self):
+        """Check if any caption in the set has no layout_info.
+
+        When True, the source format lacks positioning (e.g. VTT/SRT),
+        so the writer uses CENTER alignment per RP 2052-10.
+        """
+        for lang in self._caption_set.get_languages():
+            if not self._caption_set.get_layout_info(lang):
+                return True
+            for caption in self._caption_set.get_captions(lang):
+                if not caption.layout_info:
+                    return True
+        return False
+
     def create_document_regions(self):
         """Create all <region> tags needed by the caption set.
 
         Always creates a default region first, then creates additional
         regions for any unique Layout objects found in the caption set.
+        When captions with no layout exist (VTT/SRT sources), the default
+        region uses CENTER alignment per RP 2052-10; otherwise it uses the
+        DFXP spec default (START) for round-trip fidelity.
         """
+        if self._has_null_layouts():
+            default_layout = DFXP_WRITER_DEFAULT_REGION
+        else:
+            default_layout = DFXP_DEFAULT_REGION
+
         default_region_map = self._create_unique_regions(
-            [DFXP_DEFAULT_REGION], self._dfxp, lambda: DFXP_DEFAULT_REGION_ID
+            [default_layout], self._dfxp, lambda: DFXP_DEFAULT_REGION_ID
         )
-        unique_regions = self._collect_unique_regions(
-            self._caption_set, DFXP_DEFAULT_REGION
-        )
+        unique_regions = self._collect_unique_regions(self._caption_set, default_layout)
 
         self._region_map = self._create_unique_regions(
             unique_regions, self._dfxp, self._get_new_id
@@ -402,6 +426,9 @@ class RegionCreator:
             layout_info = caption_set.get_layout_info(lang)
             if not layout_info:
                 layout_info = caption_set.layout_info
+
+        if layout_info and _is_scc_positional(layout_info):
+            layout_info = None
 
         region_id = self._region_map.get(layout_info)
         if not region_id:
@@ -466,12 +493,20 @@ def _recreate_style(content, dfxp):
     return dfxp_style
 
 
+def _is_scc_positional(layout):
+    """Check if this layout uses a positional anchor (e.g. SCC row/col
+    coordinates) rather than visual text alignment.
+    """
+    return layout.is_positional_anchor
+
+
 def _convert_layout_to_attributes(layout):
     """Convert a Layout object to a dict of DFXP region attributes.
 
     Maps origin, extent, padding, alignment, and writing_direction to their
     tts: namespace equivalents.  Returns default alignment attributes when
-    layout is None.
+    layout is None.  Detects SCC positional layouts and emits center
+    alignment per RP 2052-10.
 
     :type layout: Layout | None
     :rtype: dict
@@ -479,6 +514,13 @@ def _convert_layout_to_attributes(layout):
     result = {}
     if not layout:
         return _create_external_alignment(DFXP_WRITER_FALLBACK_ALIGNMENT)
+
+    if _is_scc_positional(layout):
+        result.update(_create_external_alignment(DFXP_WRITER_FALLBACK_ALIGNMENT))
+        writing_mode = _WRITING_DIRECTION_TO_DFXP.get(layout.writing_direction)
+        if writing_mode:
+            result["tts:writingMode"] = writing_mode
+        return result
 
     if layout.origin:
         result["tts:origin"] = layout.origin.to_xml_attribute()

@@ -635,6 +635,7 @@ def _get_layout_from_tuple(position_tuple):
     return Layout(
         origin=Point(horizontal, vertical),
         alignment=Alignment(HorizontalAlignmentEnum.LEFT, VerticalAlignmentEnum.TOP),
+        is_positional_anchor=True,
     )
 
 

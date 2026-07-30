@@ -148,11 +148,13 @@ class TestWebVTTtoSAMIStyles(SAMITestingMixIn):
         assert "color:red;" in result or "color: red;" in result
 
     def test_positioning_alignment(self):
-        vtt = "WEBVTT\n\n" "00:00:01.000 --> 00:00:04.000 align:left\n" "Left aligned\n"
+        vtt = (
+            "WEBVTT\n\n" "00:00:01.000 --> 00:00:04.000 align:right\n" "Right aligned\n"
+        )
         caption_set = WebVTTReader().read(vtt)
         result = SAMIWriter().write(caption_set)
 
-        assert "text-align:left;" in result or "text-align: left;" in result
+        assert "text-align:right;" in result
 
     def test_writing_direction_dropped(self):
         vtt = (
@@ -209,8 +211,10 @@ class TestWebVTTtoSAMIStyles(SAMITestingMixIn):
 
 
 class TestSCCtoSAMI(SAMITestingMixIn):
-    def test_scc_to_sami_no_text_align(self, sample_scc_pop_on):
+    def test_scc_to_sami_center_aligned(self, sample_scc_pop_on):
         caption_set = SCCReader().read(sample_scc_pop_on)
         result = SAMIWriter().write(caption_set)
 
-        assert "text-align" not in result
+        assert "text-align:center;" in result
+        assert "margin-left" not in result
+        assert "margin-top" not in result
