@@ -41,13 +41,12 @@ jobs:
             • `/analyze-scc-docs` — CEA-608/SCC specification
             • `/analyze-vtt-docs` — WebVTT specification
             • `/analyze-dfxp-docs` — DFXP/TTML specification
+            • `/analyze-sami-docs` — SAMI specification
 
             Then run compliance checks:
-            • `/check-scc-compliance`
-            • `/check-vtt-compliance`
-            • `/check-dfxp-compliance`
+            • `/run-all-compliance` — runs all 4 checks at once
 
-            _These specs (CEA-608, TTML, WebVTT) change rarely, but it's good to verify._
+            _These specs (CEA-608, TTML, WebVTT, SAMI) change rarely, but it's good to verify._
 
       - name: Log if Slack unavailable
         if: steps.slack_check.outputs.available != 'true'

@@ -46,6 +46,11 @@ venv/
 # Local proprietary standards docs (not for distribution)
 ai_artifacts/specs/*/standards_summary.md
 
+# Intermediate spec artifacts (used locally by analyze-docs skills, not needed by CI)
+ai_artifacts/specs/*/master_checklist.md
+ai_artifacts/specs/*/*_web_sources.md
+ai_artifacts/specs/*/*_web_summary.md
+
 # Local-only developer documentation (not committed)
 pycaption/scripts/code_walkthrough/
 pycaption/scripts/differences/

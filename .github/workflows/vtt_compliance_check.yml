@@ -41,6 +41,10 @@ jobs:
           TMPDIR=$(mktemp -d)
           trap 'rm -rf "$TMPDIR"' EXIT
           sed -n '/^```python/,/^```/{ /^```/d; p; }' .claude/skills/check-vtt-compliance/skill.md > "$TMPDIR/vtt.py"
+          if [ ! -s "$TMPDIR/vtt.py" ]; then
+            echo "ERROR: Failed to extract script (empty output)"
+            exit 1
+          fi
           python3 "$TMPDIR/vtt.py"
         continue-on-error: true
 

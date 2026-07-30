@@ -41,6 +41,10 @@ jobs:
           TMPDIR=$(mktemp -d)
           trap 'rm -rf "$TMPDIR"' EXIT
           sed -n '/^```python/,/^```/{ /^```/d; p; }' .claude/skills/check-sami-compliance/skill.md > "$TMPDIR/sami.py"
+          if [ ! -s "$TMPDIR/sami.py" ]; then
+            echo "ERROR: Failed to extract script (empty output)"
+            exit 1
+          fi
           python3 "$TMPDIR/sami.py"
         continue-on-error: true
 
@@ -60,6 +64,11 @@ jobs:
             echo "VALIDATION_GAPS=$(grep -E '^\| Validation gaps' "$REPORT" | grep -oE '[0-9]+' | head -1 || echo unknown)" >> $GITHUB_ENV
             echo "MISSING_RULES=$(grep -E '^\| Missing rules' "$REPORT" | grep -oE '[0-9]+' | head -1 || echo unknown)" >> $GITHUB_ENV
             echo "TEST_GAPS=$(grep -E '^\| Test gaps' "$REPORT" | grep -oE '[0-9]+' | head -1 || echo unknown)" >> $GITHUB_ENV
+            FOOTER=$(grep -E '^\*\*Styling\*\*:' "$REPORT" || echo "")
+            echo "STY_ROUNDTRIP=$(echo "$FOOTER" | grep -oE 'Styling\*\*: [0-9]+' | grep -oE '[0-9]+' || echo unknown)" >> $GITHUB_ENV
+            echo "ELEM_READ=$(echo "$FOOTER" | grep -oE 'Elements\*\*: [0-9]+' | grep -oE '[0-9]+' || echo unknown)" >> $GITHUB_ENV
+            echo "TIMING_SUPPORTED=$(echo "$FOOTER" | grep -oE 'Timing\*\*: [0-9]+' | grep -oE '[0-9]+' || echo unknown)" >> $GITHUB_ENV
+            echo "LANG_SUPPORTED=$(echo "$FOOTER" | grep -oE 'Language\*\*: [0-9]+' | grep -oE '[0-9]+' || echo unknown)" >> $GITHUB_ENV
           else
             echo "REPORT_EXISTS=false" >> $GITHUB_ENV
             echo "TOTAL_ISSUES=unknown" >> $GITHUB_ENV
@@ -111,6 +120,10 @@ jobs:
             *MUST Violations*: ${{ env.MUST_VIOLATIONS }}
             *Validation Gaps*: ${{ env.VALIDATION_GAPS }}
             *Missing Rules*: ${{ env.MISSING_RULES }}
+            *Styling*: ${{ env.STY_ROUNDTRIP }}/12 round-trip
+            *Elements*: ${{ env.ELEM_READ }}/7 read
+            *Timing*: ${{ env.TIMING_SUPPORTED }}/6
+            *Language*: ${{ env.LANG_SUPPORTED }}/5
             *Test Gaps*: ${{ env.TEST_GAPS }}
 
             *Report Location*: `${{ env.REPORT_PATH }}`
@@ -153,6 +166,12 @@ jobs:
             echo "- **Validation Gaps**: $VALIDATION_GAPS" >> $GITHUB_STEP_SUMMARY
             echo "- **Missing Rules**: $MISSING_RULES" >> $GITHUB_STEP_SUMMARY
             echo "- **Test Gaps**: $TEST_GAPS" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### Coverage" >> $GITHUB_STEP_SUMMARY
+            echo "- **Styling**: $STY_ROUNDTRIP/12 round-trip" >> $GITHUB_STEP_SUMMARY
+            echo "- **Elements**: $ELEM_READ/7 read" >> $GITHUB_STEP_SUMMARY
+            echo "- **Timing**: $TIMING_SUPPORTED/6" >> $GITHUB_STEP_SUMMARY
+            echo "- **Language**: $LANG_SUPPORTED/5" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "### Report" >> $GITHUB_STEP_SUMMARY
             echo "Report saved to: \`$REPORT_PATH\`" >> $GITHUB_STEP_SUMMARY
