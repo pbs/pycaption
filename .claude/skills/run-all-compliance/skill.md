@@ -34,28 +34,37 @@ echo ""
 TMPDIR=$(mktemp -d)
 trap 'rm -rf "$TMPDIR"' EXIT
 
+extract_script() {
+    local skill_file="$1" output_file="$2"
+    sed -n '/^```python/,/^```/{ /^```/d; p; }' "$skill_file" > "$output_file"
+    if [ ! -s "$output_file" ]; then
+        echo "ERROR: Failed to extract script from $skill_file (empty output)"
+        return 1
+    fi
+}
+
 echo "[1/4] SCC Compliance Check"
 echo "-------------------------------------------"
-sed -n '/^```python/,/^```/{ /^```/d; p; }' .claude/skills/check-scc-compliance/skill.md > "$TMPDIR/scc.py"
-python3 "$TMPDIR/scc.py" && SCC_EXIT=0 || SCC_EXIT=$?
+extract_script .claude/skills/check-scc-compliance/skill.md "$TMPDIR/scc.py" && \
+    python3 "$TMPDIR/scc.py" && SCC_EXIT=0 || SCC_EXIT=$?
 echo ""
 
 echo "[2/4] VTT Compliance Check"
 echo "-------------------------------------------"
-sed -n '/^```python/,/^```/{ /^```/d; p; }' .claude/skills/check-vtt-compliance/skill.md > "$TMPDIR/vtt.py"
-python3 "$TMPDIR/vtt.py" && VTT_EXIT=0 || VTT_EXIT=$?
+extract_script .claude/skills/check-vtt-compliance/skill.md "$TMPDIR/vtt.py" && \
+    python3 "$TMPDIR/vtt.py" && VTT_EXIT=0 || VTT_EXIT=$?
 echo ""
 
 echo "[3/4] DFXP Compliance Check"
 echo "-------------------------------------------"
-sed -n '/^```python/,/^```/{ /^```/d; p; }' .claude/skills/check-dfxp-compliance/skill.md > "$TMPDIR/dfxp.py"
-python3 "$TMPDIR/dfxp.py" && DFXP_EXIT=0 || DFXP_EXIT=$?
+extract_script .claude/skills/check-dfxp-compliance/skill.md "$TMPDIR/dfxp.py" && \
+    python3 "$TMPDIR/dfxp.py" && DFXP_EXIT=0 || DFXP_EXIT=$?
 echo ""
 
 echo "[4/4] SAMI Compliance Check"
 echo "-------------------------------------------"
-sed -n '/^```python/,/^```/{ /^```/d; p; }' .claude/skills/check-sami-compliance/skill.md > "$TMPDIR/sami.py"
-python3 "$TMPDIR/sami.py" && SAMI_EXIT=0 || SAMI_EXIT=$?
+extract_script .claude/skills/check-sami-compliance/skill.md "$TMPDIR/sami.py" && \
+    python3 "$TMPDIR/sami.py" && SAMI_EXIT=0 || SAMI_EXIT=$?
 echo ""
 
 echo "=========================================="

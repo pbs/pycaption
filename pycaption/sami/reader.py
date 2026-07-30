@@ -84,9 +84,10 @@ class SAMIReader(BaseReader):
         :param inherit_from: parent Layout whose values are used as defaults
         :rtype: Layout
         """
-        alignment = Alignment.from_horizontal_and_vertical_align(
-            text_align=styles.get("text-align")
-        )
+        text_align = styles.get("text-align")
+        if not text_align and not inherit_from:
+            text_align = "left"
+        alignment = Alignment.from_horizontal_and_vertical_align(text_align=text_align)
         return Layout(
             origin=None,
             extent=None,

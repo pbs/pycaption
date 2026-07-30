@@ -29,6 +29,10 @@ DFXP_DEFAULT_REGION = Layout(
     alignment=Alignment(HorizontalAlignmentEnum.START, VerticalAlignmentEnum.BOTTOM)
 )
 
+DFXP_WRITER_FALLBACK_ALIGNMENT = Alignment(
+    HorizontalAlignmentEnum.CENTER, VerticalAlignmentEnum.BOTTOM
+)
+
 DFXP_DEFAULT_STYLE_ID = "default"
 DFXP_DEFAULT_REGION_ID = "bottom"
 

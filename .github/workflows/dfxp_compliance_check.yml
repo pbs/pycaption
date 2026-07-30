@@ -41,6 +41,10 @@ jobs:
           TMPDIR=$(mktemp -d)
           trap 'rm -rf "$TMPDIR"' EXIT
           sed -n '/^```python/,/^```/{ /^```/d; p; }' .claude/skills/check-dfxp-compliance/skill.md > "$TMPDIR/dfxp.py"
+          if [ ! -s "$TMPDIR/dfxp.py" ]; then
+            echo "ERROR: Failed to extract script (empty output)"
+            exit 1
+          fi
           python3 "$TMPDIR/dfxp.py"
         continue-on-error: true
 

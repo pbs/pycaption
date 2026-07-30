@@ -44,29 +44,38 @@ jobs:
           TMPDIR=$(mktemp -d)
           trap 'rm -rf "$TMPDIR"' EXIT
 
+          extract_script() {
+            local skill_file="$1" output_file="$2"
+            sed -n '/^```python/,/^```/{ /^```/d; p; }' "$skill_file" > "$output_file"
+            if [ ! -s "$output_file" ]; then
+              echo "ERROR: Failed to extract script from $skill_file (empty output)"
+              return 1
+            fi
+          }
+
           echo ""
           echo "[1/4] SCC Compliance Check"
           echo "-------------------------------------------"
-          sed -n '/^```python/,/^```/{ /^```/d; p; }' .claude/skills/check-scc-compliance/skill.md > "$TMPDIR/scc.py"
-          python3 "$TMPDIR/scc.py" && SCC_EXIT=0 || SCC_EXIT=$?
+          extract_script .claude/skills/check-scc-compliance/skill.md "$TMPDIR/scc.py" && \
+            python3 "$TMPDIR/scc.py" && SCC_EXIT=0 || SCC_EXIT=$?
 
           echo ""
           echo "[2/4] VTT Compliance Check"
           echo "-------------------------------------------"
-          sed -n '/^```python/,/^```/{ /^```/d; p; }' .claude/skills/check-vtt-compliance/skill.md > "$TMPDIR/vtt.py"
-          python3 "$TMPDIR/vtt.py" && VTT_EXIT=0 || VTT_EXIT=$?
+          extract_script .claude/skills/check-vtt-compliance/skill.md "$TMPDIR/vtt.py" && \
+            python3 "$TMPDIR/vtt.py" && VTT_EXIT=0 || VTT_EXIT=$?
 
           echo ""
           echo "[3/4] DFXP Compliance Check"
           echo "-------------------------------------------"
-          sed -n '/^```python/,/^```/{ /^```/d; p; }' .claude/skills/check-dfxp-compliance/skill.md > "$TMPDIR/dfxp.py"
-          python3 "$TMPDIR/dfxp.py" && DFXP_EXIT=0 || DFXP_EXIT=$?
+          extract_script .claude/skills/check-dfxp-compliance/skill.md "$TMPDIR/dfxp.py" && \
+            python3 "$TMPDIR/dfxp.py" && DFXP_EXIT=0 || DFXP_EXIT=$?
 
           echo ""
           echo "[4/4] SAMI Compliance Check"
           echo "-------------------------------------------"
-          sed -n '/^```python/,/^```/{ /^```/d; p; }' .claude/skills/check-sami-compliance/skill.md > "$TMPDIR/sami.py"
-          python3 "$TMPDIR/sami.py" && SAMI_EXIT=0 || SAMI_EXIT=$?
+          extract_script .claude/skills/check-sami-compliance/skill.md "$TMPDIR/sami.py" && \
+            python3 "$TMPDIR/sami.py" && SAMI_EXIT=0 || SAMI_EXIT=$?
 
           echo ""
           echo "=========================================="
@@ -131,12 +140,10 @@ jobs:
 
       - name: Write job summary
         run: |
-          cat >> $GITHUB_STEP_SUMMARY << 'EOF'
-          ## All Compliance Checks
-
-          | Format | Status | Issues | MUST |
-          |--------|--------|--------|------|
-          EOF
+          echo "## All Compliance Checks" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Format | Status | Issues | MUST |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|--------|--------|------|" >> $GITHUB_STEP_SUMMARY
           echo "| SCC | $SCC_STATUS | $SCC_ISSUES | $SCC_MUST |" >> $GITHUB_STEP_SUMMARY
           echo "| VTT | $VTT_STATUS | $VTT_ISSUES | $VTT_MUST |" >> $GITHUB_STEP_SUMMARY
           echo "| DFXP | $DFXP_STATUS | $DFXP_ISSUES | $DFXP_MUST |" >> $GITHUB_STEP_SUMMARY

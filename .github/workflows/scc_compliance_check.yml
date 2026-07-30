@@ -41,6 +41,10 @@ jobs:
           TMPDIR=$(mktemp -d)
           trap 'rm -rf "$TMPDIR"' EXIT
           sed -n '/^```python/,/^```/{ /^```/d; p; }' .claude/skills/check-scc-compliance/skill.md > "$TMPDIR/scc.py"
+          if [ ! -s "$TMPDIR/scc.py" ]; then
+            echo "ERROR: Failed to extract script (empty output)"
+            exit 1
+          fi
           python3 "$TMPDIR/scc.py"
         continue-on-error: true
 

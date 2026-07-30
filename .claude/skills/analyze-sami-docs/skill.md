@@ -44,6 +44,13 @@ ls -la ai_artifacts/specs/SAMI/
 cat ai_artifacts/specs/SAMI/sami_web_sources.md
 ```
 
+**Check for local standards file (NOT in the repo — user provides separately):**
+- Check if `ai_artifacts/specs/dfxp/standards_summary.md` exists locally (SMPTE RP 2052-10 covers SAMI→TTML conversion rules)
+- If it exists: read it as an additional reference for conversion-related rules (RULE-CONV-*)
+- If it does NOT exist: skip it and rely on web sources instead
+
+This file is not committed to the repo (gitignored). Generate it with `/generate-standards-summary`.
+
 **If `sami_spec_summary.md` exists:**
 - Read it to assess completeness
 - Identify gaps using completeness checklist (Step 2)

@@ -1,9 +1,9 @@
 # SCC Specification - Complete Reference
 
-**Version:** 1.0  
-**Generated:** 2026-04-20  
+**Version:** 1.1  
+**Generated:** 2026-07-30  
 **Purpose:** Unified source of truth for SCC compliance checking  
-**Sources:** Public technical documentation, open-source implementations (libcaption, CCExtractor, pycaption), web references, and industry best practices
+**Sources:** Public technical documentation, open-source implementations (libcaption, CCExtractor, pycaption), web references, industry best practices, and SMPTE RP 2052-10 conversion requirements
 
 ---
 
@@ -13,6 +13,7 @@
 - **Open-source implementations** - libcaption, CCExtractor, pycaption, AWS MediaConvert
 - **Public web-based technical documentation** - Implementation references and format guides
 - **Industry best practices** - Broadcast captioning conventions
+- **SMPTE RP 2052-10** - CEA-608 to TTML conversion requirements
 - **Total specification items:** 300+ control codes, 90+ validation rules
 
 ### Completeness Status
@@ -319,6 +320,7 @@ Complete PAC decoding logic is implemented in `pycaption/scc/constants.py`.
 - **IMPL-WRITE-003:** Monotonic timecode generation
 - **IMPL-WRITE-004:** 4-digit hex format
 - **IMPL-WRITE-005:** Space separation
+- **IMPL-CONV-001:** SMPTE RP 2052-10 region naming for SCC→TTML conversion
 
 ### Validator Requirements
 - **IMPL-VAL-001:** All MUST rules enforced
@@ -831,7 +833,102 @@ Extended characters cover Spanish (EXT-ES-001 to 014, hex 0x1220-0x122F / 0x1320
 
 ---
 
-## Part 9: XDS (eXtended Data Services) - Reference Only
+## Part 9: SMPTE RP 2052-10 Conversion (SCC to TTML)
+
+### 9.1 Conversion Modes
+
+**[RULE-CONV-001]** SCC-to-TTML conversion SHOULD use Enhanced mode by default
+
+- **Requirement:** Enhanced mode retains semantic equivalence of caption styles while allowing latitude in specific style values. Preserved mode replicates exact visual appearance including character-level timing.
+- **Level:** SHOULD (Enhanced preferred unless exact visual fidelity required)
+- **Behavior:**
+  - **Preserved mode:** Exact visual replication, character-level timing in roll-up/paint-on
+  - **Enhanced mode:** Semantic equivalence, allows pop-on presentation for roll-up/paint-on
+- **Sources:** SMPTE RP 2052-10 conversion specification
+- **Confidence:** High
+
+### 9.2 Region Mapping
+
+**[RULE-CONV-002]** Converted TTML MUST NOT rely on the default region
+
+- **Requirement:** At least one explicit region element must exist in the layout
+- **Level:** MUST NOT (rely on default region)
+- **Region IDs:**
+  - Pop-on: "pop1" through "pop4" (up to 4 non-contiguous line groups)
+  - Roll-up: "rollup"
+  - Paint-on: "paint" through "paint4"
+- **Contiguity rule:** Lines sharing the same column and consecutive rows SHALL use a single multiline region with br elements, not separate regions
+- **Sources:** SMPTE RP 2052-10 region requirements
+- **Confidence:** High
+
+### 9.3 Cell Resolution and Positioning
+
+**[RULE-CONV-003]** Converter SHOULD set ttp:cellResolution for 32x15 grid within safe title area
+
+- **Requirement:** Map the 32x15 character grid within the safe caption area (typically central 80% horizontal and vertical)
+- **Level:** SHOULD
+- **Positioning:**
+  - PAC row and indent map to percentage-based tts:origin accounting for safe area offset
+  - Tab offsets at start of line map to region positioning
+  - Tab offsets within a line (after characters) affect text content as spaces, not positioning
+  - Multiple PACs for same display event: only final position is translated
+- **Sources:** SMPTE RP 2052-10 positioning requirements
+- **Confidence:** High
+
+### 9.4 Style Mapping
+
+**[RULE-CONV-004]** Default style for converted captions SHALL be white/black/monospace/bold
+
+- **Requirement:** Default style: white foreground, black background, monospace font, bold weight, no decoration, 1-cell font size
+- **Level:** SHALL
+- **Style mappings:**
+  - Foreground colors (PAC/mid-row) → tts:color values
+  - Italics → tts:fontStyle="italic"
+  - Underline → tts:textDecoration="underline"
+  - Background colors → tts:backgroundColor on span elements (not paragraph/region)
+  - Semi-transparent background → approximately 50% alpha
+- **Mid-row constraint:** Because TTML requires proper XML nesting but CEA-608 mid-row codes can create overlapping style regions, translation SHALL use a single level of nested spans
+- **Sources:** SMPTE RP 2052-10 style requirements
+- **Confidence:** High
+
+### 9.5 Timing
+
+**[RULE-CONV-005]** Translated file SHALL use media clock mode
+
+- **Requirement:** Times expressed as multiples of field/frame rate, using media clock
+- **Level:** SHALL
+- **Significant moments:** EOC (pop-on swap), CR (roll-up scroll), character placement (paint-on/roll-up in Preserved mode), EDM (erase), RU mode changes, RDC mode switch
+- **Threshold:** Changes lasting less than 1/20 second need not be mapped
+- **Accuracy:** Begin time plus offset time SHALL not differ from origin event by more than one frame
+- **Sources:** SMPTE RP 2052-10 timing requirements
+- **Confidence:** High
+
+### 9.6 Implementation Requirements
+
+**[IMPL-CONV-001]** Writer converting SCC to TTML SHOULD follow SMPTE RP 2052-10 region naming
+
+- **Spec Rules:** RULE-CONV-001 through RULE-CONV-005
+- **Component:** Writer (SCC→DFXP/TTML conversion path)
+- **Implementation Requirement:**
+  When writing TTML output from SCC-sourced captions, use explicit regions
+  (not default), apply correct style defaults, and map positioning from
+  the 32x15 grid to percentage-based coordinates.
+
+- **Expected Behavior:**
+  - SCC pop-on caption → TTML with region id="pop1", explicit origin/extent
+  - SCC roll-up caption → TTML with region id="rollup"
+  - SCC with multiple non-contiguous rows → separate regions (pop1, pop2, etc.)
+  - SCC contiguous rows → single region with br elements
+
+- **Validation Criteria:**
+  1. No reliance on TTML default region
+  2. Region ids follow naming convention
+  3. Contiguous lines merged into single region
+  4. Style defaults applied (white/black/monospace/bold)
+
+---
+
+## Part 9b: XDS (eXtended Data Services) - Reference Only
 
 **Note:** XDS is transmitted in Field 2 and provides program metadata.
 While not part of core captioning, SCC files may contain XDS packets.
@@ -957,7 +1054,7 @@ While not part of core captioning, SCC files may contain XDS packets.
 
 ## Validation Report - Document Self-Check
 
-**Specification Generation Date:** 2026-04-20  
+**Specification Generation Date:** 2026-07-30  
 **Validation Status:** ✅ PASS
 
 ### Completeness Verification
@@ -989,7 +1086,8 @@ While not part of core captioning, SCC files may contain XDS packets.
 - ✅ Mid-Row Rules: 1 rule (RULE-MID-001)
 - ✅ Color Rules: 2 rules (RULE-COLOR-001 to RULE-COLOR-002)
 - ✅ XDS Rules: 1 rule (RULE-XDS-001)
-- **TOTAL: 34 RULE-XXX rules**
+- ✅ Conversion Rules: 5 rules (RULE-CONV-001 to RULE-CONV-005)
+- **TOTAL: 39 RULE-XXX rules**
 
 #### Implementation Requirements
 - ✅ Format Implementation: 1 requirement (IMPL-FMT-001)
@@ -1001,14 +1099,15 @@ While not part of core captioning, SCC files may contain XDS packets.
 - ✅ EDM Implementation: 1 requirement (IMPL-EDM-001)
 - ✅ Frame Rate Implementation: 1 requirement (IMPL-FPS-001)
 - ✅ Encoding Implementation: 1 requirement (IMPL-ENC-001)
-- **TOTAL: 11 IMPL-XXX requirements (all generic, no pycaption-specific references)**
+- ✅ Conversion Implementation: 1 requirement (IMPL-CONV-001)
+- **TOTAL: 12 IMPL-XXX requirements (all generic, no pycaption-specific references)**
 
 #### Requirement Levels
-- ✅ MUST rules: 28 documented
-- ✅ SHOULD rules: 5 documented
+- ✅ MUST rules: 29 documented
+- ✅ SHOULD rules: 8 documented
 - ✅ MAY rules: 2 documented
-- ✅ MUST NOT rules: 2 documented
-- **TOTAL: 36 normative requirement levels**
+- ✅ MUST NOT rules: 3 documented
+- **TOTAL: 42 normative requirement levels**
 
 #### Critical Requirements (from Skill Definition)
 - ✅ Parity rules documented: RULE-ENC-001 (marked N/A for SCC format)
@@ -1064,10 +1163,10 @@ This specification provides:
 
 ---
 
-**Document Version:** 1.0  
-**Total Lines:** 1039+  
+**Document Version:** 1.1  
+**Total Lines:** 1100+  
 **Total Control Codes:** 747+ explicitly documented, 300+ via patterns  
-**Total Rules:** 34 RULE-XXX + 11 IMPL-XXX = 45 normative requirements  
-**Generated:** 2026-04-20  
+**Total Rules:** 39 RULE-XXX + 12 IMPL-XXX = 51 normative requirements  
+**Generated:** 2026-07-30  
 **Status:** ✅ PRODUCTION READY
 

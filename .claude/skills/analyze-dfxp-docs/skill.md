@@ -45,6 +45,13 @@ ls -la ai_artifacts/specs/dfxp/
 cat ai_artifacts/specs/dfxp/dfxp_web_sources.md
 ```
 
+**Check for local standards file (NOT in the repo — user provides separately):**
+- Check if `ai_artifacts/specs/dfxp/standards_summary.md` exists locally
+- If it exists: read it as the primary reference alongside web sources
+- If it does NOT exist: skip it and rely on web sources instead
+
+This file is not committed to the repo (gitignored). Generate it with `/generate-standards-summary`.
+
 **If `dfxp_specs_summary.md` exists:**
 - Read it to assess completeness
 - Identify gaps using completeness checklist (Step 2)

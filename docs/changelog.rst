@@ -1,12 +1,24 @@
 Changelog
 ---------
+2.3.2
+^^^^^^
+  - DFXP writer: output ``textAlign="center"`` (not ``"start"``) as the
+    fallback alignment for cues that carry no explicit alignment.
+    Separates the writer's fallback (CENTER) from the reader's default
+    region (START) via a new ``DFXP_WRITER_FALLBACK_ALIGNMENT`` constant.
+
+  - SAMI reader: apply the SAMI spec default ``text-align: left`` only at
+    the root layout level (no parent to inherit from). Child layouts
+    without an explicit text-align now correctly inherit from their parent
+    stylesheet rather than being forced to left.
+
 2.3.1
 ^^^^^^
   - SAMI writer: fix text-align:left regression for SCC-sourced captions.
     The 2.3.0 SAMI writer emitted text-align from Layout alignment, but
     SCC's alignment is a positional anchor (origin-based), not a text
     alignment intent. Skip text-align when the caption has an explicit
-    origin. (OCTO-11538)
+    origin.
   - SAMI writer: emit integer milliseconds in <sync start> attributes.
     SCC timing produces floats, causing ``start="1800.0"`` which violates
     the SAMI spec (integer milliseconds required) and breaks some players.

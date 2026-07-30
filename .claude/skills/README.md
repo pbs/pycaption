@@ -1,6 +1,6 @@
 # Caption Compliance Skills
 
-Custom Claude Code skills for SCC, WebVTT, and DFXP/TTML compliance in pycaption per CEA-608/708, W3C WebVTT, and W3C TTML standards.
+Custom Claude Code skills for SCC, WebVTT, DFXP/TTML, and SAMI compliance in pycaption per CEA-608/708, W3C WebVTT, W3C TTML, and Microsoft SAMI standards.
 
 ## Workflow
 
@@ -16,14 +16,17 @@ analyze-*-docs --> check-*-compliance --> suggest-*-fixes
 | `/analyze-scc-docs` | Generate SCC spec summary from CEA-608/708 sources. Uses local `standards_summary.md` if available, otherwise falls back to web sources (agent-driven, uses WebFetch/WebSearch) |
 | `/analyze-vtt-docs` | Generate WebVTT spec summary from W3C web sources (agent-driven, uses WebFetch/WebSearch) |
 | `/analyze-dfxp-docs` | Generate DFXP/TTML spec summary from W3C TTML web sources (agent-driven, uses WebFetch/WebSearch) |
+| `/analyze-sami-docs` | Generate SAMI spec summary from Microsoft SAMI documentation and web sources (agent-driven, uses WebFetch/WebSearch) |
 | `/check-scc-compliance` | Sanity check + 12 deep validations (cross-mode EDM, zero-value truthiness, silent error suppression, read-only styling, position fallback, etc.) + 44 rules + 704 control codes + frame rate analysis + test coverage |
 | `/check-vtt-compliance` | Sanity check + deep validation + 76 rules + tag/setting/entity coverage with read/write distinction |
 | `/check-dfxp-compliance` | Sanity check + deep validation + 115 rules + styling/timing/parameter coverage with read/write distinction |
+| `/check-sami-compliance` | Sanity check + deep validation + 75 rules + styling/element/timing/language/encoding coverage with read/write distinction |
 | `/suggest-scc-fixes` | Analyzes latest SCC compliance report, generates code fix for the most critical issue |
 | `/suggest-vtt-fixes` | Analyzes latest VTT compliance report, generates code fix for the most critical issue |
 | `/suggest-dfxp-fixes` | Analyzes latest DFXP compliance report, generates code fix for the most critical issue |
 | `/check-last-pr` | Comprehensive PR review: compliance, code review, regressions, test coverage |
-| `/run-all-compliance` | Runs all 3 compliance checks (SCC, VTT, DFXP) in sequence, produces 3 dated reports |
+| `/run-all-compliance` | Runs all 4 compliance checks (SCC, VTT, DFXP, SAMI) in sequence, produces 4 dated reports |
+| `/generate-standards-summary` | Reads proprietary PDF standards (CEA-608, CEA-708, SMPTE ST 2052-1, RP 2052-10) and generates local-only `standards_summary.md` files for analyze skills |
 
 ## GitHub Actions
 
@@ -32,7 +35,7 @@ analyze-*-docs --> check-*-compliance --> suggest-*-fixes
 | `scc_compliance_check.yml` | `workflow_dispatch` | Runs SCC compliance check, uploads report, optional Slack notification |
 | `vtt_compliance_check.yml` | `workflow_dispatch` | Runs VTT compliance check, uploads report, optional Slack notification |
 | `dfxp_compliance_check.yml` | `workflow_dispatch` | Runs DFXP compliance check, uploads report, optional Slack notification |
-| `all_compliance_checks.yml` | `workflow_dispatch` | Runs all 3 compliance checks, uploads combined report, summary table in Slack |
+| `all_compliance_checks.yml` | `workflow_dispatch` | Runs all 4 compliance checks, uploads combined report, summary table in Slack |
 | `pr_compliance_check.yml` | `workflow_dispatch` / `pull_request` | PR review: compliance, regressions, test coverage, comments on PR |
 | `spec_refresh_reminder.yml` | `schedule` (bi-annual) / `workflow_dispatch` | Sends Slack reminder to re-run analyze-docs skills locally |
 
@@ -78,11 +81,11 @@ Any format's compliance workflow can optionally use a local copy of its propriet
 
 **How it works:** When `/analyze-scc-docs` runs, it checks if `standards_summary.md` exists locally. If found, it uses it as the primary reference alongside web sources. If not found, it relies entirely on web sources. The compliance checks (`/check-scc-compliance`, CI workflows) only need `scc_specs_summary.md` — they work without the proprietary file.
 
-Contributors with a licensed copy of the relevant standard can place it at `ai_artifacts/specs/{format}/standards_summary.md` to get richer spec analysis.
+Contributors with licensed copies of the relevant standards can run `/generate-standards-summary` to produce these files from PDFs (CEA-608, CEA-708, SMPTE ST 2052-1, SMPTE RP 2052-10). The skill reads the PDFs and outputs sanitized prose summaries without reproducing proprietary content.
 
 ## Gotchas
 
-[`gotchas.md`](gotchas.md) lists past mistakes (copyright, workflow bugs, false-positive reviews, security patterns) that skills must avoid. Skills reference it in pre-flight checks and append new gotchas post-run when they discover repeatable patterns. Currently 12 gotchas covering: proprietary content, source attribution, W3C licensing, expression injection, `set -e` bugs, Slack guards, IMPL regex, false-positive reviews, gitignore coverage, SHA pinning, crash guards, and fork PR failures.
+[`gotchas.md`](gotchas.md) lists past mistakes (copyright, workflow bugs, false-positive reviews, security patterns) that skills must avoid. Skills reference it in pre-flight checks and append new gotchas post-run when they discover repeatable patterns. Currently 13 gotchas covering: proprietary content, source attribution, W3C licensing, expression injection, `set -e` bugs, Slack guards, IMPL regex, false-positive reviews, gitignore coverage, SHA pinning, crash guards, fork PR failures, and module-to-package refactors.
 
 ## Notes
 
@@ -95,4 +98,4 @@ Contributors with a licensed copy of the relevant standard can place it at `ai_a
 - `${{ github.token }}` is used automatically for GitHub API calls (no secret setup needed)
 
 ---
-**Last Updated**: 2026-04-30
+**Last Updated**: 2026-07-30
