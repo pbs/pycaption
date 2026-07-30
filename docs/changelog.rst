@@ -2,13 +2,17 @@ Changelog
 ---------
 2.3.2
 ^^^^^^
-  - DFXP/SAMI writers: RP 2052-10 compliance — when source format's visual
-    default is CENTER (VTT/SRT/SCC) and target default is LEFT/START
-    (DFXP/SAMI), explicitly emit center alignment. DFXP sources retain
+  - RP 2052-10 compliance for all 25 conversion paths: when source format's
+    visual default is CENTER (VTT/SRT/SCC) and target default is LEFT/START
+    (DFXP/SAMI), explicitly emit center alignment. DFXP/SAMI sources retain
     their original alignment for round-trip fidelity.
 
-  - DFXP writer: detect SCC positional layouts (row/column anchors) and
-    suppress ``tts:origin``, mapping them to center alignment instead.
+  - DFXP writer: suppress ``tts:origin`` from SCC positional layouts
+    (row/column anchors), emit ``tts:textAlign="center"`` instead.
+
+  - WebVTT writer: suppress SCC positional cue settings (``align:left
+    position:N% line:N% size:N%``). SCC coordinate anchors are not visual
+    alignment — omitting lets VTT default to center.
 
   - SAMI reader: apply ``text-align: left`` only at the root layout level;
     child layouts now inherit from parent rather than being forced to left.
