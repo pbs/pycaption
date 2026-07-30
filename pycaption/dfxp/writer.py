@@ -20,6 +20,7 @@ from .constants import (
     DFXP_DEFAULT_REGION_ID,
     DFXP_DEFAULT_STYLE,
     DFXP_DEFAULT_STYLE_ID,
+    DFXP_WRITER_FALLBACK_ALIGNMENT,
     _create_external_alignment,
 )
 
@@ -477,7 +478,7 @@ def _convert_layout_to_attributes(layout):
     """
     result = {}
     if not layout:
-        return _create_external_alignment(DFXP_DEFAULT_REGION.alignment)
+        return _create_external_alignment(DFXP_WRITER_FALLBACK_ALIGNMENT)
 
     if layout.origin:
         result["tts:origin"] = layout.origin.to_xml_attribute()
@@ -491,7 +492,7 @@ def _convert_layout_to_attributes(layout):
     if layout.alignment:
         result.update(_create_external_alignment(layout.alignment))
     else:
-        result.update(_create_external_alignment(DFXP_DEFAULT_REGION.alignment))
+        result.update(_create_external_alignment(DFXP_WRITER_FALLBACK_ALIGNMENT))
 
     writing_mode = _WRITING_DIRECTION_TO_DFXP.get(layout.writing_direction)
     if writing_mode:

@@ -119,7 +119,7 @@ class TestSAMIReader(ReaderTestingMixIn):
         caption_set = self.reader.read(sample_sami_with_invalid_inline_style)
         caption = caption_set.get_captions("en-US")[0]
 
-        assert caption.layout_info.alignment is None
+        assert caption.layout_info.alignment.horizontal == HorizontalAlignmentEnum.LEFT
 
     def test_sami_including_hexadecimal_charref(
         self, sample_sami_including_hexadecimal_charref

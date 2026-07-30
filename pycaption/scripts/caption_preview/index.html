@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Caption Preview</title>
+<link href="https://vjs.zencdn.net/8.10.0/video-js.css" rel="stylesheet">
+<style>
+  body { font-family: system-ui, sans-serif; margin: 1rem 2rem; background: #1a1a1a; color: #eee; }
+  h1 { font-size: 1.2rem; margin-bottom: 0.5rem; }
+  .controls { display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 0.5rem; align-items: center; }
+  .controls label { font-size: 0.85rem; }
+  .controls input[type="file"] { font-size: 0.8rem; }
+  #player { width: 100%; height: calc(100vh - 80px); }
+  .file-list { margin-top: 1.5rem; font-size: 0.85rem; }
+  .file-list a { color: #7cb7ff; text-decoration: none; margin-right: 1rem; }
+  .file-list a:hover { text-decoration: underline; }
+  #status { font-size: 0.85rem; color: #aaa; margin-top: 0.5rem; }
+</style>
+</head>
+<body>
+<h1>Caption Preview</h1>
+
+<div class="controls">
+  <label>Video: <input type="file" id="videoInput" accept="video/*"></label>
+  <label>Captions: <input type="file" id="captionInput" accept=".vtt,.srt,.dfxp,.ttml,.smi,.sami,.scc" multiple></label>
+</div>
+
+<video id="player" class="video-js vjs-big-play-centered" controls preload="auto">
+</video>
+
+<div id="status"></div>
+<div class="file-list" id="fileList"></div>
+
+<script src="https://vjs.zencdn.net/8.10.0/video.min.js"></script>
+<script>
+const player = videojs('player', {
+  fluid: false,
+  fill: true,
+  html5: { nativeTextTracks: false }
+});
+
+const status = document.getElementById('status');
+let trackCount = 0;
+
+document.getElementById('videoInput').addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const url = URL.createObjectURL(file);
+  player.src({ type: file.type || 'video/mp4', src: url });
+  status.textContent = 'Video loaded: ' + file.name;
+  trackCount = 0;
+  player.remoteTextTracks().tracks_.slice().forEach(t => player.removeRemoteTextTrack(t));
+});
+
+document.getElementById('captionInput').addEventListener('change', function(e) {
+  Array.from(e.target.files).forEach(addCaptionFile);
+});
+
+function addCaptionFile(file) {
+  const url = URL.createObjectURL(file);
+  const ext = file.name.split('.').pop().toLowerCase();
+  const kind = 'subtitles';
+  const label = file.name;
+  const srclang = 'en';
+
+  // Video.js handles VTT natively; for other formats we need conversion
+  if (ext === 'vtt') {
+    player.addRemoteTextTrack({ kind, src: url, srclang, label, default: trackCount === 0 }, false);
+    trackCount++;
+    status.textContent = 'Added track: ' + file.name;
+  } else {
+    // Read file and convert to VTT blob for non-VTT formats
+    const reader = new FileReader();
+    reader.onload = function() {
+      const vttBlob = convertToVTT(reader.result, ext, file.name);
+      const vttUrl = URL.createObjectURL(vttBlob);
+      player.addRemoteTextTrack({ kind, src: vttUrl, srclang, label, default: trackCount === 0 }, false);
+      trackCount++;
+      status.textContent = 'Added track: ' + file.name + (ext !== 'vtt' ? ' (converted to VTT)' : '');
+    };
+    reader.readAsText(file);
+  }
+}
+
+function convertToVTT(text, ext, filename) {
+  let vtt = text;
+
+  if (ext === 'srt') {
+    // SRT to VTT: replace commas in timestamps, add header
+    vtt = 'WEBVTT\n\n' + text.replace(/(\d{2}:\d{2}:\d{2}),(\d{3})/g, '$1.$2');
+  } else if (ext === 'dfxp' || ext === 'ttml') {
+    vtt = dfxpToVTT(text);
+  } else if (ext === 'smi' || ext === 'sami') {
+    vtt = samiToVTT(text);
+  } else {
+    // Fallback: try loading as-is, Video.js might handle it
+    return new Blob([text], { type: 'text/plain' });
+  }
+
+  return new Blob([vtt], { type: 'text/vtt' });
+}
+
+function dfxpToVTT(xml) {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(xml, 'text/xml');
+  const ps = doc.querySelectorAll('p[begin]');
+  let vtt = 'WEBVTT\n\n';
+
+  ps.forEach((p, i) => {
+    const begin = normalizeTime(p.getAttribute('begin'));
+    const end = normalizeTime(p.getAttribute('end') || p.getAttribute('dur'));
+    const text = p.textContent.trim();
+    if (begin && end && text) {
+      vtt += `${i + 1}\n${begin} --> ${end}\n${text}\n\n`;
+    }
+  });
+  return vtt;
+}
+
+function samiToVTT(text) {
+  const syncs = [];
+  const regex = /<SYNC\s+start=["']?(\d+)["']?[^>]*>([\s\S]*?)(?=<SYNC|<\/BODY|$)/gi;
+  let match;
+  while ((match = regex.exec(text)) !== null) {
+    const ms = parseInt(match[1]);
+    const content = match[2].replace(/<P[^>]*>/gi, '').replace(/<\/P>/gi, '')
+      .replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, '').trim();
+    if (content && content !== '&nbsp;') {
+      syncs.push({ ms, content });
+    }
+  }
+
+  let vtt = 'WEBVTT\n\n';
+  syncs.forEach((s, i) => {
+    const end = syncs[i + 1] ? syncs[i + 1].ms : s.ms + 4000;
+    vtt += `${i + 1}\n${msToVTT(s.ms)} --> ${msToVTT(end)}\n${s.content}\n\n`;
+  });
+  return vtt;
+}
+
+function msToVTT(ms) {
+  const h = String(Math.floor(ms / 3600000)).padStart(2, '0');
+  const m = String(Math.floor((ms % 3600000) / 60000)).padStart(2, '0');
+  const s = String(Math.floor((ms % 60000) / 1000)).padStart(2, '0');
+  const f = String(ms % 1000).padStart(3, '0');
+  return `${h}:${m}:${s}.${f}`;
+}
+
+function normalizeTime(t) {
+  if (!t) return null;
+  // Handle HH:MM:SS.mmm or HH:MM:SS:FF formats
+  const parts = t.replace(/,/g, '.').match(/(\d+):(\d+):([\d.]+)/);
+  if (!parts) return t;
+  const h = parts[1].padStart(2, '0');
+  const m = parts[2].padStart(2, '0');
+  const s = parseFloat(parts[3]).toFixed(3).padStart(6, '0');
+  return `${h}:${m}:${s}`;
+}
+
+// Load directory listing for served files
+fetch('./')
+  .then(r => r.text())
+  .then(html => {
+    const div = document.getElementById('fileList');
+    const links = html.match(/href="([^"]+\.(mp4|webm|mkv|vtt|srt|dfxp|ttml|smi|sami|scc))"/gi);
+    if (links && links.length) {
+      div.innerHTML = '<strong>Served files:</strong><br>' +
+        links.map(l => {
+          const name = l.match(/href="([^"]+)"/)[1];
+          return `<a href="#" onclick="loadServedFile('${name}');return false">${decodeURIComponent(name)}</a>`;
+        }).join(' ');
+    }
+  })
+  .catch(() => {});
+
+function loadServedFile(name) {
+  const ext = name.split('.').pop().toLowerCase();
+  const videoExts = ['mp4', 'webm', 'mkv', 'mov', 'avi'];
+  if (videoExts.includes(ext)) {
+    player.src({ type: 'video/' + (ext === 'mkv' ? 'x-matroska' : ext), src: name });
+    status.textContent = 'Video loaded: ' + name;
+  } else {
+    fetch(name).then(r => r.text()).then(text => {
+      const blob = (ext === 'vtt')
+        ? new Blob([text], { type: 'text/vtt' })
+        : convertToVTT(text, ext, name);
+      const url = URL.createObjectURL(blob);
+      player.addRemoteTextTrack({ kind: 'subtitles', src: url, srclang: 'en', label: name, default: trackCount === 0 }, false);
+      trackCount++;
+      status.textContent = 'Added track: ' + name;
+    });
+  }
+}
+</script>
+</body>
+</html>

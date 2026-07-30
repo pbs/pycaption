@@ -262,7 +262,7 @@ def sample_webvtt_empty():
 def sample_webvtt_double_br():
     return """WEBVTT
 
-00:00:14.848 --> 00:00:18.848
+00:00:14.848 --> 00:00:18.848 align:left
 MAN:
 &nbsp;
 When we think
@@ -347,7 +347,7 @@ Transcribed by Celestials
 def sample_webvtt_multi_lang_en():
     return """WEBVTT
 
-00:00:14.848 --> 00:00:18.848
+00:00:14.848 --> 00:00:18.848 align:left
 Butterfly.
 """
 
@@ -356,7 +356,7 @@ Butterfly.
 def sample_webvtt_multi_lang_de():
     return """WEBVTT
 
-00:00:14.848 --> 00:00:18.848
+00:00:14.848 --> 00:00:18.848 align:left
 Schmetterling.
 """
 
