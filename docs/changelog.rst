@@ -24,6 +24,17 @@ Changelog
   - Geometry: add ``is_positional_anchor`` flag to ``Layout`` to distinguish
     SCC coordinate-system positioning from visual text alignment.
 
+  - Alignment preservation now uses an explicit ``visual_alignment_default``
+    attribute on ``CaptionSet`` (set by each reader) rather than inferring
+    intent from missing layout objects. Writers compare source vs target
+    defaults via ``BaseWriter._get_visual_alignment_default()``.
+
+  - Codebase-wide readability pass: dict lookups replace if/elif chains,
+    ``@total_ordering`` on ``Size``, ``__eq__`` returns ``NotImplemented``,
+    writer signatures unified to ``**kwargs``, dead code removed
+    (``NodeCreatorFactory``, ``Caption.is_empty``, ``Layout.__ne__``).
+    Net −105 lines across 17 files, no behavioral changes.
+
 2.3.1
 ^^^^^^
   - SAMI writer: fix text-align:left regression for SCC-sourced captions.

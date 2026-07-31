@@ -19,6 +19,7 @@ from ..exceptions import (
 )
 from ..geometry import (
     Alignment,
+    HorizontalAlignmentEnum,
     Layout,
     Point,
     Size,
@@ -169,7 +170,8 @@ class WebVTTReader(BaseReader):
         self._resolve_cue_styles(captions, styles)
 
         caption_set = CaptionSet(
-            {lang: captions}, styles=styles, regions=self._regions_raw
+            {lang: captions}, styles=styles, regions=self._regions_raw,
+            visual_alignment_default=HorizontalAlignmentEnum.CENTER,
         )
 
         if caption_set.is_empty():
@@ -258,7 +260,7 @@ class WebVTTReader(BaseReader):
                 state.pending_id = None
                 if cue_id in state.seen_ids:
                     warnings.warn(
-                        f"Duplicate cue identifier '{cue_id}' " f"(line {line_index}).",
+                        f"Duplicate cue identifier '{cue_id}' (line {line_index}).",
                         CaptionReadWarning,
                         stacklevel=4,
                     )
@@ -437,12 +439,11 @@ class WebVTTReader(BaseReader):
         if not m:
             raise CaptionReadSyntaxError("Invalid timing format.")
 
-        m = m.groups()
+        groups = m.groups()
 
-        if m[2]:
-            return microseconds(m[0], m[1], m[2].replace(":", ""), m[3])
-        else:
-            return microseconds(0, m[0], m[1], m[3])
+        if groups[2]:
+            return microseconds(groups[0], groups[1], groups[2].replace(":", ""), groups[3])
+        return microseconds(0, groups[0], groups[1], groups[3])
 
     def _parse_cue_text(self, line, open_tags=None):
         """Parse a single line of WebVTT cue text into CaptionNodes.
@@ -541,9 +542,8 @@ class WebVTTReader(BaseReader):
                 if not content:
                     return None
                 return CaptionNode.create_style(False, content)
-            else:
-                text = self._decode_entities(tag_str)
-                return CaptionNode.create_text(text)
+            text = self._decode_entities(tag_str)
+            return CaptionNode.create_text(text)
 
         m = TIMESTAMP_PATTERN.match(inner)
         if m:
@@ -588,6 +588,14 @@ class WebVTTReader(BaseReader):
 
         return tag_name, class_suffix, annotation
 
+    _TAG_CONTENT_MAP = {
+        "i": {"italics": True},
+        "b": {"bold": True},
+        "u": {"underline": True},
+        "ruby": {"ruby": True},
+        "rt": {"ruby_text": True},
+    }
+
     @staticmethod
     def _tag_content(tag_name, class_suffix=None, annotation=None):
         """Build the internal style content dict for a recognized tag.
@@ -598,22 +606,12 @@ class WebVTTReader(BaseReader):
 
         :returns: Dict suitable for CaptionNode.create_style content.
         """
-        if tag_name == "i":
-            return {"italics": True}
-        elif tag_name == "b":
-            return {"bold": True}
-        elif tag_name == "u":
-            return {"underline": True}
-        elif tag_name == "c":
+        if tag_name == "c":
             classes = class_suffix.split(".") if class_suffix else []
             return {"classes": classes}
-        elif tag_name == "lang":
+        if tag_name == "lang":
             return {"lang": annotation.strip() if annotation else ""}
-        elif tag_name == "ruby":
-            return {"ruby": True}
-        elif tag_name == "rt":
-            return {"ruby_text": True}
-        return {}
+        return dict(WebVTTReader._TAG_CONTENT_MAP.get(tag_name, {}))
 
     @staticmethod
     def _decode_entities(text):
@@ -787,11 +785,10 @@ class WebVTTReader(BaseReader):
 
         if line_num >= 0:
             return min(line_num / LINE_GRID_SIZE * 100, 100.0)
-        else:
-            return max(
-                (LINE_GRID_SIZE + line_num) / LINE_GRID_SIZE * 100,
-                0.0,
-            )
+        return max(
+            (LINE_GRID_SIZE + line_num) / LINE_GRID_SIZE * 100,
+            0.0,
+        )
 
     @staticmethod
     def _parse_cue_settings(cue_settings, inherit_from=None):
@@ -866,6 +863,11 @@ class WebVTTReader(BaseReader):
             return Alignment(ALIGN_SETTING_MAP[value], None)
         return None
 
+    _VERTICAL_MAP = {
+        "rl": WritingDirectionEnum.VERTICAL_RL,
+        "lr": WritingDirectionEnum.VERTICAL_LR,
+    }
+
     @staticmethod
     def _parse_vertical_value(value):
         """Map a vertical setting to a WritingDirectionEnum.
@@ -873,11 +875,7 @@ class WebVTTReader(BaseReader):
         :param value: "rl" (right-to-left) or "lr" (left-to-right).
         :returns: WritingDirectionEnum, or None if not vertical.
         """
-        if value == "rl":
-            return WritingDirectionEnum.VERTICAL_RL
-        if value == "lr":
-            return WritingDirectionEnum.VERTICAL_LR
-        return None
+        return WebVTTReader._VERTICAL_MAP.get(value)
 
     def _parse_style_blocks(self, lines):
         """Extract and parse all STYLE blocks from the header area.

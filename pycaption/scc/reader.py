@@ -82,6 +82,7 @@ from collections import deque
 from copy import deepcopy
 
 from pycaption.base import BaseReader, CaptionSet
+from pycaption.geometry import HorizontalAlignmentEnum
 from pycaption.exceptions import (
     CaptionLineLengthError,
     CaptionReadNoCaptions,
@@ -108,49 +109,6 @@ from .specialized_collections import (
 from .state_machines import DefaultProvidingPositionTracker
 
 
-class NodeCreatorFactory:
-    """Factory for InstructionNodeCreator instances sharing a position tracker.
-
-    InstructionNodeCreator instances need a shared position tracker that
-    persists across buffer resets within a single read() call, but must not
-    leak state between separate read() calls. This factory encapsulates that
-    shared state.
-    """
-
-    def __init__(self, position_tracker, node_creator=InstructionNodeCreator):
-        self.position_tracker = position_tracker
-        self.node_creator = node_creator
-
-    def new_creator(self):
-        """Return a new InstructionNodeCreator bound to the shared position tracker.
-
-        :rtype: InstructionNodeCreator
-        """
-        return self.node_creator(position_tracker=self.position_tracker)
-
-    def from_list(self, roll_rows):
-        """Concatenate multiple node creators into a single one.
-
-        :param roll_rows: list of InstructionNodeCreator instances
-        :rtype: InstructionNodeCreator
-        """
-        return self.node_creator.from_list(
-            roll_rows, position_tracker=self.position_tracker
-        )
-
-
-def fix_last_captions_without_ending(caption_list):
-    """
-    If the last captions were never explicitly ended, set their end time to
-    start + 4 seconds
-
-    :param caption_list: the entire list of captions
-    """
-
-    for caption in reversed(caption_list):
-        if caption.end:
-            return
-        caption.end = caption.start + 4 * 1000 * 1000
 
 
 class SCCReader(BaseReader):
@@ -164,18 +122,16 @@ class SCCReader(BaseReader):
         self.caption_stash = CaptionCreator()
         self.time_translator = _SccTimeTranslator()
 
-        self.node_creator_factory = NodeCreatorFactory(
-            DefaultProvidingPositionTracker()
-        )
+        self.position_tracker = DefaultProvidingPositionTracker()
 
         self.last_command = ""
         self.double_starter = False
 
         self.buffer_dict = NotifyingDict()
 
-        self.buffer_dict["pop"] = self.node_creator_factory.new_creator()
-        self.buffer_dict["paint"] = self.node_creator_factory.new_creator()
-        self.buffer_dict["roll"] = self.node_creator_factory.new_creator()
+        self.buffer_dict["pop"] = self._new_buffer()
+        self.buffer_dict["paint"] = self._new_buffer()
+        self.buffer_dict["roll"] = self._new_buffer()
 
         # Call this method when the active key changes
         self.buffer_dict.add_change_observer(self._flush_implicit_buffers)
@@ -235,9 +191,12 @@ class SCCReader(BaseReader):
 
         self._flush_implicit_buffers(self.buffer_dict.active_key)
 
-        captions = CaptionSet({lang: self.caption_stash.get_all()})
+        captions = CaptionSet(
+            {lang: self.caption_stash.get_all()},
+            visual_alignment_default=HorizontalAlignmentEnum.CENTER,
+        )
         self._validate_captions(captions, lang)
-        fix_last_captions_without_ending(captions.get_captions(lang))
+        self._fix_last_captions_without_ending(captions.get_captions(lang))
 
         return captions
 
@@ -263,22 +222,25 @@ class SCCReader(BaseReader):
 
     def _validate_line_lengths(self):
         """Raise CaptionLineLengthError if any line exceeds 32 characters."""
-        violations = []
-        for caption in self.caption_stash._collection:
-            real_caption = caption.to_real_caption()
-            caption_start = real_caption.format_start()
-            caption_text = "".join(real_caption.get_text_nodes())
-            for line in caption_text.split("\n"):
-                if len(line) > 32:
-                    violations.append(
-                        f"around {caption_start} - {line} - Length {len(line)}"
-                    )
-
+        violations = [
+            f"around {cap.format_start()} - {line} - Length {len(line)}"
+            for cap in (c.to_real_caption() for c in self.caption_stash._collection)
+            for line in cap.get_text().split("\n")
+            if len(line) > 32
+        ]
         if violations:
             raise CaptionLineLengthError(
                 "32 character limit for caption cue in scc file.\n"
                 "Lines longer than 32:\n" + "\n".join(violations)
             )
+
+    @staticmethod
+    def _fix_last_captions_without_ending(caption_list):
+        """Set end = start + 4s for trailing captions that were never ended."""
+        for caption in reversed(caption_list):
+            if caption.end:
+                return
+            caption.end = caption.start + 4 * 1000 * 1000
 
     def _flush_implicit_buffers(self, old_key=None, *args):
         """Convert to Captions those buffers whose behavior is implicit.
@@ -299,12 +261,11 @@ class SCCReader(BaseReader):
             if not self.buffer.is_empty():
                 self._roll_up()
 
-        elif old_key == "paint":
-            if not self.buffer.is_empty():
-                self.caption_stash.create_and_store(
-                    self.buffer, self.time, caption_mode="paint_on"
-                )
-                self._reset_buffer()
+        elif old_key == "paint" and not self.buffer.is_empty():
+            self.caption_stash.create_and_store(
+                self.buffer, self.time, caption_mode="paint_on"
+            )
+            self._reset_buffer()
 
     def _translate_line(self, line):
         """Parse a single SCC file line into timestamp and word pairs."""
@@ -336,9 +297,9 @@ class SCCReader(BaseReader):
         """Dispatch a single 4-char hex word as command, special char, or text."""
         if self._handle_double_command(word):
             # count frames for timing
-            self.time_translator.increment_frames()
+            self.time_translator._frames += 1
             return
-        if word in COMMANDS or _is_pac_command(word):
+        if word in COMMANDS or self._is_pac_command(word):
             self._translate_command(word=word, next_command=next_command)
 
         # second, check if word is a special character
@@ -352,8 +313,19 @@ class SCCReader(BaseReader):
         else:
             self._translate_characters(word)
 
-        # count frames for timing only after processing a command
-        self.time_translator.increment_frames()
+        # count frames for timing
+        self.time_translator._frames += 1
+
+    def _is_doubled_type(self, word):
+        """Check if this word type is subject to CEA-608 doubling."""
+        is_doubled = (
+            (word != "94a1" and word in COMMANDS)
+            or self._is_pac_command(word)
+            or word in SPECIAL_CHARS
+        )
+        if self.double_starter:
+            is_doubled = is_doubled or word in EXTENDED_CHARS or word == "94a1"
+        return is_doubled
 
     def _handle_double_command(self, word):
         """Detect and skip redundant doubled commands used for error correction.
@@ -362,41 +334,24 @@ class SCCReader(BaseReader):
 
         :rtype: bool
         """
-        # If the caption is to be broadcast, each of the commands are doubled
-        # up for redundancy in case the signal is garbled in transmission.
-        # The decoder is programmed to ignore a second command when it is the
-        # same as the first.
-        # If we have doubled commands we're skipping also
-        # doubled special characters and doubled extended characters
-        # with only one member of each pair being displayed.
-
-        doubled_types = (
-            (word != "94a1" and word in COMMANDS)
-            or _is_pac_command(word)
-            or word in SPECIAL_CHARS
-        )
-        if self.double_starter:
-            doubled_types = doubled_types or word in EXTENDED_CHARS or word == "94a1"
-
         if word in CUE_STARTING_COMMAND and word != self.last_command:
             self.double_starter = False
 
-        if doubled_types and word == self.last_command:
+        if self._is_doubled_type(word) and word == self.last_command:
             if word in CUE_STARTING_COMMAND:
                 self.double_starter = True
             self.last_command = ""
             return True
-            # Fix for the <position> <tab offset> <position> <tab offset>
-            # repetition
-        elif _is_pac_command(word) and word in self.last_command:
+
+        if self._is_pac_command(word) and word in self.last_command:
             self.last_command = ""
             return True
-        elif word in PAC_TAB_OFFSET_COMMANDS:
-            if _is_pac_command(self.last_command):
+
+        if word in PAC_TAB_OFFSET_COMMANDS:
+            if self._is_pac_command(self.last_command):
                 self.last_command += f" {word}"
                 return False
-            else:
-                return True
+            return True
 
         self.last_command = word
         return False
@@ -516,10 +471,14 @@ class SCCReader(BaseReader):
             self._reset_buffer()
             self.time = edm_time
 
+    def _new_buffer(self):
+        """Create a fresh InstructionNodeCreator bound to the shared position tracker."""
+        return InstructionNodeCreator(position_tracker=self.position_tracker)
+
     def _reset_buffer(self):
         """Replace the active buffer with a fresh creator and reset position state."""
-        self.buffer = self.node_creator_factory.new_creator()
-        self.node_creator_factory.position_tracker.reset_for_new_caption()
+        self.buffer = self._new_buffer()
+        self.position_tracker.reset_for_new_caption()
 
     def _translate_characters(self, word):
         """Decode a 4-char hex word as two printable characters."""
@@ -559,7 +518,9 @@ class SCCReader(BaseReader):
                     self.roll_rows.pop(0)
 
                 self.roll_rows.append(self.buffer)
-                self.buffer = self.node_creator_factory.from_list(self.roll_rows)
+                self.buffer = InstructionNodeCreator.from_list(
+                    self.roll_rows, position_tracker=self.position_tracker
+                )
 
         # convert buffer and empty
         self.caption_stash.create_and_store(
@@ -583,6 +544,22 @@ class SCCReader(BaseReader):
             pop_on_cue.buffer, pop_on_cue.start, end, caption_mode="pop_on"
         )
 
+    @staticmethod
+    def _is_pac_command(word):
+        """Check whether the given word is a Preamble Address Code [PAC] command.
+
+        :type word: str
+        :param word: 4 letter unicode command
+        :rtype: bool
+        """
+        byte1, byte2 = word[:2], word[2:]
+        try:
+            PAC_BYTES_TO_POSITIONING_MAP[byte1][byte2]
+        except KeyError:
+            return False
+        else:
+            return True
+
 
 class _SccTimeTranslator:
     """Converts SCC time to microseconds, keeping track of frames passed"""
@@ -600,9 +577,10 @@ class _SccTimeTranslator:
 
         :rtype: int
         """
-        return self._translate_time(
-            self._time[:-2] + str(int(self._time[-2:]) + self._frames), self.offset
-        )
+        base_frames = int(self._time[-2:])
+        total_frames = base_frames + self._frames
+        stamp = self._time[:-2] + str(total_frames)
+        return self._translate_time(stamp, self.offset)
 
     @staticmethod
     def _translate_time(stamp, offset):
@@ -653,24 +631,3 @@ class _SccTimeTranslator:
         self._time = timespec
         self._frames = 0
 
-    def increment_frames(self):
-        """After a command was processed, we'd increment the number of frames"""
-        self._frames += 1
-
-
-def _is_pac_command(word):
-    """Checks whether the given word is a Preamble Address Code [PAC] command
-
-    :type word: str
-    :param word: 4 letter unicode command
-
-    :rtype: bool
-    """
-    byte1, byte2 = word[:2], word[2:]
-
-    try:
-        PAC_BYTES_TO_POSITIONING_MAP[byte1][byte2]
-    except KeyError:
-        return False
-    else:
-        return True

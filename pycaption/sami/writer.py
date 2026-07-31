@@ -36,10 +36,15 @@ class SAMIWriter(BaseWriter):
         super().__init__(*args, **kwargs)
         self._span_stack = []
         self.last_time = None
+        self._promote_center = False
 
-    def write(self, caption_set):
+    def write(self, caption_set, **kwargs):
         """Serialize a CaptionSet into a SAMI document string."""
         caption_set = deepcopy(caption_set)
+        source_default = self._get_visual_alignment_default(caption_set)
+        self._promote_center = (
+            source_default == HorizontalAlignmentEnum.CENTER
+        )
         sami = BeautifulSoup(SAMI_BASE_MARKUP, "lxml-xml")
 
         caption_set.layout_info = self._relativize_and_fit_to_screen(
@@ -58,8 +63,8 @@ class SAMIWriter(BaseWriter):
                 self._relativize_and_fit_to_screen(caption_set.get_layout_info(lang)),
             )
 
-            last_caption = None
-            for caption in caption_set.get_captions(lang):
+            captions = caption_set.get_captions(lang)
+            for caption in captions:
                 caption.layout_info = self._relativize_and_fit_to_screen(
                     caption.layout_info
                 )
@@ -68,11 +73,10 @@ class SAMIWriter(BaseWriter):
                         node.layout_info
                     )
                 sami = self._recreate_p_tag(caption, sami, lang, primary, caption_set)
-                last_caption = caption
 
-            if self.last_time and last_caption:
+            if self.last_time and captions:
                 sami = self._recreate_blank_tag(
-                    sami, last_caption, lang, primary, caption_set
+                    sami, captions[-1], lang, primary, caption_set
                 )
 
         stylesheet = self._recreate_stylesheet(caption_set)
@@ -95,26 +99,7 @@ class SAMIWriter(BaseWriter):
 
         p = sami.new_tag("p")
 
-        p_style = ""
-        for attr, value in self._recreate_style(caption.style).items():
-            p_style += f"{attr}:{value};"
-
-        if caption.layout_info:
-            is_scc_positional = caption.layout_info.is_positional_anchor
-
-            if caption.layout_info.origin and not is_scc_positional:
-                if caption.layout_info.origin.x:
-                    p_style += f"margin-left:{caption.layout_info.origin.x};"
-                if caption.layout_info.origin.y:
-                    p_style += f"margin-top:{caption.layout_info.origin.y};"
-
-            if caption.layout_info.extent and not is_scc_positional:
-                if caption.layout_info.extent.horizontal:
-                    p_style += f"width:{caption.layout_info.extent.horizontal};"
-
-        text_align = self._resolve_text_align(caption.layout_info)
-        if text_align:
-            p_style += f"text-align:{text_align};"
+        p_style = self._build_p_style(caption)
 
         if p_style:
             p["style"] = p_style
@@ -126,28 +111,55 @@ class SAMIWriter(BaseWriter):
 
         return sami
 
-    def _resolve_text_align(self, layout_info):
-        """Return a CSS text-align value for the layout, or None to suppress."""
+    def _build_p_style(self, caption):
+        """Build the inline CSS style string for a <p> element."""
+        parts = []
+        for attr, value in self._recreate_style(caption.style).items():
+            parts.append(f"{attr}:{value};")
+
+        self._append_position_styles(caption.layout_info, parts)
+
+        text_align = self._resolve_text_align(caption.layout_info)
+        if text_align:
+            parts.append(f"text-align:{text_align};")
+
+        return "".join(parts)
+
+    @staticmethod
+    def _append_position_styles(layout_info, parts):
+        """Append margin/width CSS from layout positioning."""
         if not layout_info:
-            return "center"
+            return
 
         if layout_info.is_positional_anchor:
-            return "center"
+            return
+
+        if layout_info.origin:
+            if layout_info.origin.x:
+                parts.append(f"margin-left:{layout_info.origin.x};")
+            if layout_info.origin.y:
+                parts.append(f"margin-top:{layout_info.origin.y};")
+
+        if layout_info.extent and layout_info.extent.horizontal:
+            parts.append(f"width:{layout_info.extent.horizontal};")
+
+    def _resolve_text_align(self, layout_info):
+        """Return a CSS text-align value for the layout, or None to suppress.
+
+        Uses self._promote_center (derived from CaptionSet.visual_alignment_default)
+        to decide whether to emit explicit center alignment per RP 2052-10.
+        """
+        if not layout_info:
+            return "center" if self._promote_center else None
+
+        if layout_info.is_positional_anchor:
+            return "center" if self._promote_center else None
 
         if not layout_info.alignment:
-            return "center"
+            return "center" if self._promote_center else None
 
         h = layout_info.alignment.horizontal
         if not h:
-            return None
-
-        is_default_left = (
-            h == HorizontalAlignmentEnum.LEFT
-            and not layout_info.origin
-            and not layout_info.extent
-            and not layout_info.webvtt_positioning
-        )
-        if is_default_left:
             return None
 
         return HORIZONTAL_ALIGNMENT_MAP.get(h)

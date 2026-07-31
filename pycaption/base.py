@@ -9,7 +9,7 @@ import os
 from datetime import timedelta
 from numbers import Number
 
-from .exceptions import CaptionReadError, CaptionReadTimingError
+from .exceptions import CaptionReadError, CaptionReadTimingError, InvalidInputError
 
 # `und` a special identifier for an undetermined language according to ISO 639-2
 DEFAULT_LANGUAGE_CODE = os.getenv("PYCAPTION_DEFAULT_LANG", "und")
@@ -26,7 +26,7 @@ class CaptionConverter:
     """
 
     def __init__(self, captions=None):
-        self.captions = captions if captions else []
+        self.captions = captions
 
     def read(self, content, caption_reader):
         """Parse caption content using the given reader.
@@ -35,10 +35,11 @@ class CaptionConverter:
         :param caption_reader: A BaseReader subclass instance.
         :returns: self (for chaining).
         """
-        try:
-            self.captions = caption_reader.read(content)
-        except AttributeError as e:
-            raise Exception(e)
+        if not hasattr(caption_reader, "read"):
+            raise InvalidInputError(
+                "The caption_reader must be a BaseReader instance with a read() method."
+            )
+        self.captions = caption_reader.read(content)
         return self
 
     def write(self, caption_writer):
@@ -48,16 +49,18 @@ class CaptionConverter:
         :returns: The serialized caption string.
         :rtype: str
         """
-        try:
-            return caption_writer.write(self.captions)
-        except AttributeError as e:
-            raise Exception(e)
+        if not hasattr(caption_writer, "write"):
+            raise InvalidInputError(
+                "The caption_writer must be a BaseWriter instance with a write() method."
+            )
+        return caption_writer.write(self.captions)
 
 
 class BaseReader:
     """Abstract base class for caption format readers."""
 
     def __init__(self, *args, **kwargs):
+        # Accepts arbitrary args so subclasses can extend without breaking super() calls.
         pass
 
     def detect(self, content):
@@ -107,6 +110,28 @@ class BaseWriter:
         self.video_height = video_height
         self.fit_to_screen = fit_to_screen
 
+    @staticmethod
+    def _get_visual_alignment_default(caption_set):
+        """Return the source format's visual alignment default from a CaptionSet.
+
+        Per SMPTE RP 2052-10, caption formats have different implicit visual
+        defaults when no alignment is specified:
+        - CENTER: WebVTT, SRT, SCC, MicroDVD
+        - LEFT/START: DFXP/TTML, SAMI
+
+        When converting between formats with mismatched defaults, the source
+        default must be made explicit in the output to prevent visual
+        regression (e.g. centered text silently becoming left-aligned).
+
+        Readers declare their default via CaptionSet.visual_alignment_default.
+        Writers compare it to their own format's default to decide whether
+        to emit explicit alignment.
+
+        :type caption_set: CaptionSet
+        :rtype: HorizontalAlignmentEnum | None
+        """
+        return caption_set.visual_alignment_default if caption_set else None
+
     def _relativize_and_fit_to_screen(self, layout_info):
         """Apply relativization and fit-to-screen adjustments to a Layout.
 
@@ -124,13 +149,14 @@ class BaseWriter:
                 layout_info = layout_info.fit_to_screen()
         return layout_info
 
-    def write(self, content):
+    def write(self, caption_set, **kwargs):
         """Serialize a CaptionSet. Subclasses override this.
 
-        :type content: CaptionSet
+        :type caption_set: CaptionSet
+        :param kwargs: Format-specific options (e.g. force, lang).
         :rtype: str
         """
-        return content
+        return caption_set
 
 
 class CaptionNode:
@@ -146,8 +172,6 @@ class CaptionNode:
     """
 
     TEXT = 1
-    # When and if this is extended, it might be better to turn it into a
-    # property of the node, not a type of node itself.
     STYLE = 2
     BREAK = 3
 
@@ -216,9 +240,9 @@ class Caption:
         """
         Initialize the Caption object
         :param start: The start time in microseconds
-        :type start: Number
+        :type start: int
         :param end: The end time in microseconds
-        :type end: Number
+        :type end: int
         :param nodes: A list of CaptionNodes
         :type nodes: list
         :param style: A dictionary with CSS-like styling rules
@@ -242,10 +266,8 @@ class Caption:
         self.nodes = nodes
         self.style = style or {}
         self.layout_info = layout_info
-
-    def is_empty(self):
-        """Return True if this caption has no nodes."""
-        return not self.nodes
+        self.caption_mode = None
+        self.roll_up_rows = None
 
     def format_start(self, msec_separator=None):
         """Format start time as HH:MM:SS.mmm string.
@@ -273,33 +295,30 @@ class Caption:
 
         :rtype: list[str]
         """
-        result = []
-        for node in self.nodes:
-            if node.type_ == CaptionNode.TEXT:
-                result.append(node.content)
-            elif node.type_ == CaptionNode.BREAK:
-                result.append("\n")
-        return result
+        return [
+            node.content if node.type_ == CaptionNode.TEXT else "\n"
+            for node in self.nodes
+            if node.type_ in (CaptionNode.TEXT, CaptionNode.BREAK)
+        ]
 
     def get_text(self):
         """Return the plain text content of this caption (no markup).
 
         :rtype: str
         """
-        text_nodes = self.get_text_nodes()
-        return "".join(text_nodes).strip()
+        return "".join(self.get_text_nodes()).strip()
 
-    def _format_timestamp(self, microseconds, msec_separator=None):
+    @staticmethod
+    def _format_timestamp(microseconds, msec_separator=None):
         """Convert microseconds to HH:MM:SS{sep}mmm string."""
         duration = timedelta(microseconds=microseconds)
         hours, rem = divmod(duration.seconds, 3600)
         minutes, seconds = divmod(rem, 60)
-        milliseconds = f"{duration.microseconds // 1000:03d}"
-        timestamp = (
+        milliseconds = duration.microseconds // 1000
+        return (
             f"{hours:02d}:{minutes:02d}:{seconds:02d}"
-            f"{msec_separator or '.'}{milliseconds:.3s}"
+            f"{msec_separator or '.'}{milliseconds:03d}"
         )
-        return timestamp
 
 
 class CaptionList(list):
@@ -320,14 +339,14 @@ class CaptionList(list):
             return item
         return CaptionList(item, layout_info=self.layout_info)
 
-    def __add__(self, other):
+    def __add__(self, value):
         add_is_safe = (
-            not hasattr(other, "layout_info")
-            or not other.layout_info
-            or self.layout_info == other.layout_info
+            not hasattr(value, "layout_info")
+            or not value.layout_info
+            or self.layout_info == value.layout_info
         )
         if add_is_safe:
-            return CaptionList(list.__add__(self, other), layout_info=self.layout_info)
+            return CaptionList(list.__add__(self, value), layout_info=self.layout_info)
         else:
             raise ValueError(
                 "Cannot add CaptionList objects with different layout_info"
@@ -348,17 +367,27 @@ class CaptionSet:
     by all the children.
     """
 
-    def __init__(self, captions, styles=None, layout_info=None, regions=None):
+    def __init__(
+        self, captions, styles=None, layout_info=None, regions=None,
+        visual_alignment_default=None,
+    ):
         """
         :param captions: A dictionary of the format {'language': CaptionList}
         :param styles: A dictionary with CSS-like styling rules
         :param Layout layout_info: A Layout object with the positioning info
         :param regions: A dictionary mapping region id to raw settings dict
+        :param visual_alignment_default: The source format's implicit text
+            alignment when no explicit alignment is specified. Per SMPTE
+            RP 2052-10, writers targeting a format with a different visual
+            default must emit this alignment explicitly to prevent visual
+            regression. Use HorizontalAlignmentEnum values.
+        :type visual_alignment_default: HorizontalAlignmentEnum | None
         """
         self._captions = captions
         self._styles = styles or {}
         self._regions = regions or {}
         self.layout_info = layout_info
+        self.visual_alignment_default = visual_alignment_default
 
     def set_captions(self, lang, captions):
         """Replace the caption list for a given language.
@@ -429,7 +458,10 @@ class CaptionSet:
 
     def is_empty(self):
         """Return True if no language contains any captions."""
-        return all([len(captions) == 0 for captions in list(self._captions.values())])
+        for captions in self._captions.values():
+            if len(captions) > 0:
+                return False
+        return True
 
     def set_layout_info(self, lang, layout_info):
         """Set the layout_info on the CaptionList for a given language.
@@ -469,44 +501,46 @@ class CaptionSet:
             self.set_captions(lang, out_captions)
 
 
-# Functions
 def merge_concurrent_captions(caption_set):
     """Merge captions that have the same start and end times"""
     for lang in caption_set.get_languages():
         captions = caption_set.get_captions(lang)
-        last_caption = None
-        concurrent_captions = CaptionList()
-        merged_captions = CaptionList()
-        for caption in captions:
-            if last_caption:
-                last_timespan = last_caption.start, last_caption.end
-                current_timespan = caption.start, caption.end
-                if current_timespan == last_timespan:
-                    concurrent_captions.append(caption)
-                    last_caption = caption
-                    continue
-                else:
-                    merged_captions.append(merge(concurrent_captions))
-            concurrent_captions = [caption]
-            last_caption = caption
-
-        if concurrent_captions:
-            merged_captions.append(merge(concurrent_captions))
-        if merged_captions:
-            caption_set.set_captions(lang, merged_captions)
+        merged = merge_caption_list(captions)
+        if merged:
+            caption_set.set_captions(lang, merged)
     return caption_set
 
 
-def merge(captions):
-    """
-    Merge list of captions into one caption. The start/end times from the first
-    caption are kept.
-    """
+def merge_caption_list(captions):
+    """Merge consecutive captions with identical start/end times into one."""
+    if not captions:
+        return CaptionList()
+    last_caption = None
+    concurrent_captions = CaptionList()
+    merged_captions = CaptionList()
+    for caption in captions:
+        if last_caption:
+            last_timespan = last_caption.start, last_caption.end
+            current_timespan = caption.start, caption.end
+            if current_timespan == last_timespan:
+                concurrent_captions.append(caption)
+                last_caption = caption
+                continue
+            else:
+                merged_captions.append(_merge_group(concurrent_captions))
+        concurrent_captions = [caption]
+        last_caption = caption
+
+    if concurrent_captions:
+        merged_captions.append(_merge_group(concurrent_captions))
+    return merged_captions
+
+
+def _merge_group(captions):
+    """Merge a group of captions into one, keeping the first caption's timing."""
     new_nodes = []
     for caption in captions:
         if new_nodes:
             new_nodes.append(CaptionNode.create_break())
-        for node in caption.nodes:
-            new_nodes.append(node)
-    caption = Caption(captions[0].start, captions[0].end, new_nodes, captions[0].style)
-    return caption
+        new_nodes.extend(caption.nodes)
+    return Caption(captions[0].start, captions[0].end, new_nodes, captions[0].style)

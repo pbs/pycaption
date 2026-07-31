@@ -22,6 +22,7 @@ from .exceptions import (
     CaptionReadTimingError,
     InvalidInputError,
 )
+from .geometry import HorizontalAlignmentEnum
 
 
 class MicroDVDReader(BaseReader):
@@ -55,30 +56,20 @@ class MicroDVDReader(BaseReader):
             start, end, txt = m.groups()
 
             if start == "0" and end == "0":
-                try:
-                    fps = float(txt)
-                    continue
-                except ValueError:
-                    raise CaptionReadTimingError("FPS information is not provided")
+                fps = self._parse_fps(txt)
+                continue
 
             caption_start = self._framestomicro(int(start), fps)
             caption_end = self._framestomicro(int(end), fps)
-            nodes = []
+            nodes = self._parse_caption_nodes(txt)
 
-            for line in txt.split("|"):
-                # skip extra blank lines
-                if line != "":
-                    nodes.append(CaptionNode.create_text(line))
-                    nodes.append(CaptionNode.create_break())
+            if nodes:
+                captions.append(Caption(caption_start, caption_end, nodes))
 
-            # remove last line break from end of caption list
-            if len(nodes):
-                nodes.pop()
-
-                caption = Caption(caption_start, caption_end, nodes)
-                captions.append(caption)
-
-        caption_set = CaptionSet({lang: captions})
+        caption_set = CaptionSet(
+            {lang: captions},
+            visual_alignment_default=HorizontalAlignmentEnum.CENTER,
+        )
         caption_set.set_captions(lang, captions)
 
         if caption_set.is_empty():
@@ -86,7 +77,28 @@ class MicroDVDReader(BaseReader):
 
         return caption_set
 
-    def _framestomicro(self, framenum, fps=25.0):
+    @staticmethod
+    def _parse_fps(txt):
+        """Parse FPS value from the {0}{0} metadata line."""
+        try:
+            return float(txt)
+        except ValueError:
+            raise CaptionReadTimingError("FPS information is not provided")
+
+    @staticmethod
+    def _parse_caption_nodes(txt):
+        """Build caption nodes from pipe-delimited text."""
+        nodes = []
+        for segment in txt.split("|"):
+            if segment != "":
+                nodes.append(CaptionNode.create_text(segment))
+                nodes.append(CaptionNode.create_break())
+        if nodes:
+            nodes.pop()
+        return nodes
+
+    @staticmethod
+    def _framestomicro(framenum, fps=25.0):
         """Convert a frame number to microseconds."""
         return int(framenum / fps * (10**6))
 
@@ -94,7 +106,7 @@ class MicroDVDReader(BaseReader):
 class MicroDVDWriter(BaseWriter):
     """Serializes a CaptionSet to MicroDVD format."""
 
-    def write(self, caption_set):
+    def write(self, caption_set, **kwargs):
         """Write a CaptionSet as a MicroDVD string.
 
         :type caption_set: CaptionSet
@@ -109,7 +121,8 @@ class MicroDVDWriter(BaseWriter):
 
         return "".join(captions)
 
-    def _microtoframes(self, micro, fps=25.0):
+    @staticmethod
+    def _microtoframes(micro, fps=25.0):
         """Convert microseconds to a frame number."""
         return int(micro * fps / (10**6))
 
@@ -138,7 +151,8 @@ class MicroDVDWriter(BaseWriter):
 
         return sub
 
-    def _recreate_line(self, sub, line):
+    @staticmethod
+    def _recreate_line(sub, line):
         """Append a CaptionNode's content to the output string."""
         if line.type_ == CaptionNode.TEXT:
             return sub + line.content

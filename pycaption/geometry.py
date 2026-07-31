@@ -9,6 +9,7 @@ CONVENTIONS:
 """
 import re
 from enum import Enum
+from functools import total_ordering
 
 from .exceptions import CaptionReadSyntaxError, RelativizationError
 
@@ -65,6 +66,19 @@ class WritingDirectionEnum(Enum):
 class Alignment:
     """Represents horizontal and vertical text alignment within a region."""
 
+    _TEXT_ALIGN_MAP = {
+        "left": HorizontalAlignmentEnum.LEFT,
+        "start": HorizontalAlignmentEnum.START,
+        "center": HorizontalAlignmentEnum.CENTER,
+        "right": HorizontalAlignmentEnum.RIGHT,
+        "end": HorizontalAlignmentEnum.END,
+    }
+    _DISPLAY_ALIGN_MAP = {
+        "before": VerticalAlignmentEnum.TOP,
+        "center": VerticalAlignmentEnum.CENTER,
+        "after": VerticalAlignmentEnum.BOTTOM,
+    }
+
     def __init__(self, horizontal, vertical):
         """
         :type horizontal: HorizontalAlignmentEnum
@@ -79,10 +93,10 @@ class Alignment:
         return hash(hash(self.horizontal) * 83 + hash(self.vertical) * 89 + 97)
 
     def __eq__(self, other):
+        if not isinstance(other, Alignment):
+            return NotImplemented
         return (
-            other
-            and type(self) == type(other)
-            and self.horizontal == other.horizontal
+            self.horizontal == other.horizontal
             and self.vertical == other.vertical
         )
 
@@ -102,28 +116,10 @@ class Alignment:
         :returns: Alignment instance, or None if both params are None.
         :rtype: Alignment | None
         """
-        horizontal_obj = None
-        vertical_obj = None
+        horizontal_obj = cls._TEXT_ALIGN_MAP.get(text_align)
+        vertical_obj = cls._DISPLAY_ALIGN_MAP.get(display_align)
 
-        if text_align == "left":
-            horizontal_obj = HorizontalAlignmentEnum.LEFT
-        if text_align == "start":
-            horizontal_obj = HorizontalAlignmentEnum.START
-        if text_align == "center":
-            horizontal_obj = HorizontalAlignmentEnum.CENTER
-        if text_align == "right":
-            horizontal_obj = HorizontalAlignmentEnum.RIGHT
-        if text_align == "end":
-            horizontal_obj = HorizontalAlignmentEnum.END
-
-        if display_align == "before":
-            vertical_obj = VerticalAlignmentEnum.TOP
-        if display_align == "center":
-            vertical_obj = VerticalAlignmentEnum.CENTER
-        if display_align == "after":
-            vertical_obj = VerticalAlignmentEnum.BOTTOM
-
-        if not any([horizontal_obj, vertical_obj]):
+        if not horizontal_obj and not vertical_obj:
             return None
         return cls(horizontal_obj, vertical_obj)
 
@@ -132,8 +128,6 @@ class TwoDimensionalObject:
     """Adds a couple useful methods to its subclasses, nothing fancy."""
 
     @classmethod
-    # TODO - highly cachable. Should use WeakValueDictionary here to return
-    # flyweights, not new objects.
     def from_xml_attribute(cls, attribute):
         """Instantiate the class from a value of the type "4px" or "5%"
         or any number concatenated with a measuring unit (member of UnitEnum)
@@ -159,11 +153,8 @@ class Stretch(TwoDimensionalObject):
         :type horizontal: Size
         :type vertical: Size
         """
-        for parameter in [horizontal, vertical]:
-            if not isinstance(parameter, Size):
-                raise ValueError(
-                    "Stretch must be initialized with two valid " "Size objects."
-                )
+        if not isinstance(horizontal, Size) or not isinstance(vertical, Size):
+            raise ValueError("Stretch must be initialized with two valid Size objects.")
         self.horizontal = horizontal
         self.vertical = vertical
 
@@ -188,10 +179,10 @@ class Stretch(TwoDimensionalObject):
         )
 
     def __eq__(self, other):
+        if not isinstance(other, Stretch):
+            return NotImplemented
         return (
-            other
-            and type(self) == type(other)
-            and self.horizontal == other.horizontal
+            self.horizontal == other.horizontal
             and self.vertical == other.vertical
         )
 
@@ -199,26 +190,18 @@ class Stretch(TwoDimensionalObject):
         return hash(hash(self.horizontal) * 59 + hash(self.vertical) * 61 + 67)
 
     def __bool__(self):
-        return True if self.horizontal or self.vertical else False
+        return bool(self.horizontal or self.vertical)
 
     def to_xml_attribute(self, **kwargs):
         """Returns a string representation of this object as an xml attribute"""
-        return "{horizontal} {vertical}".format(
-            horizontal=self.horizontal.to_xml_attribute(),
-            vertical=self.vertical.to_xml_attribute(),
-        )
+        return f"{self.horizontal.to_xml_attribute()} {self.vertical.to_xml_attribute()}"
 
     def is_relative(self):
-        """
-        Returns True if all dimensions are expressed as percentages,
-        False otherwise.
-        """
-        is_relative = True
-        if self.horizontal:
-            is_relative &= self.horizontal.is_relative()
-        if self.vertical:
-            is_relative &= self.vertical.is_relative()
-        return is_relative
+        """Return True if all dimensions are expressed as percentages."""
+        return (
+            (not self.horizontal or self.horizontal.is_relative())
+            and (not self.vertical or self.vertical.is_relative())
+        )
 
     def as_percentage_of(self, video_width, video_height):
         """
@@ -238,11 +221,8 @@ class Point(TwoDimensionalObject):
         :type x: Size
         :type y: Size
         """
-        for parameter in [x, y]:
-            if not isinstance(parameter, Size):
-                raise ValueError(
-                    "Point must be initialized with two valid " "Size objects."
-                )
+        if not isinstance(x, Size) or not isinstance(y, Size):
+            raise ValueError("Point must be initialized with two valid Size objects.")
         self.x = x
         self.y = y
 
@@ -257,16 +237,11 @@ class Point(TwoDimensionalObject):
         return Point(self.x + stretch.horizontal, self.y + stretch.vertical)
 
     def is_relative(self):
-        """
-        Returns True if all dimensions are expressed as percentages,
-        False otherwise.
-        """
-        is_relative = True
-        if self.x:
-            is_relative &= self.x.is_relative()
-        if self.y:
-            is_relative &= self.y.is_relative()
-        return is_relative
+        """Return True if all dimensions are expressed as percentages."""
+        return (
+            (not self.x or self.x.is_relative())
+            and (not self.y or self.y.is_relative())
+        )
 
     def as_percentage_of(self, video_width, video_height):
         """
@@ -306,24 +281,22 @@ class Point(TwoDimensionalObject):
         )
 
     def __eq__(self, other):
-        return (
-            other
-            and type(self) == type(other)
-            and self.x == other.x
-            and self.y == other.y
-        )
+        if not isinstance(other, Point):
+            return NotImplemented
+        return self.x == other.x and self.y == other.y
 
     def __hash__(self):
         return hash(hash(self.x) * 51 + hash(self.y) * 53 + 57)
 
     def __bool__(self):
-        return True if self.x or self.y else False
+        return bool(self.x or self.y)
 
     def to_xml_attribute(self, **kwargs):
         """Returns a string representation of this object as an xml attribute"""
         return f"{self.x.to_xml_attribute()} {self.y.to_xml_attribute()}"
 
 
+@total_ordering
 class Size:
     """Ties together a number with a unit, to represent a size.
 
@@ -352,14 +325,11 @@ class Size:
     def __abs__(self):
         return Size(abs(self.value), self.unit)
 
-    def __cmp__(self, other):
-        if self.unit == other.unit:
-            # python3 does not have cmp
-            return (self.value > other.value) - (self.value < other.value)
-        else:
-            raise ValueError("The sizes should have the same measure units.")
-
     def __lt__(self, other):
+        if not isinstance(other, Size):
+            return NotImplemented
+        if self.unit != other.unit:
+            raise ValueError("The sizes should have the same measure units.")
         return self.value < other.value
 
     def __add__(self, other):
@@ -388,7 +358,7 @@ class Size:
         # The input must be valid so that any conversion can be done
         if not (video_width or video_height):
             raise RelativizationError(
-                "At least one of video width or height" " must be given as a reference"
+                "At least one of video width or height must be given as a reference"
             )
         elif video_width and video_height:
             raise RelativizationError(
@@ -397,17 +367,12 @@ class Size:
             )
 
         if unit == UnitEnum.EM:
-            # TODO: Implement proper conversion of em in function of font-size
-            # The em unit is relative to the font-size, to which we currently
-            # have no access. As a workaround, we presume the font-size is 16px,
-            # which is a common default value but not guaranteed.
+            # Assumes 16px font-size (common default); actual font-size is
+            # not available at this layer.
             value *= 16
             unit = UnitEnum.PIXEL
 
         if unit == UnitEnum.PT:
-            # XXX: we will convert first to "px" and from "px" this will be
-            # converted to percent. we don't take into consideration the
-            # font-size
             value = value / 72.0 * 96.0
             unit = UnitEnum.PIXEL
 
@@ -416,9 +381,8 @@ class Size:
             unit = UnitEnum.PERCENT
 
         if unit == UnitEnum.CELL:
-            # TODO: Implement proper cell resolution
-            # (w3.org/TR/ttaf1-dfxp/#parameter-attribute-cellResolution)
-            # For now we will use the default values (32 columns and 15 rows)
+            # TTML default cell resolution (32 cols x 15 rows) per DFXP spec;
+            # custom ttp:cellResolution is not currently parsed.
             cell_reference = 32 if video_width else 15
             value = value * 100.0 / cell_reference
             unit = UnitEnum.PERCENT
@@ -426,8 +390,6 @@ class Size:
         return Size(value, unit)
 
     @classmethod
-    # TODO - this also looks highly cachable. Should use a WeakValueDict here
-    # to return flyweights
     def from_string(cls, string):
         """Given a string of the form "46px" or "5%" etc., returns the proper
         size object
@@ -475,18 +437,13 @@ class Size:
         return self.value, self.unit
 
     def __eq__(self, other):
-        return (
-            other
-            and type(self) == type(other)
-            and self.value == other.value
-            and self.unit == other.unit
-        )
+        if not isinstance(other, Size):
+            return NotImplemented
+        return self.value == other.value and self.unit == other.unit
 
     def __hash__(self):
         return hash(hash(self.value) * 41 + hash(self.unit) * 43 + 47)
 
-    def __bool__(self):
-        return self.unit in UnitEnum and self.value is not None
 
 
 class Padding:
@@ -505,17 +462,11 @@ class Padding:
         :type start: Size
         :type end: Size
         """
-        self.before = before  # top
-        self.after = after  # bottom
-        self.start = start  # left
-        self.end = end  # right
-
-        for attr in ["before", "after", "start", "end"]:
-            # Ensure that a Padding object always explicitly defines all
-            # four possible paddings
-            if not isinstance(getattr(self, attr), Size):
-                # Sets default padding (0%)
-                setattr(self, attr, Size(0, UnitEnum.PERCENT))
+        default = Size(0, UnitEnum.PERCENT)
+        self.before = before if isinstance(before, Size) else default
+        self.after = after if isinstance(after, Size) else default
+        self.start = start if isinstance(start, Size) else default
+        self.end = end if isinstance(end, Size) else default
 
     @classmethod
     def from_xml_attribute(cls, attribute):
@@ -531,11 +482,7 @@ class Padding:
         :param attribute: a string like object, representing a dfxp attr. value
         :return: a Padding object
         """
-        values_list = attribute.split(" ")
-        sizes = []
-
-        for value in values_list:
-            sizes.append(Size.from_string(value))
+        sizes = [Size.from_string(v) for v in attribute.split(" ")]
 
         if len(sizes) == 1:
             return cls(sizes[0], sizes[0], sizes[0], sizes[0])
@@ -591,10 +538,7 @@ class Padding:
     def to_xml_attribute(
         self, attribute_order=("before", "end", "after", "start"), **kwargs
     ):
-        """Returns a string representation of this object as an xml attribute
-
-        TODO - should extend the attribute_order tuple to contain 4 tuples,
-        so we can reduce the output length to 3, 2 or 1 element.
+        """Returns a string representation of this object as an xml attribute.
 
         :type attribute_order: tuple
         :param attribute_order: the order that the attributes should be
@@ -629,16 +573,10 @@ class Padding:
 
     def is_relative(self):
         """Return True if all padding values are expressed as percentages."""
-        is_relative = True
-        if self.before:
-            is_relative &= self.before.is_relative()
-        if self.after:
-            is_relative &= self.after.is_relative()
-        if self.start:
-            is_relative &= self.start.is_relative()
-        if self.end:
-            is_relative &= self.end.is_relative()
-        return is_relative
+        return all(
+            not size or size.is_relative()
+            for size in (self.before, self.after, self.start, self.end)
+        )
 
 
 class Layout:
@@ -714,16 +652,14 @@ class Layout:
                     setattr(self, attr_name, getattr(inherit_from, attr_name))
 
     def __bool__(self):
-        return any(
-            [
-                self.origin,
-                self.extent,
-                self.padding,
-                self.alignment,
-                self.webvtt_positioning,
-                self.writing_direction,
-            ]
-        )
+        return any((
+            self.origin,
+            self.extent,
+            self.padding,
+            self.alignment,
+            self.webvtt_positioning,
+            self.writing_direction,
+        ))
 
     def __repr__(self):
         return (
@@ -751,9 +687,6 @@ class Layout:
             and self.writing_direction == other.writing_direction
         )
 
-    def __ne__(self, other):
-        return not self == other
-
     def __hash__(self):
         return hash(
             hash(self.origin) * 7
@@ -765,18 +698,11 @@ class Layout:
         )
 
     def is_relative(self):
-        """
-        Returns True if all positioning values are expressed as percentages,
-        False otherwise.
-        """
-        is_relative = True
-        if self.origin:
-            is_relative &= self.origin.is_relative()
-        if self.extent:
-            is_relative &= self.extent.is_relative()
-        if self.padding:
-            is_relative &= self.padding.is_relative()
-        return is_relative
+        """Return True if all positioning values are expressed as percentages."""
+        return all(
+            not attr or attr.is_relative()
+            for attr in (self.origin, self.extent, self.padding)
+        )
 
     def as_percentage_of(self, video_width, video_height):
         """Convert absolute positioning values to percentages.
@@ -806,53 +732,42 @@ class Layout:
         ATTENTION: This must be called on relativized objects (such as the one
         returned by as_percentage_of). All units are presumed to be percentages.
         """
+        if not self.origin:
+            return self
 
-        if self.origin:
-            # Calculated values to be used if replacement is needed
-            diff_horizontal = Size(90 - self.origin.x.value, UnitEnum.PERCENT)
-            diff_vertical = Size(95 - self.origin.y.value, UnitEnum.PERCENT)
-            if not self.extent:
-                # Extent is not set, use the calculated values
-                new_extent = Stretch(diff_horizontal, diff_vertical)
-            else:
-                # Extent is set but may have inconsistent values,
-                # e.g. origin="35% 25%" extent="80% 80%", which would cause
-                # captions to end horizontally at 115% and vertically at 105%,
-                # which would result in them being cut out of the screen.
-                # In this case, the horizontal and vertical values are
-                # corrected so that origin + extent = 100%.
-                bottom_right = self.origin.add_stretch(self.extent)
+        diff_horizontal = Size(90 - self.origin.x.value, UnitEnum.PERCENT)
+        diff_vertical = Size(95 - self.origin.y.value, UnitEnum.PERCENT)
 
-                found_absolute_unit = False
-                if bottom_right.x.unit != UnitEnum.PERCENT:
-                    found_absolute_unit = True
-                elif bottom_right.y.unit != UnitEnum.PERCENT:
-                    found_absolute_unit = True
+        if not self.extent:
+            new_extent = Stretch(diff_horizontal, diff_vertical)
+        else:
+            new_extent = self._corrected_extent(diff_horizontal, diff_vertical)
 
-                if found_absolute_unit:
-                    raise ValueError(
-                        "Units must be relativized before extent "
-                        "can be calculated based on origin."
-                    )
+        return Layout(
+            origin=self.origin,
+            extent=new_extent,
+            padding=self.padding,
+            alignment=self.alignment,
+            writing_direction=self.writing_direction,
+            is_positional_anchor=self.is_positional_anchor,
+        )
 
-                new_horizontal = self.extent.horizontal
-                new_vertical = self.extent.vertical
-                # If extent is set but it's inconsistent, replace with
-                # calculated values
-                if bottom_right.x.value > 90:
-                    new_horizontal = diff_horizontal
-                if bottom_right.y.value > 95:
-                    new_vertical = diff_vertical
+    def _corrected_extent(self, diff_horizontal, diff_vertical):
+        """Return extent clamped so origin + extent doesn't exceed the screen."""
+        bottom_right = self.origin.add_stretch(self.extent)
 
-                new_extent = Stretch(new_horizontal, new_vertical)
-
-            return Layout(
-                origin=self.origin,
-                extent=new_extent,
-                padding=self.padding,
-                alignment=self.alignment,
-                writing_direction=self.writing_direction,
-                is_positional_anchor=self.is_positional_anchor,
+        if (bottom_right.x.unit != UnitEnum.PERCENT
+                or bottom_right.y.unit != UnitEnum.PERCENT):
+            raise ValueError(
+                "Units must be relativized before extent "
+                "can be calculated based on origin."
             )
 
-        return self
+        new_horizontal = self.extent.horizontal
+        new_vertical = self.extent.vertical
+        if bottom_right.x.value > 90:
+            new_horizontal = diff_horizontal
+        if bottom_right.y.value > 95:
+            new_vertical = diff_vertical
+
+        return Stretch(new_horizontal, new_vertical)

@@ -700,10 +700,10 @@ class TestInterpretableNodeCreator:
         node_creator.interpret_command("9429")
         self.check_closing_italics_closing_on_style_change(node_creator)
 
-    def test_remove_noop_off_on_italics(self):
+    def test_remove_noop_italic_pairs(self):
         from pycaption.scc.specialized_collections import (
             _InstructionNode,
-            _remove_noop_off_on_italics,
+            _remove_noop_italic_pairs,
         )
 
         position_tracker = DefaultProvidingPositionTracker().default
@@ -723,7 +723,7 @@ class TestInterpretableNodeCreator:
         assert node_creator._collection[-2].sets_italics_off()
         assert node_creator._collection[-1].sets_italics_on()
 
-        new_collection = _remove_noop_off_on_italics(node_creator._collection)
+        new_collection = _remove_noop_italic_pairs(node_creator._collection, opening_is_on=False)
 
         #  should eliminate italic tags, keep only the text node
         assert len(new_collection) == 1
@@ -743,7 +743,7 @@ class TestInterpretableNodeCreator:
         assert node_creator._collection[-2].is_text_node()
         assert node_creator._collection[-1].sets_italics_on()
 
-        new_collection = _remove_noop_off_on_italics(node_creator._collection)
+        new_collection = _remove_noop_italic_pairs(node_creator._collection, opening_is_on=False)
         # should not eliminate any node
         assert new_collection[-3].sets_italics_off()
         assert new_collection[-2].is_text_node()

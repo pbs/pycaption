@@ -12,7 +12,7 @@ from ..exceptions import (
     CaptionReadTimingError,
     InvalidInputError,
 )
-from ..geometry import Alignment, Layout, Padding, Size
+from ..geometry import Alignment, HorizontalAlignmentEnum, Layout, Padding, Size
 from .parser import SAMIParser
 
 _TAG_TO_STYLE = {"i": "italics", "b": "bold", "u": "underline"}
@@ -65,10 +65,13 @@ class SAMIReader(BaseReader):
 
             caption_dict[language] = lang_captions
 
-        caption_set = CaptionSet(caption_dict, layout_info=global_layout)
+        caption_set = CaptionSet(
+            caption_dict, layout_info=global_layout,
+            visual_alignment_default=HorizontalAlignmentEnum.LEFT,
+        )
 
-        for style in list(doc_styles.items()):
-            style = (style[0], self._translate_parsed_style(style[1]))
+        for style_rules in doc_styles.values():
+            self._translate_parsed_style(style_rules)
 
         caption_set.set_styles(doc_styles)
 
@@ -114,7 +117,8 @@ class SAMIReader(BaseReader):
             end=margin_end,
         )
 
-    def _get_size(self, styles, style_label):
+    @staticmethod
+    def _get_size(styles, style_label):
         """Extract a Size from a CSS property value string.
 
         :rtype: Size | None

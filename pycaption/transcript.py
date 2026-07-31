@@ -11,6 +11,7 @@ class TranscriptWriter(BaseWriter):
     """
 
     def __init__(self, *args, **kw):
+        super().__init__(*args, **kw)
         try:
             from nltk import PunktSentenceTokenizer
 
@@ -20,7 +21,7 @@ class TranscriptWriter(BaseWriter):
                 "Missing Dependency: You must install nltk"
             ) from exc
 
-    def write(self, captions):
+    def write(self, caption_set, **kwargs):
         """Write a CaptionSet as sentence-split plain text.
 
         :type captions: CaptionSet
@@ -28,10 +29,10 @@ class TranscriptWriter(BaseWriter):
         """
         transcripts = []
 
-        for lang in captions.get_languages():
+        for lang in caption_set.get_languages():
             lang_transcript = ""
 
-            for caption in captions.get_captions(lang):
+            for caption in caption_set.get_captions(lang):
                 lang_transcript = self._strip_text(caption.nodes, lang_transcript)
 
             lang_transcript = "\n".join(self.tokenizer.tokenize(lang_transcript))
@@ -39,7 +40,8 @@ class TranscriptWriter(BaseWriter):
 
         return "\n".join(transcripts)
 
-    def _strip_text(self, elements, lang_transcript):
+    @staticmethod
+    def _strip_text(elements, lang_transcript):
         """Extract and concatenate text nodes, appending to the transcript."""
         parts = []
         for el in elements:

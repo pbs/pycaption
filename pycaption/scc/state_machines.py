@@ -53,14 +53,14 @@ class _PositioningTracker:
 
         # Threshold for when to use breaks vs repositioning
         # Jumps of 4+ rows will trigger repositioning instead of adding breaks
-        MAX_BREAKS_THRESHOLD = 3
+        max_breaks_threshold = 3
 
         # Handle row jumps
         if new_row > row:
             row_diff = new_row - row
 
             # Small jumps (1-3 rows): Use line breaks to preserve visual spacing
-            if row_diff <= MAX_BREAKS_THRESHOLD:
+            if row_diff <= max_breaks_threshold:
                 self._positions.append((new_row, col))
                 # Add breaks equal to row difference
                 # Row N -> N+1: 1 break
@@ -96,13 +96,12 @@ class _PositioningTracker:
         """
         if not any(self._positions):
             raise CaptionReadSyntaxError("No Preamble Address Code [PAC] was provided")
-        else:
-            return self._positions[0]
+        return self._positions[0]
 
     def is_repositioning_required(self):
         """Determines whether the current positioning has changed non-trivially
 
-        Trivial would be mean that a line break should suffice.
+        Trivial would mean that a line break should suffice.
         :rtype: bool
         """
         return self._repositioning_required
