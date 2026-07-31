@@ -194,7 +194,9 @@ class Stretch(TwoDimensionalObject):
 
     def to_xml_attribute(self, **kwargs):
         """Returns a string representation of this object as an xml attribute"""
-        return f"{self.horizontal.to_xml_attribute()} {self.vertical.to_xml_attribute()}"
+        h = self.horizontal.to_xml_attribute()
+        v = self.vertical.to_xml_attribute()
+        return f"{h} {v}"
 
     def is_relative(self):
         """Return True if all dimensions are expressed as percentages."""

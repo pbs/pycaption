@@ -472,8 +472,11 @@ class SCCReader(BaseReader):
             self.time = edm_time
 
     def _new_buffer(self):
-        """Create a fresh InstructionNodeCreator bound to the shared position tracker."""
-        return InstructionNodeCreator(position_tracker=self.position_tracker)
+        """Create a fresh InstructionNodeCreator bound to the shared
+        position tracker."""
+        return InstructionNodeCreator(
+            position_tracker=self.position_tracker
+        )
 
     def _reset_buffer(self):
         """Replace the active buffer with a fresh creator and reset position state."""

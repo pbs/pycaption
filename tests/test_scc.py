@@ -723,7 +723,9 @@ class TestInterpretableNodeCreator:
         assert node_creator._collection[-2].sets_italics_off()
         assert node_creator._collection[-1].sets_italics_on()
 
-        new_collection = _remove_noop_italic_pairs(node_creator._collection, opening_is_on=False)
+        new_collection = _remove_noop_italic_pairs(
+            node_creator._collection, opening_is_on=False
+        )
 
         #  should eliminate italic tags, keep only the text node
         assert len(new_collection) == 1
@@ -743,7 +745,9 @@ class TestInterpretableNodeCreator:
         assert node_creator._collection[-2].is_text_node()
         assert node_creator._collection[-1].sets_italics_on()
 
-        new_collection = _remove_noop_italic_pairs(node_creator._collection, opening_is_on=False)
+        new_collection = _remove_noop_italic_pairs(
+            node_creator._collection, opening_is_on=False
+        )
         # should not eliminate any node
         assert new_collection[-3].sets_italics_off()
         assert new_collection[-2].is_text_node()

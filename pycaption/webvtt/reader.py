@@ -442,7 +442,10 @@ class WebVTTReader(BaseReader):
         groups = m.groups()
 
         if groups[2]:
-            return microseconds(groups[0], groups[1], groups[2].replace(":", ""), groups[3])
+            return microseconds(
+                groups[0], groups[1],
+                groups[2].replace(":", ""), groups[3],
+            )
         return microseconds(0, groups[0], groups[1], groups[3])
 
     def _parse_cue_text(self, line, open_tags=None):

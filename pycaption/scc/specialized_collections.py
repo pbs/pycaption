@@ -497,7 +497,9 @@ class InstructionNodeCreator:
             x.is_explicit_break()
             for x in self._collection[self._collection.index(prev_text_node):]
         )
-        if prev_node_is_break or prev_text_node.text[-1].isspace() or next_is_punctuation:
+        if (prev_node_is_break
+                or prev_text_node.text[-1].isspace()
+                or next_is_punctuation):
             return
 
         if self.last_style == "italics off":

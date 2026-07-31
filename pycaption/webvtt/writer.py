@@ -207,7 +207,7 @@ class WebVTTWriter(BaseWriter):
             return ""
         blocks = []
         for region_id, settings in regions.items():
-            lines = [f"REGION", f"id:{region_id}"]
+            lines = ["REGION", f"id:{region_id}"]
             lines.extend(f"{key}:{value}" for key, value in settings.items())
             blocks.append("\n".join(lines))
         return "\n\n".join(blocks) + "\n\n"

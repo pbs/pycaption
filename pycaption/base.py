@@ -37,7 +37,8 @@ class CaptionConverter:
         """
         if not hasattr(caption_reader, "read"):
             raise InvalidInputError(
-                "The caption_reader must be a BaseReader instance with a read() method."
+                "The caption_reader must be a BaseReader instance "
+                "with a read() method."
             )
         self.captions = caption_reader.read(content)
         return self
@@ -51,7 +52,8 @@ class CaptionConverter:
         """
         if not hasattr(caption_writer, "write"):
             raise InvalidInputError(
-                "The caption_writer must be a BaseWriter instance with a write() method."
+                "The caption_writer must be a BaseWriter instance "
+                "with a write() method."
             )
         return caption_writer.write(self.captions)
 
@@ -60,7 +62,6 @@ class BaseReader:
     """Abstract base class for caption format readers."""
 
     def __init__(self, *args, **kwargs):
-        # Accepts arbitrary args so subclasses can extend without breaking super() calls.
         pass
 
     def detect(self, content):
