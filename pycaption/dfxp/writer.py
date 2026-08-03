@@ -10,7 +10,7 @@ from xml.sax.saxutils import escape
 from bs4 import BeautifulSoup
 
 from ..base import BaseWriter, CaptionNode
-from ..geometry import WritingDirectionEnum
+from ..geometry import HorizontalAlignmentEnum, WritingDirectionEnum
 from .constants import (
     DFXP_ATTR_XML_ID,
     DFXP_ATTR_XML_LANG,
@@ -20,6 +20,7 @@ from .constants import (
     DFXP_DEFAULT_REGION_ID,
     DFXP_DEFAULT_STYLE,
     DFXP_DEFAULT_STYLE_ID,
+    DFXP_WRITER_DEFAULT_REGION,
     DFXP_WRITER_FALLBACK_ALIGNMENT,
     _create_external_alignment,
 )
@@ -49,14 +50,16 @@ class DFXPWriter(BaseWriter):
         self.region_creator = None
         super().__init__(*args, **kwargs)
 
-    def write(self, caption_set, force=""):
+    def write(self, caption_set, **kwargs):
         """Serialize a CaptionSet into a DFXP/TTML XML string.
 
         :type caption_set: CaptionSet
-        :param force: if set and present in the caption_set, output only
-            this language
+        :param kwargs:
+            force (str): if set and present in the caption_set, output only
+                this language
         :rtype: str
         """
+        force = kwargs.get("force", "")
         dfxp = BeautifulSoup(DFXP_BASE_MARKUP, "lxml-xml")
 
         langs = caption_set.get_languages()
@@ -285,13 +288,14 @@ class RegionCreator:
         self._region_map = {}
         self._id_seed = 0
         self._assigned_region_ids = set()
+        self._fallback_alignment = None
 
     @staticmethod
     def _collect_unique_regions(caption_set, ignore_region):
         """Collect all unique Layout objects from the caption set.
 
-        Excludes None and ignore_region (typically the default region) to
-        avoid duplicate region creation.
+        Excludes None, ignore_region (typically the default region), and
+        SCC positional layouts (which map to the default center region).
 
         :type caption_set: CaptionSet
         :param ignore_region: a Layout to exclude from the result
@@ -311,10 +315,12 @@ class RegionCreator:
 
         unique_regions.pop(None, None)
         unique_regions.pop(ignore_region, None)
+        for layout in list(unique_regions):
+            if layout and layout.is_positional_anchor:
+                unique_regions.pop(layout)
         return unique_regions
 
-    @staticmethod
-    def _create_unique_regions(unique_layouts, dfxp, id_factory):
+    def _create_unique_regions(self, unique_layouts, dfxp, id_factory):
         """Create <region> tags in the <layout> section for each Layout.
 
         Skips Layout objects that have no positioning data (no origin,
@@ -342,24 +348,47 @@ class RegionCreator:
                 new_region[DFXP_ATTR_XML_ID] = new_id
 
                 region_map[region_spec] = new_id
-                region_attribs = _convert_layout_to_attributes(region_spec)
+                region_attribs = _convert_layout_to_attributes(
+                    region_spec, self._fallback_alignment
+                )
                 new_region.attrs.update(region_attribs)
 
                 layout_section.append(new_region)
         return region_map
+
+    def _needs_center_promotion(self):
+        """Check if the source format's visual default requires center promotion.
+
+        Per SMPTE RP 2052-10, DFXP's native default is START/left. When the
+        source format visually defaults to CENTER (WebVTT, SRT, SCC, MicroDVD),
+        the writer must use CENTER alignment for its default region to prevent
+        visual regression.
+
+        Uses CaptionSet.visual_alignment_default set by the reader.
+        """
+        source_default = self._caption_set.visual_alignment_default
+        return source_default == HorizontalAlignmentEnum.CENTER
 
     def create_document_regions(self):
         """Create all <region> tags needed by the caption set.
 
         Always creates a default region first, then creates additional
         regions for any unique Layout objects found in the caption set.
+        When the source format defaults to center alignment, the default
+        region uses CENTER per RP 2052-10; otherwise it uses the
+        DFXP spec default (START) for round-trip fidelity.
         """
+        if self._needs_center_promotion():
+            default_layout = DFXP_WRITER_DEFAULT_REGION
+            self._fallback_alignment = DFXP_WRITER_FALLBACK_ALIGNMENT
+        else:
+            default_layout = DFXP_DEFAULT_REGION
+            self._fallback_alignment = None
+
         default_region_map = self._create_unique_regions(
-            [DFXP_DEFAULT_REGION], self._dfxp, lambda: DFXP_DEFAULT_REGION_ID
+            [default_layout], self._dfxp, lambda: DFXP_DEFAULT_REGION_ID
         )
-        unique_regions = self._collect_unique_regions(
-            self._caption_set, DFXP_DEFAULT_REGION
-        )
+        unique_regions = self._collect_unique_regions(self._caption_set, default_layout)
 
         self._region_map = self._create_unique_regions(
             unique_regions, self._dfxp, self._get_new_id
@@ -403,11 +432,16 @@ class RegionCreator:
             if not layout_info:
                 layout_info = caption_set.layout_info
 
+        if layout_info and layout_info.is_positional_anchor:
+            layout_info = None
+
         region_id = self._region_map.get(layout_info)
         if not region_id:
             region_id = DFXP_DEFAULT_REGION_ID
 
-        positioning_attributes = _convert_layout_to_attributes(layout_info)
+        positioning_attributes = _convert_layout_to_attributes(
+            layout_info, self._fallback_alignment
+        )
         self._assigned_region_ids.add(region_id)
 
         return region_id, positioning_attributes
@@ -466,19 +500,34 @@ def _recreate_style(content, dfxp):
     return dfxp_style
 
 
-def _convert_layout_to_attributes(layout):
+def _convert_layout_to_attributes(layout, fallback_alignment=None):
     """Convert a Layout object to a dict of DFXP region attributes.
 
     Maps origin, extent, padding, alignment, and writing_direction to their
-    tts: namespace equivalents.  Returns default alignment attributes when
-    layout is None.
+    tts: namespace equivalents.
+
+    When layout is None or carries a positional anchor (SCC row/col coords),
+    uses fallback_alignment if provided (per RP 2052-10 center promotion).
 
     :type layout: Layout | None
+    :param fallback_alignment: Alignment to use when the layout lacks one.
+        Set by RegionCreator based on CaptionSet.visual_alignment_default.
+    :type fallback_alignment: Alignment | None
     :rtype: dict
     """
     result = {}
     if not layout:
-        return _create_external_alignment(DFXP_WRITER_FALLBACK_ALIGNMENT)
+        if fallback_alignment:
+            return _create_external_alignment(fallback_alignment)
+        return result
+
+    if layout.is_positional_anchor:
+        if fallback_alignment:
+            result.update(_create_external_alignment(fallback_alignment))
+        writing_mode = _WRITING_DIRECTION_TO_DFXP.get(layout.writing_direction)
+        if writing_mode:
+            result["tts:writingMode"] = writing_mode
+        return result
 
     if layout.origin:
         result["tts:origin"] = layout.origin.to_xml_attribute()
@@ -491,8 +540,8 @@ def _convert_layout_to_attributes(layout):
 
     if layout.alignment:
         result.update(_create_external_alignment(layout.alignment))
-    else:
-        result.update(_create_external_alignment(DFXP_WRITER_FALLBACK_ALIGNMENT))
+    elif fallback_alignment:
+        result.update(_create_external_alignment(fallback_alignment))
 
     writing_mode = _WRITING_DIRECTION_TO_DFXP.get(layout.writing_direction)
     if writing_mode:

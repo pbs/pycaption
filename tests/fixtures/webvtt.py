@@ -317,7 +317,7 @@ def sample_webvtt_from_scc_properly_writes_newlines_output():
     return """\
 WEBVTT
 
-00:21:30.000 --> 00:21:34.000 align:left position:20% line:83% size:70%
+00:21:30.000 --> 00:21:34.000
 aa
 bb
 """

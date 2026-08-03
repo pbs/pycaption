@@ -105,8 +105,13 @@ class TestWebVTTtoDFXP(DFXPTestingMixIn):
         results = DFXPWriter().write(caption_set)
 
         assert isinstance(results, str)
+        assert 'tts:textAlign="center"' in results
+
+        expected = sample_dfxp.replace(
+            'tts:textAlign="start"', 'tts:textAlign="center"'
+        )
         self.assert_dfxp_equals(
-            sample_dfxp, results, ignore_styling=True, ignore_spans=True
+            expected, results, ignore_styling=True, ignore_spans=True
         )
 
 
@@ -239,7 +244,7 @@ class TestWebVTTStyleCrossFormat:
         vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\n<i>italic</i>\n"
         caption_set = WebVTTReader().read(vtt)
         result = SAMIWriter().write(caption_set)
-        assert "font-style:italic" in result
+        assert "<i>" in result and "</i>" in result
 
     def test_italic_to_srt(self):
         vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\n<i>italic</i>\n"
@@ -564,8 +569,8 @@ class TestNestedSpanSupport:
         caption_set = WebVTTReader().read(vtt)
         result = SAMIWriter().write(caption_set)
 
-        assert "font-weight:bold;" in result
-        assert "font-style:italic;" in result
+        assert "<b>" in result and "</b>" in result
+        assert "<i>" in result and "</i>" in result
         assert "both" in result
 
     def test_nested_class_and_italic_to_dfxp(self):
@@ -595,7 +600,7 @@ class TestNestedSpanSupport:
         result = SAMIWriter().write(caption_set)
 
         assert 'class="yellow"' in result
-        assert "font-style:italic;" in result
+        assert "<i>" in result and "</i>" in result
         assert "styled" in result
 
     def test_triple_nesting_to_dfxp(self):

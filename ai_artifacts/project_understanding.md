@@ -60,7 +60,7 @@ pycaption/
 │   ├── srt.py                    # SRT format (reader + writer in single file)
 │   ├── microdvd.py               # MicroDVD format (reader + writer)
 │   └── transcript.py             # Plain text transcript (writer only, uses nltk)
-├── tests/                        # Test suite (504 tests)
+├── tests/                        # Test suite (505 tests)
 │   ├── conftest.py               # Fixture imports (re-exports from fixtures/)
 │   ├── fixtures/                 # Pytest fixture modules (inline caption strings)
 │   │   ├── scc.py, translated_scc.py, dfxp.py, webvtt.py, srt.py, sami.py, microdvd.py
@@ -217,6 +217,10 @@ The SAMI reader uses a two-phase approach:
    overflow (not 100% as might be expected)
 6. **Style filtering**: Writers filter internal keys (e.g. `classes`, `webvtt_positioning`) from
    output via format-specific exclusion sets
+7. **RP 2052-10 implicit defaults**: When source format's visual default differs from
+   target format's default, writers explicitly emit the source's alignment. VTT/SRT/SCC
+   default to center; DFXP/SAMI default to left/start. The `is_positional_anchor` flag
+   on Layout distinguishes SCC coordinate-system positioning from visual alignment intent.
 
 ---
 
@@ -286,7 +290,7 @@ Additional workflows for format spec compliance:
 ### Running Tests Locally
 
 ```bash
-# Run all tests (504 tests, ~0.5s)
+# Run all tests (505 tests, ~0.5s)
 python -m pytest tests/ -q
 
 # Run specific format tests
@@ -299,7 +303,7 @@ python -m pytest tests/ -v
 python -m pytest tests/test_webvtt_conversion.py -q
 ```
 
-- Tests cover all formats (504 tests total)
+- Tests cover all formats (505 tests total)
 - Fixtures defined in `tests/fixtures/` as pytest session-scoped fixtures
 - Each fixture is an inline string containing a complete caption file
 - Conversion tests verify round-trip and cross-format fidelity

@@ -5,8 +5,8 @@ cue timing lines with positioning settings, and inline markup tags.
 Supports lossless VTT-to-VTT round-trip via preserved positioning strings.
 """
 
-import datetime
 from copy import deepcopy
+from datetime import timedelta
 
 from ..base import BaseWriter, CaptionNode
 from ..geometry import WritingDirectionEnum
@@ -55,7 +55,7 @@ class WebVTTWriter(BaseWriter):
         }
     )
 
-    def write(self, caption_set, lang=None):
+    def write(self, caption_set, lang=None, **kwargs):
         """Serialize a CaptionSet into a WebVTT string.
 
         Pipeline: header → STYLE block → REGION blocks → cues.
@@ -99,7 +99,7 @@ class WebVTTWriter(BaseWriter):
         :param ts: Time in microseconds.
         :returns: Formatted timestamp string.
         """
-        td = datetime.timedelta(microseconds=ts)
+        td = timedelta(microseconds=ts)
         mm, ss = divmod(td.seconds, 60)
         hh, mm = divmod(mm, 60)
         return f"{hh:02}:{mm:02}:{ss:02}.{td.microseconds // 1000:03}"
@@ -152,17 +152,15 @@ class WebVTTWriter(BaseWriter):
         :param styles: Iterable of (key, props) pairs.
         :returns: List of (class_name, props) tuples.
         """
-        rules = []
-        for key, props in styles:
-            if key == self._CUE_SELECTOR or key.startswith("::"):
-                continue
-            if key in self._HTML_ELEMENT_NAMES:
-                continue
-            if "lang" in props:
-                continue
-            if props:
-                rules.append((key, props))
-        return rules
+        return [
+            (key, props)
+            for key, props in styles
+            if props
+            and key != self._CUE_SELECTOR
+            and not key.startswith("::")
+            and key not in self._HTML_ELEMENT_NAMES
+            and "lang" not in props
+        ]
 
     @staticmethod
     def _inject_scroll_regions(captions, caption_set):
@@ -207,14 +205,12 @@ class WebVTTWriter(BaseWriter):
         regions = caption_set.get_regions()
         if not regions:
             return ""
-        output = ""
+        blocks = []
         for region_id, settings in regions.items():
-            output += "REGION\n"
-            output += f"id:{region_id}\n"
-            for key, value in settings.items():
-                output += f"{key}:{value}\n"
-            output += "\n"
-        return output
+            lines = ["REGION", f"id:{region_id}"]
+            lines.extend(f"{key}:{value}" for key, value in settings.items())
+            blocks.append("\n".join(lines))
+        return "\n\n".join(blocks) + "\n\n"
 
     @classmethod
     def _format_css_declarations(cls, props):
@@ -236,21 +232,20 @@ class WebVTTWriter(BaseWriter):
                 declarations.append(f"{k}: {v}")
         return "; ".join(declarations)
 
+    _STYLE_TO_TAG = {
+        "italics": ("<i>", "</i>"),
+        "underline": ("<u>", "</u>"),
+        "bold": ("<b>", "</b>"),
+    }
+
     @staticmethod
     def _convert_style_to_text_tag(style):
         """Map an internal style key to its WebVTT open/close tag pair.
 
         :param style: One of "italics", "underline", "bold".
-        :returns: List of [open_tag, close_tag] strings.
+        :returns: Tuple of (open_tag, close_tag) strings.
         """
-        if style == "italics":
-            return ["<i>", "</i>"]
-        elif style == "underline":
-            return ["<u>", "</u>"]
-        elif style == "bold":
-            return ["<b>", "</b>"]
-        else:
-            return ["", ""]
+        return WebVTTWriter._STYLE_TO_TAG.get(style, ("", ""))
 
     def _calculate_resulting_style(self, style, caption_set):
         """Resolve a style dict by cascading class references.
@@ -349,6 +344,9 @@ class WebVTTWriter(BaseWriter):
         if not layout:
             return ""
 
+        if layout.is_positional_anchor:
+            return ""
+
         if layout.webvtt_positioning:
             return f" {layout.webvtt_positioning}"
 
@@ -376,14 +374,10 @@ class WebVTTWriter(BaseWriter):
         :param layout: Layout to resolve.
         :returns: Resolved Layout in percentages, or None if not applicable.
         """
-        already_relative = False
         if not self.relativize:
-            if layout.is_relative():
-                already_relative = True
-            else:
+            if not layout.is_relative():
                 return None
-
-        if not already_relative:
+        else:
             layout = layout.as_percentage_of(self.video_width, self.video_height)
 
         if self.fit_to_screen:
@@ -549,11 +543,9 @@ class WebVTTWriter(BaseWriter):
         :param i: Index of the current BREAK node.
         :returns: String to append to cue text.
         """
-        s = ""
         if i == 0 or nodes[i - 1].type_ != CaptionNode.TEXT:
-            s += "&nbsp;"
-        s += "\n"
-        return s
+            return "&nbsp;\n"
+        return "\n"
 
     @staticmethod
     def _encode_illegal_characters(s):

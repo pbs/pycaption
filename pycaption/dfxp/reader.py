@@ -25,6 +25,7 @@ from ..exceptions import (
 )
 from ..geometry import (
     Alignment,
+    HorizontalAlignmentEnum,
     Layout,
     Padding,
     Point,
@@ -129,44 +130,7 @@ class DFXPReader(BaseReader):
         )
 
         tt_attrs = dfxp_document.tt.attrs if dfxp_document.tt else {}
-        framerate_str = tt_attrs.get("ttp:framerate", str(DFXP_DEFAULT_FRAMERATE))
-        multiplier_str = tt_attrs.get(
-            "ttp:frameratemultiplier", DFXP_DEFAULT_FRAMERATE_MULTIPLIER
-        )
-        self.framerate = self._get_effective_framerate(framerate_str, multiplier_str)
-
-        if "ttp:tickrate" in tt_attrs:
-            try:
-                tickrate = float(tt_attrs["ttp:tickrate"])
-            except ValueError:
-                raise CaptionReadSyntaxError(
-                    f"ttp:tickRate must be a number, "
-                    f"got '{tt_attrs['ttp:tickrate']}'"
-                )
-            if tickrate <= 0:
-                raise CaptionReadSyntaxError(
-                    f"ttp:tickRate must be positive, got '{tt_attrs['ttp:tickrate']}'"
-                )
-            self.tickrate = tickrate
-        else:
-            # TTML spec 8.2.12: default tickRate = frameRate × subFrameRate
-            try:
-                sub_framerate = int(
-                    tt_attrs.get("ttp:subframerate", DFXP_DEFAULT_SUBFRAMERATE)
-                )
-            except ValueError:
-                raise CaptionReadSyntaxError(
-                    f"ttp:subFrameRate must be a positive integer, "
-                    f"got '{tt_attrs['ttp:subframerate']}'"
-                )
-            try:
-                framerate_int = int(framerate_str)
-            except ValueError:
-                raise CaptionReadSyntaxError(
-                    f"ttp:frameRate must be a positive integer, "
-                    f"got '{framerate_str}'"
-                )
-            self.tickrate = float(framerate_int * sub_framerate)
+        self._resolve_timing_parameters(tt_attrs)
 
         caption_dict = {}
         style_dict = {}
@@ -180,17 +144,70 @@ class DFXPReader(BaseReader):
         for style in dfxp_document.find_all("style"):
             id_ = style.attrs.get(DFXP_ATTR_XML_ID) or style.attrs.get("id")
             if id_:
-                # Styles nested inside <region> tags are region-scoped and
-                # should not appear as document-level styles.
                 if "region" not in [parent_.name for parent_ in style.parents]:
                     style_dict[id_] = self._convert_style(style)
 
-        caption_set = CaptionSet(caption_dict, styles=style_dict)
+        caption_set = CaptionSet(
+            caption_dict, styles=style_dict,
+            visual_alignment_default=HorizontalAlignmentEnum.START,
+        )
 
         if caption_set.is_empty():
             raise CaptionReadNoCaptions("empty caption file")
 
         return caption_set
+
+    def _resolve_timing_parameters(self, tt_attrs):
+        """Extract framerate and tickrate from <tt> attributes.
+
+        Sets self.framerate and self.tickrate per TTML spec sections 8.2.8,
+        8.2.11, and 8.2.12.
+        """
+        framerate_str = tt_attrs.get("ttp:framerate", str(DFXP_DEFAULT_FRAMERATE))
+        multiplier_str = tt_attrs.get(
+            "ttp:frameratemultiplier", DFXP_DEFAULT_FRAMERATE_MULTIPLIER
+        )
+        self.framerate = self._get_effective_framerate(framerate_str, multiplier_str)
+
+        if "ttp:tickrate" in tt_attrs:
+            self._resolve_explicit_tickrate(tt_attrs)
+        else:
+            self._resolve_default_tickrate(tt_attrs, framerate_str)
+
+    def _resolve_explicit_tickrate(self, tt_attrs):
+        """Parse an explicit ttp:tickRate attribute."""
+        try:
+            tickrate = float(tt_attrs["ttp:tickrate"])
+        except ValueError:
+            raise CaptionReadSyntaxError(
+                f"ttp:tickRate must be a number, "
+                f"got '{tt_attrs['ttp:tickrate']}'"
+            )
+        if tickrate <= 0:
+            raise CaptionReadSyntaxError(
+                f"ttp:tickRate must be positive, got '{tt_attrs['ttp:tickrate']}'"
+            )
+        self.tickrate = tickrate
+
+    def _resolve_default_tickrate(self, tt_attrs, framerate_str):
+        """Compute default tickRate = frameRate × subFrameRate (TTML 8.2.12)."""
+        try:
+            sub_framerate = int(
+                tt_attrs.get("ttp:subframerate", DFXP_DEFAULT_SUBFRAMERATE)
+            )
+        except ValueError:
+            raise CaptionReadSyntaxError(
+                f"ttp:subFrameRate must be a positive integer, "
+                f"got '{tt_attrs['ttp:subframerate']}'"
+            )
+        try:
+            framerate_int = int(framerate_str)
+        except ValueError:
+            raise CaptionReadSyntaxError(
+                f"ttp:frameRate must be a positive integer, "
+                f"got '{framerate_str}'"
+            )
+        self.tickrate = float(framerate_int * sub_framerate)
 
     def _convert_div_to_caption_list(self, div):
         """Convert a <div> element into a CaptionList for one language.

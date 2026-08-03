@@ -10,6 +10,7 @@ from xml.sax.saxutils import escape
 from bs4 import BeautifulSoup
 
 from ..base import BaseWriter, CaptionNode
+from ..geometry import HorizontalAlignmentEnum
 from .constants import HORIZONTAL_ALIGNMENT_MAP, SAMI_BASE_MARKUP
 
 _NON_CSS_KEYS = frozenset(
@@ -35,10 +36,15 @@ class SAMIWriter(BaseWriter):
         super().__init__(*args, **kwargs)
         self._span_stack = []
         self.last_time = None
+        self._promote_center = False
 
-    def write(self, caption_set):
+    def write(self, caption_set, **kwargs):
         """Serialize a CaptionSet into a SAMI document string."""
         caption_set = deepcopy(caption_set)
+        source_default = self._get_visual_alignment_default(caption_set)
+        self._promote_center = (
+            source_default == HorizontalAlignmentEnum.CENTER
+        )
         sami = BeautifulSoup(SAMI_BASE_MARKUP, "lxml-xml")
 
         caption_set.layout_info = self._relativize_and_fit_to_screen(
@@ -57,7 +63,8 @@ class SAMIWriter(BaseWriter):
                 self._relativize_and_fit_to_screen(caption_set.get_layout_info(lang)),
             )
 
-            for caption in caption_set.get_captions(lang):
+            captions = caption_set.get_captions(lang)
+            for caption in captions:
                 caption.layout_info = self._relativize_and_fit_to_screen(
                     caption.layout_info
                 )
@@ -66,6 +73,11 @@ class SAMIWriter(BaseWriter):
                         node.layout_info
                     )
                 sami = self._recreate_p_tag(caption, sami, lang, primary, caption_set)
+
+            if self.last_time and captions:
+                sami = self._recreate_blank_tag(
+                    sami, captions[-1], lang, primary, caption_set
+                )
 
         stylesheet = self._recreate_stylesheet(caption_set)
         sami.find("style").append(stylesheet)
@@ -87,17 +99,7 @@ class SAMIWriter(BaseWriter):
 
         p = sami.new_tag("p")
 
-        p_style = ""
-        for attr, value in self._recreate_style(caption.style).items():
-            p_style += f"{attr}:{value};"
-
-        if caption.layout_info and caption.layout_info.alignment:
-            if not caption.layout_info.origin:
-                h = caption.layout_info.alignment.horizontal
-                if h:
-                    css_align = HORIZONTAL_ALIGNMENT_MAP.get(h)
-                    if css_align:
-                        p_style += f"text-align:{css_align};"
+        p_style = self._build_p_style(caption)
 
         if p_style:
             p["style"] = p_style
@@ -108,6 +110,59 @@ class SAMIWriter(BaseWriter):
         sync.append(p)
 
         return sami
+
+    def _build_p_style(self, caption):
+        """Build the inline CSS style string for a <p> element."""
+        parts = []
+        for attr, value in self._recreate_style(caption.style).items():
+            parts.append(f"{attr}:{value};")
+
+        self._append_position_styles(caption.layout_info, parts)
+
+        text_align = self._resolve_text_align(caption.layout_info)
+        if text_align:
+            parts.append(f"text-align:{text_align};")
+
+        return "".join(parts)
+
+    @staticmethod
+    def _append_position_styles(layout_info, parts):
+        """Append margin/width CSS from layout positioning."""
+        if not layout_info:
+            return
+
+        if layout_info.is_positional_anchor:
+            return
+
+        if layout_info.origin:
+            if layout_info.origin.x:
+                parts.append(f"margin-left:{layout_info.origin.x};")
+            if layout_info.origin.y:
+                parts.append(f"margin-top:{layout_info.origin.y};")
+
+        if layout_info.extent and layout_info.extent.horizontal:
+            parts.append(f"width:{layout_info.extent.horizontal};")
+
+    def _resolve_text_align(self, layout_info):
+        """Return a CSS text-align value for the layout, or None to suppress.
+
+        Uses self._promote_center (derived from CaptionSet.visual_alignment_default)
+        to decide whether to emit explicit center alignment per RP 2052-10.
+        """
+        if not layout_info:
+            return "center" if self._promote_center else None
+
+        if layout_info.is_positional_anchor:
+            return "center" if self._promote_center else None
+
+        if not layout_info.alignment:
+            return "center" if self._promote_center else None
+
+        h = layout_info.alignment.horizontal
+        if not h:
+            return None
+
+        return HORIZONTAL_ALIGNMENT_MAP.get(h)
 
     def _recreate_sync(self, sami, lang, primary, time):
         """Find or create a <sync> tag at the given millisecond timestamp."""
@@ -221,25 +276,44 @@ class SAMIWriter(BaseWriter):
                 line = self._recreate_line_style(line, node)
 
         while self._span_stack:
-            line = line.rstrip() + "</span> "
-            self._span_stack.pop()
+            tag = self._span_stack.pop()
+            if tag:
+                line = line.rstrip() + f"</{tag}> "
 
         return line.rstrip()
 
     def _recreate_line_style(self, line, node):
-        """Handle style node transitions, opening and closing <span> tags."""
+        """Handle style node transitions, opening/closing inline markup."""
         if node.start:
             line = self._recreate_span(line, node.content)
         else:
             if self._span_stack:
-                had_span = self._span_stack.pop()
-                if had_span:
-                    line = line.rstrip() + "</span> "
+                tag = self._span_stack.pop()
+                if tag:
+                    line = line.rstrip() + f"</{tag}> "
 
         return line
 
+    @staticmethod
+    def _get_semantic_tag(content):
+        """Return a semantic HTML tag if content is a single style property."""
+        keys = {k for k in content if k not in _NON_CSS_KEYS}
+        if keys == {"italics"} and content.get("italics") is True:
+            return "i"
+        if keys == {"bold"} and content.get("bold") is True:
+            return "b"
+        if keys == {"underline"} and content.get("underline") is True:
+            return "u"
+        return None
+
     def _recreate_span(self, line, content):
-        """Build an opening <span> with class and/or inline style attributes."""
+        """Build an opening inline tag — semantic (<i>/<b>/<u>) when possible."""
+        semantic = self._get_semantic_tag(content)
+        if semantic:
+            line += f"<{semantic}>"
+            self._span_stack.append(semantic)
+            return line
+
         style = ""
         klass = ""
         if "classes" in content:
@@ -254,9 +328,9 @@ class SAMIWriter(BaseWriter):
             if style:
                 style = f' style="{style}"'
             line += f"<span{klass}{style}>"
-            self._span_stack.append(True)
+            self._span_stack.append("span")
         else:
-            self._span_stack.append(False)
+            self._span_stack.append(None)
 
         return line
 

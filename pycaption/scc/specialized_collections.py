@@ -36,12 +36,11 @@ _PUNCTUATION_PREFIXES = frozenset(["ae", "a1", "bf", "2c"])
 
 
 class PreCaption:
-    """
-    The Caption class has been refactored and now its instances must be used as
-    immutable objects. Some of the code in this module, however, relied on the
-    fact that Caption instances were mutable. For backwards compatibility,
-    therefore, this class was created to work as a mutable caption data holder
-    used to eventually instantiate an actual Caption object.
+    """Mutable caption builder for incremental construction during SCC decoding.
+
+    Caption requires valid timing and non-empty nodes at construction.
+    SCC commands arrive one at a time, so this builder accumulates state
+    and converts to an immutable Caption via to_real_caption() once complete.
     """
 
     _INTERNAL_STYLE_KEYS = {"caption_mode", "roll_up_rows"}
@@ -120,8 +119,8 @@ class TimingCorrectingCaptionList(list):
         The start time of the first caption in new_captions should never be 0.
         This means an invalid SCC file.
 
-        :type batch: tuple[Caption]
-        :type new_captions: tuple[Caption]
+        :type batch: tuple[Caption, ...]
+        :type new_captions: Caption
         """
         if not new_captions:
             return
@@ -227,6 +226,18 @@ class CaptionCreator:
         for caption in captions_to_correct:
             caption.end = end_time
 
+    @staticmethod
+    def _new_precaption(start, end, caption_mode, roll_up_rows):
+        """Create a PreCaption with timing and optional SCC metadata."""
+        caption = PreCaption()
+        caption.start = start
+        caption.end = end
+        if caption_mode:
+            caption.style["caption_mode"] = caption_mode
+        if roll_up_rows:
+            caption.style["roll_up_rows"] = roll_up_rows
+        return caption
+
     def create_and_store(
         self, node_buffer, start, end=0, caption_mode=None, roll_up_rows=None
     ):
@@ -251,31 +262,17 @@ class CaptionCreator:
         if node_buffer.is_empty():
             return
 
-        caption = PreCaption()
-        caption.start = start
-        caption.end = end
-        if caption_mode:
-            caption.style["caption_mode"] = caption_mode
-        if roll_up_rows:
-            caption.style["roll_up_rows"] = roll_up_rows
+        caption = self._new_precaption(start, end, caption_mode, roll_up_rows)
         self._still_editing = [caption]
 
         for instruction in node_buffer:
-            # skip empty elements
             if instruction.is_empty():
                 continue
 
             elif instruction.requires_repositioning():
-                caption = PreCaption()
-                caption.start = start
-                caption.end = end
-                if caption_mode:
-                    caption.style["caption_mode"] = caption_mode
-                if roll_up_rows:
-                    caption.style["roll_up_rows"] = roll_up_rows
+                caption = self._new_precaption(start, end, caption_mode, roll_up_rows)
                 self._still_editing.append(caption)
 
-            # handle line breaks
             elif instruction.is_explicit_break():
                 caption.nodes.append(
                     CaptionNode.create_break(
@@ -283,7 +280,6 @@ class CaptionCreator:
                     )
                 )
 
-            # handle open italics
             elif instruction.sets_italics_on():
                 caption.nodes.append(
                     CaptionNode.create_style(
@@ -293,7 +289,6 @@ class CaptionCreator:
                     )
                 )
 
-            # handle clone italics
             elif instruction.sets_italics_off():
                 caption.nodes.append(
                     CaptionNode.create_style(
@@ -303,7 +298,6 @@ class CaptionCreator:
                     )
                 )
 
-            # handle text
             elif instruction.is_text_node():
                 layout_info = _get_layout_from_tuple(instruction.position)
                 caption.nodes.append(
@@ -434,81 +428,84 @@ class InstructionNodeCreator:
             self.handle_backspace("94a1")
 
         if command in BACKGROUND_COLOR_CODES:
-            # Since these codes are optional, they must be preceded
-            # with the space character (20h),
-            # which will be deleted when the code is applied.
-            # ex: 2080 97ad 94a1
-            if (
-                len(self._collection) > 0
-                and self._collection[-1].is_text_node()
-                and self._collection[-1].text[-1].isspace()
-            ):
-                self._collection[-1].text = self._collection[-1].text[:-1]
+            self._handle_background_color()
 
         if command in STYLE_SETTING_COMMANDS:
-            current_position = self._position_tracer.get_current_position()
-            # which style is command setting
-            command_style = self.get_style_for_command(command)
-            if command_style == "italic":
-                if self.last_style is None or self.last_style == "italics off":
-                    #  if we don't have any style yet, or we have a closed italics tag
-                    #  it should open italic tag
-                    #  if break is required, break then add style tag
-                    if self._position_tracer.is_linebreak_required():
-                        for _ in range(self._position_tracer._breaks_required):
-                            self._collection.append(
-                                _InstructionNode.create_break(position=current_position)
-                            )
-                        self._position_tracer.acknowledge_linebreak_consumed()
-                    self._collection.append(
-                        _InstructionNode.create_italics_style(current_position)
-                    )
-                    self.last_style = "italics on"
-            else:
-                # command sets a different style (underline, plain)
-                # so we need to close italics if we have an open italics tag
-                # otherwise we ignore it
-                # if break is required, add style tag then break
-                if self.last_style == "italics on":
-                    self._collection.append(
-                        _InstructionNode.create_italics_style(
-                            self._position_tracer.get_current_position(), turn_on=False
-                        )
-                    )
-                    self.last_style = "italics off"
-                    if self._position_tracer.is_linebreak_required():
-                        for _ in range(self._position_tracer._breaks_required):
-                            self._collection.append(
-                                _InstructionNode.create_break(position=current_position)
-                            )
-                        self._position_tracer.acknowledge_linebreak_consumed()
+            self._handle_style_command(command)
 
-        #  handle mid-row codes that follows a text node
-        #  don't add space if the next command adds one of
-        #  ['.', '!', '?', ',']
+        if command in MID_ROW_CODES and command not in PAC_TAB_OFFSET_COMMANDS:
+            self._handle_mid_row_spacing(next_command)
+
+    def _handle_background_color(self):
+        """Strip trailing space before a background color code (CEA-608 rule)."""
+        if (
+            len(self._collection) > 0
+            and self._collection[-1].is_text_node()
+            and self._collection[-1].text[-1].isspace()
+        ):
+            self._collection[-1].text = self._collection[-1].text[:-1]
+
+    def _handle_style_command(self, command):
+        """Apply italics on/off based on the style-setting command."""
+        current_position = self._position_tracer.get_current_position()
+        command_style = self.get_style_for_command(command)
+
+        if command_style == "italic":
+            self._open_italics(current_position)
+        else:
+            self._close_italics(current_position)
+
+    def _open_italics(self, position):
+        """Open an italics tag if not already open."""
+        if self.last_style is not None and self.last_style != "italics off":
+            return
+        self._emit_pending_breaks(position)
+        self._collection.append(
+            _InstructionNode.create_italics_style(position)
+        )
+        self.last_style = "italics on"
+
+    def _close_italics(self, position):
+        """Close an italics tag if currently open."""
+        if self.last_style != "italics on":
+            return
+        self._collection.append(
+            _InstructionNode.create_italics_style(
+                self._position_tracer.get_current_position(), turn_on=False
+            )
+        )
+        self.last_style = "italics off"
+        self._emit_pending_breaks(position)
+
+    def _emit_pending_breaks(self, position):
+        """Emit any pending line breaks from the position tracer."""
+        if not self._position_tracer.is_linebreak_required():
+            return
+        for _ in range(self._position_tracer._breaks_required):
+            self._collection.append(
+                _InstructionNode.create_break(position=position)
+            )
+        self._position_tracer.acknowledge_linebreak_consumed()
+
+    def _handle_mid_row_spacing(self, next_command):
+        """Insert spacing around mid-row code style transitions."""
         next_is_punctuation = next_command and next_command[:2] in _PUNCTUATION_PREFIXES
         prev_text_node = self.get_previous_text_node()
-        prev_node_is_break = prev_text_node is not None and any(
+        if not prev_text_node:
+            return
+        prev_node_is_break = any(
             x.is_explicit_break()
-            for x in self._collection[self._collection.index(prev_text_node) :]
+            for x in self._collection[self._collection.index(prev_text_node):]
         )
-        if (
-            command in MID_ROW_CODES
-            and prev_text_node
-            and not prev_node_is_break
-            and not prev_text_node.text[-1].isspace()
-            and command not in PAC_TAB_OFFSET_COMMANDS
-            and not next_is_punctuation
-        ):
-            if self.last_style == "italics off":
-                # need to open italics tag, add a space
-                # to the beginning of the next text node
-                self.add_chars(" ")
-            else:
-                # italics on
-                # need to close italics tag, add a space
-                # to the end of the previous text node
-                prev_text_node.text = prev_text_node.text + " "
+        if (prev_node_is_break
+                or prev_text_node.text[-1].isspace()
+                or next_is_punctuation):
+            return
+
+        if self.last_style == "italics off":
+            self.add_chars(" ")
+        else:
+            prev_text_node.text = prev_text_node.text + " "
 
     def _update_positioning(self, command):
         """Sets the positioning information to use for the next nodes
@@ -635,6 +632,7 @@ def _get_layout_from_tuple(position_tuple):
     return Layout(
         origin=Point(horizontal, vertical),
         alignment=Alignment(HorizontalAlignmentEnum.LEFT, VerticalAlignmentEnum.TOP),
+        is_positional_anchor=True,
     )
 
 
@@ -808,11 +806,10 @@ def _format_italics(collection):
     :type collection: list[_InstructionNode]
     :rtype: list[_InstructionNode]
     """
-    new_collection = _skip_initial_italics_off_nodes(collection)
-
-    new_collection = _skip_empty_text_nodes(new_collection)
+    new_collection = _skip_empty_text_nodes(collection)
 
     # after this step we're guaranteed a proper ordering of the nodes
+    # (also removes initial italics-off nodes that precede any italics-on)
     new_collection = _skip_redundant_italics_nodes(new_collection)
 
     # after this, we're guaranteed that the italics are properly contained
@@ -853,64 +850,34 @@ def _remove_spaces_at_end_of_the_line(collection):
     return collection
 
 
-def _remove_noop_on_off_italics(collection):
-    """Return an equivalent list to `collection`. It removes the italics node
-     pairs that don't surround text nodes, if those nodes are in the order:
-     on, off
+def _remove_noop_italic_pairs(collection, opening_is_on):
+    """Remove adjacent italics on/off (or off/on) pairs with nothing between them.
 
-    :type collection: list[_InstructionNode]
+    :param collection: list of _InstructionNode
+    :param opening_is_on: if True, removes on→off pairs; if False, removes off→on pairs
     :rtype: list[_InstructionNode]
     """
     new_collection = []
-    to_commit = None
+    pending = None
 
     for node in collection:
-        if node.is_italics_node() and node.sets_italics_on():
-            to_commit = node
+        if not node.is_italics_node():
+            if pending:
+                new_collection.append(pending)
+                pending = None
+            new_collection.append(node)
             continue
 
-        elif node.is_italics_node() and node.sets_italics_off():
-            if to_commit:
-                to_commit = None
-                continue
+        is_opener = node.sets_italics_on() if opening_is_on else node.sets_italics_off()
+        if is_opener:
+            pending = node
+        elif pending:
+            pending = None
         else:
-            if to_commit:
-                new_collection.append(to_commit)
-                to_commit = None
+            new_collection.append(node)
 
-        new_collection.append(node)
-
-    return new_collection
-
-
-def _remove_noop_off_on_italics(collection):
-    """Removes pairs of off-on italics nodes, that don't surround any other
-    node
-
-    :type collection: list[_InstructionNode]
-    :return: list[_InstructionNode]
-    """
-    new_collection = []
-    to_commit = None
-
-    for node in collection:
-        if node.is_italics_node() and node.sets_italics_off():
-            to_commit = node
-            continue
-
-        elif node.is_italics_node() and node.sets_italics_on():
-            if to_commit:
-                to_commit = None
-                continue
-        else:
-            if to_commit:
-                new_collection.append(to_commit)
-                to_commit = None
-
-        new_collection.append(node)
-
-    if to_commit:
-        new_collection.append(to_commit)
+    if pending:
+        new_collection.append(pending)
 
     return new_collection
 
@@ -922,33 +889,8 @@ def _remove_noop_italics(collection):
     :type collection: list[_InstructionNode]
     :rtype: list[_InstructionNode]
     """
-    new_collection = _remove_noop_on_off_italics(collection)
-
-    new_collection = _remove_noop_off_on_italics(new_collection)
-
-    return new_collection
-
-
-def _skip_initial_italics_off_nodes(collection):
-    """Return a collection like the one given, but without the
-    initial <Italics OFF> nodes
-
-    :type collection: list[_InstructionNode]
-    :rtype: list[_InstructionNode]
-    """
-    new_collection = []
-    can_add_italics_off_nodes = False
-
-    for node in collection:
-        if node.is_italics_node():
-            if node.sets_italics_on():
-                can_add_italics_off_nodes = True
-                new_collection.append(node)
-            elif can_add_italics_off_nodes:
-                new_collection.append(node)
-        else:
-            new_collection.append(node)
-
+    new_collection = _remove_noop_italic_pairs(collection, opening_is_on=True)
+    new_collection = _remove_noop_italic_pairs(new_collection, opening_is_on=False)
     return new_collection
 
 
@@ -992,6 +934,23 @@ def _skip_redundant_italics_nodes(collection):
     return new_collection
 
 
+def _track_italics_state(collection):
+    """Track italics on/off state through a collection of nodes.
+
+    :rtype: tuple[bool, _InstructionNode | None]
+    :returns: (italics_on, last_italics_on_node)
+    """
+    italics_on = False
+    last_italics_on_node = None
+    for node in collection:
+        if node.is_italics_node() and node.sets_italics_on():
+            italics_on = True
+            last_italics_on_node = node
+        elif node.is_italics_node() and node.sets_italics_off():
+            italics_on = False
+    return italics_on, last_italics_on_node
+
+
 def _close_italics_before_repositioning(collection):
     """Make sure that for every opened italic node, there's a corresponding
     closing node.
@@ -1002,7 +961,6 @@ def _close_italics_before_repositioning(collection):
     :rtype: list[_InstructionNode]
     """
     new_collection = []
-
     italics_on = False
     last_italics_on_node = None
 
@@ -1010,19 +968,17 @@ def _close_italics_before_repositioning(collection):
         if node.is_italics_node() and node.sets_italics_on():
             italics_on = True
             last_italics_on_node = node
-        if node.is_italics_node() and node.sets_italics_off():
+        elif node.is_italics_node() and node.sets_italics_off():
             italics_on = False
+
         if node.requires_repositioning() and italics_on:
-            # Append an italics closing node before the position change
             new_collection.append(
                 _InstructionNode.create_italics_style(
-                    # The position info of this new node should be the same
                     position=last_italics_on_node.position,
                     turn_on=False,
                 )
             )
             new_collection.append(node)
-            # Append an italics opening node after the positioning change
             new_collection.append(
                 _InstructionNode.create_italics_style(position=node.position)
             )
@@ -1039,22 +995,15 @@ def _ensure_final_italics_node_closes(collection):
     :type collection: list[_InstructionNode]
     :rtype: list[_InstructionNode]
     """
+    italics_on, last_italics_on_node = _track_italics_state(collection)
+
+    if not italics_on:
+        return list(collection)
+
     new_collection = list(collection)
-
-    italics_on = False
-    last_italics_on_node = None
-
-    for node in collection:
-        if node.is_italics_node() and node.sets_italics_on():
-            italics_on = True
-            last_italics_on_node = node
-        if node.is_italics_node() and node.sets_italics_off():
-            italics_on = False
-
-    if italics_on:
-        new_collection.append(
-            _InstructionNode.create_italics_style(
-                position=last_italics_on_node.position, turn_on=False
-            )
+    new_collection.append(
+        _InstructionNode.create_italics_style(
+            position=last_italics_on_node.position, turn_on=False
         )
+    )
     return new_collection

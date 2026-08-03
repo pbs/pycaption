@@ -46,18 +46,19 @@ class SinglePositioningDFXPWriter(DFXPWriter):
         super().__init__(*args, **kwargs)
         self.default_positioning = default_positioning
 
-    def write(self, captions_set, force=""):
+    def write(self, captions_set, **kwargs):
         """Writes a DFXP file using the positioning provided in the initializer
 
         :type captions_set: pycaption.base.CaptionSet
-        :param force: only write this language, if available in the CaptionSet
+        :param kwargs:
+            force (str): only write this language, if available in the CaptionSet
         :rtype: str
         """
         captions_set = self._create_single_positioning_caption_set(
             captions_set, self.default_positioning
         )
 
-        return super().write(captions_set, force)  # noqa
+        return super().write(captions_set, **kwargs)
 
     @staticmethod
     def _create_single_positioning_caption_set(caption_set, positioning):
@@ -98,13 +99,15 @@ class LegacyDFXPWriter(BaseWriter):
     def __init__(self, *args, **kw):
         self.open_span = False
 
-    def write(self, caption_set, force=""):
+    def write(self, caption_set, **kwargs):
         """Serialize a CaptionSet into legacy DFXP format.
 
         :type caption_set: CaptionSet
-        :param force: if set, output only this language (falls back to last)
+        :param kwargs:
+            force (str): if set, output only this language (falls back to last)
         :rtype: str
         """
+        force = kwargs.get("force", "")
         caption_set = deepcopy(caption_set)
         caption_set = merge_concurrent_captions(caption_set)
 

@@ -2,8 +2,12 @@
 
 from copy import deepcopy
 
-from .base import BaseReader, BaseWriter, Caption, CaptionList, CaptionNode, CaptionSet
+from .base import (
+    BaseReader, BaseWriter, Caption, CaptionList, CaptionNode, CaptionSet,
+    merge_caption_list,
+)
 from .exceptions import CaptionReadNoCaptions, InvalidInputError
+from .geometry import HorizontalAlignmentEnum
 
 
 class SRTReader(BaseReader):
@@ -63,14 +67,18 @@ class SRTReader(BaseReader):
 
             start_line = end_line
 
-        caption_set = CaptionSet({lang: captions})
+        caption_set = CaptionSet(
+            {lang: captions},
+            visual_alignment_default=HorizontalAlignmentEnum.CENTER,
+        )
 
         if caption_set.is_empty():
             raise CaptionReadNoCaptions("empty caption file")
 
         return caption_set
 
-    def _srttomicro(self, stamp):
+    @staticmethod
+    def _srttomicro(stamp):
         """Convert an SRT timestamp (HH:MM:SS,mmm) to microseconds."""
         timesplit = stamp.split(":")
         if "," not in timesplit[2]:
@@ -85,7 +93,8 @@ class SRTReader(BaseReader):
 
         return microseconds
 
-    def _find_text_line(self, start_line, lines):
+    @staticmethod
+    def _find_text_line(start_line, lines):
         """Find the line index where the next cue block ends (first blank)."""
         end_line = start_line
 
@@ -104,7 +113,7 @@ class SRTReader(BaseReader):
 class SRTWriter(BaseWriter):
     """Serializes a CaptionSet to SRT format."""
 
-    def write(self, caption_set):
+    def write(self, caption_set, **kwargs):
         """Write a CaptionSet as an SRT string.
 
         :type caption_set: CaptionSet
@@ -126,28 +135,7 @@ class SRTWriter(BaseWriter):
         Merges consecutive captions with identical timestamps (libass and
         similar players render duplicates in reverse order otherwise).
         """
-
-        merged_captions = [captions[0]] if captions else []
-
-        for caption in captions[1:]:
-            # Merge if the timestamp is the same as last caption
-            if (caption.start, caption.end) == (
-                merged_captions[-1].start,
-                merged_captions[-1].end,
-            ):
-                merged_captions[-1] = Caption(
-                    start=caption.start,
-                    end=caption.end,
-                    nodes=(
-                        merged_captions[-1].nodes
-                        + [CaptionNode.create_break()]
-                        + caption.nodes
-                    ),
-                )
-            else:
-                # Different timestamp, end of merging, append new caption
-                merged_captions.append(caption)
-        captions = merged_captions
+        captions = merge_caption_list(captions)
 
         srt = ""
         count = 1
@@ -172,7 +160,8 @@ class SRTWriter(BaseWriter):
 
         return srt[:-1]  # remove unwanted newline at end of file
 
-    def _recreate_line(self, srt, line):
+    @staticmethod
+    def _recreate_line(srt, line):
         """Append a single CaptionNode's content to the SRT output string."""
         if line.type_ == CaptionNode.TEXT:
             return srt + f"{line.content} "

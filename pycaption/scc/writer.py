@@ -75,7 +75,7 @@ class SCCWriter(BaseWriter):
         super().__init__(*args, **kw)
         self.drop_frame = drop_frame
 
-    def write(self, caption_set):
+    def write(self, caption_set, **kwargs):
         """Convert a CaptionSet to SCC format string.
 
         Captions are emitted in chronological order. Each caption's mode
@@ -88,7 +88,7 @@ class SCCWriter(BaseWriter):
 
         caption_set = deepcopy(caption_set)
 
-        lang = list(caption_set.get_languages())[0]
+        lang = next(iter(caption_set.get_languages()))
         captions = caption_set.get_captions(lang)
         regions = caption_set.get_regions()
         scroll_regions = {
@@ -200,54 +200,17 @@ class SCCWriter(BaseWriter):
         preambles inline. Handles pop-on (ENM+RCL...EDM+EOC), roll-up
         (EDM on mode entry, RU+CR), and paint-on (RDC) seamlessly."""
         output = ""
-        max_payload = SCC_TOKENS_PER_CAPTION_MAX - _SCC_OVERHEAD
         prev_mode = None
 
         for code, start, end, mode, depth in codes:
             ts = self._format_timestamp(start)
 
             if mode == "pop_on":
-                code_tokens = code.split()
-                if len(code_tokens) + _SCC_OVERHEAD <= SCC_TOKENS_PER_CAPTION_MAX:
-                    output += f"{ts}\t"
-                    output += "94ae 94ae 9420 9420 "
-                    output += code
-                    output += "942c 942c 942f 942f\n\n"
-                else:
-                    offset = 0
-                    while offset < len(code_tokens):
-                        chunk = code_tokens[offset : offset + max_payload]
-                        if offset == 0:
-                            line = ["94ae", "94ae", "9420", "9420"] + chunk
-                        else:
-                            line = chunk
-                        is_last = offset + max_payload >= len(code_tokens)
-                        if is_last:
-                            line = line + ["942c", "942c", "942f", "942f"]
-                        output += (
-                            f"{self._format_timestamp(start)}\t"
-                            + " ".join(line)
-                            + "\n\n"
-                        )
-                        offset += max_payload
-                        if not is_last:
-                            start += MICROSECONDS_PER_CODEWORD
-
+                output += self._render_pop_on(code, start, ts)
             elif mode == "roll_up":
-                cap_ru = _ROLL_UP_COMMANDS.get(min(max(depth, 2), 4), "9426")
-                output += f"{ts}\t"
-                if prev_mode != "roll_up":
-                    output += "942c 942c "
-                output += f"{cap_ru} {cap_ru} "
-                output += f"{_CARRIAGE_RETURN} {_CARRIAGE_RETURN} "
-                output += code
-                output += "\n\n"
-
+                output += self._render_roll_up(code, ts, depth, prev_mode)
             elif mode == "paint_on":
-                output += f"{ts}\t"
-                output += f"{_RESUME_DIRECT_CAPTIONING} {_RESUME_DIRECT_CAPTIONING} "
-                output += code
-                output += "\n\n"
+                output += self._render_paint_on(code, ts)
 
             if end is not None:
                 output += f"{self._format_timestamp(end)}\t942c 942c\n\n"
@@ -255,6 +218,62 @@ class SCCWriter(BaseWriter):
             prev_mode = mode
 
         return output
+
+    def _render_pop_on(self, code, start, ts):
+        """Render a pop-on cue, chunking if it exceeds max token count."""
+        max_payload = SCC_TOKENS_PER_CAPTION_MAX - _SCC_OVERHEAD
+        code_tokens = code.split()
+
+        if len(code_tokens) <= max_payload:
+            return (
+                f"{ts}\t"
+                "94ae 94ae 9420 9420 "
+                f"{code}"
+                "942c 942c 942f 942f\n\n"
+            )
+
+        output = ""
+        offset = 0
+        while offset < len(code_tokens):
+            chunk = code_tokens[offset : offset + max_payload]
+            if offset == 0:
+                line = ["94ae", "94ae", "9420", "9420"] + chunk
+            else:
+                line = chunk
+            is_last = offset + max_payload >= len(code_tokens)
+            if is_last:
+                line = line + ["942c", "942c", "942f", "942f"]
+            output += (
+                f"{self._format_timestamp(start)}\t"
+                + " ".join(line)
+                + "\n\n"
+            )
+            offset += max_payload
+            if not is_last:
+                start += MICROSECONDS_PER_CODEWORD
+        return output
+
+    @staticmethod
+    def _render_roll_up(code, ts, depth, prev_mode):
+        """Render a roll-up cue with mode-entry EDM if needed."""
+        cap_ru = _ROLL_UP_COMMANDS.get(min(max(depth, 2), 4), "9426")
+        output = f"{ts}\t"
+        if prev_mode != "roll_up":
+            output += "942c 942c "
+        output += f"{cap_ru} {cap_ru} "
+        output += f"{_CARRIAGE_RETURN} {_CARRIAGE_RETURN} "
+        output += code
+        output += "\n\n"
+        return output
+
+    @staticmethod
+    def _render_paint_on(code, ts):
+        """Render a paint-on cue."""
+        return (
+            f"{ts}\t"
+            f"{_RESUME_DIRECT_CAPTIONING} {_RESUME_DIRECT_CAPTIONING} "
+            f"{code}\n\n"
+        )
 
     @staticmethod
     def _maybe_align(code):
@@ -281,19 +300,13 @@ class SCCWriter(BaseWriter):
         try:
             char_code = CHARACTER_TO_CODE[char]
         except KeyError:
-            try:
-                char_code = SPECIAL_OR_EXTENDED_CHAR_TO_CODE[char]
-            except KeyError:
-                char_code = "91b6"
+            char_code = SPECIAL_OR_EXTENDED_CHAR_TO_CODE.get(char, "91b6")
 
         if len(char_code) == 2:
             return code + char_code
-        elif len(char_code) == 4:
-            code = self._maybe_align(code)
-            code += f"{char_code} {char_code} "
-            return code
-        else:
-            return code
+        code = self._maybe_align(code)
+        code += f"{char_code} {char_code} "
+        return code
 
     def _emit_command(self, code, command):
         """Emit a CEA-608 control code, double-struck per spec requirements.
@@ -356,6 +369,13 @@ class SCCWriter(BaseWriter):
         tab_offset = raw_col - base_col
         return min(base_col, 28), tab_offset
 
+    _PAC_STYLE_COL0 = {
+        (True, True): "italic_underline",
+        (True, False): "italic",
+        (False, True): "underline",
+        (False, False): "plain",
+    }
+
     @staticmethod
     def _get_pac_code(row, col, italic=False, underline=False):
         """Look up the PAC (Preamble Address Code) for the given row, column,
@@ -363,35 +383,28 @@ class SCCWriter(BaseWriter):
         at columns 4-28 only plain and underline exist in CEA-608.
         Falls back to the basic row PAC if no exact match is found."""
         if col == 0:
-            if italic and underline:
-                style = "italic_underline"
-            elif italic:
-                style = "italic"
-            elif underline:
-                style = "underline"
-            else:
-                style = "plain"
+            style = SCCWriter._PAC_STYLE_COL0[italic, underline]
         else:
             style = "underline" if underline else "plain"
 
-        code = WRITER_PAC_CODES.get((row, col, style))
-        if code:
-            return code
-        return PAC_HIGH_BYTE_BY_ROW[row] + PAC_LOW_BYTE_BY_ROW_RESTRICTED[row]
+        return (
+            WRITER_PAC_CODES.get((row, col, style))
+            or PAC_HIGH_BYTE_BY_ROW[row] + PAC_LOW_BYTE_BY_ROW_RESTRICTED[row]
+        )
+
+    _MID_ROW_CODES = {
+        (True, True): MID_ROW_ITALIC_UNDERLINE,
+        (True, False): MID_ROW_ITALIC,
+        (False, True): MID_ROW_UNDERLINE,
+        (False, False): MID_ROW_PLAIN,
+    }
 
     @staticmethod
     def _get_mid_row_code(italic, underline):
         """Return the mid-row style code for the given style combination.
         Mid-row codes change text styling mid-line (after the PAC has already
         set the initial style for the line start)."""
-        if italic and underline:
-            return MID_ROW_ITALIC_UNDERLINE
-        elif italic:
-            return MID_ROW_ITALIC
-        elif underline:
-            return MID_ROW_UNDERLINE
-        else:
-            return MID_ROW_PLAIN
+        return SCCWriter._MID_ROW_CODES[italic, underline]
 
     def _text_to_code(self, caption):
         """Convert a caption's nodes into a complete SCC hex code string.
@@ -562,16 +575,12 @@ class SCCWriter(BaseWriter):
         """Format as non-drop-frame timecode (HH:MM:SS:FF).
         Applies the 1000/1001 pulldown: 1 second of timecode = 1.001 real
         seconds. Frames are computed at 30fps within each second."""
-        seconds_float = microseconds / 1_000_000.0
-        seconds_float *= 1000.0 / 1001.0
-        hours = math.floor(seconds_float / 3600)
-        seconds_float -= hours * 3600
-        minutes = math.floor(seconds_float / 60)
-        seconds_float -= minutes * 60
-        seconds = math.floor(seconds_float)
-        seconds_float -= seconds
-        frames = math.floor(seconds_float * 30)
-        return f"{hours:02}:{minutes:02}:{seconds:02}:{frames:02}"
+        total_seconds = microseconds / 1_000_000.0 * 1000.0 / 1001.0
+        hours, remainder = divmod(total_seconds, 3600)
+        minutes, remainder = divmod(remainder, 60)
+        seconds = int(remainder)
+        frames = int((remainder - seconds) * 30)
+        return f"{int(hours):02}:{int(minutes):02}:{seconds:02}:{frames:02}"
 
     @staticmethod
     def _format_timestamp_df(microseconds):

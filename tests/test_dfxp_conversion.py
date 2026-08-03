@@ -344,6 +344,12 @@ class TestSRTtoDFXP(DFXPTestingMixIn):
         results = DFXPWriter().write(caption_set)
 
         assert isinstance(results, str)
+        assert 'tts:textAlign="center"' in results
+        assert 'tts:displayAlign="after"' in results
+
+        expected = sample_dfxp.replace(
+            'tts:textAlign="start"', 'tts:textAlign="center"'
+        )
         self.assert_dfxp_equals(
-            sample_dfxp, results, ignore_styling=True, ignore_spans=True
+            expected, results, ignore_styling=True, ignore_spans=True
         )
