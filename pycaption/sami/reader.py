@@ -10,7 +10,6 @@ from ..base import BaseReader, Caption, CaptionList, CaptionNode, CaptionSet
 from ..exceptions import (
     CaptionReadNoCaptions,
     CaptionReadTimingError,
-    InvalidInputError,
 )
 from ..geometry import Alignment, HorizontalAlignmentEnum, Layout, Padding, Size
 from .parser import SAMIParser
@@ -32,6 +31,7 @@ class SAMIReader(BaseReader):
 
     def detect(self, content):
         """Return True if content looks like a SAMI document."""
+        content = self._decode_content(content)
         return "<sami" in content.lower()
 
     def read(self, content):
@@ -42,8 +42,7 @@ class SAMIReader(BaseReader):
         :raises InvalidInputError: if content is not a string
         :raises CaptionReadNoCaptions: if no captions are found
         """
-        if not isinstance(content, str):
-            raise InvalidInputError("The content is not a unicode string.")
+        content = self._decode_content(content)
 
         content, doc_styles, doc_langs = SAMIParser().feed(content)
         sami_soup = BeautifulSoup(content, features="lxml")

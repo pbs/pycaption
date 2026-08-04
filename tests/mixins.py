@@ -17,10 +17,20 @@ class ReaderTestingMixIn:
     def assert_negative_answer_for_detection(self, different_sample):
         assert self.reader.detect(different_sample) is False
 
-    def test_reader_only_supports_unicode_input(self):
+    def test_reader_rejects_non_string_non_bytes_input(self):
+        with pytest.raises(InvalidInputError) as exc_info:
+            self.reader.read(123)
+        assert "must be a unicode string or UTF-8 bytes" in exc_info.value.args[0]
+
+    def test_reader_rejects_empty_bytes(self):
         with pytest.raises(InvalidInputError) as exc_info:
             self.reader.read(b"")
-        assert exc_info.value.args[0] == "The content is not a unicode string."
+        assert exc_info.value.args[0] == "The content is empty."
+
+    def test_reader_rejects_invalid_utf8_bytes(self):
+        with pytest.raises(InvalidInputError) as exc_info:
+            self.reader.read(b"\xff\xfe invalid utf8")
+        assert "not valid UTF-8" in exc_info.value.args[0]
 
 
 class WebVTTTestingMixIn:

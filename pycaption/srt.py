@@ -6,7 +6,7 @@ from .base import (
     BaseReader, BaseWriter, Caption, CaptionList, CaptionNode, CaptionSet,
     merge_caption_list,
 )
-from .exceptions import CaptionReadNoCaptions, InvalidInputError
+from .exceptions import CaptionReadNoCaptions
 from .geometry import HorizontalAlignmentEnum
 
 
@@ -19,6 +19,7 @@ class SRTReader(BaseReader):
         Checks that the first line is a sequence number and the second
         contains an arrow ('-->').
         """
+        content = self._decode_content(content)
         lines = content.splitlines()
         if lines[0].isdigit() and "-->" in lines[1]:
             return True
@@ -34,8 +35,7 @@ class SRTReader(BaseReader):
         :raises InvalidInputError: if content is not a string.
         :raises CaptionReadNoCaptions: if no captions are found.
         """
-        if not isinstance(content, str):
-            raise InvalidInputError("The content is not a unicode string.")
+        content = self._decode_content(content)
 
         lines = content.splitlines()
         start_line = 0

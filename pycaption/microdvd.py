@@ -20,7 +20,6 @@ from .exceptions import (
     CaptionReadNoCaptions,
     CaptionReadSyntaxError,
     CaptionReadTimingError,
-    InvalidInputError,
 )
 from .geometry import HorizontalAlignmentEnum
 
@@ -30,6 +29,7 @@ class MicroDVDReader(BaseReader):
 
     def detect(self, content):
         """Return True if content starts with MicroDVD frame markers."""
+        content = self._decode_content(content)
         return re.match(r"{\d+}{\d+}", content) is not None
 
     def read(self, content, lang=DEFAULT_LANGUAGE_CODE):
@@ -39,8 +39,7 @@ class MicroDVDReader(BaseReader):
         :param lang: Language code to assign.
         :rtype: CaptionSet
         """
-        if not isinstance(content, str):
-            raise InvalidInputError("The content is not a unicode string.")
+        content = self._decode_content(content)
 
         lines = content.splitlines()
         captions = CaptionList()

@@ -87,7 +87,6 @@ from pycaption.exceptions import (
     CaptionLineLengthError,
     CaptionReadNoCaptions,
     CaptionReadTimingError,
-    InvalidInputError,
 )
 
 from .constants import (
@@ -148,10 +147,11 @@ class SCCReader(BaseReader):
     def detect(self, content):
         """Checks whether the given content is a proper SCC file
 
-        :type content: str
+        :type content: str or bytes
 
         :rtype: bool
         """
+        content = self._decode_content(content)
         lines = content.splitlines()
         if lines[0] == HEADER:
             return True
@@ -177,8 +177,7 @@ class SCCReader(BaseReader):
 
         :rtype: CaptionSet
         """
-        if not isinstance(content, str):
-            raise InvalidInputError("The content is not a unicode string.")
+        content = self._decode_content(content)
 
         self.simulate_roll_up = simulate_roll_up
         self.time_translator.offset = offset * 1000000
