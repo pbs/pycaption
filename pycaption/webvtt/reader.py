@@ -15,7 +15,6 @@ from ..exceptions import (
     CaptionReadNoCaptions,
     CaptionReadSyntaxError,
     CaptionReadWarning,
-    InvalidInputError,
 )
 from ..geometry import (
     Alignment,
@@ -126,8 +125,7 @@ class WebVTTReader(BaseReader):
         optionally followed by a space or tab and header metadata.
         Handles BOM-prefixed content.
         """
-        if content.startswith("﻿"):
-            content = content[1:]
+        content = self._decode_content(content)
         first_line = content.splitlines()[0] if content.strip() else ""
         return (
             first_line == "WEBVTT"
@@ -147,20 +145,7 @@ class WebVTTReader(BaseReader):
         :raises InvalidInputError: If content is not a string.
         :raises CaptionReadNoCaptions: If no cues are found.
         """
-        if isinstance(content, bytes):
-            if not content:
-                raise InvalidInputError("The content is not a unicode string.")
-            try:
-                content = content.decode("utf-8")
-            except UnicodeDecodeError as e:
-                raise InvalidInputError(
-                    f"WebVTT content is not valid UTF-8: {e}"
-                ) from e
-        elif not isinstance(content, str):
-            raise InvalidInputError("The content is not a unicode string.")
-
-        if content.startswith("﻿"):
-            content = content[1:]
+        content = self._decode_content(content)
 
         # str.splitlines() handles CR, LF, CRLF (W3C WebVTT §3 RULE-FMT-005)
         lines = content.splitlines()

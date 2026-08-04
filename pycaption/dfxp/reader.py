@@ -21,7 +21,6 @@ from ..exceptions import (
     CaptionReadNoCaptions,
     CaptionReadSyntaxError,
     CaptionReadTimingError,
-    InvalidInputError,
 )
 from ..geometry import (
     Alignment,
@@ -108,9 +107,10 @@ class DFXPReader(BaseReader):
     def detect(self, content):
         """Return True if content looks like a DFXP/TTML document.
 
-        :type content: str
+        :type content: str or bytes
         :rtype: bool
         """
+        content = self._decode_content(content)
         lowered = content.lower()
         return bool(re.search(r"<tt[\s>]", lowered)) and "</tt>" in lowered
 
@@ -122,8 +122,7 @@ class DFXPReader(BaseReader):
         :raises InvalidInputError: if content is not a string
         :raises CaptionReadNoCaptions: if no captions are found
         """
-        if not isinstance(content, str):
-            raise InvalidInputError("The content is not a unicode string.")
+        content = self._decode_content(content)
 
         dfxp_document = LayoutAwareDFXPParser(
             content, read_invalid_positioning=self.read_invalid_positioning

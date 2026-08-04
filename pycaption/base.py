@@ -64,6 +64,33 @@ class BaseReader:
     def __init__(self, *args, **kwargs):
         pass
 
+    @staticmethod
+    def _decode_content(content):
+        """Decode bytes to str (UTF-8 with BOM handling).
+
+        :param content: str or bytes input.
+        :returns: decoded str with BOM stripped.
+        :raises InvalidInputError: if content is not str/bytes, is empty
+            bytes, or is not valid UTF-8.
+        """
+        if isinstance(content, bytes):
+            if not content:
+                raise InvalidInputError("The content is empty.")
+            try:
+                content = content.decode("utf-8-sig")
+            except UnicodeDecodeError as e:
+                raise InvalidInputError(
+                    f"Content is not valid UTF-8: {e}"
+                ) from e
+        elif isinstance(content, str):
+            if content.startswith("﻿"):
+                content = content[1:]
+        else:
+            raise InvalidInputError(
+                "The content must be a unicode string or UTF-8 bytes."
+            )
+        return content
+
     def detect(self, content):
         """Return True if content appears to be in this reader's format.
 
