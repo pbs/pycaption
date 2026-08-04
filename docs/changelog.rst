@@ -1,5 +1,16 @@
 Changelog
 ---------
+2.3.3
+^^^^^^
+  - All readers (SCC, DFXP, WebVTT, SAMI, SRT, MicroDVD) now accept
+    ``bytes`` input in addition to ``str``. UTF-8 decoding and BOM
+    stripping are handled by a shared ``BaseReader._decode_content()``
+    method. Invalid UTF-8, empty bytes, and non-string/non-bytes inputs
+    raise ``InvalidInputError`` with descriptive messages.
+
+  - WebVTT reader: removed its reader-specific bytes handling in favor
+    of the shared implementation.
+
 2.3.2
 ^^^^^^
   - RP 2052-10 compliance for all 25 conversion paths: when source format's
