@@ -1,5 +1,12 @@
 Changelog
 ---------
+2.3.4
+^^^^^^
+  - Auto-detect and repair double-encoded UTF-8 in all readers. When input
+    text has been misread as CP-1252 and re-encoded (e.g. ♪ stored as â™ª),
+    ``BaseReader._decode_content()`` now reverses the corruption and logs a
+    warning. Clean UTF-8 input is never modified.
+
 2.3.3
 ^^^^^^
   - All readers (SCC, DFXP, WebVTT, SAMI, SRT, MicroDVD) now accept
