@@ -211,10 +211,10 @@ class TestWebVTTtoSAMIStyles(SAMITestingMixIn):
 
 
 class TestSCCtoSAMI(SAMITestingMixIn):
-    def test_scc_to_sami_center_aligned(self, sample_scc_pop_on):
+    def test_scc_to_sami_preserves_positioning(self, sample_scc_pop_on):
         caption_set = SCCReader().read(sample_scc_pop_on)
         result = SAMIWriter().write(caption_set)
 
-        assert "text-align:center;" in result
-        assert "margin-left" not in result
-        assert "margin-top" not in result
+        assert "text-align:left;" in result
+        assert "margin-left:" in result
+        assert "margin-top:" in result

@@ -131,9 +131,6 @@ class SAMIWriter(BaseWriter):
         if not layout_info:
             return
 
-        if layout_info.is_positional_anchor:
-            return
-
         if layout_info.origin:
             if layout_info.origin.x:
                 parts.append(f"margin-left:{layout_info.origin.x};")
@@ -150,9 +147,6 @@ class SAMIWriter(BaseWriter):
         to decide whether to emit explicit center alignment per RP 2052-10.
         """
         if not layout_info:
-            return "center" if self._promote_center else None
-
-        if layout_info.is_positional_anchor:
             return "center" if self._promote_center else None
 
         if not layout_info.alignment:

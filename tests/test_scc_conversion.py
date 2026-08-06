@@ -1,7 +1,5 @@
 import re
 
-import pytest
-
 from pycaption import (
     DFXPWriter,
     SCCReader,
@@ -42,9 +40,8 @@ class TestSCCtoDFXP:
         caption_set = SCCReader().read(sample_scc_multiple_positioning)
         dfxp = DFXPWriter(relativize=False, fit_to_screen=False).write(caption_set)
 
-        assert 'tts:textAlign="center"' in dfxp
-        assert 'tts:textAlign="left"' not in dfxp
-        assert "tts:origin" not in dfxp
+        assert 'tts:textAlign="left"' in dfxp
+        assert "tts:origin" in dfxp
         assert "abab" in dfxp
         assert "ghgh" in dfxp
 
@@ -58,8 +55,7 @@ class TestSCCtoDFXP:
 
         dfxp = DFXPWriter().write(caption_set)
 
-        assert 'tts:textAlign="center"' in dfxp
-        assert 'tts:textAlign="left"' not in dfxp
+        assert 'tts:textAlign="left"' in dfxp
         assert 'tts:fontStyle="italic"' in dfxp
         from bs4 import BeautifulSoup
 
@@ -72,7 +68,7 @@ class TestSCCtoDFXP:
 
         dfxp = DFXPWriter().write(caption_set)
 
-        assert 'tts:textAlign="center"' in dfxp
+        assert 'tts:textAlign="left"' in dfxp
         assert "&amp;" in dfxp
         from bs4 import BeautifulSoup
 

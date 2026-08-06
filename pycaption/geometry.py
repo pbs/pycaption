@@ -597,7 +597,6 @@ class Layout:
         alignment=None,
         webvtt_positioning=None,
         writing_direction=None,
-        is_positional_anchor=False,
         inherit_from=None,
     ):
         """
@@ -623,11 +622,6 @@ class Layout:
         :type writing_direction: WritingDirectionEnum
         :param writing_direction: WebVTT vertical writing direction (rl or lr).
 
-        :type is_positional_anchor: bool
-        :param is_positional_anchor: True when the origin/alignment describe a
-            coordinate-system anchor point (e.g. SCC row/col positioning) rather
-            than visual text alignment.
-
         :type inherit_from: Layout
         :param inherit_from: A Layout with the positioning parameters to be
             used if not specified by the positioning arguments,
@@ -639,7 +633,6 @@ class Layout:
         self.alignment = alignment
         self.webvtt_positioning = webvtt_positioning
         self.writing_direction = writing_direction
-        self.is_positional_anchor = is_positional_anchor
 
         if inherit_from:
             for attr_name in [
@@ -716,7 +709,6 @@ class Layout:
         params = {
             "alignment": self.alignment,
             "writing_direction": self.writing_direction,
-            "is_positional_anchor": self.is_positional_anchor,
         }
         for attr_name in ["origin", "extent", "padding"]:
             attr = getattr(self, attr_name)
@@ -751,7 +743,6 @@ class Layout:
             padding=self.padding,
             alignment=self.alignment,
             writing_direction=self.writing_direction,
-            is_positional_anchor=self.is_positional_anchor,
         )
 
     def _corrected_extent(self, diff_horizontal, diff_vertical):

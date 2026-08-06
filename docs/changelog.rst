@@ -1,5 +1,22 @@
 Changelog
 ---------
+2.3.5
+^^^^^^
+  - Fix SCC positioning lost on conversion to VTT/DFXP/SAMI. The
+    ``is_positional_anchor`` flag introduced in 2.3.2 blanket-suppressed all
+    SCC row/column positioning in all three writers. Captions with intentional
+    non-default positions (top-of-screen music notes, left-aligned text at
+    specific columns) were collapsing to center-bottom.
+
+  - Remove ``is_positional_anchor`` from ``Layout`` entirely. SCC row/col
+    coordinates are valid positional data and should pass through to output
+    formats as ``align:left position:N% line:N% size:N%`` (VTT),
+    ``tts:origin`` regions (DFXP), and ``margin-left/margin-top/width`` CSS
+    (SAMI).
+
+  - RP 2052-10 center-alignment promotion remains functional for cues
+    without explicit positioning (VTT/SRT/SCC sources → DFXP/SAMI output).
+
 2.3.4
 ^^^^^^
   - Auto-detect and repair double-encoded UTF-8 in all readers. When input
