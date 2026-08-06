@@ -5,11 +5,14 @@ CaptionSet -> CaptionList -> Caption -> CaptionNode.  Also provides the
 CaptionConverter orchestrator and base classes for readers/writers.
 """
 
+import logging
 import os
 from datetime import timedelta
 from numbers import Number
 
 from .exceptions import CaptionReadError, CaptionReadTimingError, InvalidInputError
+
+logger = logging.getLogger(__name__)
 
 # `und` a special identifier for an undetermined language according to ISO 639-2
 DEFAULT_LANGUAGE_CODE = os.getenv("PYCAPTION_DEFAULT_LANG", "und")
@@ -79,9 +82,7 @@ class BaseReader:
             try:
                 content = content.decode("utf-8-sig")
             except UnicodeDecodeError as e:
-                raise InvalidInputError(
-                    f"Content is not valid UTF-8: {e}"
-                ) from e
+                raise InvalidInputError(f"Content is not valid UTF-8: {e}") from e
         elif isinstance(content, str):
             if content.startswith("﻿"):
                 content = content[1:]
@@ -89,7 +90,22 @@ class BaseReader:
             raise InvalidInputError(
                 "The content must be a unicode string or UTF-8 bytes."
             )
+        content = BaseReader._repair_double_encoding(content)
         return content
+
+    @staticmethod
+    def _repair_double_encoding(text):
+        """Fix double-encoded UTF-8 (bytes misread as CP-1252)."""
+        try:
+            repaired = text.encode("cp1252").decode("utf-8")
+        except (UnicodeEncodeError, UnicodeDecodeError):
+            return text
+        if repaired != text:
+            logger.warning(
+                "Detected and repaired double-encoded UTF-8 in caption content"
+            )
+            return repaired
+        return text
 
     def detect(self, content):
         """Return True if content appears to be in this reader's format.
@@ -396,7 +412,11 @@ class CaptionSet:
     """
 
     def __init__(
-        self, captions, styles=None, layout_info=None, regions=None,
+        self,
+        captions,
+        styles=None,
+        layout_info=None,
+        regions=None,
         visual_alignment_default=None,
     ):
         """
