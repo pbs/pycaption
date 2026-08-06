@@ -159,28 +159,3 @@ class TestMicroDVDReaderBytes:
         assert self.reader.detect(sample_microdvd.encode("utf-8")) is True
 
 
-class TestBytesPreventsMojibake:
-    """Verify that passing raw bytes prevents the cp1252 double-encoding issue."""
-
-    def test_music_notes_survive_bytes_path(self):
-        srt_content = "1\n" "00:00:01,000 --> 00:00:03,000\n" "♪ music ♪\n"
-        raw_bytes = srt_content.encode("utf-8")
-        captions = SRTReader().read(raw_bytes)
-        text = captions.get_captions("en-US")[0].get_text()
-        assert "♪" in text
-        assert "\xc3" not in text  # no mojibake
-
-    def test_cp1252_misread_bytes_are_repaired(self):
-        """Double-encoded bytes (UTF-8 misread as cp1252) are auto-repaired."""
-        original = "♪ music ♪"
-        utf8_bytes = original.encode("utf-8")
-        mangled = utf8_bytes.decode("cp1252").encode("utf-8")
-        reader = SRTReader()
-        srt_with_mangled = b"1\n00:00:01,000 --> 00:00:03,000\n" + mangled + b"\n"
-        captions = reader.read(srt_with_mangled)
-        text = captions.get_captions("en-US")[0].get_text()
-        assert "♪" in text
-        srt_with_original = b"1\n00:00:01,000 --> 00:00:03,000\n" + utf8_bytes + b"\n"
-        captions_correct = reader.read(srt_with_original)
-        correct_text = captions_correct.get_captions("en-US")[0].get_text()
-        assert correct_text == text

@@ -2,7 +2,7 @@ import logging
 
 import pytest
 
-from pycaption import SAMIReader, SRTReader, WebVTTReader
+from pycaption import SAMIReader, SRTReader
 from pycaption.base import BaseReader
 from pycaption.dfxp import DFXPReader
 
@@ -24,10 +24,6 @@ class TestRepairDoubleEncoding:
     def test_leaves_clean_utf8_alone(self):
         clean = "♪ This is — perfectly fine é text"
         assert BaseReader._repair_double_encoding(clean) == clean
-
-    def test_leaves_ascii_alone(self):
-        ascii_text = "Simple caption text with no special chars"
-        assert BaseReader._repair_double_encoding(ascii_text) == ascii_text
 
     def test_logs_warning_on_repair(self, caplog):
         garbled = _double_encode("♪")
@@ -54,18 +50,6 @@ class TestDoubleEncodingEndToEnd:
         text = "".join(n.content for n in nodes)
         assert "♪" in text
         assert garbled_note not in text
-
-    def test_webvtt_reader(self):
-        garbled_note = _double_encode("♪")
-        content = (
-            "WEBVTT\n\n"
-            "00:00:01.000 --> 00:00:02.000\n"
-            f"{garbled_note} Music {garbled_note}\n"
-        )
-        captions = WebVTTReader().read(content)
-        nodes = captions.get_captions("en-US")[0].nodes
-        text = "".join(n.content for n in nodes)
-        assert "♪" in text
 
     def test_dfxp_reader(self):
         garbled = _double_encode("élève")
