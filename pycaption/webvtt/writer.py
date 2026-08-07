@@ -344,9 +344,6 @@ class WebVTTWriter(BaseWriter):
         if not layout:
             return ""
 
-        if layout.is_positional_anchor:
-            return ""
-
         if layout.webvtt_positioning:
             return f" {layout.webvtt_positioning}"
 

@@ -30,7 +30,7 @@ DFXP_DEFAULT_REGION = Layout(
     alignment=Alignment(HorizontalAlignmentEnum.START, VerticalAlignmentEnum.BOTTOM)
 )
 
-# Writer fallback alignment used when layout is None or SCC positional.
+# Writer fallback alignment used when layout is None.
 DFXP_WRITER_FALLBACK_ALIGNMENT = Alignment(
     HorizontalAlignmentEnum.CENTER, VerticalAlignmentEnum.BOTTOM
 )

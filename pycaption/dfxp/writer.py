@@ -294,8 +294,7 @@ class RegionCreator:
     def _collect_unique_regions(caption_set, ignore_region):
         """Collect all unique Layout objects from the caption set.
 
-        Excludes None, ignore_region (typically the default region), and
-        SCC positional layouts (which map to the default center region).
+        Excludes None and ignore_region (typically the default region).
 
         :type caption_set: CaptionSet
         :param ignore_region: a Layout to exclude from the result
@@ -315,9 +314,6 @@ class RegionCreator:
 
         unique_regions.pop(None, None)
         unique_regions.pop(ignore_region, None)
-        for layout in list(unique_regions):
-            if layout and layout.is_positional_anchor:
-                unique_regions.pop(layout)
         return unique_regions
 
     def _create_unique_regions(self, unique_layouts, dfxp, id_factory):
@@ -432,9 +428,6 @@ class RegionCreator:
             if not layout_info:
                 layout_info = caption_set.layout_info
 
-        if layout_info and layout_info.is_positional_anchor:
-            layout_info = None
-
         region_id = self._region_map.get(layout_info)
         if not region_id:
             region_id = DFXP_DEFAULT_REGION_ID
@@ -506,8 +499,8 @@ def _convert_layout_to_attributes(layout, fallback_alignment=None):
     Maps origin, extent, padding, alignment, and writing_direction to their
     tts: namespace equivalents.
 
-    When layout is None or carries a positional anchor (SCC row/col coords),
-    uses fallback_alignment if provided (per RP 2052-10 center promotion).
+    When layout is None, uses fallback_alignment if provided
+    (per RP 2052-10 center promotion).
 
     :type layout: Layout | None
     :param fallback_alignment: Alignment to use when the layout lacks one.
@@ -519,14 +512,6 @@ def _convert_layout_to_attributes(layout, fallback_alignment=None):
     if not layout:
         if fallback_alignment:
             return _create_external_alignment(fallback_alignment)
-        return result
-
-    if layout.is_positional_anchor:
-        if fallback_alignment:
-            result.update(_create_external_alignment(fallback_alignment))
-        writing_mode = _WRITING_DIRECTION_TO_DFXP.get(layout.writing_direction)
-        if writing_mode:
-            result["tts:writingMode"] = writing_mode
         return result
 
     if layout.origin:
