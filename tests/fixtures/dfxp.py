@@ -1359,13 +1359,12 @@ def sample_dfxp_empty_cue_output():
       <style tts:color="white" tts:fontFamily="monospace" tts:fontSize="1c" xml:id="default"/>
    </styling>
    <layout>
-      <region tts:displayAlign="after" tts:origin="10% 10%" tts:textAlign="start" xml:id="r0"/>
-      <region tts:displayAlign="after" tts:extent="80% 85%" tts:origin="10% 10%" tts:textAlign="start" xml:id="r1"/>
+      <region tts:displayAlign="after" tts:extent="80% 85%" tts:origin="10% 10%" tts:textAlign="start" xml:id="r0"/>
    </layout>
  </head>
  <body>
    <div region="r0" xml:lang="en-US">
-     <p begin="00:00:01.209" end="00:00:02.312" region="r1" style="default">
+     <p begin="00:00:01.209" end="00:00:02.312" region="r0" style="default">
        abc
      </p>
    </div>

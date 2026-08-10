@@ -29,6 +29,8 @@ class UnitEnum(Enum):
     PERCENT = "%"
     CELL = "c"
     PT = "pt"
+    VW = "vw"
+    VH = "vh"
 
 
 class VerticalAlignmentEnum(Enum):
@@ -95,10 +97,7 @@ class Alignment:
     def __eq__(self, other):
         if not isinstance(other, Alignment):
             return NotImplemented
-        return (
-            self.horizontal == other.horizontal
-            and self.vertical == other.vertical
-        )
+        return self.horizontal == other.horizontal and self.vertical == other.vertical
 
     def __repr__(self):
         return f"<Alignment ({self.horizontal} {self.vertical})>"
@@ -181,10 +180,7 @@ class Stretch(TwoDimensionalObject):
     def __eq__(self, other):
         if not isinstance(other, Stretch):
             return NotImplemented
-        return (
-            self.horizontal == other.horizontal
-            and self.vertical == other.vertical
-        )
+        return self.horizontal == other.horizontal and self.vertical == other.vertical
 
     def __hash__(self):
         return hash(hash(self.horizontal) * 59 + hash(self.vertical) * 61 + 67)
@@ -200,9 +196,8 @@ class Stretch(TwoDimensionalObject):
 
     def is_relative(self):
         """Return True if all dimensions are expressed as percentages."""
-        return (
-            (not self.horizontal or self.horizontal.is_relative())
-            and (not self.vertical or self.vertical.is_relative())
+        return (not self.horizontal or self.horizontal.is_relative()) and (
+            not self.vertical or self.vertical.is_relative()
         )
 
     def as_percentage_of(self, video_width, video_height):
@@ -240,9 +235,8 @@ class Point(TwoDimensionalObject):
 
     def is_relative(self):
         """Return True if all dimensions are expressed as percentages."""
-        return (
-            (not self.x or self.x.is_relative())
-            and (not self.y or self.y.is_relative())
+        return (not self.x or self.x.is_relative()) and (
+            not self.y or self.y.is_relative()
         )
 
     def as_percentage_of(self, video_width, video_height):
@@ -357,6 +351,9 @@ class Size:
         if unit == UnitEnum.PERCENT:
             return self  # Nothing to do here
 
+        if unit in (UnitEnum.VW, UnitEnum.VH):
+            return Size(value, UnitEnum.PERCENT)
+
         # The input must be valid so that any conversion can be done
         if not (video_width or video_height):
             raise RelativizationError(
@@ -401,7 +398,7 @@ class Size:
         :rtype: Size
         """
         size_pattern = re.compile(
-            r"^(((?P<value>\d+(\.\d+)?)(?P<unit>"
+            r"^(((?P<value>-?\d+(\.\d+)?)(?P<unit>"
             rf"{'|'.join([unit.value for unit in UnitEnum])}))|0)$"
         )
         match = size_pattern.search(string)
@@ -416,7 +413,6 @@ class Size:
             value = match.group("value")
             return cls(value, UnitEnum(unit))
         else:
-            # If the unit is missing, the only accepted alternative is zero
             return cls(match.group(0), UnitEnum.PIXEL)
 
     def __repr__(self):
@@ -445,7 +441,6 @@ class Size:
 
     def __hash__(self):
         return hash(hash(self.value) * 41 + hash(self.unit) * 43 + 47)
-
 
 
 class Padding:
@@ -647,14 +642,16 @@ class Layout:
                     setattr(self, attr_name, getattr(inherit_from, attr_name))
 
     def __bool__(self):
-        return any((
-            self.origin,
-            self.extent,
-            self.padding,
-            self.alignment,
-            self.webvtt_positioning,
-            self.writing_direction,
-        ))
+        return any(
+            (
+                self.origin,
+                self.extent,
+                self.padding,
+                self.alignment,
+                self.webvtt_positioning,
+                self.writing_direction,
+            )
+        )
 
     def __repr__(self):
         return (
@@ -729,6 +726,15 @@ class Layout:
         if not self.origin:
             return self
 
+        if (
+            self.origin.x.unit != UnitEnum.PERCENT
+            or self.origin.y.unit != UnitEnum.PERCENT
+        ):
+            return self
+
+        if self.origin.x.value >= 90 or self.origin.y.value >= 95:
+            return self
+
         diff_horizontal = Size(90 - self.origin.x.value, UnitEnum.PERCENT)
         diff_vertical = Size(95 - self.origin.y.value, UnitEnum.PERCENT)
 
@@ -749,8 +755,10 @@ class Layout:
         """Return extent clamped so origin + extent doesn't exceed the screen."""
         bottom_right = self.origin.add_stretch(self.extent)
 
-        if (bottom_right.x.unit != UnitEnum.PERCENT
-                or bottom_right.y.unit != UnitEnum.PERCENT):
+        if (
+            bottom_right.x.unit != UnitEnum.PERCENT
+            or bottom_right.y.unit != UnitEnum.PERCENT
+        ):
             raise ValueError(
                 "Units must be relativized before extent "
                 "can be calculated based on origin."
