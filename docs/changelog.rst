@@ -1,5 +1,26 @@
 Changelog
 ---------
+2.3.6
+^^^^^^
+  - Fix ``fit_to_screen()`` producing negative or zero extent when origin
+    is at or beyond 90% horizontal / 95% vertical. An early-return guard
+    now preserves the layout unchanged for these edge-of-screen origins
+    instead of computing ``90 - origin`` (which yielded 0 or negative).
+
+  - Fix ``Size.from_string()`` rejecting negative values (e.g. ``"-5%"``).
+    The regex now accepts an optional leading minus sign.
+
+  - Add ``VW`` and ``VH`` viewport units to ``UnitEnum``. DFXP/TTML files
+    using ``tts:origin="10vw 10vh"`` or ``tts:extent="80vw 50vh"`` now
+    parse without error. ``as_percentage_of()`` treats them as equivalent
+    to percentages; the default ``relativize=True`` writer path converts
+    them to ``%`` so they never leak into output.
+
+  - DFXP writer: relativize and fit-to-screen the language-level
+    ``layout_info`` (the ``<div region="...">`` layout), not just
+    per-caption layouts. Previously the language-level layout was written
+    raw, causing duplicate regions in output.
+
 2.3.5
 ^^^^^^
   - Fix SCC positioning lost on conversion to VTT/DFXP/SAMI. The

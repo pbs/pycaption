@@ -93,6 +93,10 @@ class DFXPWriter(BaseWriter):
         :type langs: list[str]
         """
         for lang in langs:
+            caption_set.set_layout_info(
+                lang,
+                self._relativize_and_fit_to_screen(caption_set.get_layout_info(lang)),
+            )
             for caption in caption_set.get_captions(lang):
                 caption.layout_info = self._relativize_and_fit_to_screen(
                     caption.layout_info
