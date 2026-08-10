@@ -669,3 +669,25 @@ Scenarist_SCC V1.0
 00:26:48;29\t9420 9420 94d0 94d0 97a1 97a1 3e3e 2057 e5a7 ecec 2062 e520 6261 e36b 206e e5f8 f420 f7e5 e56b 20f7 e9f4 6880 9470 9470 616e eff4 68e5 f220 e570 e973 ef64 e520 efe6 91ae 91ae 4361 6e61 6461 2046 e9ec e573 9120 9120 ae80 942c 942c 8080 8080 942f 942f
 
 """
+
+
+@pytest.fixture(scope="session")
+def sample_scc_frame_30():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:09:30 94ae 94ae 9420 9420 9470 9470 c865 ecec ef80 942c 942c 942f 942f
+
+"""
+
+
+@pytest.fixture(scope="session")
+def sample_scc_frame_29():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:09:29 94ae 94ae 9420 9420 9470 9470 c865 ecec ef80 942c 942c 942f 942f
+
+00:00:12:00 942c 942c
+
+"""

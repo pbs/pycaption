@@ -78,16 +78,18 @@ http://www.theneitherworld.com/mcpoodle/SCC_TOOLS/DOCS/SCC_FORMAT.HTML
 """
 
 import re
+import warnings
 from collections import deque
 from copy import deepcopy
 
 from pycaption.base import BaseReader, CaptionSet
-from pycaption.geometry import HorizontalAlignmentEnum
 from pycaption.exceptions import (
     CaptionLineLengthError,
     CaptionReadNoCaptions,
     CaptionReadTimingError,
+    CaptionReadWarning,
 )
+from pycaption.geometry import HorizontalAlignmentEnum
 
 from .constants import (
     CHARACTERS,
@@ -106,8 +108,6 @@ from .specialized_collections import (
     PopOnCue,
 )
 from .state_machines import DefaultProvidingPositionTracker
-
-
 
 
 class SCCReader(BaseReader):
@@ -237,7 +237,7 @@ class SCCReader(BaseReader):
     def _fix_last_captions_without_ending(caption_list):
         """Set end = start + 4s for trailing captions that were never ended."""
         for caption in reversed(caption_list):
-            if caption.end:
+            if caption.end is not None and caption.end != 0:
                 return
             caption.end = caption.start + 4 * 1000 * 1000
 
@@ -473,9 +473,7 @@ class SCCReader(BaseReader):
     def _new_buffer(self):
         """Create a fresh InstructionNodeCreator bound to the shared
         position tracker."""
-        return InstructionNodeCreator(
-            position_tracker=self.position_tracker
-        )
+        return InstructionNodeCreator(position_tracker=self.position_tracker)
 
     def _reset_buffer(self):
         """Replace the active buffer with a fresh creator and reset position state."""
@@ -630,6 +628,15 @@ class _SccTimeTranslator:
 
         :type timespec: str
         """
+        parts = timespec.replace(";", ":").split(":")
+        if len(parts) == 4:
+            frames = int(parts[3])
+            if frames >= 30:
+                warnings.warn(
+                    f"Frame number {frames} is out of range (must be 0-29) "
+                    f"in timestamp: {timespec}. Value will be used as-is.",
+                    CaptionReadWarning,
+                    stacklevel=2,
+                )
         self._time = timespec
         self._frames = 0
-
