@@ -142,6 +142,7 @@ class SCCReader(BaseReader):
         self.roll_rows_expected = 0
         self.simulate_roll_up = False
 
+        self._raw_lines = []
         self.time = 0
 
     def detect(self, content):
@@ -181,7 +182,6 @@ class SCCReader(BaseReader):
 
         self.simulate_roll_up = simulate_roll_up
         self.time_translator.offset = offset * 1000000
-        # split lines
         lines = content.splitlines()
         self._raw_lines = lines
 
