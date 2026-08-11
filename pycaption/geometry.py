@@ -592,6 +592,8 @@ class Layout:
         alignment=None,
         webvtt_positioning=None,
         writing_direction=None,
+        cue_position_alignment=None,
+        cue_line_alignment=None,
         inherit_from=None,
     ):
         """
@@ -617,6 +619,14 @@ class Layout:
         :type writing_direction: WritingDirectionEnum
         :param writing_direction: WebVTT vertical writing direction (rl or lr).
 
+        :type cue_position_alignment: str
+        :param cue_position_alignment: WebVTT position alignment qualifier
+            (e.g. "line-left", "center", "line-right").
+
+        :type cue_line_alignment: str
+        :param cue_line_alignment: WebVTT line alignment qualifier
+            (e.g. "start", "center", "end").
+
         :type inherit_from: Layout
         :param inherit_from: A Layout with the positioning parameters to be
             used if not specified by the positioning arguments,
@@ -628,6 +638,8 @@ class Layout:
         self.alignment = alignment
         self.webvtt_positioning = webvtt_positioning
         self.writing_direction = writing_direction
+        self.cue_position_alignment = cue_position_alignment
+        self.cue_line_alignment = cue_line_alignment
 
         if inherit_from:
             for attr_name in [

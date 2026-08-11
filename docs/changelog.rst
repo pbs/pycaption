@@ -21,6 +21,16 @@ Changelog
     per-caption layouts. Previously the language-level layout was written
     raw, causing duplicate regions in output.
 
+  - WebVTT reader: tolerate header metadata lines (e.g.
+    ``Kind: captions``, ``Language: en``) between the ``WEBVTT`` signature
+    and the first blank line, per W3C spec. Files missing a blank line
+    anywhere after the header still raise ``CaptionReadSyntaxError``.
+
+  - WebVTT reader: parse position and line alignment sub-values
+    (``position:50%,line-left``, ``line:80%,center``). The alignment
+    qualifier is now stored in ``Layout`` instead of being silently
+    discarded.
+
 2.3.5
 ^^^^^^
   - Fix SCC positioning lost on conversion to VTT/DFXP/SAMI. The

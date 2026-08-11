@@ -808,6 +808,28 @@ Hello
         assert layout.alignment.horizontal == HorizontalAlignmentEnum.END
         assert layout.origin is not None
 
+    def test_position_with_alignment_subvalue(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "00:00:01.000 --> 00:00:03.000 position:50%,line-left line:0\n"
+            "Hello\n"
+        )
+        captions = self.reader.read(vtt)
+        cue = captions.get_captions("en-US")[0]
+        layout = cue.layout_info
+
+        assert layout.origin.x == Size(50, UnitEnum.PERCENT)
+        assert layout.cue_position_alignment == "line-left"
+
+    def test_line_with_alignment_subvalue(self):
+        vtt = "WEBVTT\n\n" "00:00:01.000 --> 00:00:03.000 line:80%,center\n" "Hello\n"
+        captions = self.reader.read(vtt)
+        cue = captions.get_captions("en-US")[0]
+        layout = cue.layout_info
+
+        assert layout.origin.y == Size(80, UnitEnum.PERCENT)
+        assert layout.cue_line_alignment == "center"
+
 
 class TestWebVTTStyleBlockParsing:
     def setup_method(self):
@@ -915,6 +937,30 @@ class TestWebVTTInputValidation:
     def test_no_blank_after_header_raises(self, sample_webvtt_no_blank_after_header):
         with pytest.raises(CaptionReadSyntaxError):
             self.reader.read(sample_webvtt_no_blank_after_header)
+
+    def test_metadata_header_multi_line(self):
+        vtt = (
+            "WEBVTT\n"
+            "Kind: captions\n"
+            "Language: en\n"
+            "\n"
+            "00:00:01.000 --> 00:00:05.000\n"
+            "Hello\n"
+        )
+        captions = self.reader.read(vtt)
+        assert len(captions.get_captions("en-US")) == 1
+        assert captions.get_captions("en-US")[0].get_text() == "Hello"
+
+    def test_metadata_header_no_blank_line_anywhere_raises(self):
+        vtt = (
+            "WEBVTT\n"
+            "Kind: captions\n"
+            "Language: en\n"
+            "00:00:01.000 --> 00:00:05.000\n"
+            "Hello\n"
+        )
+        with pytest.raises(CaptionReadSyntaxError):
+            self.reader.read(vtt)
 
     def test_bom_stripped_before_parsing(self, sample_webvtt_with_bom):
         captions = self.reader.read(sample_webvtt_with_bom)
