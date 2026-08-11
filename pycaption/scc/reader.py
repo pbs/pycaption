@@ -78,7 +78,6 @@ http://www.theneitherworld.com/mcpoodle/SCC_TOOLS/DOCS/SCC_FORMAT.HTML
 """
 
 import re
-import warnings
 from collections import deque
 from copy import deepcopy
 
@@ -87,7 +86,6 @@ from pycaption.exceptions import (
     CaptionLineLengthError,
     CaptionReadNoCaptions,
     CaptionReadTimingError,
-    CaptionReadWarning,
 )
 from pycaption.geometry import HorizontalAlignmentEnum
 
@@ -108,6 +106,8 @@ from .specialized_collections import (
     PopOnCue,
 )
 from .state_machines import DefaultProvidingPositionTracker
+
+_TIMECODE_RE = re.compile(r"\d{2}:\d{2}:\d{2}[:;](\d{1,2})")
 
 
 class SCCReader(BaseReader):
@@ -183,6 +183,7 @@ class SCCReader(BaseReader):
         self.time_translator.offset = offset * 1000000
         # split lines
         lines = content.splitlines()
+        self._raw_lines = lines
 
         # loop through each line except the first
         for line in lines[1:]:
@@ -204,11 +205,13 @@ class SCCReader(BaseReader):
 
         Raises CaptionReadNoCaptions if no captions were parsed,
         CaptionLineLengthError if any line exceeds 32 characters,
+        CaptionReadTimingError if any timecode has frame >= 30,
         and CaptionReadTimingError if any cue is shorter than 0.05s.
         """
         if captions.is_empty():
             raise CaptionReadNoCaptions("empty caption file")
 
+        self._validate_frame_numbers()
         self._validate_line_lengths()
 
         for cap in captions.get_captions(lang):
@@ -218,6 +221,22 @@ class SCCReader(BaseReader):
                     f'for line beginning with "{cap.get_text()}". Duration '
                     f"must be at least 0.05 seconds."
                 )
+
+    def _validate_frame_numbers(self):
+        """Raise CaptionReadTimingError if any timecode has frames >= 30."""
+        violations = []
+        for line in self._raw_lines:
+            match = _TIMECODE_RE.match(line.strip())
+            if match:
+                frames = int(match.group(1))
+                if frames >= 30:
+                    timecode = match.group(0)
+                    violations.append(f"{timecode} (frame {frames})")
+        if violations:
+            raise CaptionReadTimingError(
+                "Frame number must be 0-29 in SCC timecodes.\n"
+                "Invalid timecodes:\n" + "\n".join(violations)
+            )
 
     def _validate_line_lengths(self):
         """Raise CaptionLineLengthError if any line exceeds 32 characters."""
@@ -628,15 +647,5 @@ class _SccTimeTranslator:
 
         :type timespec: str
         """
-        parts = timespec.replace(";", ":").split(":")
-        if len(parts) == 4:
-            frames = int(parts[3])
-            if frames >= 30:
-                warnings.warn(
-                    f"Frame number {frames} is out of range (must be 0-29) "
-                    f"in timestamp: {timespec}. Value will be used as-is.",
-                    CaptionReadWarning,
-                    stacklevel=2,
-                )
         self._time = timespec
         self._frames = 0

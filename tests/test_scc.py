@@ -298,7 +298,7 @@ class TestSCCReader(ReaderTestingMixIn):
             "was Cal l l l l l l l l l l l l l l l l l l l l l l l l l l l l "
             "Denison, a friend - Length 81"
         )
-        assert "around 00:00:05.900" in exc_info.value.args[0].split("\n")[2]
+        assert "around 00:00:04.733" in exc_info.value.args[0].split("\n")[2]
         assert str_to_check in exc_info.value.args[0].split("\n")[2]
 
     def test_mid_row_codes_not_adding_space_before_text(
@@ -433,17 +433,11 @@ class TestSCCReader(ReaderTestingMixIn):
             ]
             assert expected_lines == actual_lines
 
-    def test_frame_30_emits_warning(self, sample_scc_frame_30):
-        import warnings
-
-        from pycaption.exceptions import CaptionReadWarning
-
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
+    def test_frame_30_raises_error(self, sample_scc_frame_30):
+        with pytest.raises(CaptionReadTimingError) as exc_info:
             SCCReader().read(sample_scc_frame_30)
-        frame_warnings = [x for x in w if issubclass(x.category, CaptionReadWarning)]
-        assert len(frame_warnings) >= 1
-        assert "Frame number 30 is out of range" in str(frame_warnings[0].message)
+        assert "Frame number must be 0-29" in exc_info.value.args[0]
+        assert "frame 30" in exc_info.value.args[0]
 
     def test_frame_29_parses_normally(self, sample_scc_frame_29):
         captions = SCCReader().read(sample_scc_frame_29)

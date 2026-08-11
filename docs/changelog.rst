@@ -2,11 +2,6 @@ Changelog
 ---------
 2.3.6
 ^^^^^^
-  - SCC reader: emit ``CaptionReadWarning`` when a source timestamp has a
-    frame number >= 30 (invalid per CEA-608 at 30 fps). The value is still
-    used as-is to avoid breaking real-world SCC files that encode high
-    frame numbers.
-
   - Fix ``fit_to_screen()`` producing negative or zero extent when origin
     is at or beyond 90% horizontal / 95% vertical. An early-return guard
     now preserves the layout unchanged for these edge-of-screen origins
@@ -35,6 +30,13 @@ Changelog
     (``position:50%,line-left``, ``line:80%,center``). The alignment
     qualifier is now stored in ``Layout`` instead of being silently
     discarded.
+
+  - SCC reader: reject timecodes with frame numbers >= 30. Previously
+    the parser silently divided the out-of-range value by 30, producing
+    garbage microsecond offsets (e.g. frame 45 added 1.5 extra seconds).
+    A new ``_validate_frame_numbers()`` check now raises
+    ``CaptionReadTimingError`` listing all invalid timecodes. The old
+    warning-only behaviour in ``start_at`` has been removed.
 
 2.3.5
 ^^^^^^
