@@ -52,10 +52,13 @@ Matches two percentage values (integer or decimal) separated by a comma:
 0%,0%
 100%,100%
 """
-CUE_SETTING_PATTERN = re.compile(r"(position|line|size|align|vertical):([\w.%-]+)")
+CUE_SETTING_PATTERN = re.compile(
+    r"(position|line|size|align|vertical):([\w.%-]+(?:,[\w.%-]+)?)"
+)
 """
-Matches individual cue settings from the timing line:
-position:50%  line:75%  size:80%  align:center  vertical:rl
+Matches individual cue settings from the timing line, including optional
+comma-separated alignment qualifiers per W3C WebVTT spec:
+position:50%  position:50%,line-left  line:80%,center  align:center
 """
 STYLE_SELECTOR_PATTERN = re.compile(r"::cue(?:\((\.?[\w-]+)\))?\s*\{([^}]*)\}")
 """

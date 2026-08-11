@@ -168,8 +168,12 @@ class WebVTTReader(BaseReader):
     def _validate_header(lines):
         """Enforce WebVTT header requirements.
 
+        Per W3C WebVTT spec, optional header metadata text may appear
+        between the WEBVTT signature line and the first blank line.
+
         :raises CaptionReadSyntaxError: If file is empty, doesn't start
-            with WEBVTT, or is missing the blank line after the header.
+            with WEBVTT, or has no blank line separating the header block
+            from the body.
         """
         if not lines:
             raise CaptionReadSyntaxError("WebVTT file is empty.")
@@ -184,8 +188,13 @@ class WebVTTReader(BaseReader):
                 "WebVTT file must start with 'WEBVTT' on the first line."
             )
 
-        if len(lines) > 1 and lines[1] != "":
-            raise CaptionReadSyntaxError("Missing blank line after WebVTT header.")
+        if len(lines) < 2:
+            return
+
+        for line in lines[1:]:
+            if line == "":
+                return
+        raise CaptionReadSyntaxError("Missing blank line after WebVTT header.")
 
     def _parse(self, lines):
         """Parse all cues from the file lines into a CaptionList.
@@ -795,8 +804,15 @@ class WebVTTReader(BaseReader):
             name, value = match.group(1), match.group(2)
             parsed[name] = value
 
-        origin_x = WebVTTReader._parse_percent_value(parsed.get("position", ""))
-        origin_y = WebVTTReader._parse_line_value(parsed.get("line", ""))
+        position_value, _ = WebVTTReader._split_alignment(
+            parsed.get("position", "")
+        )
+        line_value, _ = WebVTTReader._split_alignment(
+            parsed.get("line", "")
+        )
+
+        origin_x = WebVTTReader._parse_percent_value(position_value)
+        origin_y = WebVTTReader._parse_line_value(line_value)
         extent_horizontal = WebVTTReader._parse_percent_value(parsed.get("size", ""))
         alignment = WebVTTReader._parse_align_value(parsed.get("align", ""))
         writing_direction = WebVTTReader._parse_vertical_value(
@@ -820,6 +836,20 @@ class WebVTTReader(BaseReader):
             webvtt_positioning=cue_settings,
             inherit_from=inherit_from,
         )
+
+    @staticmethod
+    def _split_alignment(value):
+        """Split a cue setting value from its optional alignment qualifier.
+
+        Per W3C WebVTT spec, position and line settings may include a
+        comma-separated alignment qualifier (e.g. "50%,line-left").
+
+        :returns: Tuple of (numeric_value, alignment_qualifier_or_None).
+        """
+        if "," in value:
+            parts = value.split(",", 1)
+            return parts[0], parts[1] or None
+        return value, None
 
     @staticmethod
     def _parse_line_value(value):
