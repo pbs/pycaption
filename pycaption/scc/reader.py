@@ -237,7 +237,7 @@ class SCCReader(BaseReader):
     def _fix_last_captions_without_ending(caption_list):
         """Set end = start + 4s for trailing captions that were never ended."""
         for caption in reversed(caption_list):
-            if caption.end is not None and caption.end != 0:
+            if caption.end:
                 return
             caption.end = caption.start + 4 * 1000 * 1000
 

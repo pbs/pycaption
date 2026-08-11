@@ -7,11 +7,6 @@ Changelog
     used as-is to avoid breaking real-world SCC files that encode high
     frame numbers.
 
-  - SCC reader: make the "unset end time" sentinel check in
-    ``_fix_last_captions_without_ending`` explicit
-    (``caption.end is not None and caption.end != 0``) instead of relying
-    on truthiness, consistent with ``specialized_collections.py``.
-
   - Fix ``fit_to_screen()`` producing negative or zero extent when origin
     is at or beyond 90% horizontal / 95% vertical. An early-return guard
     now preserves the layout unchanged for these edge-of-screen origins
