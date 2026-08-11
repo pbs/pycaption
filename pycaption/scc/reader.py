@@ -82,12 +82,12 @@ from collections import deque
 from copy import deepcopy
 
 from pycaption.base import BaseReader, CaptionSet
-from pycaption.geometry import HorizontalAlignmentEnum
 from pycaption.exceptions import (
     CaptionLineLengthError,
     CaptionReadNoCaptions,
     CaptionReadTimingError,
 )
+from pycaption.geometry import HorizontalAlignmentEnum
 
 from .constants import (
     CHARACTERS,
@@ -107,7 +107,7 @@ from .specialized_collections import (
 )
 from .state_machines import DefaultProvidingPositionTracker
 
-
+_TIMECODE_RE = re.compile(r"\d{2}:\d{2}:\d{2}[:;](\d{1,2})")
 
 
 class SCCReader(BaseReader):
@@ -142,6 +142,7 @@ class SCCReader(BaseReader):
         self.roll_rows_expected = 0
         self.simulate_roll_up = False
 
+        self._raw_lines = []
         self.time = 0
 
     def detect(self, content):
@@ -181,8 +182,8 @@ class SCCReader(BaseReader):
 
         self.simulate_roll_up = simulate_roll_up
         self.time_translator.offset = offset * 1000000
-        # split lines
         lines = content.splitlines()
+        self._raw_lines = lines
 
         # loop through each line except the first
         for line in lines[1:]:
@@ -204,11 +205,13 @@ class SCCReader(BaseReader):
 
         Raises CaptionReadNoCaptions if no captions were parsed,
         CaptionLineLengthError if any line exceeds 32 characters,
+        CaptionReadTimingError if any timecode has frame >= 30,
         and CaptionReadTimingError if any cue is shorter than 0.05s.
         """
         if captions.is_empty():
             raise CaptionReadNoCaptions("empty caption file")
 
+        self._validate_frame_numbers()
         self._validate_line_lengths()
 
         for cap in captions.get_captions(lang):
@@ -218,6 +221,22 @@ class SCCReader(BaseReader):
                     f'for line beginning with "{cap.get_text()}". Duration '
                     f"must be at least 0.05 seconds."
                 )
+
+    def _validate_frame_numbers(self):
+        """Raise CaptionReadTimingError if any timecode has frames >= 30."""
+        violations = []
+        for line in self._raw_lines:
+            match = _TIMECODE_RE.match(line.strip())
+            if match:
+                frames = int(match.group(1))
+                if frames >= 30:
+                    timecode = match.group(0)
+                    violations.append(f"{timecode} (frame {frames})")
+        if violations:
+            raise CaptionReadTimingError(
+                "Frame number must be 0-29 in SCC timecodes.\n"
+                "Invalid timecodes:\n" + "\n".join(violations)
+            )
 
     def _validate_line_lengths(self):
         """Raise CaptionLineLengthError if any line exceeds 32 characters."""
@@ -473,9 +492,7 @@ class SCCReader(BaseReader):
     def _new_buffer(self):
         """Create a fresh InstructionNodeCreator bound to the shared
         position tracker."""
-        return InstructionNodeCreator(
-            position_tracker=self.position_tracker
-        )
+        return InstructionNodeCreator(position_tracker=self.position_tracker)
 
     def _reset_buffer(self):
         """Replace the active buffer with a fresh creator and reset position state."""
@@ -632,4 +649,3 @@ class _SccTimeTranslator:
         """
         self._time = timespec
         self._frames = 0
-

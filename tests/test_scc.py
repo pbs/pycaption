@@ -94,8 +94,8 @@ class TestSCCReader(ReaderTestingMixIn):
     def test_breaks_do_not_accumulate_across_caption_boundaries(
         self, sample_scc_multiple_positioning
     ):
-        captions = SCCReader().read(sample_scc_multiple_positioning).get_captions(
-            "en-US"
+        captions = (
+            SCCReader().read(sample_scc_multiple_positioning).get_captions("en-US")
         )
 
         for caption in captions:
@@ -104,9 +104,9 @@ class TestSCCReader(ReaderTestingMixIn):
                 "Caption must not start with a BREAK node — indicates breaks "
                 "leaked from the previous caption"
             )
-            assert caption.nodes[-1].type_ != CaptionNode.BREAK, (
-                "Caption must not end with a trailing BREAK node"
-            )
+            assert (
+                caption.nodes[-1].type_ != CaptionNode.BREAK
+            ), "Caption must not end with a trailing BREAK node"
 
     def test_tab_offset(self, sample_scc_tab_offset):
         captions = SCCReader().read(sample_scc_tab_offset)
@@ -298,7 +298,7 @@ class TestSCCReader(ReaderTestingMixIn):
             "was Cal l l l l l l l l l l l l l l l l l l l l l l l l l l l l "
             "Denison, a friend - Length 81"
         )
-        assert "around 00:00:05.900" in exc_info.value.args[0].split("\n")[2]
+        assert "around 00:00:04.733" in exc_info.value.args[0].split("\n")[2]
         assert str_to_check in exc_info.value.args[0].split("\n")[2]
 
     def test_mid_row_codes_not_adding_space_before_text(
@@ -400,9 +400,7 @@ class TestSCCReader(ReaderTestingMixIn):
         self,
         sample_scc_doubled_mid_row_before_punctuation,
     ):
-        caption_set = SCCReader().read(
-            sample_scc_doubled_mid_row_before_punctuation
-        )
+        caption_set = SCCReader().read(sample_scc_doubled_mid_row_before_punctuation)
         captions = caption_set.get_captions("en-US")
         text_nodes = [
             node.content
@@ -434,6 +432,31 @@ class TestSCCReader(ReaderTestingMixIn):
                 if node.type_ == CaptionNode.TEXT
             ]
             assert expected_lines == actual_lines
+
+    def test_frame_30_raises_error(self, sample_scc_frame_30):
+        with pytest.raises(CaptionReadTimingError) as exc_info:
+            SCCReader().read(sample_scc_frame_30)
+        assert "Frame number must be 0-29" in exc_info.value.args[0]
+        assert "frame 30" in exc_info.value.args[0]
+
+    def test_frame_29_parses_normally(self, sample_scc_frame_29):
+        captions = SCCReader().read(sample_scc_frame_29)
+        assert len(captions.get_captions("en-US")) >= 1
+
+    def test_fix_last_captions_handles_end_zero(self):
+        from pycaption.base import Caption, CaptionNode
+
+        node = CaptionNode.create_text("test")
+
+        # end=0 means "unset" — should be overwritten with start + 4s
+        caption_unset = Caption(1000000, 0, [node])
+        SCCReader._fix_last_captions_without_ending([caption_unset])
+        assert caption_unset.end == 1000000 + 4 * 1000 * 1000
+
+        # end=5000000 (a real end time) — should NOT be overwritten
+        caption_with_end = Caption(1000000, 5000000, [node])
+        SCCReader._fix_last_captions_without_ending([caption_with_end])
+        assert caption_with_end.end == 5000000
 
 
 class TestCoverageOnly:

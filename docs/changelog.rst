@@ -31,6 +31,13 @@ Changelog
     qualifier is now stored in ``Layout`` instead of being silently
     discarded.
 
+  - SCC reader: reject timecodes with frame numbers >= 30. Previously
+    the parser silently divided the out-of-range value by 30, producing
+    garbage microsecond offsets (e.g. frame 45 added 1.5 extra seconds).
+    A new ``_validate_frame_numbers()`` check now raises
+    ``CaptionReadTimingError`` listing all invalid timecodes. The old
+    warning-only behaviour in ``start_at`` has been removed.
+
 2.3.5
 ^^^^^^
   - Fix SCC positioning lost on conversion to VTT/DFXP/SAMI. The
