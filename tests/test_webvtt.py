@@ -819,7 +819,6 @@ Hello
         layout = cue.layout_info
 
         assert layout.origin.x == Size(50, UnitEnum.PERCENT)
-        assert layout.cue_position_alignment == "line-left"
 
     def test_line_with_alignment_subvalue(self):
         vtt = "WEBVTT\n\n" "00:00:01.000 --> 00:00:03.000 line:80%,center\n" "Hello\n"
@@ -828,7 +827,6 @@ Hello
         layout = cue.layout_info
 
         assert layout.origin.y == Size(80, UnitEnum.PERCENT)
-        assert layout.cue_line_alignment == "center"
 
 
 class TestWebVTTStyleBlockParsing:

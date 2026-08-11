@@ -804,10 +804,10 @@ class WebVTTReader(BaseReader):
             name, value = match.group(1), match.group(2)
             parsed[name] = value
 
-        position_value, cue_position_alignment = WebVTTReader._split_alignment(
+        position_value, _ = WebVTTReader._split_alignment(
             parsed.get("position", "")
         )
-        line_value, cue_line_alignment = WebVTTReader._split_alignment(
+        line_value, _ = WebVTTReader._split_alignment(
             parsed.get("line", "")
         )
 
@@ -834,8 +834,6 @@ class WebVTTReader(BaseReader):
             alignment=alignment,
             writing_direction=writing_direction,
             webvtt_positioning=cue_settings,
-            cue_position_alignment=cue_position_alignment,
-            cue_line_alignment=cue_line_alignment,
             inherit_from=inherit_from,
         )
 
