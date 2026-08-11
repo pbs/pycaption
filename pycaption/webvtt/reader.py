@@ -32,6 +32,7 @@ from .constants import (
     KNOWN_TAGS,
     LINE_GRID_SIZE,
     LINE_HEIGHT_VH,
+    POSITION_ALIGN_MAP,
     REGION_ANCHOR_PATTERN,
     REGION_SETTING_PATTERN,
     STYLE_SELECTOR_PATTERN,
@@ -155,7 +156,9 @@ class WebVTTReader(BaseReader):
         self._resolve_cue_styles(captions, styles)
 
         caption_set = CaptionSet(
-            {lang: captions}, styles=styles, regions=self._regions_raw,
+            {lang: captions},
+            styles=styles,
+            regions=self._regions_raw,
             visual_alignment_default=HorizontalAlignmentEnum.CENTER,
         )
 
@@ -233,32 +236,15 @@ class WebVTTReader(BaseReader):
         Transitions: skip NOTE/STYLE/REGION blocks → detect timing line →
         accumulate cue text → finalize cue on blank line.
         """
-        if state.in_note_block:
-            state.in_note_block = line != ""
-            return
-
-        if state.in_style_block:
-            state.in_style_block = line != ""
-            return
-
-        if state.in_region_block:
-            state.in_region_block = line != ""
+        if state.in_note_block or state.in_style_block or state.in_region_block:
+            self._continue_skip_block(line, state)
             return
 
         if self._check_block_start(line, state):
             return
 
         if "-->" in line:
-            if state.pending_id is not None:
-                cue_id = state.pending_id
-                state.pending_id = None
-                if cue_id in state.seen_ids:
-                    warnings.warn(
-                        f"Duplicate cue identifier '{cue_id}' (line {line_index}).",
-                        CaptionReadWarning,
-                        stacklevel=4,
-                    )
-                state.seen_ids.add(cue_id)
+            self._consume_pending_id(state, line_index)
             state.found_timing = True
             last_start_time = captions[-1].start if captions else 0
             state.start, state.end, state.layout_info = self._read_timing(
@@ -278,10 +264,22 @@ class WebVTTReader(BaseReader):
             self._finalize_cue(state, captions)
             return
 
-        if state.found_timing and line != "":
-            if state.nodes:
-                state.nodes.append(CaptionNode.create_break())
-            state.nodes.extend(self._parse_cue_text(line, state.open_tags))
+        if not state.found_timing or line == "":
+            return
+        if state.nodes:
+            state.nodes.append(CaptionNode.create_break())
+        state.nodes.extend(self._parse_cue_text(line, state.open_tags))
+
+    @staticmethod
+    def _continue_skip_block(line, state):
+        """Keep skipping lines in a NOTE/STYLE/REGION block until blank."""
+        still_in_block = line != ""
+        if state.in_note_block:
+            state.in_note_block = still_in_block
+        elif state.in_style_block:
+            state.in_style_block = still_in_block
+        else:
+            state.in_region_block = still_in_block
 
     @staticmethod
     def _check_block_start(line, state):
@@ -304,6 +302,21 @@ class WebVTTReader(BaseReader):
             state.pending_id = None
             return True
         return False
+
+    @staticmethod
+    def _consume_pending_id(state, line_index):
+        """Register the pending cue ID (if any) and warn on duplicates."""
+        if state.pending_id is None:
+            return
+        cue_id = state.pending_id
+        state.pending_id = None
+        if cue_id in state.seen_ids:
+            warnings.warn(
+                f"Duplicate cue identifier '{cue_id}' (line {line_index}).",
+                CaptionReadWarning,
+                stacklevel=5,
+            )
+        state.seen_ids.add(cue_id)
 
     def _finalize_cue(self, state, captions):
         """Close the current cue, append it to captions, and reset state
@@ -437,8 +450,10 @@ class WebVTTReader(BaseReader):
 
         if groups[2]:
             return microseconds(
-                groups[0], groups[1],
-                groups[2].replace(":", ""), groups[3],
+                groups[0],
+                groups[1],
+                groups[2].replace(":", ""),
+                groups[3],
             )
         return microseconds(0, groups[0], groups[1], groups[3])
 
@@ -804,12 +819,10 @@ class WebVTTReader(BaseReader):
             name, value = match.group(1), match.group(2)
             parsed[name] = value
 
-        position_value, _ = WebVTTReader._split_alignment(
+        position_value, position_align = WebVTTReader._split_alignment(
             parsed.get("position", "")
         )
-        line_value, _ = WebVTTReader._split_alignment(
-            parsed.get("line", "")
-        )
+        line_value, _ = WebVTTReader._split_alignment(parsed.get("line", ""))
 
         origin_x = WebVTTReader._parse_percent_value(position_value)
         origin_y = WebVTTReader._parse_line_value(line_value)
@@ -817,6 +830,9 @@ class WebVTTReader(BaseReader):
         alignment = WebVTTReader._parse_align_value(parsed.get("align", ""))
         writing_direction = WebVTTReader._parse_vertical_value(
             parsed.get("vertical", "")
+        )
+        pos_alignment = (
+            POSITION_ALIGN_MAP.get(position_align) if position_align else None
         )
 
         origin = None
@@ -833,6 +849,7 @@ class WebVTTReader(BaseReader):
             extent=extent,
             alignment=alignment,
             writing_direction=writing_direction,
+            position_alignment=pos_alignment,
             webvtt_positioning=cue_settings,
             inherit_from=inherit_from,
         )

@@ -182,6 +182,7 @@ class TestDFXPReader(ReaderTestingMixIn):
                 None,
                 (HorizontalAlignmentEnum.START, VerticalAlignmentEnum.BOTTOM),
                 None,
+                None,
             ),
             (
                 ((40, UnitEnum.PERCENT), (40, UnitEnum.PERCENT)),
@@ -189,12 +190,14 @@ class TestDFXPReader(ReaderTestingMixIn):
                 None,
                 (HorizontalAlignmentEnum.START, VerticalAlignmentEnum.BOTTOM),
                 None,
+                None,
             ),
             (
                 ((10, UnitEnum.PERCENT), (70, UnitEnum.PERCENT)),
                 None,
                 None,
                 (HorizontalAlignmentEnum.START, VerticalAlignmentEnum.BOTTOM),
+                None,
                 None,
             ),
         ]

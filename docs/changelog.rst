@@ -28,8 +28,18 @@ Changelog
 
   - WebVTT reader: parse position and line alignment sub-values
     (``position:50%,line-left``, ``line:80%,center``). The alignment
-    qualifier is now stored in ``Layout`` instead of being silently
-    discarded.
+    qualifier is now stored in ``Layout.position_alignment`` instead of
+    being silently discarded.
+
+  - Fix incorrect origin when converting VTT cues with position
+    alignment ``center`` or ``line-right``/``end`` to DFXP or SCC.
+    Previously the position percentage was stored directly as origin.x,
+    which is only correct for ``line-left``/``start``. For example,
+    ``position:50%,center`` with ``size:60%`` now correctly produces
+    ``origin.x = 20%`` (50% − 60%/2) instead of the wrong ``50%``.
+    ``fit_to_screen()`` resolves the alignment before computing the
+    output region; the result is clamped to 0% so negative origins
+    cannot occur.
 
   - SCC reader: reject timecodes with frame numbers >= 30. Previously
     the parser silently divided the out-of-range value by 30, producing
