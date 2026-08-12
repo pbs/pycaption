@@ -1,14 +1,15 @@
 ---
 name: check-dfxp-compliance
-description: Generates EXHAUSTIVE DFXP/TTML compliance report checking all 115 rules individually + styling/timing/element coverage with deep validation analysis to identify ALL issues in pycaption code.
+description: Generates EXHAUSTIVE DFXP/TTML compliance report checking all 115 rules individually + implementation quality gaps + styling/timing/element coverage with deep validation analysis to identify ALL issues in pycaption code.
 ---
 
 # check-dfxp-compliance
 
 ## What this skill does
 
-Exhaustive DFXP/TTML compliance checker - 5 phases:
+Exhaustive DFXP/TTML compliance checker - 6 phases:
 1. Deep validation (critical rules with function-level detection vs validation)
+1.5. Implementation quality gaps (things the code should do but doesn't, beyond regex existence)
 2. Systematic checking (all 115 rules individually verified with per-rule patterns)
 3. Styling attribute / timing format / content element / parameter coverage (read/write distinction)
 4. Test coverage analysis
@@ -429,6 +430,175 @@ if has_legacy_recreate and not has_legacy_bold_write:
     })
 print(f"  extras.py bold: {'PASS' if has_legacy_bold_write else 'ALSO DROPS BOLD'}")
 
+# ===== PHASE 1.5: IMPLEMENTATION QUALITY GAPS =====
+# Beyond "does the code exist" — checks for things a reference TTML parser handles.
+print("\n" + "=" * 60)
+print("PHASE 1.5: IMPLEMENTATION QUALITY GAPS")
+print("=" * 60)
+
+quality_gaps = []
+
+# Q1: No structured error diagnostics (only exceptions or silence)
+has_structured_diag = bool(re.search(r'warnings\.warn|CaptionReadWarning', reader_content))
+has_error_collection = bool(re.search(r'errors\s*=\s*\[\]|self\.errors|self\.warnings|diagnostic', reader_content, re.I))
+if not has_structured_diag and not has_error_collection:
+    quality_gaps.append({
+        'id': 'QUAL-001', 'name': 'No structured error diagnostics',
+        'severity': 'SHOULD',
+        'note': 'Reader either raises an exception (halting) or silently accepts. '
+                'No middle ground for collecting issues like a validator would. '
+                'Reference TTML parsers collect all errors with line/element info.',
+    })
+    print("  QUAL-001: NO STRUCTURED DIAGNOSTICS")
+else:
+    print("  QUAL-001: PASS")
+
+# Q2: timeContainer="seq" not implemented (silently treated as "par")
+has_time_container = bool(re.search(r'timeContainer|time_container|sequential', reader_content, re.I))
+if not has_time_container:
+    quality_gaps.append({
+        'id': 'QUAL-002', 'name': 'timeContainer="seq" not implemented',
+        'severity': 'SHOULD',
+        'note': 'TTML defines parallel (default) and sequential time containers. '
+                'Sequential timing (children play one after another) is never checked. '
+                'All timing is treated as parallel without warning.',
+    })
+    print("  QUAL-002: timeContainer=seq NOT IMPLEMENTED")
+else:
+    print("  QUAL-002: PASS")
+
+# Q3: Time containment not enforced (children can exceed parent timing)
+has_containment = bool(re.search(r'containment|constrain|clip.*time|child.*exceed|parent.*time', reader_content, re.I))
+if not has_containment:
+    quality_gaps.append({
+        'id': 'QUAL-003', 'name': 'Time containment not enforced',
+        'severity': 'MAY',
+        'note': 'TTML specifies that children are constrained by parent begin/end. '
+                'A <p> inside a <div begin="5s" end="10s"> with begin="0s" should be clipped. '
+                'No containment logic exists — children use raw timestamps.',
+    })
+    print("  QUAL-003: NO TIME CONTAINMENT")
+else:
+    print("  QUAL-003: PASS")
+
+# Q4: Unknown tts: attributes silently ignored
+# _convert_style only handles 8 known attributes (fontStyle, fontWeight, textDecoration,
+# textAlign, fontFamily, fontSize, color, backgroundColor). All others silently dropped.
+has_unknown_attr_warn = bool(re.search(r'unknown.*attr|unrecognized.*tts|warn.*attribute', reader_content, re.I))
+if not has_unknown_attr_warn:
+    quality_gaps.append({
+        'id': 'QUAL-004', 'name': 'Unknown tts: attributes silently ignored',
+        'severity': 'MAY',
+        'note': '_convert_style only handles 8 known tts: attributes. '
+                'Any other tts: attribute (lineHeight, opacity, textOutline, etc.) '
+                'is silently dropped. No warning for unrecognized styling.',
+    })
+    print("  QUAL-004: UNKNOWN TTS ATTRS SILENTLY DROPPED")
+else:
+    print("  QUAL-004: PASS")
+
+# Q5: <set> animation element completely ignored
+has_set_element = bool(re.search(r'set.*element|<set|name.*==.*"set"', reader_content, re.I))
+if not has_set_element:
+    quality_gaps.append({
+        'id': 'QUAL-005', 'name': '<set> animation element completely ignored',
+        'severity': 'MAY',
+        'note': 'TTML defines <set> for style animation (e.g. visibility changes at time offsets). '
+                'Reader does not handle <set> elements at all — they are silently skipped by '
+                'the tag-to-node conversion which only handles span/br/text.',
+    })
+    print("  QUAL-005: <set> ELEMENT NOT HANDLED")
+else:
+    print("  QUAL-005: PASS")
+
+# Q6: No xml:space whitespace normalization
+has_xml_space = bool(re.search(r'xml:space|whitespace.*normal|preserve.*space', reader_content, re.I))
+if not has_xml_space:
+    quality_gaps.append({
+        'id': 'QUAL-006', 'name': 'No xml:space whitespace normalization',
+        'severity': 'SHOULD',
+        'note': 'TTML inherits xml:space from XML spec. With xml:space="default", '
+                'consecutive whitespace should be collapsed and leading/trailing stripped. '
+                'With "preserve", all whitespace is kept. Reader does neither — '
+                'whitespace handling depends on BeautifulSoup defaults.',
+    })
+    print("  QUAL-006: NO xml:space HANDLING")
+else:
+    print("  QUAL-006: PASS")
+
+# Q7: No duplicate xml:id detection beyond <style> elements
+# _get_style_reference_chain raises on duplicate style IDs, but region/div/p IDs unchecked
+has_dup_style_check = bool(re.search(r'More than 1 style with.*xml:id', reader_content))
+has_dup_region_check = bool(re.search(r'duplicate.*region.*id|More than 1 region', reader_content, re.I))
+if has_dup_style_check and not has_dup_region_check:
+    quality_gaps.append({
+        'id': 'QUAL-007', 'name': 'Duplicate xml:id only checked for <style> elements',
+        'severity': 'MAY',
+        'note': '_get_style_reference_chain raises CaptionReadSyntaxError for duplicate style IDs. '
+                'But duplicate region xml:ids, or duplicate IDs on div/p elements, go unchecked. '
+                'XML spec requires all xml:id values be unique within a document.',
+    })
+    print("  QUAL-007: DUPLICATE IDs ONLY CHECKED FOR STYLES")
+else:
+    print("  QUAL-007: PASS")
+
+# Q8: fontStyle only handles "italic", other values silently ignored
+# (This is already caught in Phase 1 deep analysis as RULE-STY-005, but the quality
+# gap framing is about _convert_style silently ignoring values rather than warning)
+has_fontstyle_else = bool(re.search(r'fontstyle.*!=.*italic.*warn|fontstyle.*else|unknown.*fontstyle', reader_content, re.I))
+if not has_fontstyle_else and has_fontstyle_italic:
+    quality_gaps.append({
+        'id': 'QUAL-008', 'name': 'Non-italic fontStyle values silently ignored',
+        'severity': 'MAY',
+        'note': '_convert_style checks tts:fontStyle=="italic" only. Values "oblique" and '
+                '"normal" are silently skipped without warning. A document with '
+                'tts:fontStyle="oblique" will render as normal text without any diagnostic.',
+    })
+    print("  QUAL-008: NON-ITALIC FONTSTYLE SILENTLY IGNORED")
+else:
+    print("  QUAL-008: PASS")
+
+# Q9: No BCP-47 language tag validation
+has_lang_validate = bool(re.search(r'BCP.*47|valid.*lang|language.*code.*check|validate.*lang', reader_content, re.I))
+if not has_lang_validate:
+    quality_gaps.append({
+        'id': 'QUAL-009', 'name': 'No BCP-47 language tag validation',
+        'severity': 'MAY',
+        'note': 'xml:lang read with silent fallback to "en". No validation that the value '
+                'is a valid BCP-47 language tag. Invalid values like "zz-INVALID" are '
+                'accepted without warning.',
+    })
+    print("  QUAL-009: NO BCP-47 VALIDATION")
+else:
+    print("  QUAL-009: PASS")
+
+# Q10: Writer drops style properties not in its known set
+# _recreate_style only handles: class, text-align, italics, bold, underline,
+# font-family, font-size, color, background-color, display-align (10 keys).
+# Any other internal style key is silently dropped.
+has_unknown_style_warn = bool(re.search(r'unknown.*style|unrecognized.*key|warn.*style.*key', writer_content, re.I))
+if not has_unknown_style_warn:
+    quality_gaps.append({
+        'id': 'QUAL-010', 'name': 'Writer silently drops unknown style properties',
+        'severity': 'MAY',
+        'note': '_recreate_style only maps 10 known internal keys to tts: attributes. '
+                'Any style property from other formats (e.g., lang, writing-mode passed as '
+                'internal key) is silently lost on DFXP output without warning.',
+    })
+    print("  QUAL-010: WRITER DROPS UNKNOWN STYLE KEYS")
+else:
+    print("  QUAL-010: PASS")
+
+print(f"  Quality gaps found: {len(quality_gaps)}")
+
+# Add quality gaps to issues
+for qg in quality_gaps:
+    issues['partial_validation'].append({
+        'rule_id': qg['id'], 'name': qg['name'],
+        'status': 'QUALITY_GAP', 'severity': qg['severity'],
+        'note': qg['note'],
+    })
+
 # ===== PHASE 2: SYSTEMATIC RULE CHECK =====
 print("\n" + "=" * 60)
 print("PHASE 2: ALL RULES CHECK ({} rules)".format(len(all_rules)))
@@ -832,7 +1002,7 @@ report = f"""# DFXP/TTML EXHAUSTIVE Compliance Report
 
 **Generated**: {date}
 **Spec**: {latest_spec}
-**Analysis**: Deep Validation + Systematic Rules + Coverage + Tests
+**Analysis**: Deep Validation + Quality Gaps + Systematic Rules + Coverage + Tests
 **Implementation files**: {', '.join(f for f in impl_files if os.path.exists(f))}
 {sanity_section}
 ---
@@ -846,7 +1016,8 @@ report = f"""# DFXP/TTML EXHAUSTIVE Compliance Report
 | Category | Count |
 |----------|-------|
 | Validation gaps | {len(issues['validation_gaps'])} |
-| Partial/caveats | {len(issues['partial_validation'])} |
+| Implementation quality gaps | {len(quality_gaps)} |
+| Implementation caveats | {len(issues['partial_validation']) - len(quality_gaps)} |
 | Missing rules | {len(issues['missing'])} (MUST: {len(must_missing)}) |
 | Test gaps | {len(issues['test_gaps'])} |
 
@@ -866,20 +1037,37 @@ for g in issues['validation_gaps']:
 
 report += f"""---
 
-## 2. Implementation Caveats ({len(issues['partial_validation'])})
+## 2. Implementation Quality Gaps ({len(quality_gaps)})
+
+Features that exist but are incomplete compared to a reference TTML parser.
+These represent silent data loss or missing validation that affects interoperability.
+
+"""
+
+for qg in quality_gaps:
+    report += f"### {qg['id']}: {qg['name']}\n"
+    report += f"- **Severity**: {qg['severity']}\n"
+    report += f"- **Note**: {qg['note']}\n\n"
+
+# Filter out quality gaps from partial_validation for section 3
+non_quality_caveats = [p for p in issues['partial_validation'] if not p['rule_id'].startswith('QUAL-')]
+
+report += f"""---
+
+## 3. Implementation Caveats ({len(non_quality_caveats)})
 
 Rules implemented but with significant limitations.
 
 """
 
-for p in issues['partial_validation']:
+for p in non_quality_caveats:
     report += f"### {p['rule_id']}: {p['name']}\n"
     report += f"- **Status**: {p['status']}\n"
     report += f"- **Note**: {p['note']}\n\n"
 
 report += f"""---
 
-## 3. Missing Rules ({len(issues['missing'])})
+## 4. Missing Rules ({len(issues['missing'])})
 
 ### MUST Rules ({len(must_missing)})
 
@@ -902,7 +1090,7 @@ for r in may_missing:
 report += f"""
 ---
 
-## 4. Coverage Analysis
+## 5. Coverage Analysis
 
 ### Styling Attributes ({sty_read}/24 read, {sty_write}/24 write, {sty_roundtrip}/24 round-trip)
 
@@ -964,7 +1152,7 @@ for unit, supported in unit_coverage.items():
 report += f"""
 ---
 
-## 5. Test Gaps ({len(issues['test_gaps'])})
+## 6. Test Gaps ({len(issues['test_gaps'])})
 
 """
 
@@ -974,7 +1162,7 @@ for t in issues['test_gaps']:
 report += f"""
 ---
 
-## 6. Key Findings
+## 7. Key Findings
 
 """
 
@@ -1023,6 +1211,8 @@ if has_writing_mode_write:
 else:
     key_findings.append("13. **tts:writingMode not implemented**.")
 
+key_findings.append(f"14. **{len(quality_gaps)} quality gaps vs reference parser**: No structured diagnostics, timeContainer=seq not supported, unknown tts: attrs silently dropped, no xml:space handling.")
+
 for f in key_findings:
     report += f + "\n"
 
@@ -1031,7 +1221,7 @@ report += f"""
 
 **Generated**: {datetime.now().strftime('%Y-%m-%d %H:%M')}
 **Rules**: {len(all_rules)} | **Found**: {len(found_rules)} | **Missing**: {len(issues['missing'])}
-**Styling**: {sty_roundtrip}/24 round-trip ({sty_readonly} read-only) | **Timing**: {time_supported}/8 | **Elements**: {elem_read}/11 read | **Params**: {param_read}/11
+**Quality gaps**: {len(quality_gaps)} | **Styling**: {sty_roundtrip}/24 round-trip ({sty_readonly} read-only) | **Timing**: {time_supported}/8 | **Elements**: {elem_read}/11 read | **Params**: {param_read}/11
 """
 
 with open(path, 'w') as _f: _f.write(report)
@@ -1045,11 +1235,12 @@ Execute the above Python script directly (no external files needed beyond spec a
 
 ## Key improvements over previous version
 
-1. **No tts:display false positive**: Uses negative lookahead `(?!Align)` so `tts:display` pattern does NOT match `tts:displayAlign`
-2. **Read-only attributes correctly identified**: fontWeight and textDecoration tracked as read-only (reader detects, writer drops)
-3. **xml:lang correctly assessed**: Silent fallback to "en", no BCP-47 validation
-4. **Expanded file scope**: Includes geometry.py for unit parsing, Layout, Size, Padding classes
-5. **Per-rule specific_patterns**: Matches actual function names (`_convert_clock_time_to_microseconds`, `_get_style_reference_chain`) not broad keywords
+1. **Phase 1.5 quality gaps**: 10 checks for implementation-quality issues beyond regex existence (no diagnostics, timeContainer=seq, xml:space, etc.)
+2. **No tts:display false positive**: Uses negative lookahead `(?!Align)` so `tts:display` pattern does NOT match `tts:displayAlign`
+3. **Read-only attributes correctly identified**: fontWeight and textDecoration tracked as read-only (reader detects, writer drops)
+4. **xml:lang correctly assessed**: Silent fallback to "en", no BCP-47 validation
+5. **Expanded file scope**: Includes geometry.py for unit parsing, Layout, Size, Padding classes
+6. **Per-rule specific_patterns**: Matches actual function names (`_convert_clock_time_to_microseconds`, `_get_style_reference_chain`) not broad keywords
 6. **Read/write distinction for all coverage**: Styling, elements, parameters tracked for read vs write separately
 7. **NotImplementedError for ticks correctly reported**: Not counted as "implemented"
 8. **Frame rate analysis**: Clearly reports hardcoded /30 for both clock-time and offset frames
