@@ -62,6 +62,7 @@ jobs:
             echo "TOTAL_ISSUES=$(grep -oE 'Total issues\*\*: [0-9]+' "$REPORT" | grep -oE '[0-9]+' || echo unknown)" >> $GITHUB_ENV
             echo "MUST_VIOLATIONS=$(grep -oE 'MUST violations\*\*: [0-9]+' "$REPORT" | grep -oE '[0-9]+' || echo unknown)" >> $GITHUB_ENV
             echo "VALIDATION_GAPS=$(grep -E '^\| Validation gaps' "$REPORT" | grep -oE '[0-9]+' | head -1 || echo unknown)" >> $GITHUB_ENV
+            echo "QUALITY_GAPS=$(grep -E '^\| Implementation quality gaps' "$REPORT" | grep -oE '[0-9]+' | head -1 || echo unknown)" >> $GITHUB_ENV
             echo "MISSING_RULES=$(grep -E '^\| Missing rules' "$REPORT" | grep -oE '[0-9]+' | head -1 || echo unknown)" >> $GITHUB_ENV
             echo "TEST_GAPS=$(grep -E '^\| Test gaps' "$REPORT" | grep -oE '[0-9]+' | head -1 || echo unknown)" >> $GITHUB_ENV
           else
@@ -114,6 +115,7 @@ jobs:
             *Total Issues*: ${{ env.TOTAL_ISSUES }}
             *MUST Violations*: ${{ env.MUST_VIOLATIONS }}
             *Validation Gaps*: ${{ env.VALIDATION_GAPS }}
+            *Quality Gaps*: ${{ env.QUALITY_GAPS }}
             *Missing Rules*: ${{ env.MISSING_RULES }}
             *Test Gaps*: ${{ env.TEST_GAPS }}
 
@@ -155,6 +157,7 @@ jobs:
             echo "- **Total Issues**: $TOTAL_ISSUES" >> $GITHUB_STEP_SUMMARY
             echo "- **MUST Violations**: $MUST_VIOLATIONS" >> $GITHUB_STEP_SUMMARY
             echo "- **Validation Gaps**: $VALIDATION_GAPS" >> $GITHUB_STEP_SUMMARY
+            echo "- **Quality Gaps**: $QUALITY_GAPS" >> $GITHUB_STEP_SUMMARY
             echo "- **Missing Rules**: $MISSING_RULES" >> $GITHUB_STEP_SUMMARY
             echo "- **Test Gaps**: $TEST_GAPS" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY

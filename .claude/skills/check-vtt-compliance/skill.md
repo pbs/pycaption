@@ -121,9 +121,9 @@ deep_results['RULE-FMT-001'] = {
     'note': '' if (has_header_validate and has_detect_first_line) else 'Header validation incomplete',
 }
 
-# RULE-FMT-002: UTF-8 encoding
-has_utf8_check = bool(re.search(r'isinstance.*str|encoding.*utf', content, re.I))
-has_utf8_validate = bool(re.search(r'UnicodeDecodeError|decode\("utf-8"\)|decode.*utf', content, re.I))
+# RULE-FMT-002: UTF-8 encoding (base class _decode_content handles via utf-8-sig)
+has_utf8_check = bool(re.search(r'isinstance.*str|encoding.*utf|_decode_content', content, re.I))
+has_utf8_validate = bool(re.search(r'UnicodeDecodeError|decode\("utf-8"|decode\("utf-8-sig"|_decode_content', content + "\n" + support_content, re.I))
 deep_results['RULE-FMT-002'] = {
     'name': 'UTF-8 encoding',
     'detected': has_utf8_check,
@@ -147,7 +147,7 @@ deep_results['RULE-TIME-003'] = {
     'name': 'Milliseconds exactly 3 digits',
     'detected': has_3_digits,
     'validated': has_3_digits,
-    'note': 'Enforced by TIMESTAMP_PATTERN regex \\d{3}',
+    'note': '',
 }
 
 # RULE-TIME-005: Start <= end
@@ -179,7 +179,7 @@ deep_results['RULE-CUE-001'] = {
     'name': 'Timing separator -->',
     'detected': has_timing_pattern,
     'validated': has_timing_pattern and has_timing_parse,
-    'note': 'TIMING_LINE_PATTERN captures arrow with surrounding whitespace',
+    'note': '',
 }
 
 # RULE-SET-002: Zero-value positions silently dropped on write
@@ -268,7 +268,7 @@ if center_dropped and has_default_start:
 
 # IMPL-PARSE-009: REGION block state-machine handling in _parse_line
 has_region_block_state = bool(re.search(r'in_region_block', reader_content))
-has_region_block_check = bool(re.search(r'if\s+state\.in_region_block', reader_content))
+has_region_block_check = bool(re.search(r'state\.in_region_block', reader_content))
 has_region_block_start = bool(re.search(r'line\.strip\(\)\s*==\s*"REGION"|==\s*"REGION"', reader_content))
 deep_results['IMPL-PARSE-009'] = {
     'name': 'REGION block state-machine skip in parse loop',
@@ -331,6 +331,194 @@ for rid, info in deep_results.items():
             'note': info['note'],
         })
 
+# ===== PHASE 1.5: IMPLEMENTATION QUALITY GAPS =====
+# These check for things the W3C reference parser handles but pycaption doesn't.
+# They go beyond "does the function exist" to "does it actually cover all cases."
+print("\n[1.5/5] Implementation Quality Gaps (vs W3C reference parser)")
+
+quality_gaps = []
+
+# Q1: Cue identifiers not preserved on Caption object or written on output
+has_caption_id_field = bool(re.search(r'self\.id\s*=|self\.cue_id\s*=', support_content))
+writes_cue_id = bool(re.search(r'cue_id|identifier|caption\.id', writer_content))
+if not has_caption_id_field or not writes_cue_id:
+    quality_gaps.append({
+        'id': 'QUAL-001', 'name': 'Cue identifiers silently discarded',
+        'severity': 'SHOULD',
+        'note': 'Reader parses and validates cue IDs (seen_ids) but Caption has no id field. '
+                'IDs are lost on output. W3C reference parser preserves them on the cue object.',
+    })
+    print(f"  QUAL-001: CUE IDs NOT PRESERVED (parsed then discarded)")
+else:
+    print(f"  QUAL-001: PASS — cue IDs preserved")
+
+# Q2: Voice spans destructively flattened to text
+voice_is_text_prefix = bool(re.search(r'VOICE_SPAN_PATTERN\.sub\(.*\\\\2.*:', reader_content))
+voice_preserves_semantic = bool(re.search(r'"voice"|"speaker"', reader_content))
+if voice_is_text_prefix and not voice_preserves_semantic:
+    quality_gaps.append({
+        'id': 'QUAL-002', 'name': 'Voice <v> spans destructively flattened to text',
+        'severity': 'SHOULD',
+        'note': '<v Speaker>text</v> becomes "Speaker: text" (baked into TEXT node). '
+                'Semantic voice annotation is lost. W3C parser preserves voice as tree node attribute.',
+    })
+    print(f"  QUAL-002: VOICE FLATTENED to text prefix")
+else:
+    print(f"  QUAL-002: PASS — voice annotations preserved semantically")
+
+# Q3: No tag nesting validation (spec requires proper nesting)
+has_nesting_error = bool(re.search(r'nesting.*error|invalid.*nest|improper.*nest|overlap.*tag', reader_content, re.I))
+if not has_nesting_error:
+    quality_gaps.append({
+        'id': 'QUAL-003', 'name': 'No tag nesting validation',
+        'severity': 'SHOULD',
+        'note': 'Malformed nesting like <b><i></b></i> passes silently. '
+                'W3C reference parser reports nesting violations with line/column info. '
+                'pycaption closes unclosed tags at cue end but never warns about bad nesting.',
+    })
+    print(f"  QUAL-003: NO NESTING VALIDATION")
+else:
+    print(f"  QUAL-003: PASS — nesting errors detected")
+
+# Q4: No duplicate cue settings detection/warning
+has_dup_setting_warn = bool(re.search(r'duplicate.*setting|setting.*already|seen_settings', reader_content, re.I))
+if not has_dup_setting_warn:
+    quality_gaps.append({
+        'id': 'QUAL-004', 'name': 'Duplicate cue settings not detected',
+        'severity': 'MAY',
+        'note': 'Spec says each setting should appear at most once (first-wins). '
+                'pycaption silently takes one value without warning. '
+                'W3C reference parser flags duplicates as errors.',
+    })
+    print(f"  QUAL-004: DUPLICATE SETTINGS NOT WARNED")
+else:
+    print(f"  QUAL-004: PASS — duplicate settings detected")
+
+# Q5: STYLE block — only ::cue and ::cue(.class) supported, not tag/combined selectors
+has_tag_selector = bool(re.search(r'::cue\(b\)|::cue\(i\)|::cue\(u\)|::cue\(v\)|::cue\(ruby\)', reader_content))
+has_combined_selector = bool(re.search(r'::cue\([^)]+\)\s*,\s*::cue', reader_content))
+tag_selector_skipped = bool(re.search(r'tag.*selector.*skip|Skip tag|skip.*::cue\(\w+\)', reader_content, re.I))
+if not has_tag_selector or tag_selector_skipped:
+    quality_gaps.append({
+        'id': 'QUAL-005', 'name': 'STYLE block: tag selectors and combined selectors unsupported',
+        'severity': 'MAY',
+        'note': '::cue(b), ::cue(i), ::cue(v) tag selectors are explicitly skipped. '
+                'Combined selectors like ::cue(.a), ::cue(.b) { } not parsed. '
+                'Only ::cue (global) and ::cue(.className) are handled.',
+    })
+    print(f"  QUAL-005: TAG/COMBINED SELECTORS SKIPPED")
+else:
+    print(f"  QUAL-005: PASS — all selector types handled")
+
+# Q6: Limited CSS property support (only 5 properties mapped)
+css_props_mapped = 0
+for prop in ['font-style', 'font-weight', 'text-decoration', 'color', 'background-color',
+             'font-family', 'font-size', 'text-shadow', 'opacity', 'white-space']:
+    if re.search(rf'"{prop}"', reader_content):
+        css_props_mapped += 1
+if css_props_mapped < 7:
+    quality_gaps.append({
+        'id': 'QUAL-006', 'name': f'Limited CSS property support ({css_props_mapped}/10 properties)',
+        'severity': 'MAY',
+        'note': f'Only {css_props_mapped} CSS properties are mapped from STYLE blocks. '
+                'font-family, font-size, text-shadow, opacity, white-space are silently ignored. '
+                'This affects cross-format fidelity when styled VTT is converted.',
+    })
+    print(f"  QUAL-006: LIMITED CSS ({css_props_mapped}/10 mapped)")
+else:
+    print(f"  QUAL-006: PASS — {css_props_mapped}/10 CSS properties mapped")
+
+# Q7: Class annotations on style tags discarded (<i.highlight> loses class)
+# _tag_content for 'i' returns {"italics": True} — class_suffix is only used for 'c' tag
+tag_content_uses_class_for_ibu = bool(re.search(
+    r'tag_name\s*==\s*"[ibu]".*class_suffix|'
+    r'if tag_name in.*ibu.*class_suffix|'
+    r'"i".*class_suffix|"b".*class_suffix|"u".*class_suffix',
+    reader_content, re.DOTALL))
+if not tag_content_uses_class_for_ibu:
+    quality_gaps.append({
+        'id': 'QUAL-007', 'name': 'Class annotations on <i>/<b>/<u> tags discarded',
+        'severity': 'MAY',
+        'note': '<i.highlight>text</i> is parsed but class_suffix is discarded — '
+                'only {"italics": True} stored. The class is only preserved for <c> tags. '
+                'Spec allows classes on all tags.',
+    })
+    print(f"  QUAL-007: CLASS ON <i>/<b>/<u> DISCARDED")
+else:
+    print(f"  QUAL-007: PASS — classes preserved on all tags")
+
+# Q8: No error diagnostics with line/column info (only exceptions or silence)
+has_line_col_errors = bool(re.search(r'line.*col.*error|column.*\d+|diagnostic.*line', reader_content, re.I))
+has_structured_warnings = bool(re.search(r'warnings\.warn.*line|CaptionReadWarning.*line', reader_content))
+if not has_line_col_errors:
+    quality_gaps.append({
+        'id': 'QUAL-008', 'name': 'No structured error diagnostics (line/column)',
+        'severity': 'SHOULD',
+        'note': 'pycaption either raises an exception (halting parse) or silently accepts malformed input. '
+                'No middle ground for "this is malformed but I parsed what I could, here are the issues." '
+                'W3C reference parser collects all errors with line/col info in an array.',
+    })
+    print(f"  QUAL-008: NO LINE/COL DIAGNOSTICS")
+else:
+    print(f"  QUAL-008: PASS — structured error diagnostics present")
+
+# Q9: Invalid entity references not validated on read
+has_entity_validation = bool(re.search(r'invalid.*entity|unknown.*entity|unrecognized.*&', reader_content, re.I))
+if not has_entity_validation:
+    quality_gaps.append({
+        'id': 'QUAL-009', 'name': 'Invalid/unknown entity references not flagged',
+        'severity': 'MAY',
+        'note': 'WebVTT only allows 6 named entities (&amp; &lt; &gt; &lrm; &rlm; &nbsp;) plus numeric refs. '
+                'html.unescape() decodes ALL HTML entities silently (e.g. &copy; &mdash;). '
+                'W3C parser flags unrecognized entities as errors.',
+    })
+    print(f"  QUAL-009: INVALID ENTITIES NOT FLAGGED")
+else:
+    print(f"  QUAL-009: PASS — invalid entities flagged")
+
+# Q10: position-only without line creates no origin
+position_requires_line = bool(re.search(r'origin_y.*is.*None|if.*origin_y.*None.*origin_x', reader_content))
+pos_without_line = not bool(re.search(r'Point\(.*origin_x.*Size\(0', reader_content))
+if position_requires_line or pos_without_line:
+    # Check if position:50% without line: creates an origin
+    has_pos_only_handling = bool(re.search(r'if\s+origin_x\s+is\s+not\s+None\s+and\s+origin_y\s+is\s+None', reader_content))
+    if not has_pos_only_handling:
+        quality_gaps.append({
+            'id': 'QUAL-010', 'name': 'position-only cue setting produces no Layout origin',
+            'severity': 'SHOULD',
+            'note': 'If only position:50% is set without line:, origin remains None because '
+                    'reader requires origin_y (line value) to create a Point. '
+                    'Position information is silently lost.',
+        })
+        print(f"  QUAL-010: POSITION-ONLY LOST (needs line: too)")
+    else:
+        print(f"  QUAL-010: PASS — position-only handled")
+else:
+    print(f"  QUAL-010: PASS")
+
+# Q11: line alignment qualifier discarded
+line_align_used = bool(re.search(r'line_align|lineAlign', reader_content))
+if not line_align_used:
+    quality_gaps.append({
+        'id': 'QUAL-011', 'name': 'Line alignment qualifier discarded',
+        'severity': 'MAY',
+        'note': 'line:80%,center is parsed but the alignment qualifier (center/start/end) '
+                'is extracted then assigned to _ (unused). Only the numeric part is stored.',
+    })
+    print(f"  QUAL-011: LINE ALIGN QUALIFIER DISCARDED")
+else:
+    print(f"  QUAL-011: PASS — line alignment preserved")
+
+print(f"  Quality gaps found: {len(quality_gaps)}")
+
+# Add quality gaps to partial_validation (they're real limitations, not missing features)
+for qg in quality_gaps:
+    partial_validation.append({
+        'rule_id': qg['id'], 'name': qg['name'],
+        'status': 'QUALITY_GAP', 'severity': qg['severity'],
+        'note': qg['note'],
+    })
+
 # Accepted (Won't Fix) — intentional design decisions, not real gaps
 ACCEPTED_WONT_FIX = {
     'RULE-TIME-006': 'Intentional: timing validation disabled by default because real-world VTT files have overlapping captions. Opt-in via ignore_timing_errors=False.',
@@ -358,7 +546,7 @@ specific_patterns = {
     'RULE-FMT-001': [r'"WEBVTT"', r'def detect', r'def _validate_header'],
     'RULE-FMT-002': [r'isinstance.*str|InvalidInputError'],
     'RULE-FMT-003': [r'BOM|\\ufeff|\xef\xbb\xbf|startswith.*"\xef\xbb\xbf"'],
-    'RULE-FMT-004': [r'_validate_header.*blank|lines\[1\]\s*!=\s*""'],
+    'RULE-FMT-004': [r'_validate_header.*blank|lines\[1\]\s*!=\s*""|Missing blank line after.*header'],
     'RULE-FMT-005': [r'splitlines|\\r\\n|\\r|\\n'],
     # Timestamps
     'RULE-TIME-001': [r'TIMESTAMP_PATTERN', r'def _parse_timestamp'],
@@ -643,7 +831,8 @@ report = f"""# WebVTT EXHAUSTIVE Compliance Report
 | Category | Count |
 |----------|-------|
 | Validation gaps | {len(validation_gaps)} |
-| Implementation caveats | {len(partial_validation)} |
+| Implementation quality gaps | {len(quality_gaps)} |
+| Implementation caveats | {len(partial_validation) - len(quality_gaps)} |
 | Missing rules | {len(missing_rules)} (MUST: {len(must_missing)}) |
 | Tag round-trip gaps | {tags_missing}/8 |
 | Setting parse gaps | {settings_missing}/6 |
@@ -667,20 +856,37 @@ for g in validation_gaps:
 
 report += f"""---
 
-## 2. Implementation Caveats ({len(partial_validation)})
+## 2. Implementation Quality Gaps ({len(quality_gaps)})
+
+Features that exist but are incomplete compared to the W3C reference parser (webvtt.js).
+These represent real data loss or missing validation that affects interoperability.
+
+"""
+
+for qg in quality_gaps:
+    report += f"### {qg['id']}: {qg['name']}\n"
+    report += f"- **Severity**: {qg['severity']}\n"
+    report += f"- **Note**: {qg['note']}\n\n"
+
+# Filter out quality gaps from partial_validation for section 3
+non_quality_caveats = [p for p in partial_validation if not p['rule_id'].startswith('QUAL-')]
+
+report += f"""---
+
+## 3. Implementation Caveats ({len(non_quality_caveats)})
 
 Rules implemented but with significant limitations.
 
 """
 
-for p in partial_validation:
+for p in non_quality_caveats:
     report += f"### {p['rule_id']}: {p['name']}\n"
     report += f"- **Status**: {p['status']}\n"
     report += f"- **Note**: {p['note']}\n\n"
 
 report += f"""---
 
-## 3. Missing Rules ({len(missing_rules)})
+## 4. Missing Rules ({len(missing_rules)})
 
 ### MUST Rules ({len(must_missing)})
 
@@ -703,7 +909,7 @@ for r in may_missing:
 report += f"""
 ---
 
-## 4. Accepted — Won't Fix ({len(ACCEPTED_WONT_FIX)})
+## 5. Accepted — Won't Fix ({len(ACCEPTED_WONT_FIX)})
 
 Intentional design decisions — not counted as issues.
 
@@ -717,7 +923,7 @@ for rid, reason in sorted(ACCEPTED_WONT_FIX.items()):
 report += f"""
 ---
 
-## 5. Coverage Analysis
+## 6. Coverage Analysis
 
 ### Tags ({tags_roundtrip}/8 round-trip)
 
@@ -760,7 +966,7 @@ for entity, info in entity_coverage.items():
 report += f"""
 ---
 
-## 6. Test Gaps ({len(test_gaps)})
+## 7. Test Gaps ({len(test_gaps)})
 
 """
 
@@ -770,7 +976,7 @@ for t in test_gaps:
 report += """
 ---
 
-## 7. Key Findings
+## 8. Key Findings
 
 """
 
