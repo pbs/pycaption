@@ -13,6 +13,8 @@ from functools import total_ordering
 
 from .exceptions import CaptionReadSyntaxError, RelativizationError
 
+_UNIT_MISMATCH_MSG = "The sizes should have the same measure units."
+
 
 class UnitEnum(Enum):
     """Enumeration-like object, specifying the units of measure for length
@@ -57,6 +59,15 @@ class HorizontalAlignmentEnum(Enum):
     END = "end"
 
 
+class PositionAlignmentEnum(Enum):
+    """WebVTT position alignment: which edge of the cue box the position
+    percentage anchors to."""
+
+    LINE_LEFT = "line-left"
+    CENTER = "center"
+    LINE_RIGHT = "line-right"
+
+
 class WritingDirectionEnum(Enum):
     """Specifies WebVTT writing direction (vertical cue setting)."""
 
@@ -81,12 +92,12 @@ class Alignment:
         "after": VerticalAlignmentEnum.BOTTOM,
     }
 
-    def __init__(self, horizontal, vertical):
+    def __init__(self, horizontal=None, vertical=None):
         """
-        :type horizontal: HorizontalAlignmentEnum
-        :param horizontal: HorizontalAlignmentEnum member
-        :type vertical: VerticalAlignmentEnum
-        :param vertical: VerticalAlignmentEnum member
+        :type horizontal: HorizontalAlignmentEnum | None
+        :param horizontal: HorizontalAlignmentEnum member, or None
+        :type vertical: VerticalAlignmentEnum | None
+        :param vertical: VerticalAlignmentEnum member, or None
         """
         self.horizontal = horizontal
         self.vertical = vertical
@@ -94,13 +105,15 @@ class Alignment:
     def __hash__(self):
         return hash(hash(self.horizontal) * 83 + hash(self.vertical) * 89 + 97)
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         if not isinstance(other, Alignment):
             return NotImplemented
         return self.horizontal == other.horizontal and self.vertical == other.vertical
 
     def __repr__(self):
-        return f"<Alignment ({self.horizontal} {self.vertical})>"
+        h = self.horizontal.value if self.horizontal else "None"
+        v = self.vertical.value if self.vertical else "None"
+        return f"<Alignment ({h} {v})>"
 
     def serialized(self):
         """Returns a tuple of the useful information regarding this object"""
@@ -120,11 +133,14 @@ class Alignment:
 
         if not horizontal_obj and not vertical_obj:
             return None
-        return cls(horizontal_obj, vertical_obj)
+        return Alignment(horizontal_obj, vertical_obj)
 
 
 class TwoDimensionalObject:
     """Adds a couple useful methods to its subclasses, nothing fancy."""
+
+    def __init__(self, first, second):
+        raise NotImplementedError
 
     @classmethod
     def from_xml_attribute(cls, attribute):
@@ -133,11 +149,11 @@ class TwoDimensionalObject:
 
         :type attribute: str
         """
-        horizontal, vertical = attribute.split(" ")
-        horizontal = Size.from_string(horizontal)
-        vertical = Size.from_string(vertical)
+        first, second = attribute.split(" ")
+        first = Size.from_string(first)
+        second = Size.from_string(second)
 
-        return cls(horizontal, vertical)
+        return cls(first, second)
 
 
 class Stretch(TwoDimensionalObject):
@@ -177,7 +193,7 @@ class Stretch(TwoDimensionalObject):
             None if not self.vertical else self.vertical.serialized(),
         )
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         if not isinstance(other, Stretch):
             return NotImplemented
         return self.horizontal == other.horizontal and self.vertical == other.vertical
@@ -276,7 +292,7 @@ class Point(TwoDimensionalObject):
             None if not self.y else self.y.serialized(),
         )
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         if not isinstance(other, Point):
             return NotImplemented
         return self.x == other.x and self.y == other.y
@@ -316,7 +332,7 @@ class Size:
         if self.unit == other.unit:
             return Size(self.value - other.value, self.unit)
         else:
-            raise ValueError("The sizes should have the same measure units.")
+            raise ValueError(_UNIT_MISMATCH_MSG)
 
     def __abs__(self):
         return Size(abs(self.value), self.unit)
@@ -325,14 +341,14 @@ class Size:
         if not isinstance(other, Size):
             return NotImplemented
         if self.unit != other.unit:
-            raise ValueError("The sizes should have the same measure units.")
+            raise ValueError(_UNIT_MISMATCH_MSG)
         return self.value < other.value
 
     def __add__(self, other):
         if self.unit == other.unit:
             return Size(self.value + other.value, self.unit)
         else:
-            raise ValueError("The sizes should have the same measure units.")
+            raise ValueError(_UNIT_MISMATCH_MSG)
 
     def is_relative(self):
         """
@@ -434,7 +450,7 @@ class Size:
         """Returns the "useful" values of this object"""
         return self.value, self.unit
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         if not isinstance(other, Size):
             return NotImplemented
         return self.value == other.value and self.unit == other.unit
@@ -513,11 +529,11 @@ class Padding:
             None if not self.end else self.end.serialized(),
         )
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Padding):
+            return NotImplemented
         return (
-            other
-            and type(self) == type(other)
-            and self.before == other.before
+            self.before == other.before
             and self.after == other.after
             and self.start == other.start
             and self.end == other.end
@@ -592,6 +608,7 @@ class Layout:
         alignment=None,
         webvtt_positioning=None,
         writing_direction=None,
+        position_alignment=None,
         inherit_from=None,
     ):
         """
@@ -617,6 +634,10 @@ class Layout:
         :type writing_direction: WritingDirectionEnum
         :param writing_direction: WebVTT vertical writing direction (rl or lr).
 
+        :type position_alignment: PositionAlignmentEnum
+        :param position_alignment: Which edge of the cue box the position
+            percentage anchors to (line-left, center, or line-right).
+
         :type inherit_from: Layout
         :param inherit_from: A Layout with the positioning parameters to be
             used if not specified by the positioning arguments,
@@ -628,6 +649,7 @@ class Layout:
         self.alignment = alignment
         self.webvtt_positioning = webvtt_positioning
         self.writing_direction = writing_direction
+        self.position_alignment = position_alignment
 
         if inherit_from:
             for attr_name in [
@@ -636,6 +658,7 @@ class Layout:
                 "padding",
                 "alignment",
                 "writing_direction",
+                "position_alignment",
             ]:
                 attr = getattr(self, attr_name)
                 if not attr:
@@ -650,6 +673,7 @@ class Layout:
                 self.alignment,
                 self.webvtt_positioning,
                 self.writing_direction,
+                self.position_alignment,
             )
         )
 
@@ -667,16 +691,19 @@ class Layout:
             None if not self.padding else self.padding.serialized(),
             None if not self.alignment else self.alignment.serialized(),
             self.writing_direction,
+            self.position_alignment,
         )
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Layout):
+            return NotImplemented
         return (
-            type(self) == type(other)
-            and self.origin == other.origin
+            self.origin == other.origin
             and self.extent == other.extent
             and self.padding == other.padding
             and self.alignment == other.alignment
             and self.writing_direction == other.writing_direction
+            and self.position_alignment == other.position_alignment
         )
 
     def __hash__(self):
@@ -686,6 +713,7 @@ class Layout:
             + hash(self.padding) * 13
             + hash(self.alignment) * 5
             + hash(self.writing_direction) * 19
+            + hash(self.position_alignment) * 23
             + 17
         )
 
@@ -706,6 +734,7 @@ class Layout:
         params = {
             "alignment": self.alignment,
             "writing_direction": self.writing_direction,
+            "position_alignment": self.position_alignment,
         }
         for attr_name in ["origin", "extent", "padding"]:
             attr = getattr(self, attr_name)
@@ -720,6 +749,10 @@ class Layout:
         technically valid but contain inconsistent settings that may cause
         long captions to be cut out of the screen.
 
+        When position_alignment is set, the origin is first adjusted so that
+        origin.x represents the true left edge of the cue box (the W3C spec
+        allows the position to anchor to center or right edge).
+
         ATTENTION: This must be called on relativized objects (such as the one
         returned by as_percentage_of). All units are presumed to be percentages.
         """
@@ -732,28 +765,56 @@ class Layout:
         ):
             return self
 
-        if self.origin.x.value >= 90 or self.origin.y.value >= 95:
+        origin = self._resolve_position_alignment()
+
+        if origin.x.value >= 90 or origin.y.value >= 95:
             return self
 
-        diff_horizontal = Size(90 - self.origin.x.value, UnitEnum.PERCENT)
-        diff_vertical = Size(95 - self.origin.y.value, UnitEnum.PERCENT)
+        diff_horizontal = Size(90 - origin.x.value, UnitEnum.PERCENT)
+        diff_vertical = Size(95 - origin.y.value, UnitEnum.PERCENT)
 
         if not self.extent:
             new_extent = Stretch(diff_horizontal, diff_vertical)
         else:
-            new_extent = self._corrected_extent(diff_horizontal, diff_vertical)
+            new_extent = self._corrected_extent_from(
+                origin, diff_horizontal, diff_vertical
+            )
 
         return Layout(
-            origin=self.origin,
+            origin=origin,
             extent=new_extent,
             padding=self.padding,
             alignment=self.alignment,
             writing_direction=self.writing_direction,
         )
 
-    def _corrected_extent(self, diff_horizontal, diff_vertical):
+    def _resolve_position_alignment(self):
+        """Adjust origin.x based on position_alignment and extent width.
+
+        The VTT reader always stores the ``position`` setting in origin.x
+        and ``size`` in extent.horizontal, regardless of writing direction.
+        This method adjusts origin.x so it represents the true left edge
+        of the cue box.
+
+        Returns a new Point (or self.origin unchanged for LINE_LEFT/None).
+        """
+        if not self.position_alignment or not self.extent:
+            return self.origin
+
+        width = self.extent.horizontal.value
+
+        if self.position_alignment == PositionAlignmentEnum.CENTER:
+            adjusted_x = max(0, self.origin.x.value - width / 2)
+        elif self.position_alignment == PositionAlignmentEnum.LINE_RIGHT:
+            adjusted_x = max(0, self.origin.x.value - width)
+        else:
+            return self.origin
+
+        return Point(Size(adjusted_x, UnitEnum.PERCENT), self.origin.y)
+
+    def _corrected_extent_from(self, origin, diff_horizontal, diff_vertical):
         """Return extent clamped so origin + extent doesn't exceed the screen."""
-        bottom_right = self.origin.add_stretch(self.extent)
+        bottom_right = origin.add_stretch(self.extent)
 
         if (
             bottom_right.x.unit != UnitEnum.PERCENT

@@ -6,7 +6,7 @@ docstrings below each pattern explain what they capture and give examples.
 
 import re
 
-from ..geometry import HorizontalAlignmentEnum
+from ..geometry import HorizontalAlignmentEnum, PositionAlignmentEnum
 
 TIMING_LINE_PATTERN = re.compile(r"^(\S+)\s+-->\s+(\S+)(?:\s+(.*?))?\s*$")
 """
@@ -101,6 +101,15 @@ ALIGN_SETTING_MAP = {
 }
 """Reverse mapping from WebVTT ``align`` setting strings to internal
 HorizontalAlignmentEnum values (used by the reader)."""
+
+POSITION_ALIGN_MAP = {
+    "line-left": PositionAlignmentEnum.LINE_LEFT,
+    "center": PositionAlignmentEnum.CENTER,
+    "line-right": PositionAlignmentEnum.LINE_RIGHT,
+    "start": PositionAlignmentEnum.LINE_LEFT,
+    "end": PositionAlignmentEnum.LINE_RIGHT,
+}
+"""Maps WebVTT positionAlign qualifier strings to PositionAlignmentEnum."""
 
 
 def _is_note_start(line):

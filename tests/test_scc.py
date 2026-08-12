@@ -172,12 +172,14 @@ class TestSCCReader(ReaderTestingMixIn):
                 None,
                 (HorizontalAlignmentEnum.LEFT, VerticalAlignmentEnum.TOP),
                 None,
+                None,
             ),
             (
                 ((10.0, UnitEnum.PERCENT), (83.0, UnitEnum.PERCENT)),
                 None,
                 None,
                 (HorizontalAlignmentEnum.LEFT, VerticalAlignmentEnum.TOP),
+                None,
                 None,
             ),
         ]
@@ -196,6 +198,7 @@ class TestSCCReader(ReaderTestingMixIn):
                         None,
                         (HorizontalAlignmentEnum.LEFT, VerticalAlignmentEnum.TOP),
                         None,
+                        None,
                     )
                 ]
             },
@@ -206,6 +209,7 @@ class TestSCCReader(ReaderTestingMixIn):
                         None,
                         None,
                         (HorizontalAlignmentEnum.LEFT, VerticalAlignmentEnum.TOP),
+                        None,
                         None,
                     )
                 ]

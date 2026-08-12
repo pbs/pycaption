@@ -8,6 +8,7 @@ from pycaption import (
     CaptionReadSyntaxError,
     CaptionReadWarning,
     DFXPReader,
+    DFXPWriter,
     SAMIReader,
     WebVTTReader,
     WebVTTWriter,
@@ -15,6 +16,7 @@ from pycaption import (
 from pycaption.base import CaptionNode
 from pycaption.geometry import (
     HorizontalAlignmentEnum,
+    PositionAlignmentEnum,
     Size,
     UnitEnum,
     WritingDirectionEnum,
@@ -819,6 +821,135 @@ Hello
         layout = cue.layout_info
 
         assert layout.origin.x == Size(50, UnitEnum.PERCENT)
+        assert layout.position_alignment == PositionAlignmentEnum.LINE_LEFT
+
+    def test_position_alignment_center_stored(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "00:00:01.000 --> 00:00:03.000 position:50%,center line:80%\n"
+            "Hello\n"
+        )
+        captions = self.reader.read(vtt)
+        cue = captions.get_captions("en-US")[0]
+        layout = cue.layout_info
+
+        assert layout.position_alignment == PositionAlignmentEnum.CENTER
+        assert layout.origin.x == Size(50, UnitEnum.PERCENT)
+
+    def test_position_alignment_line_right_stored(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "00:00:01.000 --> 00:00:03.000 position:70%,line-right line:10%\n"
+            "Hello\n"
+        )
+        captions = self.reader.read(vtt)
+        cue = captions.get_captions("en-US")[0]
+        layout = cue.layout_info
+
+        assert layout.position_alignment == PositionAlignmentEnum.LINE_RIGHT
+        assert layout.origin.x == Size(70, UnitEnum.PERCENT)
+
+    def test_position_alignment_none_when_unspecified(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "00:00:01.000 --> 00:00:03.000 position:50% line:80%\n"
+            "Hello\n"
+        )
+        captions = self.reader.read(vtt)
+        cue = captions.get_captions("en-US")[0]
+        layout = cue.layout_info
+
+        assert layout.position_alignment is None
+
+    def test_position_alignment_center_adjusts_origin_in_dfxp(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "00:00:01.000 --> 00:00:03.000 "
+            "position:50%,center line:80% size:60%\n"
+            "Hello\n"
+        )
+        captions = self.reader.read(vtt)
+        output = DFXPWriter().write(captions)
+        dfxp_captions = DFXPReader().read(output)
+        cue = dfxp_captions.get_captions("en-US")[0]
+
+        assert cue.layout_info.origin.x == Size(20.0, UnitEnum.PERCENT)
+
+    def test_position_alignment_line_right_adjusts_origin_in_dfxp(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "00:00:01.000 --> 00:00:03.000 "
+            "position:80%,line-right line:10% size:60%\n"
+            "Hello\n"
+        )
+        captions = self.reader.read(vtt)
+        output = DFXPWriter().write(captions)
+        dfxp_captions = DFXPReader().read(output)
+        cue = dfxp_captions.get_captions("en-US")[0]
+
+        assert cue.layout_info.origin.x == Size(20.0, UnitEnum.PERCENT)
+
+    def test_position_alignment_center_clamps_to_zero_in_dfxp(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "00:00:01.000 --> 00:00:03.000 "
+            "position:10%,center line:10% size:50%\n"
+            "Hello\n"
+        )
+        captions = self.reader.read(vtt)
+        output = DFXPWriter().write(captions)
+        dfxp_captions = DFXPReader().read(output)
+        cue = dfxp_captions.get_captions("en-US")[0]
+
+        assert cue.layout_info.origin.x == Size(0.0, UnitEnum.PERCENT)
+
+    def test_position_alignment_start_maps_to_line_left(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "00:00:01.000 --> 00:00:03.000 position:40%,start line:10%\n"
+            "Hello\n"
+        )
+        captions = self.reader.read(vtt)
+        cue = captions.get_captions("en-US")[0]
+
+        assert cue.layout_info.position_alignment == PositionAlignmentEnum.LINE_LEFT
+
+    def test_position_alignment_vertical_rl_adjusts_x(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "00:00:01.000 --> 00:00:03.000 "
+            "vertical:rl position:50%,center line:20% size:40%\n"
+            "Hello\n"
+        )
+        captions = self.reader.read(vtt)
+        output = DFXPWriter().write(captions)
+        dfxp_captions = DFXPReader().read(output)
+        cue = dfxp_captions.get_captions("en-US")[0]
+
+        assert cue.layout_info.origin.x == Size(30.0, UnitEnum.PERCENT)
+        assert cue.layout_info.origin.y == Size(20.0, UnitEnum.PERCENT)
+
+    def test_multiple_cues_with_different_position_alignments(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "00:00:01.000 --> 00:00:03.000 "
+            "position:50%,line-left line:10% size:40%\n"
+            "Left-anchored\n\n"
+            "00:00:04.000 --> 00:00:06.000 "
+            "position:50%,center line:10% size:40%\n"
+            "Center-anchored\n\n"
+            "00:00:07.000 --> 00:00:09.000 "
+            "position:80%,line-right line:10% size:60%\n"
+            "Right-anchored\n"
+        )
+        captions = self.reader.read(vtt)
+        output = DFXPWriter().write(captions)
+        dfxp_captions = DFXPReader().read(output)
+        cues = dfxp_captions.get_captions("en-US")
+
+        assert cues[0].layout_info.origin.x == Size(50.0, UnitEnum.PERCENT)
+        assert cues[1].layout_info.origin.x == Size(30.0, UnitEnum.PERCENT)
+        assert cues[2].layout_info.origin.x == Size(20.0, UnitEnum.PERCENT)
 
     def test_line_with_alignment_subvalue(self):
         vtt = "WEBVTT\n\n" "00:00:01.000 --> 00:00:03.000 line:80%,center\n" "Hello\n"
