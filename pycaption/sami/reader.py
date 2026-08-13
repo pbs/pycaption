@@ -7,10 +7,7 @@ styles, margin-based positioning, and multi-language content.
 from bs4 import BeautifulSoup, NavigableString
 
 from ..base import BaseReader, Caption, CaptionList, CaptionNode, CaptionSet
-from ..exceptions import (
-    CaptionReadNoCaptions,
-    CaptionReadTimingError,
-)
+from ..exceptions import CaptionReadNoCaptions, CaptionReadTimingError
 from ..geometry import Alignment, HorizontalAlignmentEnum, Layout, Padding, Size
 from .parser import SAMIParser
 
@@ -65,7 +62,8 @@ class SAMIReader(BaseReader):
             caption_dict[language] = lang_captions
 
         caption_set = CaptionSet(
-            caption_dict, layout_info=global_layout,
+            caption_dict,
+            layout_info=global_layout,
             visual_alignment_default=HorizontalAlignmentEnum.LEFT,
         )
 
@@ -244,7 +242,7 @@ class SAMIReader(BaseReader):
         attrs = {}
         css_attrs = tag.attrs
 
-        if "class" in css_attrs:
+        if "class" in css_attrs and css_attrs["class"]:
             attrs["class"] = css_attrs["class"][0].lower()
         if "id" in css_attrs:
             attrs["class"] = css_attrs["id"].lower()

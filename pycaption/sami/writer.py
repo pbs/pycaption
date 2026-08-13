@@ -42,9 +42,7 @@ class SAMIWriter(BaseWriter):
         """Serialize a CaptionSet into a SAMI document string."""
         caption_set = deepcopy(caption_set)
         source_default = self._get_visual_alignment_default(caption_set)
-        self._promote_center = (
-            source_default == HorizontalAlignmentEnum.CENTER
-        )
+        self._promote_center = source_default == HorizontalAlignmentEnum.CENTER
         sami = BeautifulSoup(SAMI_BASE_MARKUP, "lxml-xml")
 
         caption_set.layout_info = self._relativize_and_fit_to_screen(
@@ -310,7 +308,7 @@ class SAMIWriter(BaseWriter):
 
         style = ""
         klass = ""
-        if "classes" in content:
+        if "classes" in content and content["classes"]:
             klass += f' class="{" ".join(content["classes"])}"'
         elif "class" in content:
             klass += f' class="{content["class"]}"'

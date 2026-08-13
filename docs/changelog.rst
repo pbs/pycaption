@@ -1,5 +1,15 @@
 Changelog
 ---------
+2.3.7
+^^^^^^
+  - Fix ``SAMIWriter`` emitting ``class=""`` when the classes list is empty
+    (e.g. from YouTube auto-generated VTT files with bare ``<c>`` karaoke
+    tags). The writer now skips the class attribute entirely for empty lists.
+
+  - Fix ``SAMIReader._translate_attrs`` raising ``IndexError`` when a tag's
+    ``class`` attribute parses to an empty list. The reader now treats an
+    empty class list the same as a missing class attribute.
+
 2.3.6
 ^^^^^^
   - Fix ``fit_to_screen()`` producing negative or zero extent when origin
