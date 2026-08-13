@@ -99,6 +99,7 @@ class SCCWriter(BaseWriter):
         codes = self._encode_all(classified)
         codes = self._adjust_timing(codes)
         codes = self._deduplicate_timestamps(codes)
+        codes = self._clamp_end_times(codes)
         output += self._render_mixed(codes)
 
         return output
@@ -193,6 +194,17 @@ class SCCWriter(BaseWriter):
                     start += MICROSECONDS_PER_CODEWORD
                 codes[index] = (code, start, end, mode, depth)
             last_emitted_frame = self._microseconds_to_frame(start)
+        return codes
+
+    @staticmethod
+    def _clamp_end_times(codes):
+        """Suppress end times that drift behind start after timing adjustments.
+        When dense cues push start forward beyond the original end, emit no
+        clear command (end=None) rather than producing an invalid negative-
+        duration cue."""
+        for index, (code, start, end, mode, depth) in enumerate(codes):
+            if end is not None and end <= start:
+                codes[index] = (code, start, None, mode, depth)
         return codes
 
     def _render_mixed(self, codes):

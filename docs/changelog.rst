@@ -7,6 +7,11 @@ Changelog
     base_row 15). The writer now stacks lines upward from row 15 so each
     line gets a distinct PAC code and survives a roundtrip without merging.
 
+  - Fix ``SCCWriter`` producing negative-duration cues when dense input
+    (cue spacing < code transmission time) causes start-time drift beyond
+    the original end time. The writer now suppresses the clear command
+    rather than emitting an invalid timestamp.
+
   - Fix ``SAMIWriter`` emitting ``class=""`` when the classes list is empty
     (e.g. from YouTube auto-generated VTT files with bare ``<c>`` karaoke
     tags). The writer now skips the class attribute entirely for empty lists.

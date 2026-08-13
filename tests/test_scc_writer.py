@@ -185,6 +185,30 @@ class TestSCCWriterOverlappingCues:
         # (only the last cue gets a clear-screen at its end time)
         assert len(clear_lines) <= 1
 
+    def test_dense_cues_never_produce_negative_duration(self):
+        """When many dense cues push start times forward via timing
+        adjustments, the end time must never be less than the start."""
+        lines = ["WEBVTT", ""]
+        for i in range(20):
+            start_ms = 1000 + i * 200
+            end_ms = start_ms + 150
+            s, e = start_ms / 1000, end_ms / 1000
+            lines.append(
+                f"00:00:{int(s):02d}.{int((s % 1) * 1000):03d} --> "
+                f"00:00:{int(e):02d}.{int((e % 1) * 1000):03d}"
+            )
+            lines.append(
+                f"Caption number {i + 1:02d} with a lot of extra "
+                f"text padding here for testing!!"
+            )
+            lines.append("")
+        captions = WebVTTReader().read("\n".join(lines))
+        scc_output = SCCWriter().write(captions)
+        reread = SCCReader().read(scc_output)
+        caps = reread.get_captions(reread.get_languages()[0])
+        for cap in caps:
+            assert cap.end >= cap.start
+
 
 class TestSCCWriterSplitLongCaption:
     def test_split_caption_exceeding_80_tokens(self):
