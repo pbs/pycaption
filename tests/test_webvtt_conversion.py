@@ -672,3 +672,25 @@ class TestGlobalCueColorPropagation:
         style_opens = [n for n in nodes if n.type_ == CaptionNode.STYLE and n.start]
         assert len(style_opens) == 1
         assert style_opens[0].content.get("color") == "red"
+
+
+class TestYouTubeKaraokeEmptyClassRoundtrip:
+    def test_empty_class_vtt_to_sami_roundtrip(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "00:00:01.000 --> 00:00:04.000\n"
+            "<c> Hello</c><c> world</c>\n"
+        )
+        caption_set = WebVTTReader().read(vtt)
+        sami_output = SAMIWriter().write(caption_set)
+
+        assert 'class=""' not in sami_output
+        assert "Hello" in sami_output
+        assert "world" in sami_output
+
+        reread_set = SAMIReader().read(sami_output)
+        captions = reread_set.get_captions(reread_set.get_languages()[0])
+        assert len(captions) == 1
+        text = captions[0].get_text()
+        assert "Hello" in text
+        assert "world" in text
