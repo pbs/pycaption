@@ -99,6 +99,7 @@ class SCCWriter(BaseWriter):
         codes = self._encode_all(classified)
         codes = self._adjust_timing(codes)
         codes = self._deduplicate_timestamps(codes)
+        codes = self._clamp_end_times(codes)
         output += self._render_mixed(codes)
 
         return output
@@ -195,6 +196,17 @@ class SCCWriter(BaseWriter):
             last_emitted_frame = self._microseconds_to_frame(start)
         return codes
 
+    @staticmethod
+    def _clamp_end_times(codes):
+        """Suppress end times that drift behind start after timing adjustments.
+        When dense cues push start forward beyond the original end, emit no
+        clear command (end=None) rather than producing an invalid negative-
+        duration cue."""
+        for index, (code, start, end, mode, depth) in enumerate(codes):
+            if end is not None and end <= start:
+                codes[index] = (code, start, None, mode, depth)
+        return codes
+
     def _render_mixed(self, codes):
         """Serialize all cues in chronological order, emitting mode-appropriate
         preambles inline. Handles pop-on (ENM+RCL...EDM+EOC), roll-up
@@ -225,12 +237,7 @@ class SCCWriter(BaseWriter):
         code_tokens = code.split()
 
         if len(code_tokens) <= max_payload:
-            return (
-                f"{ts}\t"
-                "94ae 94ae 9420 9420 "
-                f"{code}"
-                "942c 942c 942f 942f\n\n"
-            )
+            return f"{ts}\t" "94ae 94ae 9420 9420 " f"{code}" "942c 942c 942f 942f\n\n"
 
         output = ""
         offset = 0
@@ -243,11 +250,7 @@ class SCCWriter(BaseWriter):
             is_last = offset + max_payload >= len(code_tokens)
             if is_last:
                 line = line + ["942c", "942c", "942f", "942f"]
-            output += (
-                f"{self._format_timestamp(start)}\t"
-                + " ".join(line)
-                + "\n\n"
-            )
+            output += f"{self._format_timestamp(start)}\t" + " ".join(line) + "\n\n"
             offset += max_payload
             if not is_last:
                 start += MICROSECONDS_PER_CODEWORD
@@ -329,6 +332,7 @@ class SCCWriter(BaseWriter):
                 base_row = max(1, min(15, round((y.value - 5) / 90.0 * 15) + 1))
             else:
                 base_row = 15
+            base_row = max(1, min(base_row, 16 - num_lines))
             row = base_row + line_index
             return min(row, 15)
         return max(1, min(15, 16 - num_lines + line_index))
