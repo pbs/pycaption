@@ -1,6 +1,7 @@
 import pytest
 
 from pycaption import CaptionReadNoCaptions, SRTReader
+from pycaption.exceptions import CaptionReadSyntaxError
 from tests.mixins import ReaderTestingMixIn
 
 
@@ -50,6 +51,22 @@ class TestSRTReader(ReaderTestingMixIn):
         with pytest.raises(CaptionReadNoCaptions) as exc_info:
             self.reader.read(sample_srt_empty)
         assert exc_info.value.args[0] == "empty caption file"
+
+    def test_detection_of_single_line_content(self):
+        # Content with fewer than two lines used to raise IndexError from
+        # lines[1]; detection should just return False.
+        assert self.reader.detect("1") is False
+        assert self.reader.detect("") is False
+
+    def test_malformed_timing_raises_read_error(self):
+        # A timing line missing or with an unparsable timestamp used to raise a
+        # bare IndexError/ValueError; it should be a CaptionReadSyntaxError.
+        for content in (
+            "1\n00:00:01,000 -->\nHi",
+            "1\n00:00:01,000 --> xx:yy\nHi",
+        ):
+            with pytest.raises(CaptionReadSyntaxError):
+                self.reader.read(content)
 
     def test_extra_empty_line(self, sample_srt_blank_lines):
         captions = self.reader.read(sample_srt_blank_lines)

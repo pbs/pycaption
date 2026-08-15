@@ -6,7 +6,7 @@ from .base import (
     BaseReader, BaseWriter, Caption, CaptionList, CaptionNode, CaptionSet,
     merge_caption_list,
 )
-from .exceptions import CaptionReadNoCaptions
+from .exceptions import CaptionReadNoCaptions, CaptionReadSyntaxError
 from .geometry import HorizontalAlignmentEnum
 
 
@@ -21,6 +21,8 @@ class SRTReader(BaseReader):
         """
         content = self._decode_content(content)
         lines = content.splitlines()
+        if len(lines) < 2:
+            return False
         if lines[0].isdigit() and "-->" in lines[1]:
             return True
         else:
@@ -48,8 +50,17 @@ class SRTReader(BaseReader):
             end_line = self._find_text_line(start_line, lines)
 
             timing = lines[start_line + 1].split("-->")
-            start = self._srttomicro(timing[0].strip(" \r\n"))
-            end = self._srttomicro(timing[1].strip(" \r\n"))
+            if len(timing) != 2:
+                raise CaptionReadSyntaxError(
+                    f"Invalid timing line: {lines[start_line + 1]!r}"
+                )
+            try:
+                start = self._srttomicro(timing[0].strip(" \r\n"))
+                end = self._srttomicro(timing[1].strip(" \r\n"))
+            except (IndexError, ValueError):
+                raise CaptionReadSyntaxError(
+                    f"Invalid timestamp in: {lines[start_line + 1]!r}"
+                )
 
             nodes = []
 
