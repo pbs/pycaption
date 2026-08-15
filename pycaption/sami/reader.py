@@ -142,7 +142,12 @@ class SAMIReader(BaseReader):
                 raise CaptionReadTimingError(
                     f"Missing start time on the following line: {p.parent}."
                 )
-            milliseconds = int(float(start_str))
+            try:
+                milliseconds = int(float(start_str))
+            except ValueError:
+                raise CaptionReadTimingError(
+                    f"Invalid start time on the following line: {p.parent}."
+                )
             start = milliseconds * 1000
 
             self._backfill_end_times(captions, start)

@@ -50,6 +50,17 @@ class TestSAMIReader(ReaderTestingMixIn):
             "Missing start time on the following line: "
         )
 
+    def test_non_numeric_start(self):
+        # A non-numeric SYNC start attribute used to raise a bare ValueError
+        # from int(float(start_str)); it should be a CaptionReadTimingError.
+        content = "<SAMI><BODY><SYNC Start=abc><P>Hi</P></SYNC></BODY></SAMI>"
+        with pytest.raises(CaptionReadTimingError) as exc_info:
+            self.reader.read(content)
+
+        assert exc_info.value.args[0].startswith(
+            "Invalid start time on the following line: "
+        )
+
     def test_6digit_color_code_from_6digit_input(self, sample_sami):
         caption_set = self.reader.read(sample_sami)
         p_style = caption_set.get_style("p")
