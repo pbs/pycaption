@@ -1,6 +1,7 @@
 import pytest
 
 from pycaption import CaptionReadNoCaptions, SRTReader
+from pycaption.exceptions import CaptionReadSyntaxError
 from tests.mixins import ReaderTestingMixIn
 
 
@@ -50,6 +51,20 @@ class TestSRTReader(ReaderTestingMixIn):
         with pytest.raises(CaptionReadNoCaptions) as exc_info:
             self.reader.read(sample_srt_empty)
         assert exc_info.value.args[0] == "empty caption file"
+
+    @pytest.mark.parametrize(
+        "content",
+        [
+            "1\n",  # caption number with no timing line following
+            "1\n2\n",  # a second number where the timing line should be
+            "1\n00:00:01,000\ntext\n",  # timing line without an arrow
+            "1\n00:x:01,000 --> 00:00:04,000\ntext\n",  # non-numeric timestamp
+            "1\n00:01,000 --> 00:04,000\ntext\n",  # timestamp missing a field
+        ],
+    )
+    def test_malformed_input_raises_read_error(self, content):
+        with pytest.raises(CaptionReadSyntaxError):
+            self.reader.read(content)
 
     def test_extra_empty_line(self, sample_srt_blank_lines):
         captions = self.reader.read(sample_srt_blank_lines)

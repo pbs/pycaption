@@ -10,6 +10,12 @@ Changelog
     ``class`` (or ``lang``) attribute. Such attributes carry no language
     information and are now ignored.
 
+  - Fix ``SRTReader`` raising a bare ``IndexError`` or ``ValueError`` on
+    malformed input (a caption number with no timing line after it, a timing
+    line missing ``-->``, or a timestamp with missing or non-numeric fields).
+    The reader now raises ``CaptionReadSyntaxError`` like its other read
+    errors.
+
 2.3.8
 ^^^^^^
   - Fix ``WebVTTReader`` silently discarding the ``position:`` cue setting

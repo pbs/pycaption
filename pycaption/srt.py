@@ -6,7 +6,7 @@ from .base import (
     BaseReader, BaseWriter, Caption, CaptionList, CaptionNode, CaptionSet,
     merge_caption_list,
 )
-from .exceptions import CaptionReadNoCaptions
+from .exceptions import CaptionReadNoCaptions, CaptionReadSyntaxError
 from .geometry import HorizontalAlignmentEnum
 
 
@@ -47,6 +47,11 @@ class SRTReader(BaseReader):
 
             end_line = self._find_text_line(start_line, lines)
 
+            if start_line + 1 >= len(lines) or "-->" not in lines[start_line + 1]:
+                raise CaptionReadSyntaxError(
+                    "Missing or malformed timing line after caption number "
+                    f"{lines[start_line]!r}."
+                )
             timing = lines[start_line + 1].split("-->")
             start = self._srttomicro(timing[0].strip(" \r\n"))
             end = self._srttomicro(timing[1].strip(" \r\n"))
@@ -81,15 +86,18 @@ class SRTReader(BaseReader):
     def _srttomicro(stamp):
         """Convert an SRT timestamp (HH:MM:SS,mmm) to microseconds."""
         timesplit = stamp.split(":")
-        if "," not in timesplit[2]:
-            timesplit[2] += ",000"
-        secsplit = timesplit[2].split(",")
-        microseconds = (
-            int(timesplit[0]) * 3600000000
-            + int(timesplit[1]) * 60000000
-            + int(secsplit[0]) * 1000000
-            + int(secsplit[1]) * 1000
-        )
+        try:
+            if "," not in timesplit[2]:
+                timesplit[2] += ",000"
+            secsplit = timesplit[2].split(",")
+            microseconds = (
+                int(timesplit[0]) * 3600000000
+                + int(timesplit[1]) * 60000000
+                + int(secsplit[0]) * 1000000
+                + int(secsplit[1]) * 1000
+            )
+        except (IndexError, ValueError):
+            raise CaptionReadSyntaxError(f"Invalid SRT timestamp: {stamp!r}.")
 
         return microseconds
 
