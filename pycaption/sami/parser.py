@@ -174,6 +174,10 @@ class SAMIParser(HTMLParser):
         :rtype: str | None
         """
         for attr, value in attrs:
+            if value is None:
+                # A valueless attribute (e.g. a bare ``class``) carries no
+                # language information; skip it rather than crashing.
+                continue
             if attr.lower() == "lang":
                 return value[:2]
             if attr.lower() == "class":
