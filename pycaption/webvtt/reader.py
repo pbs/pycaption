@@ -30,6 +30,7 @@ from .constants import (
     ALIGN_SETTING_MAP,
     CUE_SETTING_PATTERN,
     KNOWN_TAGS,
+    LINE_ALIGN_MAP,
     LINE_GRID_SIZE,
     LINE_HEIGHT_VH,
     POSITION_ALIGN_MAP,
@@ -354,9 +355,34 @@ class WebVTTReader(BaseReader):
         :returns: Caption instance.
         """
         self._close_unclosed_tags(nodes, open_tags)
+        self._adjust_default_line_position(nodes, layout_info)
         caption = Caption(start, end, nodes, layout_info=layout_info)
         self._check_line_overflow(caption)
         return caption
+
+    @staticmethod
+    def _adjust_default_line_position(nodes, layout_info):
+        """Adjust the default origin.y for multi-line cues.
+
+        When position: is set but line: is absent, origin.y defaults to
+        the last grid row. For multi-line cues this would extend beyond
+        the viewport. Push the top edge up by one row per extra line so
+        the bottom line stays at the viewport bottom.
+        """
+        if not layout_info or not layout_info.origin:
+            return
+        if not layout_info.webvtt_positioning:
+            return
+        if "line:" in layout_info.webvtt_positioning:
+            return
+        num_lines = sum(1 for n in nodes if n.type_ == CaptionNode.BREAK) + 1
+        if num_lines <= 1:
+            return
+        adjusted_y = (LINE_GRID_SIZE - num_lines) / LINE_GRID_SIZE * 100
+        layout_info.origin = Point(
+            layout_info.origin.x,
+            Size(max(0, adjusted_y), UnitEnum.PERCENT),
+        )
 
     @staticmethod
     def _check_line_overflow(caption):
@@ -824,7 +850,7 @@ class WebVTTReader(BaseReader):
         position_value, position_align = WebVTTReader._split_alignment(
             parsed.get("position", "")
         )
-        line_value, _ = WebVTTReader._split_alignment(parsed.get("line", ""))
+        line_value, line_align = WebVTTReader._split_alignment(parsed.get("line", ""))
 
         origin_x = WebVTTReader._parse_percent_value(position_value)
         origin_y = WebVTTReader._parse_line_value(line_value)
@@ -836,6 +862,7 @@ class WebVTTReader(BaseReader):
         pos_alignment = (
             POSITION_ALIGN_MAP.get(position_align) if position_align else None
         )
+        ln_alignment = LINE_ALIGN_MAP.get(line_align) if line_align else None
 
         origin = None
         if origin_y is not None or origin_x is not None:
@@ -857,6 +884,7 @@ class WebVTTReader(BaseReader):
             alignment=alignment,
             writing_direction=writing_direction,
             position_alignment=pos_alignment,
+            line_alignment=ln_alignment,
             webvtt_positioning=cue_settings,
             inherit_from=inherit_from,
         )

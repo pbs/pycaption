@@ -50,3 +50,5 @@ ai_artifacts/specs/*/standards_summary.md
 # Local-only developer documentation (not committed)
 pycaption/scripts/code_walkthrough/
 pycaption/scripts/differences/
+pycaption/examples
+examples/

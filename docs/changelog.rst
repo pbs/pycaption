@@ -5,9 +5,17 @@ Changelog
   - Fix ``WebVTTReader`` silently discarding the ``position:`` cue setting
     when ``line:`` is not present. The reader now creates a valid ``Layout``
     origin using the parsed horizontal position and a default vertical
-    position of 93.33% (WebVTT bottom-of-viewport equivalent). This
-    restores correct VTT→DFXP and VTT→SAMI conversions for position-only
-    cues.
+    position based on cue line count (last grid row for single-line cues,
+    adjusted upward by one row per extra line for multi-line cues so
+    content stays within the viewport). This restores correct VTT→DFXP
+    and VTT→SAMI conversions for position-only cues.
+
+  - Fix ``WebVTTReader`` silently discarding the ``line:`` alignment qualifier
+    (e.g. ``line:80%,center``). A new ``LineAlignmentEnum`` and
+    ``Layout.line_alignment`` field now store the qualifier, and the
+    ``DFXPWriter`` maps it to ``tts:displayAlign`` (start→before,
+    center→center, end→after). The ``WebVTTWriter`` non-passthrough path
+    also emits the qualifier when present.
 
 2.3.7
 ^^^^^^
