@@ -368,6 +368,8 @@ class WebVTTReader(BaseReader):
         layout = caption.layout_info
         if not layout or not layout.origin:
             return
+        if not layout.webvtt_positioning or "line:" not in layout.webvtt_positioning:
+            return
         origin_y = layout.origin.y
         if origin_y is None or origin_y.unit != UnitEnum.PERCENT:
             return
@@ -836,9 +838,14 @@ class WebVTTReader(BaseReader):
         )
 
         origin = None
-        if origin_y is not None:
+        if origin_y is not None or origin_x is not None:
             x = origin_x if origin_x is not None else Size(0, UnitEnum.PERCENT)
-            origin = Point(x, origin_y)
+            y = (
+                origin_y
+                if origin_y is not None
+                else Size((LINE_GRID_SIZE - 1) / LINE_GRID_SIZE * 100, UnitEnum.PERCENT)
+            )
+            origin = Point(x, y)
 
         extent = None
         if extent_horizontal is not None:
