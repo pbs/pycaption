@@ -1069,6 +1069,10 @@ class WebVTTReader(BaseReader):
                 props["color"] = prop_value
             elif prop_name == "background-color":
                 props["background-color"] = prop_value
+            elif prop_name == "font-family":
+                props["font-family"] = prop_value
+            elif prop_name == "font-size":
+                props["font-size"] = prop_value
 
         return props
 

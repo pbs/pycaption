@@ -1075,6 +1075,77 @@ class TestWebVTTStyleBlockParsing:
         assert "yellow" in styles
         assert styles["yellow"] == {"color": "yellow", "italics": True}
 
+    def test_font_family_parsed(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "STYLE\n"
+            '::cue { font-family: "Comic Sans MS" }\n\n'
+            "00:00:01.000 --> 00:00:03.000\n"
+            "<c.any>Hello</c>\n"
+        )
+        captions = self.reader.read(vtt)
+        styles = dict(captions.get_styles())
+
+        assert styles["::cue"] == {"font-family": '"Comic Sans MS"'}
+
+    def test_font_family_comma_separated_parsed(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "STYLE\n"
+            '::cue { font-family: Arial, "Helvetica Neue", sans-serif }\n\n'
+            "00:00:01.000 --> 00:00:03.000\n"
+            "<c.any>Hello</c>\n"
+        )
+        captions = self.reader.read(vtt)
+        styles = dict(captions.get_styles())
+
+        assert styles["::cue"] == {
+            "font-family": 'Arial, "Helvetica Neue", sans-serif'
+        }
+
+    def test_font_size_parsed(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "STYLE\n"
+            "::cue { font-size: 120% }\n\n"
+            "00:00:01.000 --> 00:00:03.000\n"
+            "<c.any>Hello</c>\n"
+        )
+        captions = self.reader.read(vtt)
+        styles = dict(captions.get_styles())
+
+        assert styles["::cue"] == {"font-size": "120%"}
+
+    def test_font_size_px_unit_preserved(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "STYLE\n"
+            "::cue { font-size: 18px }\n\n"
+            "00:00:01.000 --> 00:00:03.000\n"
+            "<c.any>Hello</c>\n"
+        )
+        captions = self.reader.read(vtt)
+        styles = dict(captions.get_styles())
+
+        assert styles["::cue"] == {"font-size": "18px"}
+
+    def test_class_font_properties(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "STYLE\n"
+            "::cue(.custom) { font-family: Arial; font-size: 1.2em }\n\n"
+            "00:00:01.000 --> 00:00:03.000\n"
+            "<c.custom>Hello</c>\n"
+        )
+        captions = self.reader.read(vtt)
+        cue = captions.get_captions("en-US")[0]
+
+        for node in cue.nodes:
+            if node.type_ == CaptionNode.STYLE and node.start:
+                assert node.content["font-family"] == "Arial"
+                assert node.content["font-size"] == "1.2em"
+                break
+
     def test_cascade_specificity(self, sample_webvtt_with_style_block_cascade):
         captions = self.reader.read(sample_webvtt_with_style_block_cascade)
         cue = captions.get_captions("en-US")[0]

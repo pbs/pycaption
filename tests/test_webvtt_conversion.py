@@ -563,6 +563,32 @@ class TestWebVTTtoDFXPStyles:
 
         assert 'tts:textDecoration="underline"' in result
 
+    def test_font_family_to_dfxp(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "STYLE\n"
+            "::cue(.fancy) { font-family: Arial }\n\n"
+            "00:00:01.000 --> 00:00:03.000\n"
+            "<c.fancy>Hello styled</c>\n"
+        )
+        caption_set = WebVTTReader().read(vtt)
+        result = DFXPWriter().write(caption_set)
+
+        assert 'tts:fontFamily="Arial"' in result
+
+    def test_font_size_to_dfxp(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "STYLE\n"
+            "::cue(.big) { font-size: 120% }\n\n"
+            "00:00:01.000 --> 00:00:03.000\n"
+            "<c.big>Hello styled</c>\n"
+        )
+        caption_set = WebVTTReader().read(vtt)
+        result = DFXPWriter().write(caption_set)
+
+        assert 'tts:fontSize="120%"' in result
+
     def test_classes_not_in_dfxp_output(self):
         from lxml import etree
 
