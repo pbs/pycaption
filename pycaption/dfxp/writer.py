@@ -4,6 +4,7 @@ Serializes pycaption CaptionSet objects into DFXP/TTML XML documents,
 including style elements, region-based positioning, and writing direction.
 """
 
+import re
 from copy import deepcopy
 from xml.sax.saxutils import escape
 
@@ -460,12 +461,44 @@ class RegionCreator:
                 region.extract()
 
 
+_CSS_LENGTH_RE = re.compile(r"^-?[\d.]+(?:px|em|%|pt|rem|c)?$")
+_CSS_COLOR_RE = re.compile(
+    r"^(?:#[0-9a-fA-F]{3,8}|rgba?\([^)]+\)|[a-zA-Z]{3,})$"
+)
+
+
+def _text_shadow_to_outline(value):
+    """Best-effort conversion of CSS text-shadow to tts:textOutline.
+
+    Extracts the color and a representative thickness from the first shadow
+    in the list. Returns "color thickness" or None if unparseable.
+    """
+    first_shadow = value.split(",")[0].strip()
+    tokens = first_shadow.split()
+    color = None
+    lengths = []
+    for token in tokens:
+        if _CSS_LENGTH_RE.match(token):
+            lengths.append(token)
+        elif _CSS_COLOR_RE.match(token):
+            color = token
+    if not lengths:
+        return None
+    if len(lengths) >= 3:
+        thickness = lengths[2]
+    else:
+        thickness = lengths[0]
+    if color:
+        return f"{color} {thickness}"
+    return thickness
+
+
 def _recreate_style(content, dfxp):
     """Convert an internal style dict to DFXP/TTS style attributes.
 
     Maps pycaption's internal keys (class, italics, bold, underline, color,
-    background-color, font-family, font-size, text-align, display-align)
-    to their tts: namespace equivalents.
+    background-color, font-family, font-size, text-shadow, text-align,
+    display-align) to their tts: namespace equivalents.
 
     :param content: internal style dictionary
     :type content: dict
@@ -493,10 +526,18 @@ def _recreate_style(content, dfxp):
         dfxp_style["tts:fontFamily"] = content["font-family"]
     if "font-size" in content:
         dfxp_style["tts:fontSize"] = content["font-size"]
+    if "text-shadow" in content:
+        outline = _text_shadow_to_outline(content["text-shadow"])
+        if outline:
+            dfxp_style["tts:textOutline"] = outline
     if "color" in content:
         dfxp_style["tts:color"] = content["color"]
     if "background-color" in content:
         dfxp_style["tts:backgroundColor"] = content["background-color"]
+    if "opacity" in content:
+        dfxp_style["tts:opacity"] = content["opacity"]
+    if "line-height" in content:
+        dfxp_style["tts:lineHeight"] = content["line-height"]
     if "display-align" in content:
         dfxp_style["tts:displayAlign"] = content["display-align"]
 

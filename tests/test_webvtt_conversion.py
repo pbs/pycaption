@@ -563,6 +563,84 @@ class TestWebVTTtoDFXPStyles:
 
         assert 'tts:textDecoration="underline"' in result
 
+    def test_font_family_to_dfxp(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "STYLE\n"
+            "::cue(.fancy) { font-family: Arial }\n\n"
+            "00:00:01.000 --> 00:00:03.000\n"
+            "<c.fancy>Hello styled</c>\n"
+        )
+        caption_set = WebVTTReader().read(vtt)
+        result = DFXPWriter().write(caption_set)
+
+        assert 'tts:fontFamily="Arial"' in result
+
+    def test_font_size_to_dfxp(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "STYLE\n"
+            "::cue(.big) { font-size: 120% }\n\n"
+            "00:00:01.000 --> 00:00:03.000\n"
+            "<c.big>Hello styled</c>\n"
+        )
+        caption_set = WebVTTReader().read(vtt)
+        result = DFXPWriter().write(caption_set)
+
+        assert 'tts:fontSize="120%"' in result
+
+    def test_text_shadow_to_dfxp(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "STYLE\n"
+            "::cue(.shadow) { text-shadow: 2px 2px 4px black }\n\n"
+            "00:00:01.000 --> 00:00:03.000\n"
+            "<c.shadow>Hello styled</c>\n"
+        )
+        caption_set = WebVTTReader().read(vtt)
+        result = DFXPWriter().write(caption_set)
+
+        assert 'tts:textOutline="black 4px"' in result
+
+    def test_text_shadow_no_blur_to_dfxp(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "STYLE\n"
+            "::cue(.shadow) { text-shadow: 1px 1px black }\n\n"
+            "00:00:01.000 --> 00:00:03.000\n"
+            "<c.shadow>Hello styled</c>\n"
+        )
+        caption_set = WebVTTReader().read(vtt)
+        result = DFXPWriter().write(caption_set)
+
+        assert 'tts:textOutline="black 1px"' in result
+
+    def test_opacity_to_dfxp(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "STYLE\n"
+            "::cue(.faded) { opacity: 0.8 }\n\n"
+            "00:00:01.000 --> 00:00:03.000\n"
+            "<c.faded>Hello styled</c>\n"
+        )
+        caption_set = WebVTTReader().read(vtt)
+        result = DFXPWriter().write(caption_set)
+
+        assert 'tts:opacity="0.8"' in result
+
+    def test_line_height_to_dfxp(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "STYLE\n"
+            "::cue(.spaced) { line-height: 1.5 }\n\n"
+            "00:00:01.000 --> 00:00:03.000\n"
+            "<c.spaced>Hello styled</c>\n"
+        )
+        caption_set = WebVTTReader().read(vtt)
+        result = DFXPWriter().write(caption_set)
+
+        assert 'tts:lineHeight="1.5"' in result
+
     def test_classes_not_in_dfxp_output(self):
         from lxml import etree
 

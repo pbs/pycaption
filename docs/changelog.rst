@@ -17,6 +17,19 @@ Changelog
     center→center, end→after). The ``WebVTTWriter`` non-passthrough path
     also emits the qualifier when present.
 
+  - Add ``font-family``, ``font-size``, ``text-shadow``, ``opacity``, and
+    ``line-height`` CSS property parsing to ``WebVTTReader``. These values
+    are now preserved through VTT→VTT and VTT→SAMI conversions, and mapped
+    to ``tts:fontFamily``, ``tts:fontSize``, ``tts:textOutline``,
+    ``tts:opacity``, and ``tts:lineHeight`` in DFXP output. Base ``::cue``
+    styles using these properties now correctly cascade to bare text (not
+    only class-scoped spans) in DFXP and SAMI output.
+
+  - Fix ``SAMIReader`` not recognizing ``text-align`` when it is not the
+    first property in an inline ``Style=""`` attribute. The leading
+    whitespace from semicolon splitting was not stripped, causing the
+    property name comparison to fail silently.
+
 2.3.7
 ^^^^^^
   - Fix ``SCCWriter`` merging multi-line captions into a single line when

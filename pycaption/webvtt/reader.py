@@ -1041,9 +1041,8 @@ class WebVTTReader(BaseReader):
     def _parse_css_declarations(declarations):
         """Parse CSS declaration text into pycaption's style dict.
 
-        Only maps properties pycaption can represent: font-style,
-        font-weight, text-decoration, color, background-color.
-        All other properties are silently ignored.
+        Maps recognized CSS properties to pycaption's internal style dict.
+        Unrecognized properties are silently ignored.
 
         :param declarations: CSS declarations string (between braces).
         :returns: Dict of recognized style properties.
@@ -1069,6 +1068,16 @@ class WebVTTReader(BaseReader):
                 props["color"] = prop_value
             elif prop_name == "background-color":
                 props["background-color"] = prop_value
+            elif prop_name == "font-family":
+                props["font-family"] = prop_value
+            elif prop_name == "font-size":
+                props["font-size"] = prop_value
+            elif prop_name == "text-shadow":
+                props["text-shadow"] = prop_value
+            elif prop_name == "opacity":
+                props["opacity"] = prop_value
+            elif prop_name == "line-height":
+                props["line-height"] = prop_value
 
         return props
 
@@ -1143,6 +1152,9 @@ class WebVTTReader(BaseReader):
             "background-color",
             "font-family",
             "font-size",
+            "text-shadow",
+            "opacity",
+            "line-height",
         }
         base_text_props = {
             k: v for k, v in base_style.items() if k in _VISUAL_KEYS and v

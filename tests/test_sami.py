@@ -121,6 +121,22 @@ class TestSAMIReader(ReaderTestingMixIn):
 
         assert caption.layout_info.alignment.horizontal == HorizontalAlignmentEnum.LEFT
 
+    def test_text_align_recognized_after_other_property(self):
+        sami = (
+            "<SAMI><HEAD><STYLE TYPE=\"Text/css\">\n"
+            "P { margin-left: 20px; }\n"
+            ".ENCC { Name: 'Subtitles'; Lang: en-US; SAMIType: CC; }\n"
+            "</STYLE></HEAD><BODY>\n"
+            "<SYNC start=\"100\">\n"
+            '<P class="ENCC" Style="color:white; text-align:right;">'
+            "Hello</P>\n"
+            "</SYNC></BODY></SAMI>"
+        )
+        caption_set = self.reader.read(sami)
+        caption = caption_set.get_captions("en-US")[0]
+
+        assert caption.layout_info.alignment.horizontal == HorizontalAlignmentEnum.RIGHT
+
     def test_sami_including_hexadecimal_charref(
         self, sample_sami_including_hexadecimal_charref
     ):
