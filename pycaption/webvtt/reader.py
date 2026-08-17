@@ -1069,7 +1069,7 @@ class WebVTTReader(BaseReader):
             elif prop_name == "background-color":
                 props["background-color"] = prop_value
             elif prop_name == "font-family":
-                props["font-family"] = prop_value
+                props["font-family"] = prop_value.replace('"', "").replace("'", "")
             elif prop_name == "font-size":
                 props["font-size"] = prop_value
             elif prop_name == "text-shadow":

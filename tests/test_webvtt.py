@@ -1086,7 +1086,22 @@ class TestWebVTTStyleBlockParsing:
         captions = self.reader.read(vtt)
         styles = dict(captions.get_styles())
 
-        assert styles["::cue"] == {"font-family": 'Arial, "Helvetica Neue", sans-serif'}
+        assert styles["::cue"] == {"font-family": "Arial, Helvetica Neue, sans-serif"}
+
+    def test_quoted_font_family_roundtrips_with_quotes(self):
+        from pycaption import WebVTTWriter
+
+        vtt = (
+            "WEBVTT\n\n"
+            "STYLE\n"
+            '::cue(.fancy) { font-family: "Courier New", monospace }\n\n'
+            "00:00:01.000 --> 00:00:03.000\n"
+            "<c.fancy>Hello</c>\n"
+        )
+        captions = self.reader.read(vtt)
+        result = WebVTTWriter().write(captions)
+
+        assert 'font-family: "Courier New", monospace' in result
 
     def test_font_size_parsed(self):
         vtt = (

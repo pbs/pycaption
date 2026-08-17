@@ -37,6 +37,10 @@ Changelog
     cascade with higher specificity than single-class selectors, and
     round-trip correctly through ``WebVTTWriter`` and ``DFXPWriter``.
 
+  - Fix quoted ``font-family`` names (e.g. ``"Helvetica Neue"``) producing
+    malformed XML in DFXP output. The reader now strips CSS quotes at parse
+    time, and ``WebVTTWriter`` re-quotes multi-word font names on output.
+
 2.3.7
 ^^^^^^
   - Fix ``SCCWriter`` merging multi-line captions into a single line when
