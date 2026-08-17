@@ -1069,7 +1069,7 @@ class WebVTTReader(BaseReader):
             elif prop_name == "background-color":
                 props["background-color"] = prop_value
             elif prop_name == "font-family":
-                props["font-family"] = prop_value
+                props["font-family"] = prop_value.replace('"', "").replace("'", "")
             elif prop_name == "font-size":
                 props["font-size"] = prop_value
             elif prop_name == "text-shadow":
@@ -1110,8 +1110,8 @@ class WebVTTReader(BaseReader):
     def _apply_cascade(content, styles, base_style):
         """Merge base and class-resolved styles into a node's content dict.
 
-        Resolution order: base (::cue) → each class in order. Existing
-        keys in content are not overwritten (inline > cascade).
+        Resolution order: base (::cue) → single class → compound selectors.
+        Existing keys in content are not overwritten (inline > cascade).
 
         :param content: The STYLE node's content dict (mutated in place).
         :param styles: Full styles dict with class entries.
@@ -1128,6 +1128,12 @@ class WebVTTReader(BaseReader):
             class_style = styles.get(class_name, {})
             if class_style:
                 resolved.update(class_style)
+
+        if len(classes) > 1:
+            class_set = set(classes)
+            for key, style in styles.items():
+                if "." in key and set(key.split(".")).issubset(class_set):
+                    resolved.update(style)
 
         for key, value in resolved.items():
             if key not in content:

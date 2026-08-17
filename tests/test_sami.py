@@ -123,11 +123,11 @@ class TestSAMIReader(ReaderTestingMixIn):
 
     def test_text_align_recognized_after_other_property(self):
         sami = (
-            "<SAMI><HEAD><STYLE TYPE=\"Text/css\">\n"
+            '<SAMI><HEAD><STYLE TYPE="Text/css">\n'
             "P { margin-left: 20px; }\n"
             ".ENCC { Name: 'Subtitles'; Lang: en-US; SAMIType: CC; }\n"
             "</STYLE></HEAD><BODY>\n"
-            "<SYNC start=\"100\">\n"
+            '<SYNC start="100">\n'
             '<P class="ENCC" Style="color:white; text-align:right;">'
             "Hello</P>\n"
             "</SYNC></BODY></SAMI>"

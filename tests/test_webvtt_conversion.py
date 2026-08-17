@@ -576,6 +576,22 @@ class TestWebVTTtoDFXPStyles:
 
         assert 'tts:fontFamily="Arial"' in result
 
+    def test_quoted_font_family_to_valid_dfxp(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "STYLE\n"
+            '::cue(.fancy) { font-family: "Helvetica Neue", Arial, sans-serif }\n\n'
+            "00:00:01.000 --> 00:00:03.000\n"
+            "<c.fancy>Hello styled</c>\n"
+        )
+        caption_set = WebVTTReader().read(vtt)
+        result = DFXPWriter().write(caption_set)
+
+        assert 'tts:fontFamily="Helvetica Neue, Arial, sans-serif"' in result
+        from lxml import etree
+
+        etree.fromstring(result.encode("utf-8"))
+
     def test_font_size_to_dfxp(self):
         vtt = (
             "WEBVTT\n\n"
@@ -640,6 +656,19 @@ class TestWebVTTtoDFXPStyles:
         result = DFXPWriter().write(caption_set)
 
         assert 'tts:lineHeight="1.5"' in result
+
+    def test_compound_selector_to_dfxp(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "STYLE\n"
+            "::cue(.bold.yellow) { color: yellow }\n\n"
+            "00:00:01.000 --> 00:00:03.000\n"
+            "<c.bold.yellow>Hello styled</c>\n"
+        )
+        caption_set = WebVTTReader().read(vtt)
+        result = DFXPWriter().write(caption_set)
+
+        assert 'tts:color="yellow"' in result
 
     def test_classes_not_in_dfxp_output(self):
         from lxml import etree

@@ -462,9 +462,7 @@ class RegionCreator:
 
 
 _CSS_LENGTH_RE = re.compile(r"^-?[\d.]+(?:px|em|%|pt|rem|c)?$")
-_CSS_COLOR_RE = re.compile(
-    r"^(?:#[0-9a-fA-F]{3,8}|rgba?\([^)]+\)|[a-zA-Z]{3,})$"
-)
+_CSS_COLOR_RE = re.compile(r"^(?:#[0-9a-fA-F]{3,8}|rgba?\([^)]+\)|[a-zA-Z]{3,})$")
 
 
 def _text_shadow_to_outline(value):

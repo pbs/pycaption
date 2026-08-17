@@ -229,8 +229,16 @@ class WebVTTWriter(BaseWriter):
                 css_prop, css_val = cls._INTERNAL_TO_CSS[k]
                 declarations.append(f"{css_prop}: {css_val}")
             elif k not in cls._INTERNAL_STYLE_KEYS:
+                if k == "font-family":
+                    v = cls._quote_font_family(v)
                 declarations.append(f"{k}: {v}")
         return "; ".join(declarations)
+
+    @staticmethod
+    def _quote_font_family(value):
+        """Re-quote multi-word font names for valid CSS output."""
+        parts = [p.strip() for p in value.split(",")]
+        return ", ".join(f'"{p}"' if " " in p else p for p in parts)
 
     _STYLE_TO_TAG = {
         "italics": ("<i>", "</i>"),
