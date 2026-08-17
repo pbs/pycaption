@@ -303,6 +303,32 @@ class TestWebVTTCueSettingsConversion:
 
         assert "position:50% line:80% align:center" in result
 
+    def test_line_alignment_center_to_dfxp(self):
+        vtt = "WEBVTT\n\n" "00:00:01.000 --> 00:00:03.000 line:50%,center\n" "Hello\n"
+        caption_set = WebVTTReader().read(vtt)
+        result = DFXPWriter().write(caption_set)
+
+        assert 'tts:displayAlign="center"' in result
+
+    def test_line_alignment_vtt_non_passthrough_roundtrip(self):
+        vtt = "WEBVTT\n\n" "00:00:01.000 --> 00:00:03.000 line:80%,center\n" "Hello\n"
+        caption_set = WebVTTReader().read(vtt)
+        for caption in caption_set.get_captions("en-US"):
+            caption.layout_info.webvtt_positioning = None
+        result = WebVTTWriter().write(caption_set)
+
+        assert "line:80%,center" in result
+
+    def test_line_alignment_absent_no_qualifier_in_vtt_output(self):
+        vtt = "WEBVTT\n\n" "00:00:01.000 --> 00:00:03.000 line:80%\n" "Hello\n"
+        caption_set = WebVTTReader().read(vtt)
+        for caption in caption_set.get_captions("en-US"):
+            caption.layout_info.webvtt_positioning = None
+        result = WebVTTWriter().write(caption_set)
+
+        assert "line:80%" in result
+        assert "line:80%," not in result
+
     def test_style_block_to_sami_no_invalid_selector(self):
         vtt = (
             "WEBVTT\n\n"

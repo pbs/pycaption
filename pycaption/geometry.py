@@ -68,6 +68,15 @@ class PositionAlignmentEnum(Enum):
     LINE_RIGHT = "line-right"
 
 
+class LineAlignmentEnum(Enum):
+    """WebVTT line alignment: how the cue box is positioned relative to
+    the line setting value (start, center, or end of the cue box)."""
+
+    START = "start"
+    CENTER = "center"
+    END = "end"
+
+
 class WritingDirectionEnum(Enum):
     """Specifies WebVTT writing direction (vertical cue setting)."""
 
@@ -609,6 +618,7 @@ class Layout:
         webvtt_positioning=None,
         writing_direction=None,
         position_alignment=None,
+        line_alignment=None,
         inherit_from=None,
     ):
         """
@@ -638,6 +648,10 @@ class Layout:
         :param position_alignment: Which edge of the cue box the position
             percentage anchors to (line-left, center, or line-right).
 
+        :type line_alignment: LineAlignmentEnum
+        :param line_alignment: How the cue box is vertically aligned relative
+            to the line position (start, center, or end).
+
         :type inherit_from: Layout
         :param inherit_from: A Layout with the positioning parameters to be
             used if not specified by the positioning arguments,
@@ -650,6 +664,7 @@ class Layout:
         self.webvtt_positioning = webvtt_positioning
         self.writing_direction = writing_direction
         self.position_alignment = position_alignment
+        self.line_alignment = line_alignment
 
         if inherit_from:
             for attr_name in [
@@ -659,6 +674,7 @@ class Layout:
                 "alignment",
                 "writing_direction",
                 "position_alignment",
+                "line_alignment",
             ]:
                 attr = getattr(self, attr_name)
                 if not attr:
@@ -674,6 +690,7 @@ class Layout:
                 self.webvtt_positioning,
                 self.writing_direction,
                 self.position_alignment,
+                self.line_alignment,
             )
         )
 
@@ -692,6 +709,7 @@ class Layout:
             None if not self.alignment else self.alignment.serialized(),
             self.writing_direction,
             self.position_alignment,
+            self.line_alignment,
         )
 
     def __eq__(self, other: object) -> bool:
@@ -704,6 +722,7 @@ class Layout:
             and self.alignment == other.alignment
             and self.writing_direction == other.writing_direction
             and self.position_alignment == other.position_alignment
+            and self.line_alignment == other.line_alignment
         )
 
     def __hash__(self):
@@ -714,6 +733,7 @@ class Layout:
             + hash(self.alignment) * 5
             + hash(self.writing_direction) * 19
             + hash(self.position_alignment) * 23
+            + hash(self.line_alignment) * 29
             + 17
         )
 
@@ -735,6 +755,7 @@ class Layout:
             "alignment": self.alignment,
             "writing_direction": self.writing_direction,
             "position_alignment": self.position_alignment,
+            "line_alignment": self.line_alignment,
         }
         for attr_name in ["origin", "extent", "padding"]:
             attr = getattr(self, attr_name)
@@ -786,6 +807,7 @@ class Layout:
             padding=self.padding,
             alignment=self.alignment,
             writing_direction=self.writing_direction,
+            line_alignment=self.line_alignment,
         )
 
     def _resolve_position_alignment(self):

@@ -17,6 +17,7 @@ from pycaption import (
 from pycaption.base import CaptionNode
 from pycaption.geometry import (
     HorizontalAlignmentEnum,
+    LineAlignmentEnum,
     PositionAlignmentEnum,
     Size,
     UnitEnum,
@@ -963,6 +964,39 @@ Hello
         layout = cue.layout_info
 
         assert layout.origin.y == Size(80, UnitEnum.PERCENT)
+        assert layout.line_alignment == LineAlignmentEnum.CENTER
+
+    def test_line_alignment_end_stored(self):
+        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000 line:80%,end\nHello\n"
+        captions = self.reader.read(vtt)
+        cue = captions.get_captions("en-US")[0]
+
+        assert cue.layout_info.line_alignment == LineAlignmentEnum.END
+
+    def test_line_alignment_none_when_absent(self):
+        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000 line:80%\nHello\n"
+        captions = self.reader.read(vtt)
+        cue = captions.get_captions("en-US")[0]
+
+        assert cue.layout_info.line_alignment is None
+
+    def test_default_line_adjusts_for_multiline_cue(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "00:00:01.000 --> 00:00:03.000 position:50%\n"
+            "Line one\nLine two\nLine three\n"
+        )
+        captions = self.reader.read(vtt)
+        cue = captions.get_captions("en-US")[0]
+
+        assert cue.layout_info.origin.y == Size(80, UnitEnum.PERCENT)
+
+    def test_default_line_unchanged_for_single_line_cue(self):
+        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000 position:50%\nHello\n"
+        captions = self.reader.read(vtt)
+        cue = captions.get_captions("en-US")[0]
+
+        assert cue.layout_info.origin.y == Size((14 / 15) * 100, UnitEnum.PERCENT)
 
     def test_line_only_origin_x_defaults_to_zero(self):
         vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000 line:80%\nHello\n"

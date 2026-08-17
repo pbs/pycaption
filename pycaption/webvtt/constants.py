@@ -6,7 +6,7 @@ docstrings below each pattern explain what they capture and give examples.
 
 import re
 
-from ..geometry import HorizontalAlignmentEnum, PositionAlignmentEnum
+from ..geometry import HorizontalAlignmentEnum, LineAlignmentEnum, PositionAlignmentEnum
 
 TIMING_LINE_PATTERN = re.compile(r"^(\S+)\s+-->\s+(\S+)(?:\s+(.*?))?\s*$")
 """
@@ -110,6 +110,13 @@ POSITION_ALIGN_MAP = {
     "end": PositionAlignmentEnum.LINE_RIGHT,
 }
 """Maps WebVTT positionAlign qualifier strings to PositionAlignmentEnum."""
+
+LINE_ALIGN_MAP = {
+    "start": LineAlignmentEnum.START,
+    "center": LineAlignmentEnum.CENTER,
+    "end": LineAlignmentEnum.END,
+}
+"""Maps WebVTT lineAlign qualifier strings to LineAlignmentEnum."""
 
 
 def _is_note_start(line):

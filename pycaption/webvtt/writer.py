@@ -442,7 +442,10 @@ class WebVTTWriter(BaseWriter):
         if left_offset is not None:
             cue_settings += f" position:{left_offset}"
         if top_offset is not None:
-            cue_settings += f" line:{top_offset}"
+            line_part = f" line:{top_offset}"
+            if layout.line_alignment:
+                line_part += f",{layout.line_alignment.value}"
+            cue_settings += line_part
         if cue_width is not None:
             cue_settings += f" size:{cue_width}"
 

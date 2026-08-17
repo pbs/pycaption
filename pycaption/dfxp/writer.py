@@ -10,7 +10,7 @@ from xml.sax.saxutils import escape
 from bs4 import BeautifulSoup
 
 from ..base import BaseWriter, CaptionNode
-from ..geometry import HorizontalAlignmentEnum, WritingDirectionEnum
+from ..geometry import HorizontalAlignmentEnum, LineAlignmentEnum, WritingDirectionEnum
 from .constants import (
     DFXP_ATTR_XML_ID,
     DFXP_ATTR_XML_LANG,
@@ -28,6 +28,12 @@ from .constants import (
 _WRITING_DIRECTION_TO_DFXP = {
     WritingDirectionEnum.VERTICAL_RL: "tbrl",
     WritingDirectionEnum.VERTICAL_LR: "tblr",
+}
+
+_LINE_ALIGNMENT_TO_DISPLAY_ALIGN = {
+    LineAlignmentEnum.START: "before",
+    LineAlignmentEnum.CENTER: "center",
+    LineAlignmentEnum.END: "after",
 }
 
 
@@ -535,5 +541,10 @@ def _convert_layout_to_attributes(layout, fallback_alignment=None):
     writing_mode = _WRITING_DIRECTION_TO_DFXP.get(layout.writing_direction)
     if writing_mode:
         result["tts:writingMode"] = writing_mode
+
+    if layout.line_alignment:
+        display_align = _LINE_ALIGNMENT_TO_DISPLAY_ALIGN.get(layout.line_alignment)
+        if display_align:
+            result["tts:displayAlign"] = display_align
 
     return result
