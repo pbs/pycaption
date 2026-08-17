@@ -263,7 +263,7 @@ class SAMIReader(BaseReader):
         for style in styles:
             style = style.split(":")
             if len(style) == 2:
-                css_property, value = style
+                css_property, value = style[0].strip(), style[1]
             else:
                 continue
             if css_property == "text-align":

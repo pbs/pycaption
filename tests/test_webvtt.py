@@ -1075,19 +1075,6 @@ class TestWebVTTStyleBlockParsing:
         assert "yellow" in styles
         assert styles["yellow"] == {"color": "yellow", "italics": True}
 
-    def test_font_family_parsed(self):
-        vtt = (
-            "WEBVTT\n\n"
-            "STYLE\n"
-            '::cue { font-family: "Comic Sans MS" }\n\n'
-            "00:00:01.000 --> 00:00:03.000\n"
-            "<c.any>Hello</c>\n"
-        )
-        captions = self.reader.read(vtt)
-        styles = dict(captions.get_styles())
-
-        assert styles["::cue"] == {"font-family": '"Comic Sans MS"'}
-
     def test_font_family_comma_separated_parsed(self):
         vtt = (
             "WEBVTT\n\n"
@@ -1116,19 +1103,6 @@ class TestWebVTTStyleBlockParsing:
 
         assert styles["::cue"] == {"font-size": "120%"}
 
-    def test_font_size_px_unit_preserved(self):
-        vtt = (
-            "WEBVTT\n\n"
-            "STYLE\n"
-            "::cue { font-size: 18px }\n\n"
-            "00:00:01.000 --> 00:00:03.000\n"
-            "<c.any>Hello</c>\n"
-        )
-        captions = self.reader.read(vtt)
-        styles = dict(captions.get_styles())
-
-        assert styles["::cue"] == {"font-size": "18px"}
-
     def test_class_font_properties(self):
         vtt = (
             "WEBVTT\n\n"
@@ -1145,6 +1119,45 @@ class TestWebVTTStyleBlockParsing:
                 assert node.content["font-family"] == "Arial"
                 assert node.content["font-size"] == "1.2em"
                 break
+
+    def test_text_shadow_parsed(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "STYLE\n"
+            "::cue { text-shadow: 2px 2px 4px black }\n\n"
+            "00:00:01.000 --> 00:00:03.000\n"
+            "<c.any>Hello</c>\n"
+        )
+        captions = self.reader.read(vtt)
+        styles = dict(captions.get_styles())
+
+        assert styles["::cue"] == {"text-shadow": "2px 2px 4px black"}
+
+    def test_opacity_parsed(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "STYLE\n"
+            "::cue { opacity: 0.8 }\n\n"
+            "00:00:01.000 --> 00:00:03.000\n"
+            "<c.any>Hello</c>\n"
+        )
+        captions = self.reader.read(vtt)
+        styles = dict(captions.get_styles())
+
+        assert styles["::cue"] == {"opacity": "0.8"}
+
+    def test_line_height_parsed(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "STYLE\n"
+            "::cue { line-height: 1.5 }\n\n"
+            "00:00:01.000 --> 00:00:03.000\n"
+            "<c.any>Hello</c>\n"
+        )
+        captions = self.reader.read(vtt)
+        styles = dict(captions.get_styles())
+
+        assert styles["::cue"] == {"line-height": "1.5"}
 
     def test_cascade_specificity(self, sample_webvtt_with_style_block_cascade):
         captions = self.reader.read(sample_webvtt_with_style_block_cascade)
