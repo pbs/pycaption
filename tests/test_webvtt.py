@@ -10,6 +10,7 @@ from pycaption import (
     DFXPReader,
     DFXPWriter,
     SAMIReader,
+    SAMIWriter,
     WebVTTReader,
     WebVTTWriter,
 )
@@ -781,13 +782,17 @@ class TestWebVTTCueSettingsParsing:
         expected = "position:10% line:80% size:60% align:start"
         assert layout.webvtt_positioning == expected
 
-    def test_position_only_no_origin(self):
+    def test_position_only_uses_default_y(self):
         vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000 position:50%\nHello\n"
         captions = self.reader.read(vtt)
         cue = captions.get_captions("en-US")[0]
         layout = cue.layout_info
 
-        assert layout.origin is None
+        expected_y = (15 - 1) / 15 * 100  # ~93.33%
+        assert layout.origin is not None
+        assert layout.origin.x == Size(50, UnitEnum.PERCENT)
+        assert layout.origin.y.unit == UnitEnum.PERCENT
+        assert abs(layout.origin.y.value - expected_y) < 0.01
         assert layout.webvtt_positioning == "position:50%"
 
     def test_region_with_cue_override(self):
@@ -958,6 +963,57 @@ Hello
         layout = cue.layout_info
 
         assert layout.origin.y == Size(80, UnitEnum.PERCENT)
+
+    def test_line_only_origin_x_defaults_to_zero(self):
+        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000 line:80%\nHello\n"
+        captions = self.reader.read(vtt)
+        cue = captions.get_captions("en-US")[0]
+        layout = cue.layout_info
+
+        assert layout.origin is not None
+        assert layout.origin.x == Size(0, UnitEnum.PERCENT)
+        assert layout.origin.y == Size(80, UnitEnum.PERCENT)
+
+    def test_neither_position_nor_line_origin_is_none(self):
+        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\nHello\n"
+        captions = self.reader.read(vtt)
+        cue = captions.get_captions("en-US")[0]
+
+        assert cue.layout_info is None or cue.layout_info.origin is None
+
+    def test_position_only_dfxp_output_has_horizontal(self):
+        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000 position:70%\nHello\n"
+        captions = self.reader.read(vtt)
+        output = DFXPWriter().write(captions)
+
+        assert "70%" in output
+        assert "tts:origin" in output
+
+    def test_position_only_sami_output_has_margin_left(self):
+        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000 position:70%\nHello\n"
+        captions = self.reader.read(vtt)
+        output = SAMIWriter().write(captions)
+
+        assert "margin-left" in output
+
+    def test_position_only_no_false_overflow_warning(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "00:00:01.000 --> 00:00:03.000 position:70%\n"
+            "Line one\n"
+            "Line two\n"
+        )
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            self.reader.read(vtt)
+
+        overflow_warnings = [
+            w
+            for w in caught
+            if issubclass(w.category, CaptionReadWarning)
+            and "extends beyond viewport" in str(w.message)
+        ]
+        assert len(overflow_warnings) == 0
 
 
 class TestWebVTTStyleBlockParsing:

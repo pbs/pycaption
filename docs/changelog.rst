@@ -1,5 +1,14 @@
 Changelog
 ---------
+2.3.8
+^^^^^^
+  - Fix ``WebVTTReader`` silently discarding the ``position:`` cue setting
+    when ``line:`` is not present. The reader now creates a valid ``Layout``
+    origin using the parsed horizontal position and a default vertical
+    position of 93.33% (WebVTT bottom-of-viewport equivalent). This
+    restores correct VTT→DFXP and VTT→SAMI conversions for position-only
+    cues.
+
 2.3.7
 ^^^^^^
   - Fix ``SCCWriter`` merging multi-line captions into a single line when
