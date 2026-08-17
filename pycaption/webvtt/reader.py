@@ -1110,8 +1110,8 @@ class WebVTTReader(BaseReader):
     def _apply_cascade(content, styles, base_style):
         """Merge base and class-resolved styles into a node's content dict.
 
-        Resolution order: base (::cue) → each class in order. Existing
-        keys in content are not overwritten (inline > cascade).
+        Resolution order: base (::cue) → single class → compound selectors.
+        Existing keys in content are not overwritten (inline > cascade).
 
         :param content: The STYLE node's content dict (mutated in place).
         :param styles: Full styles dict with class entries.
@@ -1128,6 +1128,12 @@ class WebVTTReader(BaseReader):
             class_style = styles.get(class_name, {})
             if class_style:
                 resolved.update(class_style)
+
+        if len(classes) > 1:
+            class_set = set(classes)
+            for key, style in styles.items():
+                if "." in key and set(key.split(".")).issubset(class_set):
+                    resolved.update(style)
 
         for key, value in resolved.items():
             if key not in content:

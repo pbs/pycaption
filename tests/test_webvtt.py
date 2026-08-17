@@ -1086,9 +1086,7 @@ class TestWebVTTStyleBlockParsing:
         captions = self.reader.read(vtt)
         styles = dict(captions.get_styles())
 
-        assert styles["::cue"] == {
-            "font-family": 'Arial, "Helvetica Neue", sans-serif'
-        }
+        assert styles["::cue"] == {"font-family": 'Arial, "Helvetica Neue", sans-serif'}
 
     def test_font_size_parsed(self):
         vtt = (
@@ -1158,6 +1156,116 @@ class TestWebVTTStyleBlockParsing:
         styles = dict(captions.get_styles())
 
         assert styles["::cue"] == {"line-height": "1.5"}
+
+    def test_compound_selector_parsed(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "STYLE\n"
+            "::cue(.bold.yellow) { color: yellow }\n\n"
+            "00:00:01.000 --> 00:00:03.000\n"
+            "<c.bold.yellow>Hello</c>\n"
+        )
+        captions = self.reader.read(vtt)
+        styles = dict(captions.get_styles())
+
+        assert "bold.yellow" in styles
+        assert styles["bold.yellow"] == {"color": "yellow"}
+
+    def test_compound_selector_cascades_to_span(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "STYLE\n"
+            "::cue(.bold.yellow) { color: yellow }\n\n"
+            "00:00:01.000 --> 00:00:03.000\n"
+            "<c.bold.yellow>Hello</c>\n"
+        )
+        captions = self.reader.read(vtt)
+        cue = captions.get_captions("en-US")[0]
+
+        for node in cue.nodes:
+            if node.type_ == CaptionNode.STYLE and node.start:
+                assert node.content.get("color") == "yellow"
+                break
+
+    def test_compound_selector_no_partial_match(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "STYLE\n"
+            "::cue(.bold.yellow) { color: yellow }\n\n"
+            "00:00:01.000 --> 00:00:03.000\n"
+            "<c.bold>Hello</c>\n"
+        )
+        captions = self.reader.read(vtt)
+        cue = captions.get_captions("en-US")[0]
+
+        for node in cue.nodes:
+            if node.type_ == CaptionNode.STYLE and node.start:
+                assert "color" not in node.content
+                break
+
+    def test_compound_selector_vtt_roundtrip(self):
+        from pycaption import WebVTTWriter
+
+        vtt = (
+            "WEBVTT\n\n"
+            "STYLE\n"
+            "::cue(.bold.yellow) { color: yellow }\n\n"
+            "00:00:01.000 --> 00:00:03.000\n"
+            "<c.bold.yellow>Hello</c>\n"
+        )
+        captions = self.reader.read(vtt)
+        result = WebVTTWriter().write(captions)
+
+        assert "::cue(.bold.yellow)" in result
+
+    def test_compound_selector_three_classes(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "STYLE\n"
+            "::cue(.a.b.c) { color: red }\n\n"
+            "00:00:01.000 --> 00:00:03.000\n"
+            "<c.a.b.c>Hello</c>\n"
+        )
+        captions = self.reader.read(vtt)
+        cue = captions.get_captions("en-US")[0]
+
+        for node in cue.nodes:
+            if node.type_ == CaptionNode.STYLE and node.start:
+                assert node.content.get("color") == "red"
+                break
+
+    def test_compound_selector_superset_span(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "STYLE\n"
+            "::cue(.bold.yellow) { color: gold }\n\n"
+            "00:00:01.000 --> 00:00:03.000\n"
+            "<c.bold.yellow.italic>Hello</c>\n"
+        )
+        captions = self.reader.read(vtt)
+        cue = captions.get_captions("en-US")[0]
+
+        for node in cue.nodes:
+            if node.type_ == CaptionNode.STYLE and node.start:
+                assert node.content.get("color") == "gold"
+                break
+
+    def test_compound_selector_overrides_single(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "STYLE\n"
+            "::cue(.bold) { color: white }\n"
+            "::cue(.bold.yellow) { color: gold }\n\n"
+            "00:00:01.000 --> 00:00:03.000\n"
+            "<c.bold.yellow>Hello</c>\n"
+        )
+        captions = self.reader.read(vtt)
+        cue = captions.get_captions("en-US")[0]
+
+        for node in cue.nodes:
+            if node.type_ == CaptionNode.STYLE and node.start:
+                assert node.content.get("color") == "gold"
+                break
 
     def test_cascade_specificity(self, sample_webvtt_with_style_block_cascade):
         captions = self.reader.read(sample_webvtt_with_style_block_cascade)

@@ -60,7 +60,9 @@ Matches individual cue settings from the timing line, including optional
 comma-separated alignment qualifiers per W3C WebVTT spec:
 position:50%  position:50%,line-left  line:80%,center  align:center
 """
-STYLE_SELECTOR_PATTERN = re.compile(r"::cue(?:\((\.?[\w-]+)\))?\s*\{([^}]*)\}")
+STYLE_SELECTOR_PATTERN = re.compile(
+    r"::cue(?:\((\.[\w-]+(?:\.[\w-]+)*|[\w-]+)\))?\s*\{([^}]*)\}"
+)
 """
 Matches ::cue selectors with their declaration blocks:
 ::cue { color: white }           -> group(1)=None

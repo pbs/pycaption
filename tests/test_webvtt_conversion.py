@@ -641,6 +641,19 @@ class TestWebVTTtoDFXPStyles:
 
         assert 'tts:lineHeight="1.5"' in result
 
+    def test_compound_selector_to_dfxp(self):
+        vtt = (
+            "WEBVTT\n\n"
+            "STYLE\n"
+            "::cue(.bold.yellow) { color: yellow }\n\n"
+            "00:00:01.000 --> 00:00:03.000\n"
+            "<c.bold.yellow>Hello styled</c>\n"
+        )
+        caption_set = WebVTTReader().read(vtt)
+        result = DFXPWriter().write(caption_set)
+
+        assert 'tts:color="yellow"' in result
+
     def test_classes_not_in_dfxp_output(self):
         from lxml import etree
 

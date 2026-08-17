@@ -30,6 +30,13 @@ Changelog
     whitespace from semicolon splitting was not stripped, causing the
     property name comparison to fail silently.
 
+  - Add compound class selector parsing (``::cue(.bold.yellow)``) to
+    ``WebVTTReader``'s STYLE block handling. Selectors with multiple
+    dot-separated classes now match spans carrying all listed classes
+    (including superset spans with additional classes). Compound selectors
+    cascade with higher specificity than single-class selectors, and
+    round-trip correctly through ``WebVTTWriter`` and ``DFXPWriter``.
+
 2.3.7
 ^^^^^^
   - Fix ``SCCWriter`` merging multi-line captions into a single line when
