@@ -1,5 +1,15 @@
 Changelog
 ---------
+2.3.9
+^^^^^^
+  - Fix ``SAMIReader`` raising a bare ``ValueError`` when a ``<sync>`` tag's
+    ``start`` attribute is present but not numeric. It now raises
+    ``CaptionReadTimingError`` like the missing-start case.
+
+  - Fix ``SAMIReader`` raising ``AttributeError`` when a tag has a valueless
+    ``class`` (or ``lang``) attribute. Such attributes carry no language
+    information and are now ignored.
+
 2.3.8
 ^^^^^^
   - Fix ``WebVTTReader`` silently discarding the ``position:`` cue setting

@@ -50,6 +50,26 @@ class TestSAMIReader(ReaderTestingMixIn):
             "Missing start time on the following line: "
         )
 
+    @pytest.mark.parametrize("start", ["abc", "1rt=1000", ""])
+    def test_non_numeric_start_raises_timing_error(self, start):
+        content = (
+            f"<SAMI><BODY><SYNC Start={start}>"
+            "<P>hi</P></SYNC></BODY></SAMI>"
+        )
+        with pytest.raises(CaptionReadTimingError):
+            self.reader.read(content)
+
+    def test_valueless_class_attribute_is_ignored(self):
+        # A bare ``class`` attribute (no value) used to crash _find_lang with
+        # AttributeError; it should just be treated as carrying no language.
+        content = (
+            "<SAMI><BODY><SYNC Start=1000>"
+            "<P Class>hi</P></SYNC></BODY></SAMI>"
+        )
+        caption_set = self.reader.read(content)
+        langs = caption_set.get_languages()
+        assert caption_set.get_captions(langs[0])[0].get_text() == "hi"
+
     def test_6digit_color_code_from_6digit_input(self, sample_sami):
         caption_set = self.reader.read(sample_sami)
         p_style = caption_set.get_style("p")
