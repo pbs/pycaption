@@ -47,6 +47,10 @@ class TestSRTReader(ReaderTestingMixIn):
         assert paragraphs[-3].get_text() == "NUMBER  IS  662-429-84-77."
         assert paragraphs[-1].get_text() == "3"
 
+    @pytest.mark.parametrize("content", ["1", "", "abc"])
+    def test_detect_returns_false_for_short_content(self, content):
+        assert self.reader.detect(content) is False
+
     def test_empty_file(self, sample_srt_empty):
         with pytest.raises(CaptionReadNoCaptions) as exc_info:
             self.reader.read(sample_srt_empty)

@@ -21,6 +21,8 @@ class SRTReader(BaseReader):
         """
         content = self._decode_content(content)
         lines = content.splitlines()
+        if len(lines) < 2:
+            return False
         if lines[0].isdigit() and "-->" in lines[1]:
             return True
         else:
