@@ -108,6 +108,32 @@ class TestSCCReader(ReaderTestingMixIn):
                 caption.nodes[-1].type_ != CaptionNode.BREAK
             ), "Caption must not end with a trailing BREAK node"
 
+    def test_row_jump_with_pending_reposition_creates_new_cue(
+        self, sample_scc_row_jump_with_pending_reposition
+    ):
+        captions = SCCReader().read(
+            sample_scc_row_jump_with_pending_reposition
+        ).get_captions("en-US")
+
+        assert len(captions) == 2
+
+        first, second = captions
+        assert [
+            n.content for n in first.nodes if n.type_ == CaptionNode.TEXT
+        ] == ["♪ Always by her side ♪"]
+        assert [
+            n.content for n in second.nodes if n.type_ == CaptionNode.TEXT
+        ] == ["And Trini!"]
+        assert first.layout_info.origin != second.layout_info.origin
+
+        for caption in captions:
+            assert caption.nodes[0].type_ != CaptionNode.BREAK, (
+                "Cue must not start with a phantom BREAK node"
+            )
+            assert not any(
+                node.type_ == CaptionNode.BREAK for node in caption.nodes
+            ), "Cue must not contain any phantom BREAK node"
+
     def test_tab_offset(self, sample_scc_tab_offset):
         captions = SCCReader().read(sample_scc_tab_offset)
 

@@ -119,6 +119,7 @@ from tests.fixtures.scc import (  # noqa: F401
     sample_scc_paint_on_edm,
     sample_scc_pop_on,
     sample_scc_produces_captions_with_start_and_end_time_the_same,
+    sample_scc_row_jump_with_pending_reposition,
     sample_scc_roll_up_ru2,
     sample_scc_roll_up_ru3,
     sample_scc_special_and_extended_characters,

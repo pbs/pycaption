@@ -1,6 +1,22 @@
 import pytest
 
 
+# Real-world bytes reproducing the "phantom BREAK" bug: two independent,
+# simultaneously-timed paint-on captions ("Always by her side" / "And
+# Trini!") whose PAC sequence has a small row jump (13 -> 15) combined
+# with a same-row column jump (col 4 -> 24) that was left unconsumed
+# (no text written) before the row jump landed.
+@pytest.fixture(scope="session")
+def sample_scc_row_jump_with_pending_reposition():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:21:11 9420 942f 94ae 9420 13f2 91ae 9137 20c1 ecf7 6179 7320 6279 2068 e5f2 2073 e964 e520 9137 137c 9723 9120 94f4 9723 c16e 6420 54f2 e96e e9a1
+
+00:00:25:00 942c 942c 942f 942f
+"""
+
+
 @pytest.fixture(scope="session")
 def sample_scc_created_dfxp_with_wrongly_closing_spans():
     return """\

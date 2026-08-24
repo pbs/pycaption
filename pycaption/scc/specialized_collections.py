@@ -489,6 +489,12 @@ class InstructionNodeCreator:
 
     def _handle_mid_row_spacing(self, next_command):
         """Insert spacing around mid-row code style transitions."""
+        if self._position_tracer.is_repositioning_required():
+            # A repositioning is already pending with no text written at the
+            # current position — that position is about to be abandoned, so
+            # padding it with a decorative space would wrongly consume the
+            # pending repositioning before the real content arrives.
+            return
         next_is_punctuation = next_command and next_command[:2] in _PUNCTUATION_PREFIXES
         prev_text_node = self.get_previous_text_node()
         if not prev_text_node:

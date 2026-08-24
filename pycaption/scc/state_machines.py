@@ -59,8 +59,12 @@ class _PositioningTracker:
         if new_row > row:
             row_diff = new_row - row
 
-            # Small jumps (1-3 rows): Use line breaks to preserve visual spacing
-            if row_diff <= max_breaks_threshold:
+            # Small jumps (1-3 rows): Use line breaks to preserve visual spacing.
+            # But if a repositioning was already pending and unconsumed (no text
+            # was ever written at the current position), this row jump is
+            # continuing that same unresolved position change, not wrapping
+            # text — so it must stay a repositioning rather than become a break.
+            if row_diff <= max_breaks_threshold and not self._repositioning_required:
                 self._positions.append((new_row, col))
                 # Add breaks equal to row difference
                 # Row N -> N+1: 1 break

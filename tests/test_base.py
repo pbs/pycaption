@@ -122,6 +122,29 @@ class TestPositioningTracker:
 
         assert not tracker.is_repositioning_required()
 
+    def test_pending_repositioning_is_preserved_across_small_row_jump(self):
+        tracker = _PositioningTracker((13, 4))
+        # Same-row column jump with no text written: leaves a repositioning
+        # pending and unconsumed.
+        tracker.update_positioning((13, 24))
+        assert tracker.is_repositioning_required()
+
+        # A small row jump on top of that pending, unconsumed repositioning
+        # must not be reinterpreted as a trivial line break.
+        tracker.update_positioning((15, 8))
+
+        assert tracker.is_repositioning_required()
+        assert not tracker.is_linebreak_required()
+        assert tracker._breaks_required == 0
+
+    def test_row_jump_without_pending_repositioning_still_creates_breaks(self):
+        tracker = _PositioningTracker((14, 10))
+        tracker.update_positioning((15, 1))
+
+        assert tracker.is_linebreak_required()
+        assert tracker._breaks_required == 1
+        assert not tracker.is_repositioning_required()
+
     def test_reset_for_new_caption_clears_all_state(self):
         tracker = _PositioningTracker((1, 0))
         tracker.update_positioning((3, 0))
