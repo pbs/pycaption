@@ -100,6 +100,7 @@ from .constants import (
     SPECIAL_CHARS,
 )
 from .specialized_collections import (
+    PUNCTUATION_PREFIXES,
     CaptionCreator,
     InstructionNodeCreator,
     NotifyingDict,
@@ -302,23 +303,28 @@ class SCCReader(BaseReader):
             word = word.strip()
             if len(word) == 4:
                 # Look ahead for the next command, skipping the duplicate
-                # that SCC uses for error-correction (same word repeated).
+                # that SCC uses for error-correction (same word repeated), to
+                # tell whether it decodes to punctuation.
                 next_idx = idx + 1
                 if next_idx < len(word_list) and word_list[next_idx].strip() == word:
                     next_idx += 1
                 next_command = (
                     word_list[next_idx] if next_idx < len(word_list) else None
                 )
-                self._translate_word(word=word, next_command=next_command)
+                next_is_punctuation = (
+                    next_command is not None
+                    and next_command[:2] in PUNCTUATION_PREFIXES
+                )
+                self._translate_word(word=word, next_is_punctuation=next_is_punctuation)
 
-    def _translate_word(self, word, next_command=None):
+    def _translate_word(self, word, next_is_punctuation=False):
         """Dispatch a single 4-char hex word as command, special char, or text."""
         if self._handle_double_command(word):
             # count frames for timing
             self.time_translator._frames += 1
             return
         if word in COMMANDS or self._is_pac_command(word):
-            self._translate_command(word=word, next_command=next_command)
+            self._translate_command(word=word, next_is_punctuation=next_is_punctuation)
 
         # second, check if word is a special character
         elif word in SPECIAL_CHARS:
@@ -392,7 +398,7 @@ class SCCReader(BaseReader):
 
     _ROLL_UP_DEPTH = {"9425": 2, "9426": 3, "94a7": 4}
 
-    def _translate_command(self, word, next_command=None):
+    def _translate_command(self, word, next_is_punctuation=False):
         """Route a CEA-608 control command to the appropriate handler."""
         if word == "9420":
             self._cmd_pop_on()
@@ -409,7 +415,11 @@ class SCCReader(BaseReader):
         elif word == "942c":
             self._cmd_erase_displayed()
         else:
-            self.buffer.interpret_command(command=word, next_command=next_command)
+            self.buffer.interpret_command(
+                command=word,
+                next_is_punctuation=next_is_punctuation,
+                is_paint_on=self.buffer_dict.active_key == "paint",
+            )
 
     def _cmd_pop_on(self):
         """Handle Resume Caption Loading [RCL] - switch to pop-on mode."""

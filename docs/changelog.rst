@@ -2,6 +2,26 @@ Changelog
 ---------
 2.3.9
 ^^^^^^
+  - Fix ``SCCReader`` inserting phantom ``BREAK`` nodes when two independent,
+    simultaneously-timed captions are placed at different screen positions
+    and the PAC sequence between them involves a row jump. ``_PositioningTracker``
+    now only treats a row jump as a simple line break (same cue) when it
+    moves to the very next row (``row + 1``); a skipped row, a jump
+    backwards, or (in paint-on mode only) a row+1 jump paired with a column
+    jump larger than a tab offset is treated as a repositioning (new cue)
+    instead, since those patterns indicate an unrelated region rather than
+    text wrapping onto the next line. Previously, any row jump of 1-3 rows
+    was treated as a break, which could inflate single-line cues into
+    multi-line ones with ``&nbsp;``-only lines or merge two
+    independently-positioned simultaneous captions into a single,
+    wrongly-positioned cue — producing overlapping/repositioned captions
+    and visible black bars in ``WebVTTWriter`` output.
+
+    ``InstructionNodeCreator`` also no longer inserts its decorative
+    mid-row spacing character while a repositioning is pending, since doing
+    so was silently clearing the pending flag before the real position
+    update arrived.
+
   - Fix ``SAMIReader`` raising a bare ``ValueError`` when a ``<sync>`` tag's
     ``start`` attribute is present but not numeric. It now raises
     ``CaptionReadTimingError`` like the missing-start case.

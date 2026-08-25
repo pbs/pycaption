@@ -1,6 +1,123 @@
 import pytest
 
 
+# Real-world bytes reproducing the "phantom BREAK" bug: two independent,
+# simultaneously-timed paint-on captions ("Always by her side" / "And
+# Trini!") whose PAC sequence has a small row jump (13 -> 15) combined
+# with a same-row column jump (col 4 -> 24) that was left unconsumed
+# (no text written) before the row jump landed.
+@pytest.fixture(scope="session")
+def sample_scc_row_jump_with_pending_reposition():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:21:11 9420 942f 94ae 9420 13f2 91ae 9137 20c1 ecf7 6179 7320 6279 2068 e5f2 2073 e964 e520 9137 137c 9723 9120 94f4 9723 c16e 6420 54f2 e96e e9a1
+
+00:00:25:00 942c 942c 942f 942f
+"""
+
+
+# Real-world-equivalent bytes reproducing the phantom BREAK bug in its most
+# direct form: a single paint-on PAC jumps both row (13 -> 15, a skipped
+# row) and column (28 -> 8, far beyond a tab offset) in one step, with no
+# intervening column-only PAC and no pending unconsumed repositioning to
+# key off of. The row skip alone is already enough to force a new cue; the
+# column jump is incidental.
+@pytest.fixture(scope="session")
+def sample_scc_paint_on_row_and_column_jump_in_one_pac():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:20:00 9429 9429 13fe 13fe c1c2 94f4 94f4 43c4 942c 942c
+"""
+
+
+# Same row-skip PAC pattern as
+# sample_scc_paint_on_row_and_column_jump_in_one_pac, but in pop-on mode
+# (9420 instead of 9429). A skipped row forces a new cue regardless of
+# buffer mode, so this must also split into two cues, not stay joined by
+# BREAK nodes.
+@pytest.fixture(scope="session")
+def sample_scc_pop_on_row_and_column_jump_in_one_pac():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:20:00 9420 9420 13fe 13fe c1c2 94f4 94f4 43c4 942c 942c 942f 942f
+"""
+
+
+# Same row-skip PAC pattern again, but in roll-up mode (9425/RU2 instead of
+# 9429). Same as pop-on: the skipped row alone forces a new cue, so this
+# also splits into two cues rather than staying joined by BREAK nodes.
+@pytest.fixture(scope="session")
+def sample_scc_roll_up_row_and_column_jump_in_one_pac():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:20:00 9425 9425 13fe 13fe c1c2 94f4 94f4 43c4 942c 942c
+"""
+
+
+# Real-world-equivalent bytes: a single paint-on PAC jumps to the very next
+# row (5 -> 6, not a skip) but combined with a large column jump (0 -> 20,
+# far beyond a tab offset), with no intervening column-only PAC and no
+# pending unconsumed repositioning to key off of. Unlike a simple text wrap
+# onto the next line (which stays at roughly the same column), this pattern
+# indicates a second, independently-positioned region drawn one row below
+# the first — the same "two side-by-side captions in paint-on mode" bug
+# class this branch fixes for skipped rows, but for a row+1 jump instead.
+@pytest.fixture(scope="session")
+def sample_scc_paint_on_row_plus_one_large_column_jump():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:20:00 9429 9429 1540 1540 c1c2 157a 157a 43c4 942c 942c
+"""
+
+
+# Same row+1-plus-large-column-jump PAC pattern as
+# sample_scc_paint_on_row_plus_one_large_column_jump, but in pop-on mode
+# (9420 instead of 9429). column_jump_forces_reposition is only passed as
+# True for paint-on buffers, so pop-on's large column shift between the
+# wrapped lines is treated as legitimate same-cue formatting rather than an
+# independent region — this must stay a single caption joined by a BREAK
+# node, even though the column jump is identical to the paint-on case.
+@pytest.fixture(scope="session")
+def sample_scc_pop_on_row_plus_one_large_column_jump():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:20:00 9420 9420 1540 1540 c1c2 157a 157a 43c4 942c 942c 942f 942f
+"""
+
+
+# Same row+1-plus-large-column-jump PAC pattern again, but in roll-up mode
+# (9425/RU2 instead of 9429). Like pop-on, roll-up is exempt from the
+# column-jump check, so this must also stay a single caption joined by a
+# BREAK node rather than being split like the paint-on case.
+@pytest.fixture(scope="session")
+def sample_scc_roll_up_row_plus_one_large_column_jump():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:20:00 9425 9425 1540 1540 c1c2 157a 157a 43c4 942c 942c
+"""
+
+
+# Real-world bytes: a single pop-on cue whose text skips a row (row 1 -> 3)
+# with no preceding same-row PAC and no large-enough column jump to be
+# mistaken for an independent region. This must split into two independently-
+# positioned cues with no BREAK node joining them, since a skipped row is
+# not an intentional blank line to preserve in the rendered cue.
+@pytest.fixture(scope="session")
+def sample_scc_row_skip_does_not_preserve_blank_line():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:20:00 9420 9420 9152 9152 9723 9723 c1c2 92d0 92d0 43c4 942c 942c 942f 942f
+"""
+
+
 @pytest.fixture(scope="session")
 def sample_scc_created_dfxp_with_wrongly_closing_spans():
     return """\

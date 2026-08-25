@@ -32,7 +32,7 @@ from .constants import (
 PopOnCue = collections.namedtuple("PopOnCue", "buffer, start, end")
 
 # First two hex chars of SCC codes that produce punctuation ['.', '!', '?', ',']
-_PUNCTUATION_PREFIXES = frozenset(["ae", "a1", "bf", "2c"])
+PUNCTUATION_PREFIXES = frozenset(["ae", "a1", "bf", "2c"])
 
 
 class PreCaption:
@@ -412,7 +412,7 @@ class InstructionNodeCreator:
             # only remaining possibility is plain text
             return "plaintext"
 
-    def interpret_command(self, command, next_command=None):
+    def interpret_command(self, command, next_is_punctuation=False, is_paint_on=False):
         """Given a command determines whether to turn italics on or off,
         or to set the positioning
 
@@ -420,9 +420,15 @@ class InstructionNodeCreator:
 
         :type command: str
         or a PAC_TAB_OFFSET_COMMANDS
-        :type next_command: the command that follows next
+        :type next_is_punctuation: bool
+        :param next_is_punctuation: whether the command right after this one
+            decodes to punctuation (comma, period, etc.)
+        :type is_paint_on: bool
+        :param is_paint_on: whether this command is being interpreted while
+            in paint-on mode, where a row+1 jump paired with a large column
+            jump indicates an unrelated, independently-positioned region
         """
-        self._update_positioning(command)
+        self._update_positioning(command, is_paint_on)
 
         if command == "94a1":
             self.handle_backspace("94a1")
@@ -434,7 +440,7 @@ class InstructionNodeCreator:
             self._handle_style_command(command)
 
         if command in MID_ROW_CODES and command not in PAC_TAB_OFFSET_COMMANDS:
-            self._handle_mid_row_spacing(next_command)
+            self._handle_mid_row_spacing(next_is_punctuation)
 
     def _handle_background_color(self):
         """Strip trailing space before a background color code (CEA-608 rule)."""
@@ -460,9 +466,7 @@ class InstructionNodeCreator:
         if self.last_style is not None and self.last_style != "italics off":
             return
         self._emit_pending_breaks(position)
-        self._collection.append(
-            _InstructionNode.create_italics_style(position)
-        )
+        self._collection.append(_InstructionNode.create_italics_style(position))
         self.last_style = "italics on"
 
     def _close_italics(self, position):
@@ -482,24 +486,29 @@ class InstructionNodeCreator:
         if not self._position_tracer.is_linebreak_required():
             return
         for _ in range(self._position_tracer._breaks_required):
-            self._collection.append(
-                _InstructionNode.create_break(position=position)
-            )
+            self._collection.append(_InstructionNode.create_break(position=position))
         self._position_tracer.acknowledge_linebreak_consumed()
 
-    def _handle_mid_row_spacing(self, next_command):
+    def _handle_mid_row_spacing(self, next_is_punctuation):
         """Insert spacing around mid-row code style transitions."""
-        next_is_punctuation = next_command and next_command[:2] in _PUNCTUATION_PREFIXES
+        if self._position_tracer.is_repositioning_required():
+            # A repositioning is already pending with no text written at the
+            # current position — that position is about to be abandoned, so
+            # padding it with a decorative space would wrongly consume the
+            # pending repositioning before the real content arrives.
+            return
         prev_text_node = self.get_previous_text_node()
         if not prev_text_node:
             return
         prev_node_is_break = any(
             x.is_explicit_break()
-            for x in self._collection[self._collection.index(prev_text_node):]
+            for x in self._collection[self._collection.index(prev_text_node) :]
         )
-        if (prev_node_is_break
-                or prev_text_node.text[-1].isspace()
-                or next_is_punctuation):
+        if (
+            prev_node_is_break
+            or prev_text_node.text[-1].isspace()
+            or next_is_punctuation
+        ):
             return
 
         if self.last_style == "italics off":
@@ -507,10 +516,11 @@ class InstructionNodeCreator:
         else:
             prev_text_node.text = prev_text_node.text + " "
 
-    def _update_positioning(self, command):
+    def _update_positioning(self, command, is_paint_on=False):
         """Sets the positioning information to use for the next nodes
 
         :type command: str
+        :type is_paint_on: bool
         """
         is_offset = False
         if command in PAC_TAB_OFFSET_COMMANDS:
@@ -529,7 +539,9 @@ class InstructionNodeCreator:
         offset_after_break = is_offset and self.has_break_before(self._collection)
         if not offset_after_break:
             # Tab offsets after line breaks will be ignored to avoid repositioning
-            self._position_tracer.update_positioning(positioning)
+            self._position_tracer.update_positioning(
+                positioning, column_jump_forces_reposition=is_paint_on
+            )
 
     def __iter__(self):
         return iter(_format_italics(self._collection))
