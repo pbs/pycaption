@@ -3,26 +3,24 @@ Changelog
 2.3.9
 ^^^^^^
   - Fix ``SCCReader`` inserting phantom ``BREAK`` nodes when two independent,
-    simultaneously-timed paint-on captions are placed at different screen
-    positions and the PAC sequence between them has a small row jump (1-3
-    rows) landing on top of an already-pending, unconsumed repositioning
-    (a same-row column jump with no text written). ``_PositioningTracker``
-    now keeps such a row jump classified as a repositioning instead of
-    reinterpreting it as a line break, and ``InstructionNodeCreator`` no
-    longer inserts its decorative mid-row spacing character while a
-    repositioning is pending, since doing so was silently clearing the
-    pending flag before the real position update arrived. This fixes
-    inflated single-line cues (extra blank lines / ``&nbsp;``-only lines)
-    that could overlap or reposition adjacent co-timed captions in
-    ``WebVTTWriter`` output.
+    simultaneously-timed captions are placed at different screen positions
+    and the PAC sequence between them involves a row jump. ``_PositioningTracker``
+    now only treats a row jump as a simple line break (same cue) when it
+    moves to the very next row (``row + 1``); a skipped row, a jump
+    backwards, or (in paint-on mode only) a row+1 jump paired with a column
+    jump larger than a tab offset is treated as a repositioning (new cue)
+    instead, since those patterns indicate an unrelated region rather than
+    text wrapping onto the next line. Previously, any row jump of 1-3 rows
+    was treated as a break, which could inflate single-line cues into
+    multi-line ones with ``&nbsp;``-only lines or merge two
+    independently-positioned simultaneous captions into a single,
+    wrongly-positioned cue — producing overlapping/repositioned captions
+    and visible black bars in ``WebVTTWriter`` output.
 
-    Additionally, a single PAC that jumps both row (1-3 rows) and column
-    (more than a tab offset) at once — with no preceding column-only PAC to
-    leave a pending flag — is now also treated as a repositioning rather
-    than a break, but only while in paint-on mode, where independently
-    positioned simultaneous regions are possible. Pop-on and roll-up
-    buffers are unaffected, since they legitimately use larger column
-    shifts between buffered/wrapped lines of the same cue.
+    ``InstructionNodeCreator`` also no longer inserts its decorative
+    mid-row spacing character while a repositioning is pending, since doing
+    so was silently clearing the pending flag before the real position
+    update arrived.
 
   - Fix ``SAMIReader`` raising a bare ``ValueError`` when a ``<sync>`` tag's
     ``start`` attribute is present but not numeric. It now raises

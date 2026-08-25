@@ -68,12 +68,14 @@ class TestSCCReader(ReaderTestingMixIn):
         captions = SCCReader().read(sample_scc_multiple_positioning)
 
         # SCC generates only origin, and we always expect it.
-        # With threshold-based approach: small jumps (1-3 rows) use breaks,
-        # large jumps (4+ rows) use repositioning (new cues)
-        # Each caption has independent positioning (not inherited from previous)
+        # A jump to the very next row uses a break (same cue); any other
+        # row jump (a skipped row, or backwards) uses repositioning (new
+        # cue). Each caption has independent positioning (not inherited
+        # from previous).
         expected_positioning = [
             ((10.0, UnitEnum.PERCENT), (77.0, UnitEnum.PERCENT)),
             ((40.0, UnitEnum.PERCENT), (5.0, UnitEnum.PERCENT)),
+            ((70.0, UnitEnum.PERCENT), (23.0, UnitEnum.PERCENT)),
             ((20.0, UnitEnum.PERCENT), (47.0, UnitEnum.PERCENT)),
             ((20.0, UnitEnum.PERCENT), (89.0, UnitEnum.PERCENT)),
             ((40.0, UnitEnum.PERCENT), (53.0, UnitEnum.PERCENT)),
@@ -136,14 +138,15 @@ class TestSCCReader(ReaderTestingMixIn):
                 node.type_ == CaptionNode.BREAK for node in caption.nodes
             ), "Cue must not contain any phantom BREAK node"
 
-    def test_paint_on_row_and_column_jump_in_one_pac_creates_new_cue(
+    def test_row_skip_creates_new_cue_in_paint_on_mode(
         self, sample_scc_paint_on_row_and_column_jump_in_one_pac
     ):
-        """A single PAC that jumps both row (within the 1-3 break threshold)
-        and column (beyond a tab offset) in one step — with no intervening
-        column-only PAC to leave a pending repositioning flag — must still
-        be treated as a new, independently-positioned cue rather than a
-        continuation of the previous text via BREAK nodes.
+        """A single PAC that jumps both row (skipping a row) and column
+        (beyond a tab offset) in one step — with no intervening column-only
+        PAC to leave a pending repositioning flag — must be treated as a
+        new, independently-positioned cue rather than a continuation of the
+        previous text via BREAK nodes. The row skip alone is enough to
+        force this; the column jump is incidental.
         """
         captions = (
             SCCReader()
@@ -165,14 +168,44 @@ class TestSCCReader(ReaderTestingMixIn):
                 node.type_ == CaptionNode.BREAK for node in caption.nodes
             ), "Cue must not contain any phantom BREAK node"
 
-    def test_pop_on_row_and_column_jump_in_one_pac_stays_one_cue(
+    def test_paint_on_row_plus_one_large_column_jump_creates_new_cue(
+        self, sample_scc_paint_on_row_plus_one_large_column_jump
+    ):
+        """A single paint-on PAC that jumps to the very next row (not a
+        skip) but combined with a large column jump must still be treated
+        as a new, independently-positioned cue. A row+1 jump only means
+        "same cue, wrapped onto the next line" when the wrapped text stays
+        at roughly the same column; a big column jump alongside it means
+        the new PAC targets an unrelated region drawn one row below the
+        first, which only paint-on mode can display simultaneously.
+        """
+        captions = (
+            SCCReader()
+            .read(sample_scc_paint_on_row_plus_one_large_column_jump)
+            .get_captions("en-US")
+        )
+
+        assert len(captions) == 2
+
+        first, second = captions
+        assert [n.content for n in first.nodes if n.type_ == CaptionNode.TEXT] == ["AB"]
+        assert [n.content for n in second.nodes if n.type_ == CaptionNode.TEXT] == [
+            "CD"
+        ]
+        assert first.layout_info.origin != second.layout_info.origin
+
+        for caption in captions:
+            assert not any(
+                node.type_ == CaptionNode.BREAK for node in caption.nodes
+            ), "Cue must not contain any phantom BREAK node"
+
+    def test_row_skip_creates_new_cue_in_pop_on_mode(
         self, sample_scc_pop_on_row_and_column_jump_in_one_pac
     ):
-        """The same row+column-jump PAC pattern that must split into two
-        cues in paint-on mode must NOT split in pop-on mode: pop-on buffers
-        legitimately use large column shifts between buffered/wrapped lines
-        of the same cue, so this must stay a single caption joined by
-        BREAK nodes.
+        """The same row-skip PAC pattern must split into two cues in pop-on
+        mode too — a skipped row forces a new cue regardless of buffer
+        mode, since CEA-608 never requires a skipped row to render as a
+        blank line, and mode has no bearing on that.
         """
         captions = (
             SCCReader()
@@ -180,67 +213,75 @@ class TestSCCReader(ReaderTestingMixIn):
             .get_captions("en-US")
         )
 
-        assert len(captions) == 1
+        assert len(captions) == 2
 
-        (caption,) = captions
-        assert [n.content for n in caption.nodes if n.type_ == CaptionNode.TEXT] == [
-            "AB",
-            "CD",
+        first, second = captions
+        assert [n.content for n in first.nodes if n.type_ == CaptionNode.TEXT] == ["AB"]
+        assert [n.content for n in second.nodes if n.type_ == CaptionNode.TEXT] == [
+            "CD"
         ]
-        assert any(
-            node.type_ == CaptionNode.BREAK for node in caption.nodes
-        ), "Cue must join the two PACs with a BREAK node, not split into two cues"
+        assert first.layout_info.origin != second.layout_info.origin
 
-    def test_roll_up_row_and_column_jump_in_one_pac_stays_one_cue(
+        for caption in captions:
+            assert not any(
+                node.type_ == CaptionNode.BREAK for node in caption.nodes
+            ), "Cue must not contain any phantom BREAK node"
+
+    def test_row_skip_creates_new_cue_in_roll_up_mode(
         self, sample_scc_roll_up_row_and_column_jump_in_one_pac
     ):
-        """The same row+column-jump PAC pattern that must split into two
-        cues in paint-on mode must NOT split in roll-up mode: roll-up
-        buffers, like pop-on, legitimately use large column shifts between
-        wrapped lines of the same cue, so this must stay a single caption
-        joined by BREAK nodes.
-        """
+        """Same row-skip PAC pattern again, in roll-up mode: also splits."""
         captions = (
             SCCReader()
             .read(sample_scc_roll_up_row_and_column_jump_in_one_pac)
             .get_captions("en-US")
         )
 
-        assert len(captions) == 1
+        assert len(captions) == 2
 
-        (caption,) = captions
-        assert [n.content for n in caption.nodes if n.type_ == CaptionNode.TEXT] == [
-            "AB",
-            "CD",
+        first, second = captions
+        assert [n.content for n in first.nodes if n.type_ == CaptionNode.TEXT] == ["AB"]
+        assert [n.content for n in second.nodes if n.type_ == CaptionNode.TEXT] == [
+            "CD"
         ]
-        assert any(
-            node.type_ == CaptionNode.BREAK for node in caption.nodes
-        ), "Cue must join the two PACs with a BREAK node, not split into two cues"
+        assert first.layout_info.origin != second.layout_info.origin
 
-    def test_paint_on_column_jump_boundary_at_tab_offset_threshold(self):
-        """A column jump of exactly 3 (matching the tab-offset threshold
-        used elsewhere in this file) must stay a break; one column beyond
-        that, a jump of 4, must force a repositioning. Checked in both the
-        positive (rightward) and negative (leftward) column directions,
-        since the implementation compares by absolute value.
+        for caption in captions:
+            assert not any(
+                node.type_ == CaptionNode.BREAK for node in caption.nodes
+            ), "Cue must not contain any phantom BREAK node"
+
+    def test_row_skip_does_not_preserve_blank_line(
+        self, sample_scc_row_skip_does_not_preserve_blank_line
+    ):
+        """A row jump that skips one or more rows (e.g. row 1 -> row 3)
+        must split into a new, independently-positioned cue rather than
+        joining the previous text via BREAK nodes — even when the column
+        barely changes. CEA-608 never requires a skipped row to render as
+        a blank line downstream, and WebVTT/HTML renderers draw a real,
+        often background-filled line for each BREAK, so merging the two
+        into one cue previously produced a visible black bar between two
+        lines of text that were never meant to have a gap between them.
         """
-        tracker = DefaultProvidingPositionTracker((13, 0))
-        tracker.update_positioning((14, 3), column_jump_forces_reposition=True)
-        assert not tracker.is_repositioning_required()
-        assert tracker.is_linebreak_required()
+        captions = (
+            SCCReader()
+            .read(sample_scc_row_skip_does_not_preserve_blank_line)
+            .get_captions("en-US")
+        )
 
-        tracker = DefaultProvidingPositionTracker((13, 0))
-        tracker.update_positioning((14, 4), column_jump_forces_reposition=True)
-        assert tracker.is_repositioning_required()
+        assert len(captions) == 2
 
-        tracker = DefaultProvidingPositionTracker((13, 10))
-        tracker.update_positioning((14, 7), column_jump_forces_reposition=True)
-        assert not tracker.is_repositioning_required()
-        assert tracker.is_linebreak_required()
+        first, second = captions
+        assert [n.content for n in first.nodes if n.type_ == CaptionNode.TEXT] == ["AB"]
+        assert [n.content for n in second.nodes if n.type_ == CaptionNode.TEXT] == [
+            "CD"
+        ]
+        assert first.layout_info.origin != second.layout_info.origin
 
-        tracker = DefaultProvidingPositionTracker((13, 10))
-        tracker.update_positioning((14, 6), column_jump_forces_reposition=True)
-        assert tracker.is_repositioning_required()
+        for caption in captions:
+            assert not any(
+                node.type_ == CaptionNode.BREAK for node in caption.nodes
+            ), "Cue must not contain any phantom BREAK node"
 
     def test_tab_offset(self, sample_scc_tab_offset):
         captions = SCCReader().read(sample_scc_tab_offset)

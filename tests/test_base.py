@@ -6,7 +6,6 @@ from pycaption.exceptions import CaptionReadSyntaxError
 from pycaption.scc.state_machines import _PositioningTracker
 
 
-
 class TestCaptionReadError:
     def test_str_includes_class_name_and_message(self):
         err = CaptionReadError("bad data")
@@ -83,19 +82,23 @@ class TestPositioningTracker:
         assert tracker._breaks_required == 1
         assert not tracker.is_repositioning_required()
 
-    def test_two_row_jump_creates_two_breaks(self):
+    def test_two_row_jump_triggers_repositioning_not_breaks(self):
+        # Skips row 2 -> not a simple wrap onto the next line, so it must
+        # become a repositioning (new cue), not a break.
         tracker = _PositioningTracker((1, 0))
         tracker.update_positioning((3, 0))
 
-        assert tracker._breaks_required == 2
-        assert tracker.is_linebreak_required()
+        assert not tracker.is_linebreak_required()
+        assert tracker.is_repositioning_required()
+        assert tracker._breaks_required == 0
 
-    def test_three_row_jump_creates_three_breaks(self):
+    def test_three_row_jump_triggers_repositioning_not_breaks(self):
         tracker = _PositioningTracker((1, 0))
         tracker.update_positioning((4, 0))
 
-        assert tracker._breaks_required == 3
-        assert tracker.is_linebreak_required()
+        assert not tracker.is_linebreak_required()
+        assert tracker.is_repositioning_required()
+        assert tracker._breaks_required == 0
 
     def test_four_row_jump_triggers_repositioning_not_breaks(self):
         tracker = _PositioningTracker((1, 0))
@@ -107,8 +110,8 @@ class TestPositioningTracker:
 
     def test_acknowledge_linebreak_consumed_resets_counter(self):
         tracker = _PositioningTracker((1, 0))
-        tracker.update_positioning((3, 0))
-        assert tracker._breaks_required == 2
+        tracker.update_positioning((2, 0))
+        assert tracker._breaks_required == 1
 
         tracker.acknowledge_linebreak_consumed()
 
@@ -144,6 +147,53 @@ class TestPositioningTracker:
         assert tracker.is_linebreak_required()
         assert tracker._breaks_required == 1
         assert not tracker.is_repositioning_required()
+
+    def test_paint_on_row_plus_one_with_large_column_jump_forces_reposition(self):
+        # A row+1 jump normally stays a break, but a large column jump
+        # alongside it in paint-on mode signals an unrelated, independently-
+        # positioned region one row below, so it must reposition instead.
+        tracker = _PositioningTracker((13, 0))
+        tracker.update_positioning((14, 20), column_jump_forces_reposition=True)
+
+        assert tracker.is_repositioning_required()
+        assert not tracker.is_linebreak_required()
+
+    def test_row_plus_one_with_large_column_jump_stays_break_outside_paint_on(self):
+        # The same large column jump must NOT force a repositioning when
+        # column_jump_forces_reposition is left at its default (pop-on and
+        # roll-up buffers legitimately use large column shifts between
+        # wrapped lines of the same cue).
+        tracker = _PositioningTracker((13, 0))
+        tracker.update_positioning((14, 20))
+
+        assert not tracker.is_repositioning_required()
+        assert tracker.is_linebreak_required()
+
+    def test_paint_on_column_jump_boundary_at_tab_offset_threshold(self):
+        """A column jump of exactly 3 (matching the tab-offset threshold
+        used elsewhere) alongside a row+1 jump must stay a break; one
+        column beyond that, a jump of 4, must force a repositioning.
+        Checked in both the positive (rightward) and negative (leftward)
+        column directions, since the implementation compares by absolute
+        value.
+        """
+        tracker = _PositioningTracker((13, 0))
+        tracker.update_positioning((14, 3), column_jump_forces_reposition=True)
+        assert not tracker.is_repositioning_required()
+        assert tracker.is_linebreak_required()
+
+        tracker = _PositioningTracker((13, 0))
+        tracker.update_positioning((14, 4), column_jump_forces_reposition=True)
+        assert tracker.is_repositioning_required()
+
+        tracker = _PositioningTracker((13, 10))
+        tracker.update_positioning((14, 7), column_jump_forces_reposition=True)
+        assert not tracker.is_repositioning_required()
+        assert tracker.is_linebreak_required()
+
+        tracker = _PositioningTracker((13, 10))
+        tracker.update_positioning((14, 6), column_jump_forces_reposition=True)
+        assert tracker.is_repositioning_required()
 
     def test_reset_for_new_caption_clears_all_state(self):
         tracker = _PositioningTracker((1, 0))

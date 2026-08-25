@@ -31,21 +31,33 @@ class _PositioningTracker:
         break) or not.
 
         Strategy:
-        - Small jumps (1-3 rows): Use line breaks to preserve visual spacing
-        - Large jumps (4+ rows): Use repositioning (creates new cue)
+        - A jump to the very next row (row + 1): Use a single line break —
+          this is simple text wrapping onto the next line. Exception: if
+          paired with a column jump bigger than a tab offset in paint-on
+          mode (see ``column_jump_forces_reposition``), it's treated as a
+          repositioning instead, since paint-on is the only mode that can
+          display independent, simultaneously-timed regions one row apart.
+        - Any other row jump (a skipped row, or a jump backwards): Use
+          repositioning (creates new cue). A skipped row is not an
+          intentional blank line to preserve — CEA-608 PACs only declare an
+          absolute row position; nothing in the spec says a gap between two
+          rows must be rendered as a blank line downstream, and WebVTT/HTML
+          renderers draw a real, often background-filled line for each
+          break, which previously produced a visible black bar between two
+          lines of text that were never meant to have a gap between them.
 
         :type positioning: tuple[int]
         :param positioning: a tuple (row, col)
 
         :type column_jump_forces_reposition: bool
-        :param column_jump_forces_reposition: when True, a row jump paired
-            with a column jump larger than a tab offset (>3 columns) is
-            treated as a repositioning rather than a break, even with no
-            pending unconsumed reposition. Only paint-on mode can display
-            independent, simultaneously-timed regions at unrelated columns,
-            so callers should only set this for paint-on buffers — pop-on
-            and roll-up buffers legitimately use large column shifts between
-            buffered/wrapped lines of the same cue.
+        :param column_jump_forces_reposition: when True, a row+1 jump
+            paired with a column jump larger than a tab offset (>3 columns)
+            is treated as a repositioning rather than a break. Only
+            paint-on mode can display independent, simultaneously-timed
+            regions at unrelated columns, so callers should only set this
+            for paint-on buffers — pop-on and roll-up buffers legitimately
+            use large column shifts between buffered/wrapped lines of the
+            same cue.
         """
         current = self._positions[-1]
 
@@ -61,39 +73,31 @@ class _PositioningTracker:
         new_row, new_col = positioning
         is_tab_offset = new_row == row and col + 1 <= new_col <= col + 3
 
-        # Threshold for when to use breaks vs repositioning
-        # Jumps of 4+ rows will trigger repositioning instead of adding breaks
-        max_breaks_threshold = 3
-
         # Handle row jumps
         if new_row > row:
-            row_diff = new_row - row
             is_large_column_jump = (
                 column_jump_forces_reposition and abs(new_col - col) > 3
             )
 
-            # Small jumps (1-3 rows): Use line breaks to preserve visual spacing.
-            # But if a repositioning was already pending and unconsumed (no text
-            # was ever written at the current position), this row jump is
+            # A jump to the very next row: use a line break. But if a
+            # repositioning was already pending and unconsumed (no text was
+            # ever written at the current position), this row jump is
             # continuing that same unresolved position change, not wrapping
-            # text — so it must stay a repositioning rather than become a break.
-            # Likewise, in paint-on mode, pairing the row jump with a column
-            # jump bigger than a tab offset means the new PAC almost certainly
-            # targets an unrelated, independently-positioned region rather
-            # than wrapping the current text.
+            # text — so it must stay a repositioning rather than become a
+            # break. Likewise, in paint-on mode, pairing the row+1 jump
+            # with a column jump bigger than a tab offset means the new PAC
+            # almost certainly targets an unrelated, independently-positioned
+            # region rather than wrapping the current text.
             if (
-                row_diff <= max_breaks_threshold
+                new_row == row + 1
                 and not self._repositioning_required
                 and not is_large_column_jump
             ):
                 self._positions.append((new_row, col))
-                # Add breaks equal to row difference
-                # Row N -> N+1: 1 break
-                # Row N -> N+2: 2 breaks (preserves 1 blank line)
-                # Row N -> N+3: 3 breaks (preserves 2 blank lines)
-                self._breaks_required = row_diff
+                self._breaks_required = 1
                 self._last_column = new_col
-            # Large jumps (4+ rows): Use repositioning (new cue)
+            # A skipped row, a jump backwards, or a row+1 jump with a large
+            # paint-on column jump: use repositioning (new cue)
             else:
                 # Reset position - this triggers repositioning
                 self._positions = [positioning]

@@ -1,5 +1,7 @@
 import re
 
+from bs4 import BeautifulSoup
+
 from pycaption import (
     DFXPWriter,
     SCCReader,
@@ -74,6 +76,92 @@ class TestSCCtoDFXP:
 
         BeautifulSoup(dfxp, "lxml-xml")
 
+    def test_row_jump_with_pending_reposition_splits_into_two_regions(
+        self, sample_scc_row_jump_with_pending_reposition
+    ):
+        caption_set = SCCReader().read(sample_scc_row_jump_with_pending_reposition)
+        dfxp = DFXPWriter(relativize=False, fit_to_screen=False).write(caption_set)
+
+        soup = BeautifulSoup(dfxp, "lxml-xml")
+        paragraphs = soup.find_all("p")
+
+        assert len(paragraphs) == 2, (
+            "A row jump landing on a pending, unconsumed reposition must "
+            "split into two cues, not stay joined by a BREAK"
+        )
+        assert not soup.find_all("br"), "Cues must not be joined by a phantom BREAK"
+
+        first, second = paragraphs
+        assert first["begin"] == second["begin"] == "00:00:25.091"
+        assert first["end"] == second["end"] == "00:00:29.091"
+        assert first["region"] != second["region"]
+
+        first_region = soup.find("region", {"xml:id": first["region"]})
+        second_region = soup.find("region", {"xml:id": second["region"]})
+        assert first_region["tts:origin"] == "20% 77%"
+        assert second_region["tts:origin"] == "37.5% 89%"
+
+        assert "Always by her side" in first.get_text()
+        assert second.get_text(strip=True) == "And Trini!"
+
+    def test_row_skip_does_not_preserve_blank_line_splits_into_two_regions(
+        self, sample_scc_row_skip_does_not_preserve_blank_line
+    ):
+        caption_set = SCCReader().read(sample_scc_row_skip_does_not_preserve_blank_line)
+        dfxp = DFXPWriter(relativize=False, fit_to_screen=False).write(caption_set)
+
+        soup = BeautifulSoup(dfxp, "lxml-xml")
+        paragraphs = soup.find_all("p")
+
+        assert len(paragraphs) == 2, (
+            "A skipped row must split into two cues; the gap must not be "
+            "preserved as a blank line joining them"
+        )
+        assert not soup.find_all("br"), "Cues must not be joined by a phantom BREAK"
+
+        first, second = paragraphs
+        assert first["begin"] == second["begin"] == "00:00:20.420"
+        assert first["end"] == second["end"] == "00:00:24.420"
+        assert first["region"] != second["region"]
+
+        first_region = soup.find("region", {"xml:id": first["region"]})
+        second_region = soup.find("region", {"xml:id": second["region"]})
+        assert first_region["tts:origin"] == "20% 5%"
+        assert second_region["tts:origin"] == "10% 17%"
+
+        assert first.get_text(strip=True) == "AB"
+        assert second.get_text(strip=True) == "CD"
+
+    def test_paint_on_row_plus_one_large_column_jump_splits_into_two_regions(
+        self, sample_scc_paint_on_row_plus_one_large_column_jump
+    ):
+        caption_set = SCCReader().read(
+            sample_scc_paint_on_row_plus_one_large_column_jump
+        )
+        dfxp = DFXPWriter(relativize=False, fit_to_screen=False).write(caption_set)
+
+        soup = BeautifulSoup(dfxp, "lxml-xml")
+        paragraphs = soup.find_all("p")
+
+        assert len(paragraphs) == 2, (
+            "A row+1 jump paired with a large paint-on column jump must "
+            "split into two cues, since it targets an unrelated region"
+        )
+        assert not soup.find_all("br"), "Cues must not be joined by a phantom BREAK"
+
+        first, second = paragraphs
+        assert first["begin"] == second["begin"] == "00:00:20.020"
+        assert first["end"] == second["end"] == "00:00:20.286"
+        assert first["region"] != second["region"]
+
+        first_region = soup.find("region", {"xml:id": first["region"]})
+        second_region = soup.find("region", {"xml:id": second["region"]})
+        assert first_region["tts:origin"] == "10% 29%"
+        assert second_region["tts:origin"] == "60% 35%"
+
+        assert first.get_text(strip=True) == "AB"
+        assert second.get_text(strip=True) == "CD"
+
 
 class TestSCCTimestampOrdering:
     def test_scc_captions_are_in_order_when_short_text_followed_by_long(self):
@@ -115,3 +203,73 @@ class TestSCCToWebVTT:
         webvtt = WebVTTWriter().write(caption_set)
 
         assert webvtt == sample_webvtt_from_scc_properly_writes_newlines_output
+
+    @staticmethod
+    def _cue_blocks(webvtt):
+        return [
+            block
+            for block in webvtt.strip().split("\n\n")
+            if block.strip() and "WEBVTT" not in block
+        ]
+
+    def test_row_jump_with_pending_reposition_splits_into_two_cues(
+        self, sample_scc_row_jump_with_pending_reposition
+    ):
+        caption_set = SCCReader().read(sample_scc_row_jump_with_pending_reposition)
+        webvtt = WebVTTWriter().write(caption_set)
+
+        cues = self._cue_blocks(webvtt)
+        assert len(cues) == 2, (
+            "A row jump landing on a pending, unconsumed reposition must "
+            "split into two cues, not stay joined by a BREAK"
+        )
+
+        first, second = cues
+        assert first.startswith("00:00:25.091 --> 00:00:29.091")
+        assert second.startswith("00:00:25.091 --> 00:00:29.091")
+        assert "position:20%" in first and "line:77%" in first
+        assert "position:37.5%" in second and "line:89%" in second
+        assert "Always by her side" in first
+        assert second.split("\n", 1)[1].strip() == "And Trini!"
+
+    def test_row_skip_does_not_preserve_blank_line_splits_into_two_cues(
+        self, sample_scc_row_skip_does_not_preserve_blank_line
+    ):
+        caption_set = SCCReader().read(sample_scc_row_skip_does_not_preserve_blank_line)
+        webvtt = WebVTTWriter().write(caption_set)
+
+        cues = self._cue_blocks(webvtt)
+        assert len(cues) == 2, (
+            "A skipped row must split into two cues; the gap must not be "
+            "preserved as a blank/nbsp-only line joining them"
+        )
+
+        first, second = cues
+        assert first.startswith("00:00:20.420 --> 00:00:24.420")
+        assert second.startswith("00:00:20.420 --> 00:00:24.420")
+        assert "position:20%" in first and "line:5%" in first
+        assert "position:10%" in second and "line:17%" in second
+        assert first.split("\n", 1)[1].strip() == "AB"
+        assert second.split("\n", 1)[1].strip() == "CD"
+
+    def test_paint_on_row_plus_one_large_column_jump_splits_into_two_cues(
+        self, sample_scc_paint_on_row_plus_one_large_column_jump
+    ):
+        caption_set = SCCReader().read(
+            sample_scc_paint_on_row_plus_one_large_column_jump
+        )
+        webvtt = WebVTTWriter().write(caption_set)
+
+        cues = self._cue_blocks(webvtt)
+        assert len(cues) == 2, (
+            "A row+1 jump paired with a large paint-on column jump must "
+            "split into two cues, since it targets an unrelated region"
+        )
+
+        first, second = cues
+        assert first.startswith("00:00:20.020 --> 00:00:20.286")
+        assert second.startswith("00:00:20.020 --> 00:00:20.286")
+        assert "position:10%" in first and "line:29%" in first
+        assert "position:60%" in second and "line:35%" in second
+        assert first.split("\n", 1)[1].strip() == "AB"
+        assert second.split("\n", 1)[1].strip() == "CD"

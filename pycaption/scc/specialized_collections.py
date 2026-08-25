@@ -32,7 +32,7 @@ from .constants import (
 PopOnCue = collections.namedtuple("PopOnCue", "buffer, start, end")
 
 # First two hex chars of SCC codes that produce punctuation ['.', '!', '?', ',']
-_PUNCTUATION_PREFIXES = frozenset(["ae", "a1", "bf", "2c"])
+PUNCTUATION_PREFIXES = frozenset(["ae", "a1", "bf", "2c"])
 
 
 class PreCaption:
@@ -412,7 +412,7 @@ class InstructionNodeCreator:
             # only remaining possibility is plain text
             return "plaintext"
 
-    def interpret_command(self, command, next_command=None, is_paint_on=False):
+    def interpret_command(self, command, next_is_punctuation=False, is_paint_on=False):
         """Given a command determines whether to turn italics on or off,
         or to set the positioning
 
@@ -420,10 +420,12 @@ class InstructionNodeCreator:
 
         :type command: str
         or a PAC_TAB_OFFSET_COMMANDS
-        :type next_command: the command that follows next
+        :type next_is_punctuation: bool
+        :param next_is_punctuation: whether the command right after this one
+            decodes to punctuation (comma, period, etc.)
         :type is_paint_on: bool
         :param is_paint_on: whether this command is being interpreted while
-            in paint-on mode, where a row jump paired with a large column
+            in paint-on mode, where a row+1 jump paired with a large column
             jump indicates an unrelated, independently-positioned region
         """
         self._update_positioning(command, is_paint_on)
@@ -438,7 +440,7 @@ class InstructionNodeCreator:
             self._handle_style_command(command)
 
         if command in MID_ROW_CODES and command not in PAC_TAB_OFFSET_COMMANDS:
-            self._handle_mid_row_spacing(next_command)
+            self._handle_mid_row_spacing(next_is_punctuation)
 
     def _handle_background_color(self):
         """Strip trailing space before a background color code (CEA-608 rule)."""
@@ -487,7 +489,7 @@ class InstructionNodeCreator:
             self._collection.append(_InstructionNode.create_break(position=position))
         self._position_tracer.acknowledge_linebreak_consumed()
 
-    def _handle_mid_row_spacing(self, next_command):
+    def _handle_mid_row_spacing(self, next_is_punctuation):
         """Insert spacing around mid-row code style transitions."""
         if self._position_tracer.is_repositioning_required():
             # A repositioning is already pending with no text written at the
@@ -495,7 +497,6 @@ class InstructionNodeCreator:
             # padding it with a decorative space would wrongly consume the
             # pending repositioning before the real content arrives.
             return
-        next_is_punctuation = next_command and next_command[:2] in _PUNCTUATION_PREFIXES
         prev_text_node = self.get_previous_text_node()
         if not prev_text_node:
             return
