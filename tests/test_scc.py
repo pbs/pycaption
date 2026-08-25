@@ -199,6 +199,56 @@ class TestSCCReader(ReaderTestingMixIn):
                 node.type_ == CaptionNode.BREAK for node in caption.nodes
             ), "Cue must not contain any phantom BREAK node"
 
+    def test_row_plus_one_large_column_jump_stays_one_cue_in_pop_on_mode(
+        self, sample_scc_pop_on_row_plus_one_large_column_jump
+    ):
+        """The same row+1-plus-large-column-jump PAC pattern that must split
+        into two cues in paint-on mode must NOT split in pop-on mode:
+        column_jump_forces_reposition is only set for paint-on buffers, so
+        pop-on's large column shift between the wrapped lines is treated as
+        legitimate same-cue formatting, and this must stay a single caption
+        joined by a BREAK node.
+        """
+        captions = (
+            SCCReader()
+            .read(sample_scc_pop_on_row_plus_one_large_column_jump)
+            .get_captions("en-US")
+        )
+
+        assert len(captions) == 1
+
+        (caption,) = captions
+        assert [n.content for n in caption.nodes if n.type_ == CaptionNode.TEXT] == [
+            "AB",
+            "CD",
+        ]
+        assert any(
+            node.type_ == CaptionNode.BREAK for node in caption.nodes
+        ), "Cue must join the two PACs with a BREAK node, not split into two cues"
+
+    def test_row_plus_one_large_column_jump_stays_one_cue_in_roll_up_mode(
+        self, sample_scc_roll_up_row_plus_one_large_column_jump
+    ):
+        """Same row+1-plus-large-column-jump PAC pattern again, in roll-up
+        mode: also stays one cue, for the same reason as pop-on.
+        """
+        captions = (
+            SCCReader()
+            .read(sample_scc_roll_up_row_plus_one_large_column_jump)
+            .get_captions("en-US")
+        )
+
+        assert len(captions) == 1
+
+        (caption,) = captions
+        assert [n.content for n in caption.nodes if n.type_ == CaptionNode.TEXT] == [
+            "AB",
+            "CD",
+        ]
+        assert any(
+            node.type_ == CaptionNode.BREAK for node in caption.nodes
+        ), "Cue must join the two PACs with a BREAK node, not split into two cues"
+
     def test_row_skip_creates_new_cue_in_pop_on_mode(
         self, sample_scc_pop_on_row_and_column_jump_in_one_pac
     ):

@@ -75,6 +75,35 @@ Scenarist_SCC V1.0
 """
 
 
+# Same row+1-plus-large-column-jump PAC pattern as
+# sample_scc_paint_on_row_plus_one_large_column_jump, but in pop-on mode
+# (9420 instead of 9429). column_jump_forces_reposition is only passed as
+# True for paint-on buffers, so pop-on's large column shift between the
+# wrapped lines is treated as legitimate same-cue formatting rather than an
+# independent region — this must stay a single caption joined by a BREAK
+# node, even though the column jump is identical to the paint-on case.
+@pytest.fixture(scope="session")
+def sample_scc_pop_on_row_plus_one_large_column_jump():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:20:00 9420 9420 1540 1540 c1c2 157a 157a 43c4 942c 942c 942f 942f
+"""
+
+
+# Same row+1-plus-large-column-jump PAC pattern again, but in roll-up mode
+# (9425/RU2 instead of 9429). Like pop-on, roll-up is exempt from the
+# column-jump check, so this must also stay a single caption joined by a
+# BREAK node rather than being split like the paint-on case.
+@pytest.fixture(scope="session")
+def sample_scc_roll_up_row_plus_one_large_column_jump():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:20:00 9425 9425 1540 1540 c1c2 157a 157a 43c4 942c 942c
+"""
+
+
 # Real-world bytes: a single pop-on cue whose text skips a row (row 1 -> 3)
 # with no preceding same-row PAC and no large-enough column jump to be
 # mistaken for an independent region. This must split into two independently-
