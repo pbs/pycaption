@@ -17,6 +17,49 @@ Scenarist_SCC V1.0
 """
 
 
+# Real-world-equivalent bytes reproducing the phantom BREAK bug in its most
+# direct form: a single paint-on PAC jumps both row (13 -> 15, within the
+# 1-3 row "line break" threshold) and column (28 -> 8, far beyond a tab
+# offset) in one step, with no intervening column-only PAC and no pending
+# unconsumed repositioning to key off of.
+@pytest.fixture(scope="session")
+def sample_scc_paint_on_row_and_column_jump_in_one_pac():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:20:00 9429 9429 13fe 13fe c1c2 94f4 94f4 43c4 942c 942c
+"""
+
+
+# Same row+column-jump PAC pattern as
+# sample_scc_paint_on_row_and_column_jump_in_one_pac, but in pop-on mode
+# (9420 instead of 9429). Pop-on buffers legitimately use large column
+# shifts between wrapped lines of the same cue, so this must stay a single
+# caption joined by BREAK nodes rather than being split like the paint-on
+# case.
+@pytest.fixture(scope="session")
+def sample_scc_pop_on_row_and_column_jump_in_one_pac():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:20:00 9420 9420 13fe 13fe c1c2 94f4 94f4 43c4 942c 942c 942f 942f
+"""
+
+
+# Same row+column-jump PAC pattern again, but in roll-up mode (9425/RU2
+# instead of 9429). Like pop-on, roll-up buffers legitimately use large
+# column shifts between wrapped lines of the same cue, so this must also
+# stay a single caption joined by BREAK nodes rather than being split like
+# the paint-on case.
+@pytest.fixture(scope="session")
+def sample_scc_roll_up_row_and_column_jump_in_one_pac():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:20:00 9425 9425 13fe 13fe c1c2 94f4 94f4 43c4 942c 942c
+"""
+
+
 @pytest.fixture(scope="session")
 def sample_scc_created_dfxp_with_wrongly_closing_spans():
     return """\

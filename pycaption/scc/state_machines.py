@@ -25,7 +25,7 @@ class _PositioningTracker:
         # next positioning is actually a Tab Offset
         self._last_column = None
 
-    def update_positioning(self, positioning):
+    def update_positioning(self, positioning, column_jump_forces_reposition=False):
         """Being notified of a position change, updates the internal state,
         to as to be able to tell if it was a trivial change (a simple line
         break) or not.
@@ -36,6 +36,16 @@ class _PositioningTracker:
 
         :type positioning: tuple[int]
         :param positioning: a tuple (row, col)
+
+        :type column_jump_forces_reposition: bool
+        :param column_jump_forces_reposition: when True, a row jump paired
+            with a column jump larger than a tab offset (>3 columns) is
+            treated as a repositioning rather than a break, even with no
+            pending unconsumed reposition. Only paint-on mode can display
+            independent, simultaneously-timed regions at unrelated columns,
+            so callers should only set this for paint-on buffers — pop-on
+            and roll-up buffers legitimately use large column shifts between
+            buffered/wrapped lines of the same cue.
         """
         current = self._positions[-1]
 
@@ -58,13 +68,24 @@ class _PositioningTracker:
         # Handle row jumps
         if new_row > row:
             row_diff = new_row - row
+            is_large_column_jump = (
+                column_jump_forces_reposition and abs(new_col - col) > 3
+            )
 
             # Small jumps (1-3 rows): Use line breaks to preserve visual spacing.
             # But if a repositioning was already pending and unconsumed (no text
             # was ever written at the current position), this row jump is
             # continuing that same unresolved position change, not wrapping
             # text — so it must stay a repositioning rather than become a break.
-            if row_diff <= max_breaks_threshold and not self._repositioning_required:
+            # Likewise, in paint-on mode, pairing the row jump with a column
+            # jump bigger than a tab offset means the new PAC almost certainly
+            # targets an unrelated, independently-positioned region rather
+            # than wrapping the current text.
+            if (
+                row_diff <= max_breaks_threshold
+                and not self._repositioning_required
+                and not is_large_column_jump
+            ):
                 self._positions.append((new_row, col))
                 # Add breaks equal to row difference
                 # Row N -> N+1: 1 break
@@ -169,7 +190,7 @@ class DefaultProvidingPositionTracker(_PositioningTracker):
         except CaptionReadSyntaxError:
             return self.default
 
-    def update_positioning(self, positioning):
+    def update_positioning(self, positioning, column_jump_forces_reposition=False):
         """If called, sets this positioning as the default, then delegates
         to the super class.
 
@@ -179,4 +200,4 @@ class DefaultProvidingPositionTracker(_PositioningTracker):
         if positioning:
             self.default = positioning
 
-        super().update_positioning(positioning)
+        super().update_positioning(positioning, column_jump_forces_reposition)

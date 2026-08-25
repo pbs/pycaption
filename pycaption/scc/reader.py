@@ -409,7 +409,11 @@ class SCCReader(BaseReader):
         elif word == "942c":
             self._cmd_erase_displayed()
         else:
-            self.buffer.interpret_command(command=word, next_command=next_command)
+            self.buffer.interpret_command(
+                command=word,
+                next_command=next_command,
+                is_paint_on=self.buffer_dict.active_key == "paint",
+            )
 
     def _cmd_pop_on(self):
         """Handle Resume Caption Loading [RCL] - switch to pop-on mode."""

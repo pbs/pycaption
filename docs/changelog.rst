@@ -16,6 +16,14 @@ Changelog
     that could overlap or reposition adjacent co-timed captions in
     ``WebVTTWriter`` output.
 
+    Additionally, a single PAC that jumps both row (1-3 rows) and column
+    (more than a tab offset) at once — with no preceding column-only PAC to
+    leave a pending flag — is now also treated as a repositioning rather
+    than a break, but only while in paint-on mode, where independently
+    positioned simultaneous regions are possible. Pop-on and roll-up
+    buffers are unaffected, since they legitimately use larger column
+    shifts between buffered/wrapped lines of the same cue.
+
   - Fix ``SAMIReader`` raising a bare ``ValueError`` when a ``<sync>`` tag's
     ``start`` attribute is present but not numeric. It now raises
     ``CaptionReadTimingError`` like the missing-start case.
