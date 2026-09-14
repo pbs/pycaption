@@ -7,11 +7,14 @@ CONVENTIONS:
   responsible for the recalculation should return a new object with the
   necessary modifications.
 """
+
 import re
+
 from enum import Enum
 from functools import total_ordering
 
 from .exceptions import CaptionReadSyntaxError, RelativizationError
+
 
 _UNIT_MISMATCH_MSG = "The sizes should have the same measure units."
 

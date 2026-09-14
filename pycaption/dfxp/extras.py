@@ -13,6 +13,7 @@ from ..base import BaseWriter, CaptionNode, merge_concurrent_captions
 from .constants import DFXP_DEFAULT_REGION
 from .writer import DFXPWriter
 
+
 LEGACY_DFXP_BASE_MARKUP = """
 <tt xmlns="http://www.w3.org/ns/ttml"
     xmlns:tts="http://www.w3.org/ns/ttml#styling">

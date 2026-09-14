@@ -5,6 +5,7 @@ including style elements, region-based positioning, and writing direction.
 """
 
 import re
+
 from copy import deepcopy
 from xml.sax.saxutils import escape
 
@@ -25,6 +26,7 @@ from .constants import (
     DFXP_WRITER_FALLBACK_ALIGNMENT,
     _create_external_alignment,
 )
+
 
 _WRITING_DIRECTION_TO_DFXP = {
     WritingDirectionEnum.VERTICAL_RL: "tbrl",

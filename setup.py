@@ -3,6 +3,7 @@ import os
 
 from setuptools import find_packages, setup
 
+
 README_PATH = os.path.join(
     os.path.abspath(os.path.dirname(__file__)),
     "README.rst",
@@ -28,7 +29,7 @@ setup(
     project_urls={
         "Source": "https://github.com/pbs/pycaption",
         "Documentation": "https://pycaption.readthedocs.io/",
-        "Release notes": "https://pycaption.readthedocs.io" "/en/stable/changelog.html",
+        "Release notes": "https://pycaption.readthedocs.io/en/stable/changelog.html",
     },
     python_requires=">=3.10,<4.0",
     install_requires=dependencies,

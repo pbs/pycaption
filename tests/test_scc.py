@@ -11,6 +11,7 @@ from pycaption.scc.specialized_collections import (
 from pycaption.scc.state_machines import DefaultProvidingPositionTracker
 from tests.mixins import ReaderTestingMixIn
 
+
 TOLERANCE_MICROSECONDS = 500 * 1000
 
 
@@ -106,9 +107,9 @@ class TestSCCReader(ReaderTestingMixIn):
                 "Caption must not start with a BREAK node — indicates breaks "
                 "leaked from the previous caption"
             )
-            assert (
-                caption.nodes[-1].type_ != CaptionNode.BREAK
-            ), "Caption must not end with a trailing BREAK node"
+            assert caption.nodes[-1].type_ != CaptionNode.BREAK, (
+                "Caption must not end with a trailing BREAK node"
+            )
 
     def test_row_jump_with_pending_reposition_creates_new_cue(
         self, sample_scc_row_jump_with_pending_reposition
@@ -131,12 +132,12 @@ class TestSCCReader(ReaderTestingMixIn):
         assert first.layout_info.origin != second.layout_info.origin
 
         for caption in captions:
-            assert (
-                caption.nodes[0].type_ != CaptionNode.BREAK
-            ), "Cue must not start with a phantom BREAK node"
-            assert not any(
-                node.type_ == CaptionNode.BREAK for node in caption.nodes
-            ), "Cue must not contain any phantom BREAK node"
+            assert caption.nodes[0].type_ != CaptionNode.BREAK, (
+                "Cue must not start with a phantom BREAK node"
+            )
+            assert not any(node.type_ == CaptionNode.BREAK for node in caption.nodes), (
+                "Cue must not contain any phantom BREAK node"
+            )
 
     def test_row_skip_creates_new_cue_in_paint_on_mode(
         self, sample_scc_paint_on_row_and_column_jump_in_one_pac
@@ -164,9 +165,9 @@ class TestSCCReader(ReaderTestingMixIn):
         assert first.layout_info.origin != second.layout_info.origin
 
         for caption in captions:
-            assert not any(
-                node.type_ == CaptionNode.BREAK for node in caption.nodes
-            ), "Cue must not contain any phantom BREAK node"
+            assert not any(node.type_ == CaptionNode.BREAK for node in caption.nodes), (
+                "Cue must not contain any phantom BREAK node"
+            )
 
     def test_paint_on_row_plus_one_large_column_jump_creates_new_cue(
         self, sample_scc_paint_on_row_plus_one_large_column_jump
@@ -195,9 +196,9 @@ class TestSCCReader(ReaderTestingMixIn):
         assert first.layout_info.origin != second.layout_info.origin
 
         for caption in captions:
-            assert not any(
-                node.type_ == CaptionNode.BREAK for node in caption.nodes
-            ), "Cue must not contain any phantom BREAK node"
+            assert not any(node.type_ == CaptionNode.BREAK for node in caption.nodes), (
+                "Cue must not contain any phantom BREAK node"
+            )
 
     def test_row_plus_one_large_column_jump_stays_one_cue_in_pop_on_mode(
         self, sample_scc_pop_on_row_plus_one_large_column_jump
@@ -222,9 +223,9 @@ class TestSCCReader(ReaderTestingMixIn):
             "AB",
             "CD",
         ]
-        assert any(
-            node.type_ == CaptionNode.BREAK for node in caption.nodes
-        ), "Cue must join the two PACs with a BREAK node, not split into two cues"
+        assert any(node.type_ == CaptionNode.BREAK for node in caption.nodes), (
+            "Cue must join the two PACs with a BREAK node, not split into two cues"
+        )
 
     def test_row_plus_one_large_column_jump_stays_one_cue_in_roll_up_mode(
         self, sample_scc_roll_up_row_plus_one_large_column_jump
@@ -245,9 +246,9 @@ class TestSCCReader(ReaderTestingMixIn):
             "AB",
             "CD",
         ]
-        assert any(
-            node.type_ == CaptionNode.BREAK for node in caption.nodes
-        ), "Cue must join the two PACs with a BREAK node, not split into two cues"
+        assert any(node.type_ == CaptionNode.BREAK for node in caption.nodes), (
+            "Cue must join the two PACs with a BREAK node, not split into two cues"
+        )
 
     def test_row_skip_creates_new_cue_in_pop_on_mode(
         self, sample_scc_pop_on_row_and_column_jump_in_one_pac
@@ -273,9 +274,9 @@ class TestSCCReader(ReaderTestingMixIn):
         assert first.layout_info.origin != second.layout_info.origin
 
         for caption in captions:
-            assert not any(
-                node.type_ == CaptionNode.BREAK for node in caption.nodes
-            ), "Cue must not contain any phantom BREAK node"
+            assert not any(node.type_ == CaptionNode.BREAK for node in caption.nodes), (
+                "Cue must not contain any phantom BREAK node"
+            )
 
     def test_row_skip_creates_new_cue_in_roll_up_mode(
         self, sample_scc_roll_up_row_and_column_jump_in_one_pac
@@ -297,9 +298,9 @@ class TestSCCReader(ReaderTestingMixIn):
         assert first.layout_info.origin != second.layout_info.origin
 
         for caption in captions:
-            assert not any(
-                node.type_ == CaptionNode.BREAK for node in caption.nodes
-            ), "Cue must not contain any phantom BREAK node"
+            assert not any(node.type_ == CaptionNode.BREAK for node in caption.nodes), (
+                "Cue must not contain any phantom BREAK node"
+            )
 
     def test_row_skip_does_not_preserve_blank_line(
         self, sample_scc_row_skip_does_not_preserve_blank_line
@@ -329,9 +330,9 @@ class TestSCCReader(ReaderTestingMixIn):
         assert first.layout_info.origin != second.layout_info.origin
 
         for caption in captions:
-            assert not any(
-                node.type_ == CaptionNode.BREAK for node in caption.nodes
-            ), "Cue must not contain any phantom BREAK node"
+            assert not any(node.type_ == CaptionNode.BREAK for node in caption.nodes), (
+                "Cue must not contain any phantom BREAK node"
+            )
 
     def test_tab_offset(self, sample_scc_tab_offset):
         captions = SCCReader().read(sample_scc_tab_offset)

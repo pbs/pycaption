@@ -19,6 +19,7 @@ from pycaption.dfxp.writer import _convert_layout_to_attributes, _recreate_style
 
 from .mixins import DFXPTestingMixIn, MicroDVDTestingMixIn, WebVTTTestingMixIn
 
+
 # Arbitrary values used to test relativization
 VIDEO_WIDTH = 640
 VIDEO_HEIGHT = 360
@@ -242,9 +243,9 @@ class TestDFXPtoWebVTT(WebVTTTestingMixIn):
         results = WebVTTWriter(video_width=640, video_height=360).write(caption_set)
         start_align_count = results.count("align:start")
 
-        assert (
-            start_align_count == 3
-        ), f"{3 - start_align_count} default alignment(s) missing."
+        assert start_align_count == 3, (
+            f"{3 - start_align_count} default alignment(s) missing."
+        )
 
 
 class TestDFXPtoMicroDVD(MicroDVDTestingMixIn):

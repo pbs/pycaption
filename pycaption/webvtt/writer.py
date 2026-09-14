@@ -12,6 +12,7 @@ from ..base import BaseWriter, CaptionNode
 from ..geometry import WritingDirectionEnum
 from .constants import DEFAULT_ALIGN, WEBVTT_VERSION_OF
 
+
 _SIMPLE_STRUCTURAL_TAGS = {
     "ruby": ("<ruby>", "</ruby>"),
     "ruby_text": ("<rt>", "</rt>"),

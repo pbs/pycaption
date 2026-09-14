@@ -99,9 +99,9 @@ class TestSCCWriterTimestampOrdering:
         output = SCCWriter(drop_frame=False).write(captions)
         timestamps = re.findall(r"(\d{2}:\d{2}:\d{2}:\d{2})", output)
         for i in range(1, len(timestamps)):
-            assert (
-                timestamps[i] >= timestamps[i - 1]
-            ), f"NDF timestamps out of order: {timestamps[i - 1]} > {timestamps[i]}"
+            assert timestamps[i] >= timestamps[i - 1], (
+                f"NDF timestamps out of order: {timestamps[i - 1]} > {timestamps[i]}"
+            )
 
     def test_timestamps_monotonically_increasing_df(self):
         vtt_input = (
@@ -121,9 +121,9 @@ class TestSCCWriterTimestampOrdering:
         output = SCCWriter(drop_frame=True).write(captions)
         timestamps = re.findall(r"(\d{2}:\d{2}:\d{2};\d{2})", output)
         for i in range(1, len(timestamps)):
-            assert (
-                timestamps[i] >= timestamps[i - 1]
-            ), f"DF timestamps out of order: {timestamps[i - 1]} > {timestamps[i]}"
+            assert timestamps[i] >= timestamps[i - 1], (
+                f"DF timestamps out of order: {timestamps[i - 1]} > {timestamps[i]}"
+            )
 
     def test_rapid_short_captions_stay_ordered(self):
         """Short text followed by long text should not cause timestamp inversion."""
@@ -142,14 +142,14 @@ class TestSCCWriterTimestampOrdering:
             pattern = r"\d{2}:\d{2}:\d{2}" + re.escape(sep) + r"\d{2}"
             timestamps = re.findall(pattern, output)
             for i in range(1, len(timestamps)):
-                assert (
-                    timestamps[i] >= timestamps[i - 1]
-                ), f"drop_frame={df}: {timestamps[i - 1]} > {timestamps[i]}"
+                assert timestamps[i] >= timestamps[i - 1], (
+                    f"drop_frame={df}: {timestamps[i - 1]} > {timestamps[i]}"
+                )
 
 
 class TestSCCWriterFirstCueBackshift:
     def test_first_cue_start_is_shifted_back(self):
-        srt = "1\n" "00:00:10,000 --> 00:00:12,000\n" "Hello world\n"
+        srt = "1\n00:00:10,000 --> 00:00:12,000\nHello world\n"
         captions = SRTReader().read(srt)
         output = SCCWriter(drop_frame=False).write(captions)
         timestamps = re.findall(r"(\d{2}:\d{2}:\d{2}:\d{2})", output)
@@ -158,7 +158,7 @@ class TestSCCWriterFirstCueBackshift:
         assert timestamps[0] < "00:00:09:29"
 
     def test_first_cue_at_zero_does_not_go_negative(self):
-        srt = "1\n" "00:00:00,100 --> 00:00:02,000\n" "Hello\n"
+        srt = "1\n00:00:00,100 --> 00:00:02,000\nHello\n"
         captions = SRTReader().read(srt)
         output = SCCWriter(drop_frame=False).write(captions)
         timestamps = re.findall(r"(\d{2}:\d{2}:\d{2}:\d{2})", output)
@@ -215,7 +215,7 @@ class TestSCCWriterSplitLongCaption:
         """A caption that would exceed 80 SCC tokens should be split."""
         # Create a very long caption that will produce many code tokens
         long_text = "A" * 32 + "\n" + "B" * 32 + "\n" + "C" * 32 + "\n" + "D" * 32
-        srt = "1\n" "00:00:05,000 --> 00:00:10,000\n" f"{long_text}\n"
+        srt = f"1\n00:00:05,000 --> 00:00:10,000\n{long_text}\n"
         captions = SRTReader().read(srt)
         output = SCCWriter(drop_frame=False).write(captions)
         # Each output line (non-empty, non-header) should have <= 80 tokens
@@ -287,48 +287,42 @@ from pycaption.scc.constants import (  # noqa: E402
 
 class TestSCCWriterPositioning:
     def test_vtt_line_top_maps_to_row_1(self):
-        vtt = "WEBVTT\n\n" "00:00:01.000 --> 00:00:03.000 line:0%\n" "Top of screen\n"
+        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000 line:0%\nTop of screen\n"
         captions = WebVTTReader().read(vtt)
         output = SCCWriter().write(captions)
         pac_row_1 = WRITER_PAC_CODES[(1, 0, "plain")]
         assert pac_row_1 in output
 
     def test_vtt_line_bottom_maps_to_row_15(self):
-        vtt = (
-            "WEBVTT\n\n"
-            "00:00:01.000 --> 00:00:03.000 line:100%\n"
-            "Bottom of screen\n"
-        )
+        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000 line:100%\nBottom of screen\n"
         captions = WebVTTReader().read(vtt)
         output = SCCWriter().write(captions)
         pac_row_15 = WRITER_PAC_CODES[(15, 0, "plain")]
         assert pac_row_15 in output
 
     def test_vtt_line_middle_maps_to_row_9(self):
-        vtt = (
-            "WEBVTT\n\n" "00:00:01.000 --> 00:00:03.000 line:50%\n" "Middle of screen\n"
-        )
+        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000 line:50%\nMiddle of screen\n"
         captions = WebVTTReader().read(vtt)
         output = SCCWriter().write(captions)
         pac_row_9 = WRITER_PAC_CODES[(9, 0, "plain")]
         assert pac_row_9 in output
 
     def test_vtt_no_position_defaults_to_bottom(self):
-        vtt = "WEBVTT\n\n" "00:00:01.000 --> 00:00:03.000\n" "Default position\n"
+        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\nDefault position\n"
         captions = WebVTTReader().read(vtt)
         output = SCCWriter().write(captions)
         pac_row_15 = WRITER_PAC_CODES[(15, 0, "plain")]
         assert pac_row_15 in output
 
     def test_vtt_align_left_indent_zero(self):
-        vtt = "WEBVTT\n\n" "00:00:01.000 --> 00:00:03.000 align:left\n" "Left aligned\n"
+        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000 align:left\nLeft aligned\n"
         captions = WebVTTReader().read(vtt)
         output = SCCWriter().write(captions)
         pac_col_0 = WRITER_PAC_CODES[(15, 0, "plain")]
         assert pac_col_0 in output
 
     def test_vtt_align_center_computes_indent(self):
-        vtt = "WEBVTT\n\n" "00:00:01.000 --> 00:00:03.000 align:center\n" "Hi\n"
+        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000 align:center\nHi\n"
         captions = WebVTTReader().read(vtt)
         output = SCCWriter().write(captions)
         # "Hi" is 2 chars, center = (32-2)//2 = 15, base_col=12, tab=3
@@ -336,7 +330,7 @@ class TestSCCWriterPositioning:
         assert pac_col_12 in output
 
     def test_vtt_align_right_computes_indent(self):
-        vtt = "WEBVTT\n\n" "00:00:01.000 --> 00:00:03.000 align:right\n" "Hi\n"
+        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000 align:right\nHi\n"
         captions = WebVTTReader().read(vtt)
         output = SCCWriter().write(captions)
         # "Hi" is 2 chars, right = 32-2 = 30 -> clamped to 28
@@ -383,33 +377,31 @@ class TestSCCWriterPositioning:
 
 class TestSCCWriterStyles:
     def test_vtt_italic_emits_mid_row_code(self):
-        vtt = "WEBVTT\n\n" "00:00:01.000 --> 00:00:03.000\n" "Hello <i>world</i>\n"
+        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\nHello <i>world</i>\n"
         captions = WebVTTReader().read(vtt)
         output = SCCWriter().write(captions)
         assert MID_ROW_ITALIC in output
 
     def test_vtt_underline_emits_mid_row_code(self):
-        vtt = "WEBVTT\n\n" "00:00:01.000 --> 00:00:03.000\n" "Hello <u>world</u>\n"
+        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\nHello <u>world</u>\n"
         captions = WebVTTReader().read(vtt)
         output = SCCWriter().write(captions)
         assert MID_ROW_UNDERLINE in output
 
     def test_vtt_italic_underline_combined(self):
-        vtt = (
-            "WEBVTT\n\n" "00:00:01.000 --> 00:00:03.000\n" "Hello <i><u>world</u></i>\n"
-        )
+        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\nHello <i><u>world</u></i>\n"
         captions = WebVTTReader().read(vtt)
         output = SCCWriter().write(captions)
         assert MID_ROW_ITALIC_UNDERLINE in output
 
     def test_vtt_italic_ends_with_plain_code(self):
-        vtt = "WEBVTT\n\n" "00:00:01.000 --> 00:00:03.000\n" "<i>hello</i> world\n"
+        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\n<i>hello</i> world\n"
         captions = WebVTTReader().read(vtt)
         output = SCCWriter().write(captions)
         assert MID_ROW_PLAIN in output
 
     def test_vtt_bold_silently_dropped(self):
-        vtt = "WEBVTT\n\n" "00:00:01.000 --> 00:00:03.000\n" "<b>bold text</b>\n"
+        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\n<b>bold text</b>\n"
         captions = WebVTTReader().read(vtt)
         output = SCCWriter().write(captions)
         assert MID_ROW_ITALIC not in output
@@ -419,11 +411,7 @@ class TestSCCWriterStyles:
         assert not result.is_empty()
 
     def test_vtt_class_span_silently_dropped(self):
-        vtt = (
-            "WEBVTT\n\n"
-            "00:00:01.000 --> 00:00:03.000\n"
-            "<c.yellow>colored text</c>\n"
-        )
+        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\n<c.yellow>colored text</c>\n"
         captions = WebVTTReader().read(vtt)
         output = SCCWriter().write(captions)
         assert MID_ROW_ITALIC not in output
@@ -431,7 +419,7 @@ class TestSCCWriterStyles:
         assert not result.is_empty()
 
     def test_vtt_italic_at_line_start_uses_pac(self):
-        vtt = "WEBVTT\n\n" "00:00:01.000 --> 00:00:03.000\n" "<i>all italic</i>\n"
+        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\n<i>all italic</i>\n"
         captions = WebVTTReader().read(vtt)
         output = SCCWriter().write(captions)
         pac_italic = WRITER_PAC_CODES[(15, 0, "italic")]
@@ -468,11 +456,7 @@ class TestSCCWriterPositioningAndStylesCombined:
         assert "Second caption" in caps[1].get_text()
 
     def test_multiline_with_position(self):
-        vtt = (
-            "WEBVTT\n\n"
-            "00:00:01.000 --> 00:00:03.000 line:20%\n"
-            "Line one\nLine two\n"
-        )
+        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000 line:20%\nLine one\nLine two\n"
         captions = WebVTTReader().read(vtt)
         output = SCCWriter().write(captions)
         result = SCCReader().read(output)
@@ -582,9 +566,7 @@ class TestSCCWriterRollUp:
 class TestSCCWriterPaintOn:
     def test_paint_on_emits_rdc_preamble(self):
         scc = (
-            "Scenarist_SCC V1.0\n\n"
-            "00:00:00;00\t9429 54e5 73f4\n\n"
-            "00:00:04;00\t942c\n\n"
+            "Scenarist_SCC V1.0\n\n00:00:00;00\t9429 54e5 73f4\n\n00:00:04;00\t942c\n\n"
         )
         captions = SCCReader().read(scc)
         output = SCCWriter().write(captions)
@@ -593,9 +575,7 @@ class TestSCCWriterPaintOn:
 
     def test_paint_on_text_survives_roundtrip(self):
         scc = (
-            "Scenarist_SCC V1.0\n\n"
-            "00:00:00;00\t9429 54e5 73f4\n\n"
-            "00:00:04;00\t942c\n\n"
+            "Scenarist_SCC V1.0\n\n00:00:00;00\t9429 54e5 73f4\n\n00:00:04;00\t942c\n\n"
         )
         captions = SCCReader().read(scc)
         output = SCCWriter().write(captions)

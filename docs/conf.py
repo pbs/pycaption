@@ -13,6 +13,7 @@
 
 import sphinx_rtd_theme
 
+
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
@@ -45,8 +46,7 @@ master_doc = "index"
 
 # General information about the project.
 project = "pycaption"
-copyright = "2012-2026, PBS.org " \
-            "(available under the Apache License, Version 2.0)"
+copyright = "2012-2026, PBS.org (available under the Apache License, Version 2.0)"
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
