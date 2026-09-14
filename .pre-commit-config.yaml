@@ -1,17 +1,20 @@
+default_stages: [pre-commit, pre-push]
 repos:
--   repo: git://github.com/pre-commit/pre-commit-hooks
-    rev: v4.0.1
+-   repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
     hooks:
-    -   id: end-of-file-fixer
+    -   id: check-toml
+    -   id: check-xml
+    -   id: check-yaml
     -   id: trailing-whitespace
-    -   id: debug-statements
+    -   id: requirements-txt-fixer
+    -   id: sort-simple-yaml
+    -   id: end-of-file-fixer
+    -   id: check-ast
 
--   repo: git://github.com/PyCQA/flake8
-    rev: 3.9.2
+-   repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.16.5
     hooks:
-    -   id: flake8
-        args: [
-                '--exclude=tests/fixtures*',
-                '--ignore=W503,C901',
-                '--max-line-length=80',
-        ]
+    -   id: ruff
+        args: [--fix]
+    -   id: ruff-format
