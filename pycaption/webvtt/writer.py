@@ -337,14 +337,11 @@ class WebVTTWriter(BaseWriter):
     def _strip_line_padding(cue_text):
         """Remove whitespace at either end of every line of a cue.
 
-        A positioning code can leave a space at the start of the run that
-        follows it, and a layout boundary one at the end of the line
-        before. WebVTT collapses padding at a line's edges and
-        WebVTTReader drops it, so this changes nothing on screen and makes
-        write → read → write a fixed point.
-
-        A line left empty by the stripping takes an &nbsp;: an empty line
-        inside cue text would end the cue and drop the lines after it.
+        Positioning codes and layout boundaries leave spaces at the edges
+        of a line, which WebVTT collapses and WebVTTReader drops — so
+        this changes nothing on screen and makes write → read → write a
+        fixed point. A line left empty by the stripping takes an &nbsp;,
+        since an empty line inside cue text would end the cue.
 
         :param cue_text: Rendered cue text, one line per display line.
         :returns: The same text with every line stripped.
@@ -513,20 +510,16 @@ class WebVTTWriter(BaseWriter):
         """Assign every node to a layout group, without rendering.
 
         Group identity comes from the TEXT nodes: a new group opens
-        whenever a text node's layout differs from the previous one's.
-        The layout compared is the one the node is placed at, with
-        fallback_layout standing in for a missing layout_info — grouping
-        on the raw value would split a caption into two cues that then
+        whenever a text node's layout differs from the previous one's,
+        comparing the layout the node is placed at so that a missing
+        layout_info does not split a caption into two cues that then
         resolve to the same position and overlap.
 
-        The remaining nodes are then attributed to a group, which cannot
-        be decided while rendering left to right: an opening STYLE tag
-        joins the *following* text, so a tag placed before a layout
-        change starts the new group — the shape an SCC mid-row code
-        produces, where the code that turns italics on also moves the
-        column. A BREAK joins the *preceding* text. See _close_tag_group
-        for closing tags, and _drop_trailing_breaks for the BREAKs that
-        are then dropped from the end of each group.
+        The remaining nodes cannot be attributed while rendering left to
+        right: an opening STYLE tag joins the *following* text, so a tag
+        placed before a layout change starts the new group — the shape an
+        SCC mid-row code produces, where the code that turns italics on
+        also moves the column. A BREAK joins the *preceding* text.
 
         :param nodes: List of CaptionNode from a single Caption.
         :param fallback_layout: Layout used for nodes without one.
@@ -545,10 +538,9 @@ class WebVTTWriter(BaseWriter):
                 text_group[i] = len(layouts) - 1
 
         if not layouts:
-            # Nothing but styles and breaks, so there is no text to place
-            # and nothing that renders: breaks in this position are the
-            # trailing kind a cue's blank line already ends, and tags
-            # with no text between them draw nothing.
+            # Nothing but styles and breaks: no text to place, and nothing
+            # that renders — tags with no text between them draw nothing,
+            # and these breaks are the trailing kind, dropped below.
             return []
 
         groups = [[] for _ in layouts]
@@ -575,11 +567,10 @@ class WebVTTWriter(BaseWriter):
         """Group index for a closing STYLE tag.
 
         A closing tag joins its *matching opening tag's* group, even when
-        its own layout_info already belongs to the next group, so that
-        tag balance is structural rather than a property of the data that
-        happens to hold. The cost is that a span crossing a layout
-        boundary keeps its style only on the group its opening tag went
-        to: the later groups render bare rather than re-opening the span.
+        its own layout_info already belongs to the next group, so that tag
+        balance is structural rather than a property of the data that
+        happens to hold. A span crossing a boundary therefore keeps its
+        style only on its opening tag's group.
 
         :param text_group: Per-node group indexes, None for non-TEXT nodes.
         :param i: Index of the closing STYLE node.
@@ -657,20 +648,40 @@ class WebVTTWriter(BaseWriter):
                 output += "\n" if self._line_has_text_before(group, i) else "&nbsp;\n"
         return output
 
+    @staticmethod
+    def _line_has_text_before(group, i):
+        """Whether the line ending at index i already holds text.
+
+        Decides if a BREAK needs an &nbsp; guard to stop players
+        collapsing a genuinely blank line. The look-back skips STYLE nodes
+        and stops at the previous BREAK, so an ordinary styled line wrap —
+        a break after a closing tag, with text earlier on the line — is
+        not mistaken for a blank line. It stays within the group, so a
+        break cannot see text belonging to another cue.
+
+        :param group: List of CaptionNode for one layout group.
+        :param i: Index of the BREAK node being rendered.
+        :returns: True if the current line already has text.
+        """
+        for node in reversed(group[:i]):
+            if node.type_ == CaptionNode.BREAK:
+                return False
+            if node.type_ == CaptionNode.TEXT:
+                return True
+        return False
+
     @classmethod
     def _drop_blank_groups(cls, rendered):
         """Discard groups that would render as a cue of only whitespace.
 
-        A trailing space left by a style code can land on the far side of
-        a layout boundary, where it would become a cue holding a single
-        space at near-zero width — which players draw as a filled bar. At
-        its own position it draws nothing and WebVTTReader strips it, so
-        there is nothing worth keeping.
+        A trailing space left by a style code can land past a layout
+        boundary, where it becomes a cue holding a single space at
+        near-zero width — which players draw as a filled bar. It draws
+        nothing at its own position and WebVTTReader strips it anyway.
 
-        A blank group is only dropped in favour of one that survives it,
-        so a caption that is blank all through keeps its place in the
-        timeline as a deliberately empty cue — which is what an empty
-        line in an SRT source asks for.
+        Blank groups are only dropped in favour of one that survives, so a
+        caption blank all through keeps its place in the timeline as a
+        deliberately empty cue — what an empty line in SRT asks for.
 
         :param rendered: List of (cue_text, layout) pairs.
         :returns: The same list with blank groups dropped.
@@ -732,28 +743,6 @@ class WebVTTWriter(BaseWriter):
                 tags = self._convert_style_to_text_tag(style)
                 output += tags[0] if is_start else tags[1]
         return output
-
-    @staticmethod
-    def _line_has_text_before(group, i):
-        """Whether the line ending at index i already holds text.
-
-        Decides if a BREAK needs an &nbsp; guard to stop players
-        collapsing a genuinely blank line. The look-back skips STYLE
-        nodes and stops at the previous BREAK, so an ordinary styled line
-        wrap — a break following a closing tag, with text earlier on the
-        line — is not mistaken for a blank line. It stays within the
-        group, so a break cannot see text belonging to another cue.
-
-        :param group: List of CaptionNode for one layout group.
-        :param i: Index of the BREAK node being rendered.
-        :returns: True if the current line already has text.
-        """
-        for node in reversed(group[:i]):
-            if node.type_ == CaptionNode.BREAK:
-                return False
-            if node.type_ == CaptionNode.TEXT:
-                return True
-        return False
 
     @staticmethod
     def _encode_illegal_characters(s):
