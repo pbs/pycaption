@@ -1,5 +1,12 @@
 # Ruff configuration — replaces flake8, isort, black, pyupgrade, autoflake, bandit
 
+# Global exclusions (match current .pre-commit-config.yaml exclude patterns)
+exclude = [
+    "tests/fixtures/",
+    "ai_artifacts/",
+    ".claude/",
+]
+
 # Match black's default line length
 line-length = 88
 

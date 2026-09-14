@@ -1,4 +1,12 @@
 default_stages: [pre-commit, pre-push]
+
+exclude: |
+    (?x)(
+        ^tests/fixtures/|
+        ^ai_artifacts/|
+        ^.claude/
+    )
+
 repos:
 -   repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
