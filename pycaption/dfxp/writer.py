@@ -493,7 +493,7 @@ def _text_shadow_to_outline(value):
     return thickness
 
 
-def _recreate_style(content, dfxp):
+def _recreate_style(content, dfxp):  # noqa: C901
     """Convert an internal style dict to DFXP/TTS style attributes.
 
     Maps pycaption's internal keys (class, italics, bold, underline, color,
@@ -544,7 +544,7 @@ def _recreate_style(content, dfxp):
     return dfxp_style
 
 
-def _convert_layout_to_attributes(layout, fallback_alignment=None):
+def _convert_layout_to_attributes(layout, fallback_alignment=None):  # noqa: C901
     """Convert a Layout object to a dict of DFXP region attributes.
 
     Maps origin, extent, padding, alignment, and writing_direction to their

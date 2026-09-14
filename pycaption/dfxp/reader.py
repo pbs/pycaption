@@ -396,7 +396,7 @@ class DFXPReader(BaseReader):
                 self._convert_tag_to_node(a)
 
     @staticmethod
-    def _convert_style(tag):
+    def _convert_style(tag):  # noqa: C901
         """Convert DFXP/TTS style attributes on a tag to an internal style dict.
 
         Maps tts:fontStyle, tts:fontWeight, tts:textDecoration, tts:textAlign,

@@ -256,7 +256,7 @@ class LegacyDFXPWriter(BaseWriter):
 
         return line
 
-    def _recreate_style(self, content, dfxp):
+    def _recreate_style(self, content, dfxp):  # noqa: C901
         """Convert an internal style dict to DFXP/TTS attributes.
 
         :type content: dict
