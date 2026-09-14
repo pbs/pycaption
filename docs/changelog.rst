@@ -1,5 +1,10 @@
 Changelog
 ---------
+2.3.10
+^^^^^^
+  - Replaced the existing linting tools with Ruff
+  - Added a linting check to the PyPI publishing workflow
+
 2.3.9
 ^^^^^^
   - Fix ``SCCReader`` inserting phantom ``BREAK`` nodes when two independent,
