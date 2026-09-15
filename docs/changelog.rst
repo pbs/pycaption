@@ -1,6 +1,6 @@
 Changelog
 ---------
-2.3.10
+2.3.11
 ^^^^^^
   - Replaced the existing linting tools with Ruff
   - Added a linting check to the PyPI publishing workflow
