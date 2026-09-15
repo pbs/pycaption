@@ -61,6 +61,16 @@ def is_test_file(path):
         os.path.basename(path).startswith('test_')
     )
 
+def is_library_file(path):
+    """Library code, as opposed to packaging or docs config.
+
+    The API, signature, validation and missing-test checks only make sense
+    for the package itself. setup.py and docs/conf.py are .py files that
+    every release bumps, and a missing-test finding against them can never
+    be resolved by writing a test.
+    """
+    return path.startswith('pycaption/')
+
 def detect_base_branch():
     for branch in ['main', 'master']:
         r = run(['git', 'rev-parse', '--verify', f'origin/{branch}'])
@@ -522,6 +532,8 @@ sig_pattern = re.compile(r'^\s*def\s+(\w+)\s*\((.*?)\)\s*(?:->.*?)?:')
 
 modified_py_src = set()
 for f in py_src_files:
+    if not is_library_file(f):
+        continue
     if any(a['file'] == f for a in additions) and any(d['file'] == f for d in deletions):
         modified_py_src.add(f)
 
@@ -780,6 +792,8 @@ for d in deletions:
 new_funcs = {}
 for a in additions:
     if a['file'] not in py_src_files or is_test_file(a['file']):
+        continue
+    if not is_library_file(a['file']):
         continue
     m = sig_pattern.match(a['line'])
     if not m:

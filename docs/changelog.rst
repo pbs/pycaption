@@ -5,6 +5,57 @@ Changelog
   - Replaced the existing linting tools with Ruff
   - Added a linting check to the PyPI publishing workflow
 
+2.3.10
+^^^^^^^
+  - Fix ``WebVTTWriter`` producing unparseable output when a single
+    ``Caption`` carries more than one position across its text nodes — the
+    path that emits one cue per position. Cues were written back to back
+    with no blank line between them, fusing differently-placed text into
+    one block with two timing lines. A ``BREAK`` on the boundary masked
+    this, its newline standing in for the separator.
+
+  - Fix ``WebVTTWriter`` attributing inline markup to the wrong side of a
+    position boundary. Grouping is now decided before rendering, so an
+    opening ``STYLE`` tag joins the text that *follows* it: previously an
+    ``<i>`` belonging to the second position landed at the end of the
+    first, leaving one cue with an unclosed tag and the next starting bare.
+    A closing tag joins its matching opening tag's group, making tag
+    balance independent of the input's tag placement — at the cost that a
+    span crossing a boundary keeps its style only on its opening tag's
+    group.
+
+  - Fix a style on the whole ``Caption`` trapping the boundary newline
+    inside its wrap, producing a cue whose last line was a bare closing
+    tag. Trailing ``BREAK`` nodes are now dropped from each group, since a
+    cue ends at the blank line that follows it.
+
+  - Fix a missing ``layout_info`` on the first text node defeating the
+    split, which collapsed both pieces of text into one cue that quietly
+    adopted the second position. Grouping now keys on the layout a node is
+    placed at, with the caption's own layout (or the ``CaptionSet``'s)
+    standing in for a missing one.
+
+  - Fix the empty-line ``&nbsp;`` guard firing on ordinary styled line
+    wraps. The look-back now skips ``STYLE`` nodes and stops at the previous
+    ``BREAK``, rather than inspecting only the preceding node, so a break
+    after a closing tag on a line with text is no longer taken as blank.
+
+  - Fix ``WebVTTWriter`` emitting a cue of a single space at near-zero
+    width, which many players draw as a background-filled bar. A trailing
+    space left by a style code can land past a position boundary; such a
+    group is now dropped unless it is the only one, so a deliberately empty
+    caption keeps its place in the timeline.
+
+  - ``WebVTTWriter`` now strips whitespace from the start and end of every
+    cue text line, and emits no cue for a caption that renders to nothing.
+    WebVTT collapses padding at a line's edges and ``WebVTTReader`` drops
+    it, so nothing changes on screen. The stripping is textual, so padding
+    sitting next to inline markup rather than at the line edge is left
+    alone, as before. Output does change for single-position captions —
+    ``SCC→VTT``, ``DFXP→VTT`` and ``SAMI→VTT`` are all affected, the last
+    of these no longer emitting cue lines of nothing but spaces — and
+    write → read → write becomes a fixed point.
+
 2.3.9
 ^^^^^^
   - Fix ``SCCReader`` inserting phantom ``BREAK`` nodes when two independent,

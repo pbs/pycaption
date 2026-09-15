@@ -11,6 +11,16 @@ from pycaption import (
     WebVTTReader,
     WebVTTWriter,
 )
+from pycaption.base import Caption, CaptionList, CaptionNode, CaptionSet
+from pycaption.geometry import (
+    Alignment,
+    HorizontalAlignmentEnum,
+    Layout,
+    Point,
+    Size,
+    UnitEnum,
+    VerticalAlignmentEnum,
+)
 from tests.mixins import DFXPTestingMixIn, MicroDVDTestingMixIn, WebVTTTestingMixIn
 
 
@@ -813,3 +823,438 @@ class TestYouTubeKaraokeEmptyClassRoundtrip:
         text = captions[0].get_text()
         assert "Hello" in text
         assert "world" in text
+
+
+class TestMultipleLayoutsPerCaption:
+    """A Caption whose nodes carry different layout_info must become one
+    valid, independent cue per layout — same timing, different placement."""
+
+    LAYOUT_A = Layout(
+        origin=Point(Size(35, UnitEnum.PERCENT), Size(77, UnitEnum.PERCENT)),
+        alignment=Alignment(HorizontalAlignmentEnum.LEFT, VerticalAlignmentEnum.TOP),
+    )
+    LAYOUT_B = Layout(
+        origin=Point(Size(30, UnitEnum.PERCENT), Size(89, UnitEnum.PERCENT)),
+        alignment=Alignment(HorizontalAlignmentEnum.LEFT, VerticalAlignmentEnum.TOP),
+    )
+
+    @staticmethod
+    def _write(nodes, style=None):
+        caption = Caption(1000000, 2000000, nodes, style=style or {})
+        caption_set = CaptionSet({"en-US": CaptionList([caption])})
+        return WebVTTWriter().write(caption_set)
+
+    @classmethod
+    def _cues(cls, nodes, style=None):
+        """Return [(cue_settings, [text_line, ...]), ...] for the nodes."""
+        webvtt = cls._write(nodes, style)
+        blocks = [
+            block
+            for block in webvtt.split("WEBVTT\n\n", 1)[1].split("\n\n")
+            if block.strip()
+        ]
+        cues = []
+        for block in blocks:
+            lines = block.strip("\n").split("\n")
+            assert lines[0].count("-->") == 1, f"fused cues in block: {block!r}"
+            cues.append((lines[0], lines[1:]))
+        return cues
+
+    @staticmethod
+    def _italics(is_start, layout):
+        return CaptionNode.create_style(is_start, {"italics": True}, layout_info=layout)
+
+    def test_independent_italic_spans_split_into_two_cues(self):
+        """The reported repro: an italic span on each side of the boundary."""
+        cues = self._cues(
+            [
+                self._italics(True, self.LAYOUT_A),
+                CaptionNode.create_text("Come on", layout_info=self.LAYOUT_A),
+                self._italics(False, self.LAYOUT_A),
+                CaptionNode.create_break(layout_info=self.LAYOUT_A),
+                self._italics(True, self.LAYOUT_B),
+                CaptionNode.create_text("Let's go!", layout_info=self.LAYOUT_B),
+                self._italics(False, self.LAYOUT_B),
+            ]
+        )
+
+        assert len(cues) == 2
+        assert "position:35% line:77%" in cues[0][0]
+        assert "position:30% line:89%" in cues[1][0]
+        assert cues[0][1] == ["<i>Come on</i>"]
+        assert cues[1][1] == ["<i>Let's go!</i>"]
+
+    def test_closing_tag_stays_with_its_opening_tag_group(self):
+        """A closing tag placed after the next group's text must still
+        close the span it opened, rather than following the text next to
+        it into the second cue and leaving both cues unbalanced."""
+        cues = self._cues(
+            [
+                self._italics(True, self.LAYOUT_A),
+                CaptionNode.create_text("Ha", layout_info=self.LAYOUT_A),
+                CaptionNode.create_text("there", layout_info=self.LAYOUT_B),
+                self._italics(False, self.LAYOUT_B),
+            ]
+        )
+
+        assert len(cues) == 2
+        assert cues[0][1] == ["<i>Ha</i>"]
+        assert cues[1][1] == ["there"]
+        for _, lines in cues:
+            text = "".join(lines)
+            assert text.count("<i>") == text.count("</i>")
+
+    def test_caption_style_does_not_swallow_the_boundary_newline(self):
+        """A style on the whole Caption must not leave a cue whose last
+        line is nothing but a closing tag."""
+        cues = self._cues(
+            [
+                CaptionNode.create_text("Come on", layout_info=self.LAYOUT_A),
+                CaptionNode.create_break(layout_info=self.LAYOUT_A),
+                CaptionNode.create_text("Let's go!", layout_info=self.LAYOUT_B),
+            ],
+            style={"italics": True},
+        )
+
+        assert len(cues) == 2
+        assert cues[0][1] == ["<i>Come on</i>"]
+        assert cues[1][1] == ["<i>Let's go!</i>"]
+        for _, lines in cues:
+            assert lines[-1] != "</i>"
+
+    def test_first_text_node_without_layout_still_splits(self):
+        """layout_info=None on the first text node must not collapse the
+        split, which would make the caption adopt the second position."""
+        cues = self._cues(
+            [
+                CaptionNode.create_text("Come on", layout_info=None),
+                CaptionNode.create_break(layout_info=self.LAYOUT_A),
+                CaptionNode.create_text("Let's go!", layout_info=self.LAYOUT_B),
+            ]
+        )
+
+        assert len(cues) == 2
+        assert cues[0][1] == ["Come on"]
+        assert cues[1][1] == ["Let's go!"]
+        assert "position:30% line:89%" not in cues[0][0]
+        assert "position:30% line:89%" in cues[1][0]
+
+    def test_italic_line_wrap_emits_no_nbsp_guard(self):
+        """A BREAK after a closing tag, with text earlier on the line, is
+        an ordinary wrap and needs no guard. This is also the shape the
+        caption-merging path in skylab produces when it joins two
+        same-layout italic captions with a BREAK."""
+        cues = self._cues(
+            [
+                self._italics(True, self.LAYOUT_A),
+                CaptionNode.create_text("Come on", layout_info=self.LAYOUT_A),
+                self._italics(False, self.LAYOUT_A),
+                CaptionNode.create_break(layout_info=self.LAYOUT_A),
+                CaptionNode.create_text("second line", layout_info=self.LAYOUT_A),
+            ]
+        )
+
+        assert len(cues) == 1
+        assert cues[0][1] == ["<i>Come on</i>", "second line"]
+
+    def test_line_of_only_tags_still_gets_the_nbsp_guard(self):
+        """The line before a BREAK can hold tags and no text — an empty
+        span between two breaks, which SAMI, DFXP and WebVTT input all
+        produce. Looking past the tags has to stop at the earlier BREAK
+        rather than reach the text on the line before it, or the line
+        keeps no placeholder and collapses."""
+        cues = self._cues(
+            [
+                CaptionNode.create_text("Line one", layout_info=self.LAYOUT_A),
+                CaptionNode.create_break(layout_info=self.LAYOUT_A),
+                self._italics(True, self.LAYOUT_A),
+                self._italics(False, self.LAYOUT_A),
+                CaptionNode.create_break(layout_info=self.LAYOUT_A),
+                CaptionNode.create_text("Line two", layout_info=self.LAYOUT_A),
+            ]
+        )
+
+        assert len(cues) == 1
+        assert cues[0][1] == ["Line one", "<i></i>&nbsp;", "Line two"]
+
+    def test_break_behind_a_closing_tag_is_still_trailing(self):
+        """A group can end with a BREAK sitting *before* the tag that
+        closes a span over it. That break is still trailing, and leaving
+        it in would make the cue's last line a bare closing tag."""
+        cues = self._cues(
+            [
+                self._italics(True, self.LAYOUT_A),
+                CaptionNode.create_text("only line", layout_info=self.LAYOUT_A),
+                CaptionNode.create_break(layout_info=self.LAYOUT_A),
+                self._italics(False, self.LAYOUT_A),
+            ]
+        )
+
+        assert len(cues) == 1
+        assert cues[0][1] == ["<i>only line</i>"]
+
+    def test_whitespace_only_first_group_leaves_only_the_next_cue(self):
+        """A leading blank group must not become a cue of its own at the
+        blank group's position: it renders nothing there, and WebVTTReader
+        drops it on the way back in, so it would survive no round trip.
+        The surviving cue keeps the following group's layout."""
+        cues = self._cues(
+            [
+                CaptionNode.create_text(" ", layout_info=self.LAYOUT_A),
+                CaptionNode.create_text("Come on", layout_info=self.LAYOUT_B),
+            ]
+        )
+
+        assert len(cues) == 1
+        assert "position:30% line:89%" in cues[0][0]
+        assert cues[0][1] == ["Come on"]
+
+    def test_whitespace_only_last_group_leaves_only_the_previous_cue(self):
+        """A trailing space left by a style code must not become a cue of
+        its own at near-zero width, nor a trailing space on the cue that
+        precedes it."""
+        cues = self._cues(
+            [
+                self._italics(True, self.LAYOUT_A),
+                CaptionNode.create_text("Ha.é!", layout_info=self.LAYOUT_A),
+                self._italics(False, self.LAYOUT_A),
+                CaptionNode.create_text(" ", layout_info=self.LAYOUT_B),
+            ]
+        )
+
+        assert len(cues) == 1
+        assert "position:35% line:77%" in cues[0][0]
+        assert cues[0][1] == ["<i>Ha.é!</i>"]
+
+    def test_blank_group_holding_a_break_adds_no_line(self):
+        """A blank group can hold a break of its own. Dropping the group
+        has to take that break with it: the line the break would add is
+        blank, and a caption-level style would then close itself on a
+        line of its own."""
+        cues = self._cues(
+            [
+                CaptionNode.create_text("first", layout_info=self.LAYOUT_A),
+                CaptionNode.create_text(" ", layout_info=self.LAYOUT_B),
+                CaptionNode.create_break(layout_info=self.LAYOUT_B),
+                CaptionNode.create_text(" ", layout_info=self.LAYOUT_B),
+                CaptionNode.create_text("second", layout_info=self.LAYOUT_A),
+            ],
+            style={"italics": True},
+        )
+
+        assert len(cues) == 2
+        assert cues[0][1] == ["<i>first</i>"]
+        assert cues[1][1] == ["<i>second</i>"]
+
+    def test_trailing_break_leaves_no_blank_last_line(self):
+        """Asserted on the raw output, since splitting on blank lines
+        would hide the very trailing newline under test."""
+        webvtt = self._write(
+            [
+                CaptionNode.create_text("only line", layout_info=self.LAYOUT_A),
+                CaptionNode.create_break(layout_info=self.LAYOUT_A),
+            ]
+        )
+
+        assert webvtt.endswith("\nonly line\n")
+
+    def test_consecutive_trailing_breaks_are_all_dropped(self):
+        """More than one break can end a group — each renders nothing at
+        the end of a cue, so stopping after the first would leave a blank
+        last line behind."""
+        cues = self._cues(
+            [
+                CaptionNode.create_text("only line", layout_info=self.LAYOUT_A),
+                CaptionNode.create_break(layout_info=self.LAYOUT_A),
+                CaptionNode.create_break(layout_info=self.LAYOUT_A),
+                CaptionNode.create_text("next cue", layout_info=self.LAYOUT_B),
+            ]
+        )
+
+        assert len(cues) == 2
+        assert cues[0][1] == ["only line"]
+        assert cues[1][1] == ["next cue"]
+
+    def test_caption_without_text_emits_no_cue(self):
+        """A caption holding no text node is not a cue, in any of the
+        shapes that can produce one: tags draw nothing on their own, and
+        writing them would put markup on screen as the whole of a cue's
+        content, while breaks with no text are trailing by definition and
+        leave nothing behind once dropped."""
+        assert self._write([CaptionNode.create_style(True, {})]) == "WEBVTT\n\n"
+        assert (
+            self._write(
+                [self._italics(True, self.LAYOUT_A), self._italics(False, None)]
+            )
+            == "WEBVTT\n\n"
+        )
+        assert (
+            self._write([CaptionNode.create_break(), CaptionNode.create_break()])
+            == "WEBVTT\n\n"
+        )
+
+    def test_missing_node_layout_resolves_to_the_caption_position(self):
+        """A text node without layout_info is placed at the caption's own
+        position, so it belongs to that group rather than opening one of
+        its own — which would emit two cues at the same position, drawn
+        on top of each other."""
+        caption = Caption(
+            1000000,
+            2000000,
+            [
+                CaptionNode.create_text("Come on", layout_info=None),
+                CaptionNode.create_break(layout_info=None),
+                CaptionNode.create_text("Let's go!", layout_info=self.LAYOUT_B),
+            ],
+            layout_info=self.LAYOUT_B,
+        )
+        webvtt = WebVTTWriter().write(CaptionSet({"en-US": CaptionList([caption])}))
+
+        assert webvtt.count("-->") == 1
+        assert webvtt.endswith("\nCome on\nLet's go!\n")
+
+    def test_split_leaves_no_padding_and_round_trips_unchanged(self):
+        """The text run before a layout change usually ends in the space
+        that separated it from the next word. Across a cue boundary that
+        space renders as nothing and WebVTTReader drops it, so leaving it
+        in would only stop the output from being a fixed point."""
+        webvtt = self._write(
+            [
+                CaptionNode.create_text("A ", layout_info=self.LAYOUT_A),
+                CaptionNode.create_text("new pair", layout_info=self.LAYOUT_B),
+            ]
+        )
+
+        assert "\nA\n" in webvtt
+        assert " \n" not in webvtt
+        assert WebVTTWriter().write(WebVTTReader().read(webvtt)) == webvtt
+
+    def test_padding_is_stripped_from_lines_inside_a_cue(self):
+        """Every line of a cue is stripped, not just the cue's first and
+        last: the space a line break leaves behind sits in the middle of
+        the text, where a whole-cue strip would never reach it."""
+        cues = self._cues(
+            [
+                CaptionNode.create_text("first ", layout_info=self.LAYOUT_A),
+                CaptionNode.create_break(layout_info=self.LAYOUT_A),
+                CaptionNode.create_text(" second", layout_info=self.LAYOUT_A),
+            ]
+        )
+
+        assert len(cues) == 1
+        assert cues[0][1] == ["first", "second"]
+
+    def test_line_emptied_by_stripping_keeps_a_placeholder(self):
+        """A line of nothing but a space is blank once stripped, and an
+        empty line inside cue text is the blank line that ends the cue —
+        it would drop every line after it. The placeholder the guard uses
+        for an empty line has to stand in here too."""
+        cues = self._cues(
+            [
+                CaptionNode.create_text(" ", layout_info=self.LAYOUT_A),
+                CaptionNode.create_break(layout_info=self.LAYOUT_A),
+                CaptionNode.create_text("visible", layout_info=self.LAYOUT_A),
+            ]
+        )
+
+        assert len(cues) == 1
+        assert cues[0][1] == ["&nbsp;", "visible"]
+
+    def test_lone_blank_group_is_still_a_cue(self):
+        """Dropping a blank group only makes sense against a group that
+        survives it. A caption that is blank all through is a deliberately
+        empty cue — an empty line in an SRT source — and has to keep its
+        place in the timeline."""
+        cues = self._cues([CaptionNode.create_text(" ", layout_info=self.LAYOUT_A)])
+
+        assert len(cues) == 1
+        assert cues[0][1] == ["&nbsp;"]
+
+    def test_caption_blank_at_every_layout_is_still_one_cue(self):
+        """Blankness spread over two layouts is the same deliberately
+        empty cue as blankness at one, so the caption must not vanish for
+        having been split. It keeps the first group's position, the one it
+        would have had unsplit."""
+        cues = self._cues(
+            [
+                CaptionNode.create_text(" ", layout_info=self.LAYOUT_A),
+                CaptionNode.create_text(" ", layout_info=self.LAYOUT_B),
+            ]
+        )
+
+        assert len(cues) == 1
+        assert "position:35% line:77%" in cues[0][0]
+        assert cues[0][1] == ["&nbsp;"]
+
+    def test_caption_with_no_cue_leaves_no_extra_blank_line(self):
+        """A caption that renders to nothing must not contribute a cue
+        separator either — the neighbouring cues would then be split by
+        two blank lines instead of one."""
+        webvtt = WebVTTWriter().write(
+            CaptionSet(
+                {
+                    "en-US": CaptionList(
+                        [
+                            Caption(
+                                1000000,
+                                2000000,
+                                [CaptionNode.create_text("one", layout_info=None)],
+                            ),
+                            Caption(3000000, 4000000, [CaptionNode.create_break()]),
+                            Caption(
+                                5000000,
+                                6000000,
+                                [CaptionNode.create_text("two", layout_info=None)],
+                            ),
+                        ]
+                    )
+                }
+            )
+        )
+
+        assert webvtt.count("-->") == 2
+        assert "\n\n\n" not in webvtt
+
+    def test_dangling_opening_tag_stays_with_the_preceding_text(self):
+        """An opening tag joins the text that follows it, but unbalanced
+        input can leave it with none. It then belongs to the group of the
+        text it was written after, not to the caption's first group, which
+        it may have nothing to do with."""
+        cues = self._cues(
+            [
+                CaptionNode.create_text("plain", layout_info=self.LAYOUT_A),
+                CaptionNode.create_text("styled", layout_info=self.LAYOUT_B),
+                self._italics(True, self.LAYOUT_B),
+            ]
+        )
+
+        assert len(cues) == 2
+        assert cues[0][1] == ["plain"]
+        assert cues[1][1] == ["styled<i>"]
+
+    def test_scc_mid_row_code_splits_into_two_parsable_cues(self):
+        """End to end on the shape that occurs in real SCC: a mid-row
+        italics code that also moves the column, leaving one Caption with
+        two positions. This is the caption at 00:05:50.800 of
+        examples/2000370803_Original_en.txt, which was emitted as a single
+        fused block of two timing lines."""
+        scc = (
+            "Scenarist_SCC V1.0\n\n"
+            "00:00:01:00\t9420 942f 94ae 9420 94f4 9723 c180 "
+            "9476 91ae 7961 61f2 75e9 6ebf\n\n"
+            "00:00:03:00\t9420 942f\n\n"
+            "00:00:05:00\t942c\n\n"
+        )
+        webvtt = WebVTTWriter().write(SCCReader().read(scc))
+
+        blocks = [
+            block.strip("\n")
+            for block in webvtt.split("WEBVTT\n\n", 1)[1].split("\n\n")
+            if block.strip()
+        ]
+        assert [b.count("-->") for b in blocks] == [1, 1]
+        assert blocks[0].split("\n")[1:] == ["A"]
+        assert blocks[1].split("\n")[1:] == ["<i>yaaruin?</i>"]
+        assert "position:37.5%" in blocks[0]
+        assert "position:40%" in blocks[1]
+        assert WebVTTWriter().write(WebVTTReader().read(webvtt)) == webvtt
