@@ -2,7 +2,9 @@
 
 Produces spec-compliant output including STYLE blocks, REGION blocks,
 cue timing lines with positioning settings, and inline markup tags.
-Supports lossless VTT-to-VTT round-trip via preserved positioning strings.
+Supports lossless VTT-to-VTT round-trip via preserved positioning strings,
+except that a cue rendering to nothing — one holding only markup, such as
+``<i></i>`` — is dropped rather than re-emitted.
 """
 
 import re
