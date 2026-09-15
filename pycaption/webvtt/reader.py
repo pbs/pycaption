@@ -1038,7 +1038,7 @@ class WebVTTReader(BaseReader):
                     styles[key] = props
 
     @staticmethod
-    def _parse_css_declarations(declarations):
+    def _parse_css_declarations(declarations):  # noqa: C901
         """Parse CSS declaration text into pycaption's style dict.
 
         Maps recognized CSS properties to pycaption's internal style dict.

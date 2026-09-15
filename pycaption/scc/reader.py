@@ -78,6 +78,7 @@ http://www.theneitherworld.com/mcpoodle/SCC_TOOLS/DOCS/SCC_FORMAT.HTML
 """
 
 import re
+
 from collections import deque
 from copy import deepcopy
 
@@ -107,6 +108,7 @@ from .specialized_collections import (
     PopOnCue,
 )
 from .state_machines import DefaultProvidingPositionTracker
+
 
 _TIMECODE_RE = re.compile(r"\d{2}:\d{2}:\d{2}[:;](\d{1,2})")
 

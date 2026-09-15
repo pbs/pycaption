@@ -49,8 +49,12 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
 def main():
     parser = argparse.ArgumentParser(description="Caption preview server")
-    parser.add_argument("directory", nargs="?", default=".",
-                        help="Directory to serve media/caption files from")
+    parser.add_argument(
+        "directory",
+        nargs="?",
+        default=".",
+        help="Directory to serve media/caption files from",
+    )
     parser.add_argument("--port", type=int, default=8080)
     args = parser.parse_args()
 

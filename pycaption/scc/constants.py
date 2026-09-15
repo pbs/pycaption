@@ -7,7 +7,9 @@ background color codes, and derived inverse lookup tables.
 """
 
 import re as _re
+
 from itertools import product
+
 
 COMMANDS = {
     "9420": "",

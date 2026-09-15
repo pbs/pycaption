@@ -160,13 +160,13 @@ class TestWebVTTInlineMarkupRoundTrip:
         assert "<b><i>both</i></b>" in result
 
     def test_class_roundtrip(self):
-        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\n" "<c.yellow>colored</c>\n"
+        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\n<c.yellow>colored</c>\n"
         caption_set = WebVTTReader().read(vtt)
         result = WebVTTWriter().write(caption_set)
         assert "<c.yellow>colored</c>" in result
 
     def test_lang_roundtrip(self):
-        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\n" "<lang fr>Bonjour</lang>\n"
+        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\n<lang fr>Bonjour</lang>\n"
         caption_set = WebVTTReader().read(vtt)
         result = WebVTTWriter().write(caption_set)
         assert "<lang fr>Bonjour</lang>" in result
@@ -181,7 +181,7 @@ class TestWebVTTInlineMarkupRoundTrip:
         assert "<ruby>base<rt>annotation</rt></ruby>" in result
 
     def test_timestamp_roundtrip(self):
-        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:05.000\n" "Hello <00:00:02.500>world\n"
+        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:05.000\nHello <00:00:02.500>world\n"
         caption_set = WebVTTReader().read(vtt)
         result = WebVTTWriter().write(caption_set)
         assert "<00:00:02.500>" in result
@@ -198,15 +198,13 @@ class TestWebVTTInlineMarkupRoundTrip:
         assert "Normal <i>italic</i> <b>bold</b> end" in result
 
     def test_multiline_style_spanning_lines_roundtrip(self):
-        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\n" "<i>line one\nline two</i>\n"
+        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\n<i>line one\nline two</i>\n"
         caption_set = WebVTTReader().read(vtt)
         result = WebVTTWriter().write(caption_set)
         assert "<i>line one\nline two</i>" in result
 
     def test_unrecognized_tag_preserved_roundtrip(self):
-        vtt = (
-            "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\n" "He said <LAUGHING> something\n"
-        )
+        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\nHe said <LAUGHING> something\n"
         caption_set = WebVTTReader().read(vtt)
         result = WebVTTWriter().write(caption_set)
         assert "LAUGHING" in result
@@ -214,7 +212,7 @@ class TestWebVTTInlineMarkupRoundTrip:
         assert "something" in result
 
     def test_writer_encodes_illegal_characters(self):
-        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\n" "A &amp; B &lt; C\n"
+        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\nA &amp; B &lt; C\n"
         caption_set = WebVTTReader().read(vtt)
         result = WebVTTWriter().write(caption_set)
         assert "A &amp; B &lt; C" in result
@@ -222,7 +220,7 @@ class TestWebVTTInlineMarkupRoundTrip:
         assert WebVTTWriter._encode_illegal_characters("-->") == "--&gt;"
 
     def test_writer_encodes_entities_nbsp_lrm_rlm(self):
-        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\n" "word gap ‎ltr ‏rtl\n"
+        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\nword gap ‎ltr ‏rtl\n"
         caption_set = WebVTTReader().read(vtt)
         result = WebVTTWriter().write(caption_set)
         assert "word&nbsp;gap" in result
@@ -238,9 +236,9 @@ class TestWebVTTInlineMarkupRoundTrip:
         parts = timing_line.split(" --> ")
         for ts in parts:
             ts_clean = ts.split()[0]
-            assert re.match(
-                r"\d{2}:\d{2}:\d{2}\.\d{3}$", ts_clean
-            ), f"Timestamp {ts_clean} missing hours component"
+            assert re.match(r"\d{2}:\d{2}:\d{2}\.\d{3}$", ts_clean), (
+                f"Timestamp {ts_clean} missing hours component"
+            )
 
 
 class TestWebVTTStyleCrossFormat:
@@ -264,14 +262,14 @@ class TestWebVTTStyleCrossFormat:
         assert "<i>" not in result
 
     def test_structural_tags_stripped_in_srt(self):
-        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\n" "<c.yellow>Hello</c>\n"
+        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\n<c.yellow>Hello</c>\n"
         caption_set = WebVTTReader().read(vtt)
         result = SRTWriter().write(caption_set)
         assert "<c" not in result
         assert "Hello" in result
 
     def test_structural_tags_stripped_in_dfxp(self):
-        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\n" "<lang fr>Bonjour</lang>\n"
+        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\n<lang fr>Bonjour</lang>\n"
         caption_set = WebVTTReader().read(vtt)
         result = DFXPWriter().write(caption_set)
         assert "<lang" not in result
@@ -293,9 +291,7 @@ class TestWebVTTCueSettingsConversion:
 
     def test_cue_settings_to_dfxp_text_align(self):
         vtt = (
-            "WEBVTT\n\n"
-            "00:00:01.000 --> 00:00:03.000 line:50% align:end\n"
-            "Hello world\n"
+            "WEBVTT\n\n00:00:01.000 --> 00:00:03.000 line:50% align:end\nHello world\n"
         )
         caption_set = WebVTTReader().read(vtt)
         result = DFXPWriter().write(caption_set)
@@ -314,14 +310,14 @@ class TestWebVTTCueSettingsConversion:
         assert "position:50% line:80% align:center" in result
 
     def test_line_alignment_center_to_dfxp(self):
-        vtt = "WEBVTT\n\n" "00:00:01.000 --> 00:00:03.000 line:50%,center\n" "Hello\n"
+        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000 line:50%,center\nHello\n"
         caption_set = WebVTTReader().read(vtt)
         result = DFXPWriter().write(caption_set)
 
         assert 'tts:displayAlign="center"' in result
 
     def test_line_alignment_vtt_non_passthrough_roundtrip(self):
-        vtt = "WEBVTT\n\n" "00:00:01.000 --> 00:00:03.000 line:80%,center\n" "Hello\n"
+        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000 line:80%,center\nHello\n"
         caption_set = WebVTTReader().read(vtt)
         for caption in caption_set.get_captions("en-US"):
             caption.layout_info.webvtt_positioning = None
@@ -330,7 +326,7 @@ class TestWebVTTCueSettingsConversion:
         assert "line:80%,center" in result
 
     def test_line_alignment_absent_no_qualifier_in_vtt_output(self):
-        vtt = "WEBVTT\n\n" "00:00:01.000 --> 00:00:03.000 line:80%\n" "Hello\n"
+        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000 line:80%\nHello\n"
         caption_set = WebVTTReader().read(vtt)
         for caption in caption_set.get_captions("en-US"):
             caption.layout_info.webvtt_positioning = None
@@ -440,7 +436,7 @@ class TestWebVTTWriterStyleBlocks:
         assert result.count("vertical:rl") == 1
 
     def test_no_style_block_when_no_styles(self):
-        vtt = "WEBVTT\n\n" "00:00:01.000 --> 00:00:03.000\n" "Plain text\n"
+        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\nPlain text\n"
         caption_set = WebVTTReader().read(vtt)
         result = WebVTTWriter().write(caption_set)
 
@@ -500,11 +496,7 @@ class TestWebVTTtoDFXPWritingDirection:
         assert 'tts:writingMode="tblr"' in result
 
     def test_vertical_only_creates_region(self):
-        vtt = (
-            "WEBVTT\n\n"
-            "00:00:01.000 --> 00:00:03.000 vertical:rl\n"
-            "Hello vertical\n"
-        )
+        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000 vertical:rl\nHello vertical\n"
         caption_set = WebVTTReader().read(vtt)
         result = DFXPWriter().write(caption_set)
 
@@ -524,9 +516,7 @@ class TestWebVTTtoDFXPWritingDirection:
         assert "tts:origin" in result
 
     def test_horizontal_omits_writing_mode(self):
-        vtt = (
-            "WEBVTT\n\n" "00:00:01.000 --> 00:00:03.000 line:50%\n" "Hello horizontal\n"
-        )
+        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000 line:50%\nHello horizontal\n"
         caption_set = WebVTTReader().read(vtt)
         result = DFXPWriter().write(caption_set)
 
@@ -819,11 +809,7 @@ class TestGlobalCueColorPropagation:
 
 class TestYouTubeKaraokeEmptyClassRoundtrip:
     def test_empty_class_vtt_to_sami_roundtrip(self):
-        vtt = (
-            "WEBVTT\n\n"
-            "00:00:01.000 --> 00:00:04.000\n"
-            "<c> Hello</c><c> world</c>\n"
-        )
+        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:04.000\n<c> Hello</c><c> world</c>\n"
         caption_set = WebVTTReader().read(vtt)
         sami_output = SAMIWriter().write(caption_set)
 

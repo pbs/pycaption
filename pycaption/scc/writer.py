@@ -6,6 +6,7 @@ and paint-on caption modes with proper timing, positioning, and styling.
 
 import math
 import textwrap
+
 from copy import deepcopy
 
 from pycaption.base import BaseWriter, CaptionNode
@@ -25,6 +26,7 @@ from .constants import (
     TAB_OFFSET_CODES,
     WRITER_PAC_CODES,
 )
+
 
 SCC_TOKENS_PER_CAPTION_MAX = 80
 
@@ -237,7 +239,7 @@ class SCCWriter(BaseWriter):
         code_tokens = code.split()
 
         if len(code_tokens) <= max_payload:
-            return f"{ts}\t" "94ae 94ae 9420 9420 " f"{code}" "942c 942c 942f 942f\n\n"
+            return f"{ts}\t94ae 94ae 9420 9420 {code}942c 942c 942f 942f\n\n"
 
         output = ""
         offset = 0
@@ -273,9 +275,7 @@ class SCCWriter(BaseWriter):
     def _render_paint_on(code, ts):
         """Render a paint-on cue."""
         return (
-            f"{ts}\t"
-            f"{_RESUME_DIRECT_CAPTIONING} {_RESUME_DIRECT_CAPTIONING} "
-            f"{code}\n\n"
+            f"{ts}\t{_RESUME_DIRECT_CAPTIONING} {_RESUME_DIRECT_CAPTIONING} {code}\n\n"
         )
 
     @staticmethod

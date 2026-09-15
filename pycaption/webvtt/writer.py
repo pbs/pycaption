@@ -8,12 +8,14 @@ except that a cue rendering to nothing — one holding only markup, such as
 """
 
 import re
+
 from copy import deepcopy
 from datetime import timedelta
 
 from ..base import BaseWriter, CaptionNode
 from ..geometry import WritingDirectionEnum
 from .constants import DEFAULT_ALIGN, WEBVTT_VERSION_OF
+
 
 _SIMPLE_STRUCTURAL_TAGS = {
     "ruby": ("<ruby>", "</ruby>"),

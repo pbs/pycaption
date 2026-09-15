@@ -8,6 +8,7 @@ import re
 
 from ..geometry import Alignment, HorizontalAlignmentEnum, Layout, VerticalAlignmentEnum
 
+
 DFXP_BASE_MARKUP = """
 <tt xmlns="http://www.w3.org/ns/ttml"
     xmlns:tts="http://www.w3.org/ns/ttml#styling">

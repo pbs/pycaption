@@ -29,6 +29,7 @@ from .constants import (
     UNDERLINE_COMMANDS,
 )
 
+
 PopOnCue = collections.namedtuple("PopOnCue", "buffer, start, end")
 
 # First two hex chars of SCC codes that produce punctuation ['.', '!', '?', ',']
