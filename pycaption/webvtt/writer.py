@@ -8,6 +8,7 @@ except that a cue rendering to nothing — one holding only markup, such as
 """
 
 import re
+
 from copy import deepcopy
 from datetime import timedelta
 
