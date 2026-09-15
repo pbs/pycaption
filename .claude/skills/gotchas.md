@@ -170,4 +170,14 @@ if: env.REPORT_EXISTS == 'true' && env.SCRIPT_CRASHED != 'true'
 
 ---
 
-*Last updated: 2026-07-09*
+## 14. Non-library `.py` files flagged as source needing tests
+
+**What happened:** PR #429 review returned a single HIGH finding — `docs/conf.py` "source modified but no corresponding test file was updated" — which alone flipped the verdict to NEEDS WORK. `docs/conf.py` is Sphinx configuration; the change was a version-string bump. The same classifier would flag `setup.py`.
+
+**Rule:** `py_src_files` must exclude `.py` files that are not library code before the missing-test check runs. Exclude at least `docs/`, `setup.py`, `conf.py`, and anything outside the `pycaption/` package. A finding that cannot be fixed by writing a test is not a test-coverage finding, and one false HIGH is enough to invert the merge recommendation.
+
+**Applies to:** `check-last-pr`
+
+---
+
+*Last updated: 2026-09-15*

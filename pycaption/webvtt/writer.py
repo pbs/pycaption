@@ -2,9 +2,12 @@
 
 Produces spec-compliant output including STYLE blocks, REGION blocks,
 cue timing lines with positioning settings, and inline markup tags.
-Supports lossless VTT-to-VTT round-trip via preserved positioning strings.
+Supports lossless VTT-to-VTT round-trip via preserved positioning strings,
+except that a cue rendering to nothing — one holding only markup, such as
+``<i></i>`` — is dropped rather than re-emitted.
 """
 
+import re
 from copy import deepcopy
 from datetime import timedelta
 
@@ -45,6 +48,7 @@ class WebVTTWriter(BaseWriter):
         "underline": ("text-decoration", "underline"),
     }
     _CUE_SELECTOR = "::cue"
+    _TAG_PATTERN = re.compile(r"<[^>]*>")
     _HTML_ELEMENT_NAMES = frozenset(
         {
             "p",
@@ -89,9 +93,11 @@ class WebVTTWriter(BaseWriter):
 
         self.global_layout = caption_set.get_layout_info(lang)
 
-        return output + "\n".join(
-            [self._convert_caption(caption_set, caption) for caption in captions]
-        )
+        # A caption with nothing to render contributes no cue at all, and
+        # must not contribute a separator either — it would leave a second
+        # blank line between the cues on either side of it.
+        cues = [self._convert_caption(caption_set, caption) for caption in captions]
+        return output + "\n".join([cue for cue in cues if cue])
 
     def _timestamp(self, ts):
         """Format microseconds as a WebVTT timestamp string (HH:MM:SS.mmm).
@@ -295,13 +301,14 @@ class WebVTTWriter(BaseWriter):
         :param caption: Caption to serialize.
         :returns: Multi-line string containing one or more cues.
         """
-        layout_groups = self._group_cues_by_layout(caption.nodes, caption_set)
+        fallback_layout = caption.layout_info or self.global_layout
+        layout_groups = self._group_cues_by_layout(
+            caption.nodes, caption_set, fallback_layout
+        )
 
         start = self._timestamp(caption.start)
         end = self._timestamp(caption.end)
         timespan = f"{start} --> {end}"
-
-        output = ""
 
         cue_style_tags = ["", ""]
 
@@ -314,14 +321,34 @@ class WebVTTWriter(BaseWriter):
 
         region_suffix = self._get_roll_up_region_setting(caption)
 
+        cues = []
         for cue_text, layout in layout_groups:
-            if not layout:
-                layout = caption.layout_info or self.global_layout
+            cue_text = self._strip_line_padding(cue_text)
             cue_settings = self._convert_positioning(layout) + region_suffix
-            output += timespan + cue_settings + "\n"
-            output += cue_style_tags[0] + cue_text + cue_style_tags[1] + "\n"
+            cues.append(
+                f"{timespan}{cue_settings}\n"
+                f"{cue_style_tags[0]}{cue_text}{cue_style_tags[1]}\n"
+            )
 
-        return output
+        # Each cue already ends in a newline, so joining on one more gives
+        # the blank line that separates cues — the same convention write()
+        # uses between captions.
+        return "\n".join(cues)
+
+    @staticmethod
+    def _strip_line_padding(cue_text):
+        """Remove whitespace at either end of every line of a cue.
+
+        Positioning codes and layout boundaries leave spaces at the edges
+        of a line, which WebVTT collapses and WebVTTReader drops — so
+        this changes nothing on screen and makes write → read → write a
+        fixed point. A line left empty by the stripping takes an &nbsp;,
+        since an empty line inside cue text would end the cue.
+
+        :param cue_text: Rendered cue text, one line per display line.
+        :returns: The same text with every line stripped.
+        """
+        return "\n".join(line.strip() or "&nbsp;" for line in cue_text.split("\n"))
 
     def _get_roll_up_region_setting(self, caption):
         """Return the region:id cue setting suffix for roll-up captions.
@@ -459,40 +486,219 @@ class WebVTTWriter(BaseWriter):
 
         return cue_settings
 
-    def _group_cues_by_layout(self, nodes, caption_set):
+    def _group_cues_by_layout(self, nodes, caption_set, fallback_layout):
         """Split a caption's nodes into groups sharing the same layout.
 
         Each group becomes a separate WebVTT cue in the output (same
         timing, different positioning). This handles captions where
-        individual text nodes carry different layout_info (e.g. from
-        DFXP sources with per-span positioning).
+        individual text nodes carry different layout_info — DFXP sources
+        with per-span positioning, SCC mid-row codes that advance the
+        column, or captions merged upstream.
 
         :param nodes: List of CaptionNode from a single Caption.
         :param caption_set: CaptionSet for style resolution.
+        :param fallback_layout: Layout a node without one is placed at,
+            so grouping keys on where a node actually lands.
         :returns: List of (cue_text, layout) tuples.
         """
-        if not nodes:
-            return []
+        rendered = [
+            (self._render_group(group, caption_set), layout)
+            for group, layout in self._partition_nodes_by_layout(nodes, fallback_layout)
+        ]
+        return self._drop_blank_groups(rendered)
 
-        current_layout = None
-        layout_groups = []
-        s = ""
+    @classmethod
+    def _partition_nodes_by_layout(cls, nodes, fallback_layout):
+        """Assign every node to a layout group, without rendering.
+
+        Group identity comes from the TEXT nodes: a new group opens
+        whenever a text node's layout differs from the previous one's,
+        comparing the layout the node is placed at so that a missing
+        layout_info does not split a caption into two cues that then
+        resolve to the same position and overlap.
+
+        The remaining nodes cannot be attributed while rendering left to
+        right: an opening STYLE tag joins the *following* text, so a tag
+        placed before a layout change starts the new group — the shape an
+        SCC mid-row code produces, where the code that turns italics on
+        also moves the column. A BREAK joins the *preceding* text.
+
+        :param nodes: List of CaptionNode from a single Caption.
+        :param fallback_layout: Layout used for nodes without one.
+        :returns: List of (node_list, layout) tuples in document order.
+        """
+        layouts = []
+        text_group = [None] * len(nodes)
 
         for i, node in enumerate(nodes):
             if node.type_ == CaptionNode.TEXT:
-                if s and current_layout and node.layout_info != current_layout:
-                    layout_groups.append((s, current_layout))
-                    s = ""
-                s += self._encode_illegal_characters(node.content) or "&nbsp;"
-                current_layout = node.layout_info
-            elif node.type_ == CaptionNode.STYLE:
-                s += self._render_style_node(node, caption_set)
-            elif node.type_ == CaptionNode.BREAK:
-                s += self._render_break_node(nodes, i)
+                layout = node.layout_info or fallback_layout
+                # layouts is empty until the first text node, which a
+                # layout of None must still open a group for.
+                if not layouts or layout != layouts[-1]:
+                    layouts.append(layout)
+                text_group[i] = len(layouts) - 1
 
-        if s:
-            layout_groups.append((s, current_layout))
-        return layout_groups
+        if not layouts:
+            # Nothing but styles and breaks: no text to place, and nothing
+            # that renders — tags with no text between them draw nothing,
+            # and these breaks are the trailing kind, dropped below.
+            return []
+
+        groups = [[] for _ in layouts]
+        open_tags = []
+        for i, node in enumerate(nodes):
+            if node.type_ == CaptionNode.TEXT:
+                index = text_group[i]
+            elif node.type_ == CaptionNode.STYLE and node.start:
+                index = cls._next_text_group(text_group, i)
+                open_tags.append(index)
+            elif node.type_ == CaptionNode.STYLE:
+                index = cls._close_tag_group(text_group, i, open_tags)
+            else:
+                index = cls._previous_text_group(text_group, i)
+            groups[index].append(node)
+
+        for group in groups:
+            cls._drop_trailing_breaks(group)
+
+        return list(zip(groups, layouts))
+
+    @classmethod
+    def _close_tag_group(cls, text_group, i, open_tags):
+        """Group index for a closing STYLE tag.
+
+        A closing tag joins its *matching opening tag's* group, even when
+        its own layout_info already belongs to the next group, so that tag
+        balance is structural rather than a property of the data that
+        happens to hold. A span crossing a boundary therefore keeps its
+        style only on its opening tag's group.
+
+        :param text_group: Per-node group indexes, None for non-TEXT nodes.
+        :param i: Index of the closing STYLE node.
+        :param open_tags: Stack of group indexes of the open tags,
+            popped in place.
+        :returns: Group index.
+        """
+        if open_tags:
+            return open_tags.pop()
+        return cls._previous_text_group(text_group, i)
+
+    @staticmethod
+    def _previous_text_group(text_group, i):
+        """Group index of the nearest TEXT node before i, else the first.
+
+        :param text_group: Per-node group indexes, None for non-TEXT nodes.
+        :param i: Index to look back from.
+        :returns: Group index.
+        """
+        for index in reversed(text_group[:i]):
+            if index is not None:
+                return index
+        return 0
+
+    @classmethod
+    def _next_text_group(cls, text_group, i):
+        """Group index of the nearest TEXT node after i.
+
+        Falls back to the preceding group when nothing follows, so a
+        dangling opening tag stays with the text it was written after.
+
+        :param text_group: Per-node group indexes, None for non-TEXT nodes.
+        :param i: Index to look forward from.
+        :returns: Group index.
+        """
+        for index in text_group[i + 1 :]:
+            if index is not None:
+                return index
+        return cls._previous_text_group(text_group, i)
+
+    @staticmethod
+    def _drop_trailing_breaks(group):
+        """Remove BREAK nodes that end a group, ignoring trailing tags.
+
+        A cue ends at the blank line that follows it, so a break in that
+        position renders nothing and is safe to drop. STYLE nodes are
+        skipped on the way back, because a break can sit between the last
+        text of a group and the tag closing a span over it.
+
+        Mutates the list in place.
+
+        :param group: List of CaptionNode for one layout group.
+        """
+        for i in range(len(group) - 1, -1, -1):
+            if group[i].type_ == CaptionNode.STYLE:
+                continue
+            if group[i].type_ != CaptionNode.BREAK:
+                return
+            group.pop(i)
+
+    def _render_group(self, group, caption_set):
+        """Render one layout group's nodes into WebVTT cue text.
+
+        :param group: List of CaptionNode belonging to a single group.
+        :param caption_set: CaptionSet for style resolution.
+        :returns: Cue text string.
+        """
+        output = ""
+        for i, node in enumerate(group):
+            if node.type_ == CaptionNode.TEXT:
+                output += self._encode_illegal_characters(node.content) or "&nbsp;"
+            elif node.type_ == CaptionNode.STYLE:
+                output += self._render_style_node(node, caption_set)
+            elif node.type_ == CaptionNode.BREAK:
+                output += "\n" if self._line_has_text_before(group, i) else "&nbsp;\n"
+        return output
+
+    @staticmethod
+    def _line_has_text_before(group, i):
+        """Whether the line ending at index i already holds text.
+
+        Decides if a BREAK needs an &nbsp; guard to stop players
+        collapsing a genuinely blank line. The look-back skips STYLE nodes
+        and stops at the previous BREAK, so an ordinary styled line wrap —
+        a break after a closing tag, with text earlier on the line — is
+        not mistaken for a blank line. It stays within the group, so a
+        break cannot see text belonging to another cue.
+
+        :param group: List of CaptionNode for one layout group.
+        :param i: Index of the BREAK node being rendered.
+        :returns: True if the current line already has text.
+        """
+        for node in reversed(group[:i]):
+            if node.type_ == CaptionNode.BREAK:
+                return False
+            if node.type_ == CaptionNode.TEXT:
+                return True
+        return False
+
+    @classmethod
+    def _drop_blank_groups(cls, rendered):
+        """Discard groups that would render as a cue of only whitespace.
+
+        A trailing space left by a style code can land past a layout
+        boundary, where it becomes a cue holding a single space at
+        near-zero width — which players draw as a filled bar. It draws
+        nothing at its own position and WebVTTReader strips it anyway.
+
+        Blank groups are only dropped in favour of one that survives, so a
+        caption blank all through keeps its place in the timeline as a
+        deliberately empty cue — what an empty line in SRT asks for.
+
+        :param rendered: List of (cue_text, layout) pairs.
+        :returns: The same list with blank groups dropped.
+        """
+        kept = [pair for pair in rendered if not cls._is_blank(pair[0])]
+        return kept or rendered[:1]
+
+    @classmethod
+    def _is_blank(cls, text):
+        """Whether cue text carries no visible characters.
+
+        :param text: Rendered cue text, tags included.
+        :returns: True if only markup and whitespace remain.
+        """
+        return not cls._TAG_PATTERN.sub("", text).replace("&nbsp;", " ").strip()
 
     def _render_style_node(self, node, caption_set):
         """Convert a STYLE CaptionNode into WebVTT inline markup.
@@ -539,21 +745,6 @@ class WebVTTWriter(BaseWriter):
                 tags = self._convert_style_to_text_tag(style)
                 output += tags[0] if is_start else tags[1]
         return output
-
-    @staticmethod
-    def _render_break_node(nodes, i):
-        """Render a BREAK node as a newline, with &nbsp; guard.
-
-        Prepends &nbsp; when the break is at position 0 or follows a
-        non-TEXT node, preventing empty lines from being collapsed.
-
-        :param nodes: Full node list (for look-back).
-        :param i: Index of the current BREAK node.
-        :returns: String to append to cue text.
-        """
-        if i == 0 or nodes[i - 1].type_ != CaptionNode.TEXT:
-            return "&nbsp;\n"
-        return "\n"
 
     @staticmethod
     def _encode_illegal_characters(s):
