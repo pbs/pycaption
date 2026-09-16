@@ -575,9 +575,9 @@ class WebVTTWriter(BaseWriter):
         of a timestamp renders as nothing — so it must not take a slot on
         the open-tag stack, mirroring the same exclusion in
         WebVTTReader._track_open_tag. Pairing on keys already declines to
-        match a timestamp against a real closing tag; keeping it off the
-        stack is what stops an *unpaired* closing tag from consuming its
-        slot through the LIFO fallback.
+        match a timestamp against a real closing tag, so this only keeps
+        the stack meaningful: every entry on it is a span still awaiting a
+        tag of its own.
 
         :param node: A CaptionNode of type STYLE with start=True.
         :returns: True if the node opens nothing.
@@ -602,9 +602,15 @@ class WebVTTWriter(BaseWriter):
         nested same-key spans innermost-first, and keying on identity
         rather than stack position keeps crossed spans balanced whenever
         the two spans differ in their keys — spans that cross with the
-        same keys cannot be told apart, and fall back to LIFO. Without a
-        match — an unpaired closing tag — the stack top is popped, the
-        plain LIFO behaviour.
+        same keys cannot be told apart, and fall back to LIFO.
+
+        A closing tag with no match is one with no opening tag at all:
+        every reader builds a span's close node from the same keys as its
+        open node, so a genuine pair cannot miss. Nothing is popped for it
+        — taking an open span's slot would leave that span's own tag
+        unmatched in turn, spreading one stray tag over two cues — and it
+        joins the text before it, as WebVTTReader._pop_matching_tag also
+        leaves the stack alone when it finds no match.
 
         :param text_group: Per-node group indexes, None for non-TEXT nodes.
         :param i: Index of the closing STYLE node.
@@ -617,8 +623,6 @@ class WebVTTWriter(BaseWriter):
         for j in range(len(open_tags) - 1, -1, -1):
             if open_tags[j][0] == keys:
                 return open_tags.pop(j)[1]
-        if open_tags:
-            return open_tags.pop()[1]
         return cls._previous_text_group(text_group, i)
 
     @staticmethod

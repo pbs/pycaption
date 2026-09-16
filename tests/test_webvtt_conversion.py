@@ -1048,6 +1048,25 @@ class TestMultipleLayoutsPerCaption:
         assert cues[0][1] == ["x"]
         assert cues[1][1] == ["y</i>"]
 
+    def test_closing_tag_with_no_opener_spares_an_open_span(self):
+        """A closing tag with no opener must not take an open span's slot.
+        Popping the stack top for it leaves the italic span's own </i>
+        unmatched in turn, so one stray tag ends up crossing both cues
+        instead of only the cue it sits in."""
+        cues = self._cues(
+            [
+                self._italics(True, self.LAYOUT_A),
+                CaptionNode.create_text("a", layout_info=self.LAYOUT_A),
+                CaptionNode.create_text("b", layout_info=self.LAYOUT_B),
+                self._underline(False, self.LAYOUT_B),
+                self._italics(False, self.LAYOUT_B),
+            ]
+        )
+
+        assert len(cues) == 2
+        assert cues[0][1] == ["<i>a</i>"]
+        assert cues[1][1] == ["b</u>"]
+
     def test_caption_style_does_not_swallow_the_boundary_newline(self):
         """A style on the whole Caption must not leave a cue whose last
         line is nothing but a closing tag."""
