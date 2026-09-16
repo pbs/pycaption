@@ -1,6 +1,7 @@
 import re
 
 from pycaption import (
+    DFXPReader,
     DFXPWriter,
     MicroDVDWriter,
     SAMIReader,
@@ -861,7 +862,11 @@ class TestMultipleLayoutsPerCaption:
     @classmethod
     def _cues(cls, nodes, style=None):
         """Return [(cue_settings, [text_line, ...]), ...] for the nodes."""
-        webvtt = cls._write(nodes, style)
+        return cls._split_cues(cls._write(nodes, style))
+
+    @staticmethod
+    def _split_cues(webvtt):
+        """Return [(cue_settings, [text_line, ...]), ...] for VTT output."""
         blocks = [
             block
             for block in webvtt.split("WEBVTT\n\n", 1)[1].split("\n\n")
@@ -877,6 +882,12 @@ class TestMultipleLayoutsPerCaption:
     @staticmethod
     def _italics(is_start, layout):
         return CaptionNode.create_style(is_start, {"italics": True}, layout_info=layout)
+
+    @staticmethod
+    def _underline(is_start, layout):
+        return CaptionNode.create_style(
+            is_start, {"underline": True}, layout_info=layout
+        )
 
     def test_independent_italic_spans_split_into_two_cues(self):
         """The reported repro: an italic span on each side of the boundary."""
@@ -917,6 +928,137 @@ class TestMultipleLayoutsPerCaption:
         for _, lines in cues:
             text = "".join(lines)
             assert text.count("<i>") == text.count("</i>")
+
+    def test_crossed_spans_each_close_their_own_tag(self):
+        """Overlapping spans — <i>a<u>b</i></u> — pair by tag identity.
+        Pairing by stack position hands each closing tag the other span's
+        group, so both cues close a tag they never opened."""
+        cues = self._cues(
+            [
+                self._italics(True, self.LAYOUT_A),
+                CaptionNode.create_text("a", layout_info=self.LAYOUT_A),
+                self._underline(True, self.LAYOUT_B),
+                CaptionNode.create_text("b", layout_info=self.LAYOUT_B),
+                self._italics(False, self.LAYOUT_B),
+                self._underline(False, self.LAYOUT_B),
+            ]
+        )
+
+        assert len(cues) == 2
+        assert cues[0][1] == ["<i>a</i>"]
+        assert cues[1][1] == ["<u>b</u>"]
+
+    def test_mid_cue_timestamp_does_not_consume_a_closing_tag(self):
+        """A karaoke timestamp opens with no closing counterpart — the
+        shape WebVTTReader gives <00:00:01.500>. Keyed on stack position it
+        took a slot, so the next closing tag inherited its group and left
+        the italic span unclosed."""
+        cues = self._cues(
+            [
+                self._italics(True, self.LAYOUT_A),
+                CaptionNode.create_text("a", layout_info=self.LAYOUT_A),
+                CaptionNode.create_style(
+                    True, {"timestamp": 1500000}, layout_info=self.LAYOUT_B
+                ),
+                CaptionNode.create_text("b", layout_info=self.LAYOUT_B),
+                self._italics(False, self.LAYOUT_B),
+            ]
+        )
+
+        assert len(cues) == 2
+        assert cues[0][1] == ["<i>a</i>"]
+        assert cues[1][1] == ["<00:00:01.500>b"]
+
+    def test_nested_dfxp_spans_pair_innermost_first(self):
+        """Nested spans sharing keys but not values pair innermost-first,
+        which searching from the top of the stack buys. DFXPReader gives
+        both spans the key set {'classes', 'class'}, and each closing tag
+        renders from its own style — </i> outer, </b> inner."""
+        dfxp = """<?xml version="1.0" encoding="utf-8"?>
+<tt xmlns="http://www.w3.org/ns/ttml"
+    xmlns:tts="http://www.w3.org/ns/ttml#styling">
+ <head>
+  <styling>
+   <style xml:id="it" tts:fontStyle="italic"/>
+   <style xml:id="bo" tts:fontWeight="bold"/>
+  </styling>
+  <layout>
+   <region xml:id="top" tts:origin="10% 10%" tts:extent="80% 20%"/>
+   <region xml:id="bottom" tts:origin="10% 70%" tts:extent="80% 20%"/>
+  </layout>
+ </head>
+ <body><div>
+  <p begin="00:00:01.000" end="00:00:03.000" region="bottom"><span
+    style="it">x<span style="bo" region="top">y</span></span></p>
+ </div></body>
+</tt>
+"""
+        caption_set = DFXPReader().read(dfxp)
+        cues = self._split_cues(
+            WebVTTWriter(video_width=640, video_height=360).write(caption_set)
+        )
+
+        assert len(cues) == 2
+        assert cues[0][1] == ["<i>x</i>"]
+        assert cues[1][1] == ["<b>y</b>"]
+
+    def test_class_span_pairs_on_its_keys_not_its_value(self):
+        """A class span's open and close nodes share a key but not a value
+        — WebVTTReader gives <c.loud> {'classes': ['loud']} and </c>
+        {'classes': []}. Pairing on whole content finds no match for </c>,
+        which then closes the italic span instead."""
+        cues = self._cues(
+            [
+                CaptionNode.create_style(
+                    True, {"classes": ["loud"]}, layout_info=self.LAYOUT_A
+                ),
+                CaptionNode.create_text("x", layout_info=self.LAYOUT_A),
+                self._italics(True, self.LAYOUT_B),
+                CaptionNode.create_text("y", layout_info=self.LAYOUT_B),
+                CaptionNode.create_style(
+                    False, {"classes": []}, layout_info=self.LAYOUT_B
+                ),
+                self._italics(False, self.LAYOUT_B),
+            ]
+        )
+
+        assert len(cues) == 2
+        assert cues[0][1] == ["<c.loud>x</c>"]
+        assert cues[1][1] == ["<i>y</i>"]
+
+    def test_closing_tag_with_no_opener_resolves_to_a_group(self):
+        """A closing tag with no opener cannot be balanced. The guarantee
+        is only that it lands in a group instead of raising, and that the
+        text around it survives."""
+        cues = self._cues(
+            [
+                CaptionNode.create_text("x", layout_info=self.LAYOUT_A),
+                CaptionNode.create_text("y", layout_info=self.LAYOUT_B),
+                self._italics(False, self.LAYOUT_B),
+            ]
+        )
+
+        assert len(cues) == 2
+        assert cues[0][1] == ["x"]
+        assert cues[1][1] == ["y</i>"]
+
+    def test_closing_tag_with_no_opener_spares_an_open_span(self):
+        """A closing tag with no opener must not take an open span's slot.
+        Popping the stack top leaves the italic span's own </i> unmatched
+        in turn, spreading one stray tag over both cues."""
+        cues = self._cues(
+            [
+                self._italics(True, self.LAYOUT_A),
+                CaptionNode.create_text("a", layout_info=self.LAYOUT_A),
+                CaptionNode.create_text("b", layout_info=self.LAYOUT_B),
+                self._underline(False, self.LAYOUT_B),
+                self._italics(False, self.LAYOUT_B),
+            ]
+        )
+
+        assert len(cues) == 2
+        assert cues[0][1] == ["<i>a</i>"]
+        assert cues[1][1] == ["b</u>"]
 
     def test_caption_style_does_not_swallow_the_boundary_newline(self):
         """A style on the whole Caption must not leave a cue whose last
