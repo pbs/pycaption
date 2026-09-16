@@ -788,6 +788,23 @@ Scenarist_SCC V1.0
 """
 
 
+# A mid-row italic command shifts the position of the text that follows it,
+# so 'A ' sits one column left of 'yaaruin?': two positions in one caption,
+# the first carried by a bare text node.
+@pytest.fixture(scope="session")
+def sample_scc_positioning_on_text_node():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01:00\t9420 942f 94ae 9420 94f4 9723 c180 9476 91ae 7961 61f2 75e9 6ebf
+
+00:00:03:00\t9420 942f
+
+00:00:05:00\t942c
+
+"""
+
+
 @pytest.fixture(scope="session")
 def sample_scc_frame_30():
     return """\

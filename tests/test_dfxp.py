@@ -1,14 +1,25 @@
 import pytest
+from bs4 import BeautifulSoup
 
-from pycaption import CaptionReadNoCaptions, DFXPReader, SRTWriter
-from pycaption.base import merge_concurrent_captions
+from pycaption import CaptionReadNoCaptions, DFXPReader, DFXPWriter, SRTWriter
+from pycaption.base import (
+    Caption,
+    CaptionList,
+    CaptionNode,
+    CaptionSet,
+    merge_concurrent_captions,
+)
 from pycaption.exceptions import (
     CaptionReadError,
     CaptionReadSyntaxError,
     CaptionReadTimingError,
 )
 from pycaption.geometry import (
+    Alignment,
     HorizontalAlignmentEnum,
+    Layout,
+    Point,
+    Size,
     UnitEnum,
     VerticalAlignmentEnum,
     WritingDirectionEnum,
@@ -439,3 +450,236 @@ class TestDFXPReader(ReaderTestingMixIn):
         assert caption.layout_info.writing_direction == (
             WritingDirectionEnum.VERTICAL_RL
         )
+
+
+def _layout_at(x, y):
+    """Build a top-left anchored Layout at the given percentage origin."""
+    return Layout(
+        origin=Point(Size(x, UnitEnum.PERCENT), Size(y, UnitEnum.PERCENT)),
+        alignment=Alignment(HorizontalAlignmentEnum.LEFT, VerticalAlignmentEnum.TOP),
+    )
+
+
+def _caption_set(nodes, layout_info=None):
+    """Wrap nodes in a single-caption, single-language CaptionSet."""
+    caption = Caption(1000000, 2000000, nodes, layout_info=layout_info)
+    return CaptionSet({"en-US": CaptionList([caption])})
+
+
+class TestDFXPWriterNodePositioning:
+    def setup_class(self):
+        self.nodes = [
+            CaptionNode.create_text("left side", layout_info=_layout_at(10, 80)),
+            CaptionNode.create_text("right side", layout_info=_layout_at(70, 20)),
+        ]
+
+    def test_every_text_node_layout_becomes_a_region(self):
+        dfxp = DFXPWriter().write(_caption_set(self.nodes))
+
+        soup = BeautifulSoup(dfxp, "lxml-xml")
+        origins = {region.get("tts:origin") for region in soup.find_all("region")}
+        assert {"10% 80%", "70% 20%"} <= origins
+
+    def test_text_nodes_are_wrapped_in_their_own_spans(self):
+        dfxp = DFXPWriter().write(_caption_set(self.nodes))
+
+        soup = BeautifulSoup(dfxp, "lxml-xml")
+        origins = {
+            region["xml:id"]: region.get("tts:origin")
+            for region in soup.find_all("region")
+        }
+        spans = soup.find_all("span")
+        assert len(spans) == 2
+        assert origins[spans[0]["region"]] == "10% 80%"
+        assert origins[spans[1]["region"]] == "70% 20%"
+        assert "left sideright side" not in dfxp
+
+    def test_text_node_layouts_survive_a_round_trip(self):
+        dfxp = DFXPWriter().write(_caption_set(self.nodes))
+
+        caption = DFXPReader().read(dfxp).get_captions("en-US")[0]
+        recovered = {
+            node.content: str(node.layout_info.origin)
+            for node in caption.nodes
+            if node.type_ == CaptionNode.TEXT and node.content.strip()
+        }
+        assert recovered == {
+            "left side": "<Point (10%, 80%)>",
+            "right side": "<Point (70%, 20%)>",
+        }
+
+    def test_nodes_sharing_the_caption_layout_are_not_wrapped(self):
+        layout = _layout_at(10, 80)
+        nodes = [
+            CaptionNode.create_text("one line", layout_info=layout),
+            CaptionNode.create_break(layout_info=layout),
+            CaptionNode.create_text("and another", layout_info=layout),
+        ]
+        dfxp = DFXPWriter().write(_caption_set(nodes, layout_info=layout))
+
+        assert not BeautifulSoup(dfxp, "lxml-xml").find_all("span")
+
+    def test_layout_without_positioning_data_is_not_wrapped(self):
+        nodes = [CaptionNode.create_text("no position", layout_info=Layout())]
+        dfxp = DFXPWriter().write(_caption_set(nodes, layout_info=_layout_at(10, 80)))
+
+        assert not BeautifulSoup(dfxp, "lxml-xml").find_all("span")
+
+    def test_a_whitespace_only_node_keeps_the_region_in_effect(self):
+        nodes = [
+            CaptionNode.create_text("visible"),
+            CaptionNode.create_text("  ", layout_info=_layout_at(30, 40)),
+        ]
+        dfxp = DFXPWriter().write(_caption_set(nodes, layout_info=_layout_at(10, 80)))
+
+        soup = BeautifulSoup(dfxp, "lxml-xml")
+        origins = {region.get("tts:origin") for region in soup.find_all("region")}
+        assert not soup.find_all("span")
+        assert "30% 40%" not in origins
+
+    def test_wrapping_span_can_carry_inline_positioning(self):
+        writer = DFXPWriter(write_inline_positioning=True)
+        dfxp = writer.write(_caption_set(self.nodes))
+
+        spans = BeautifulSoup(dfxp, "lxml-xml").find_all("span")
+        assert [span["tts:origin"] for span in spans] == ["10% 80%", "70% 20%"]
+
+    def test_a_break_between_two_nodes_of_one_region_stays_in_the_span(self):
+        layout = _layout_at(70, 20)
+        nodes = [
+            CaptionNode.create_text("first line", layout_info=layout),
+            CaptionNode.create_break(),
+            CaptionNode.create_text("second line", layout_info=layout),
+        ]
+        dfxp = DFXPWriter().write(_caption_set(nodes, layout_info=_layout_at(10, 80)))
+
+        spans = BeautifulSoup(dfxp, "lxml-xml").find_all("span")
+        assert len(spans) == 1
+        assert spans[0].find("br") is not None
+        assert spans[0].get_text(strip=True) == "first linesecond line"
+
+    def test_a_style_span_joins_the_run_sharing_its_region(self):
+        layout = _layout_at(70, 20)
+        nodes = [
+            CaptionNode.create_text("plain", layout_info=layout),
+            CaptionNode.create_break(),
+            CaptionNode.create_style(True, {"italics": True}, layout_info=layout),
+            CaptionNode.create_text("emphasis", layout_info=layout),
+            CaptionNode.create_style(False, {"italics": True}, layout_info=layout),
+        ]
+        dfxp = DFXPWriter().write(_caption_set(nodes, layout_info=_layout_at(10, 80)))
+
+        soup = BeautifulSoup(dfxp, "lxml-xml")
+        wrapper = soup.find("p").find("span")
+        assert wrapper.find("br") is not None
+        assert wrapper.find("span")["tts:fontStyle"] == "italic"
+
+    def test_a_style_span_carrying_a_layout_gains_no_extra_wrapper(self):
+        layout = _layout_at(70, 20)
+        nodes = [
+            CaptionNode.create_style(True, {"italics": True}, layout_info=layout),
+            CaptionNode.create_text("emphasis", layout_info=layout),
+            CaptionNode.create_style(False, {"italics": True}),
+        ]
+        dfxp = DFXPWriter().write(_caption_set(nodes, layout_info=_layout_at(10, 80)))
+
+        spans = BeautifulSoup(dfxp, "lxml-xml").find_all("span")
+        assert len(spans) == 1
+        assert spans[0]["tts:fontStyle"] == "italic"
+
+    def test_a_region_already_in_effect_is_not_repeated(self):
+        layout = _layout_at(70, 20)
+        nodes = [
+            CaptionNode.create_style(True, {"italics": True}, layout_info=layout),
+            CaptionNode.create_text("first", layout_info=layout),
+            CaptionNode.create_text("elsewhere", layout_info=_layout_at(30, 40)),
+            CaptionNode.create_text("third", layout_info=layout),
+        ]
+        dfxp = DFXPWriter().write(_caption_set(nodes, layout_info=_layout_at(10, 80)))
+
+        spans = BeautifulSoup(dfxp, "lxml-xml").find_all("span")
+        assert len(spans) == 2
+        assert spans[1].get_text(strip=True) == "elsewhere"
+
+    def test_a_style_span_crossing_a_region_boundary_stays_well_formed(self):
+        nodes = [
+            CaptionNode.create_style(
+                True, {"italics": True}, layout_info=_layout_at(70, 20)
+            ),
+            CaptionNode.create_text("here", layout_info=_layout_at(70, 20)),
+            CaptionNode.create_text("there", layout_info=_layout_at(30, 40)),
+            CaptionNode.create_style(False, {"italics": True}),
+        ]
+        dfxp = DFXPWriter().write(_caption_set(nodes, layout_info=_layout_at(10, 80)))
+
+        soup = BeautifulSoup(dfxp, "lxml-xml")
+        outer = soup.find("p").find("span")
+        assert outer["tts:fontStyle"] == "italic"
+        assert outer.find("span").get_text(strip=True) == "there"
+        assert dfxp.count("<span") == dfxp.count("</span>")
+
+    def test_text_beside_a_crossing_style_span_keeps_its_own_region(self):
+        nodes = [
+            CaptionNode.create_text("first", layout_info=_layout_at(70, 20)),
+            CaptionNode.create_style(
+                True, {"italics": True}, layout_info=_layout_at(70, 20)
+            ),
+            CaptionNode.create_text("inside", layout_info=_layout_at(30, 40)),
+            CaptionNode.create_style(False, {"italics": True}),
+        ]
+        dfxp = DFXPWriter().write(_caption_set(nodes, layout_info=_layout_at(10, 80)))
+
+        soup = BeautifulSoup(dfxp, "lxml-xml")
+        origins = {
+            region["xml:id"]: region.get("tts:origin")
+            for region in soup.find_all("region")
+        }
+        wrapper = soup.find("p").find("span")
+        assert wrapper.get_text(strip=True) == "first"
+        assert origins[wrapper["region"]] == "70% 20%"
+        assert dfxp.count("<span") == dfxp.count("</span>")
+
+    def test_text_beside_an_unclosed_style_span_keeps_its_own_region(self):
+        nodes = [
+            CaptionNode.create_text("first", layout_info=_layout_at(70, 20)),
+            CaptionNode.create_style(
+                True, {"italics": True}, layout_info=_layout_at(70, 20)
+            ),
+            CaptionNode.create_text("inside", layout_info=_layout_at(30, 40)),
+        ]
+        dfxp = DFXPWriter().write(_caption_set(nodes, layout_info=_layout_at(10, 80)))
+
+        caption = DFXPReader().read(dfxp).get_captions("en-US")[0]
+        recovered = {
+            node.content: str(node.layout_info.origin)
+            for node in caption.nodes
+            if node.type_ == CaptionNode.TEXT and node.content.strip()
+        }
+        assert recovered == {
+            "first": "<Point (70%, 20%)>",
+            "inside": "<Point (30%, 40%)>",
+        }
+
+    def test_a_trailing_break_stays_outside_the_last_region_span(self):
+        nodes = [
+            CaptionNode.create_text("one line", layout_info=_layout_at(70, 20)),
+            CaptionNode.create_break(),
+        ]
+        dfxp = DFXPWriter().write(_caption_set(nodes, layout_info=_layout_at(10, 80)))
+
+        paragraph = BeautifulSoup(dfxp, "lxml-xml").find("p")
+        spans = paragraph.find_all("span")
+        assert len(spans) == 1
+        assert spans[0].get_text(strip=True) == "one line"
+        assert paragraph.find("br").parent is paragraph
+        assert dfxp.count("<span") == dfxp.count("</span>")
+
+    def test_style_node_without_attributes_emits_no_closing_tag(self):
+        nodes = [
+            CaptionNode.create_style(True, {}),
+            CaptionNode.create_text("hello"),
+        ]
+        dfxp = DFXPWriter().write(_caption_set(nodes))
+
+        assert "</span>" not in dfxp
+        assert BeautifulSoup(dfxp, "lxml-xml").find("p").get_text(strip=True) == "hello"
