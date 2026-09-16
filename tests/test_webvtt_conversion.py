@@ -930,10 +930,9 @@ class TestMultipleLayoutsPerCaption:
             assert text.count("<i>") == text.count("</i>")
 
     def test_crossed_spans_each_close_their_own_tag(self):
-        """Spans that overlap rather than nest — <i>a<u>b</i></u> — must be
-        paired by tag identity. Pairing by stack position hands each
-        closing tag the other span's group, so both cues close a tag they
-        never opened."""
+        """Overlapping spans — <i>a<u>b</i></u> — pair by tag identity.
+        Pairing by stack position hands each closing tag the other span's
+        group, so both cues close a tag they never opened."""
         cues = self._cues(
             [
                 self._italics(True, self.LAYOUT_A),
@@ -950,10 +949,9 @@ class TestMultipleLayoutsPerCaption:
         assert cues[1][1] == ["<u>b</u>"]
 
     def test_mid_cue_timestamp_does_not_consume_a_closing_tag(self):
-        """A karaoke timestamp is a STYLE node with start=True and no
-        closing counterpart — the shape WebVTTReader gives <00:00:01.500>.
-        Before pairing was keyed on the tag, it took a stack slot and the
-        next genuine closing tag inherited the timestamp's group, leaving
+        """A karaoke timestamp opens with no closing counterpart — the
+        shape WebVTTReader gives <00:00:01.500>. Keyed on stack position it
+        took a slot, so the next closing tag inherited its group and left
         the italic span unclosed."""
         cues = self._cues(
             [
@@ -972,12 +970,10 @@ class TestMultipleLayoutsPerCaption:
         assert cues[1][1] == ["<00:00:01.500>b"]
 
     def test_nested_dfxp_spans_pair_innermost_first(self):
-        """Nested spans whose keys match but whose values do not must pair
-        innermost-first, which is what searching from the top of the stack
-        buys. DFXPReader gives both spans the key set {'classes', 'class'},
-        and each closing tag renders from its own style — </i> for the
-        outer, </b> for the inner — so pairing the inner close with the
-        outer span leaves both cues crossed."""
+        """Nested spans sharing keys but not values pair innermost-first,
+        which searching from the top of the stack buys. DFXPReader gives
+        both spans the key set {'classes', 'class'}, and each closing tag
+        renders from its own style — </i> outer, </b> inner."""
         dfxp = """<?xml version="1.0" encoding="utf-8"?>
 <tt xmlns="http://www.w3.org/ns/ttml"
     xmlns:tts="http://www.w3.org/ns/ttml#styling">
@@ -1007,11 +1003,10 @@ class TestMultipleLayoutsPerCaption:
         assert cues[1][1] == ["<b>y</b>"]
 
     def test_class_span_pairs_on_its_keys_not_its_value(self):
-        """A class span's opening and closing nodes hold the same key and
-        different values — WebVTTReader gives <c.loud> {'classes':
-        ['loud']} and </c> {'classes': []}. Pairing on the whole content
-        finds no match for </c>, which then closes the italic span
-        instead, and both cues end up crossed."""
+        """A class span's open and close nodes share a key but not a value
+        — WebVTTReader gives <c.loud> {'classes': ['loud']} and </c>
+        {'classes': []}. Pairing on whole content finds no match for </c>,
+        which then closes the italic span instead."""
         cues = self._cues(
             [
                 CaptionNode.create_style(
@@ -1032,10 +1027,9 @@ class TestMultipleLayoutsPerCaption:
         assert cues[1][1] == ["<i>y</i>"]
 
     def test_closing_tag_with_no_opener_resolves_to_a_group(self):
-        """Nothing pairs with a closing tag that opens nothing, so the
-        markup cannot be balanced — the guarantee is only that the node
-        lands in a group instead of raising, and that the text around it
-        survives."""
+        """A closing tag with no opener cannot be balanced. The guarantee
+        is only that it lands in a group instead of raising, and that the
+        text around it survives."""
         cues = self._cues(
             [
                 CaptionNode.create_text("x", layout_info=self.LAYOUT_A),
@@ -1050,9 +1044,8 @@ class TestMultipleLayoutsPerCaption:
 
     def test_closing_tag_with_no_opener_spares_an_open_span(self):
         """A closing tag with no opener must not take an open span's slot.
-        Popping the stack top for it leaves the italic span's own </i>
-        unmatched in turn, so one stray tag ends up crossing both cues
-        instead of only the cue it sits in."""
+        Popping the stack top leaves the italic span's own </i> unmatched
+        in turn, spreading one stray tag over both cues."""
         cues = self._cues(
             [
                 self._italics(True, self.LAYOUT_A),
