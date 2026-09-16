@@ -534,7 +534,7 @@ class RegionCreator:
         """Create <region> tags in the <layout> section for each Layout.
 
         Skips Layout objects that have no positioning data (no origin,
-        extent, padding, alignment, or writing_direction).
+        extent, padding, alignment, writing_direction, or line_alignment).
 
         :param unique_layouts: iterable of geometry.Layout instances
         :type dfxp: BeautifulSoup
@@ -552,6 +552,7 @@ class RegionCreator:
                 or region_spec.padding
                 or region_spec.alignment
                 or region_spec.writing_direction
+                or region_spec.line_alignment
             ):
                 new_region = dfxp.new_tag("region")
                 new_id = id_factory()
