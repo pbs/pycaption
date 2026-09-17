@@ -18,6 +18,7 @@ from pycaption.geometry import (
     Alignment,
     HorizontalAlignmentEnum,
     Layout,
+    LineAlignmentEnum,
     Point,
     Size,
     UnitEnum,
@@ -780,3 +781,43 @@ class TestDFXPWriterNodePositioning:
 
         assert "</span>" not in dfxp
         assert BeautifulSoup(dfxp, "lxml-xml").find("p").get_text(strip=True) == "hello"
+
+
+class TestDFXPWriterLineAlignment:
+    """A layout holding only a line alignment still needs a region.
+
+    WebVTT's ``line:auto,<alignment>`` produces one: it asks for a vertical
+    placement without pinning a line, so every other field is empty.
+    """
+
+    def setup_class(self):
+        self.nodes = [CaptionNode.create_text("hello")]
+
+    @staticmethod
+    def _regions(dfxp):
+        soup = BeautifulSoup(dfxp, "lxml-xml")
+        by_id = {
+            region["xml:id"]: region.get("tts:displayAlign")
+            for region in soup.find_all("region")
+        }
+        return by_id, soup.find("p")["region"]
+
+    def test_a_line_alignment_alone_becomes_a_region(self):
+        layout = Layout(line_alignment=LineAlignmentEnum.START)
+        dfxp = DFXPWriter().write(_caption_set(self.nodes, layout_info=layout))
+
+        by_id, _ = self._regions(dfxp)
+        assert "before" in by_id.values()
+
+    def test_a_line_alignment_alone_positions_the_paragraph(self):
+        layout = Layout(line_alignment=LineAlignmentEnum.START)
+        dfxp = DFXPWriter().write(_caption_set(self.nodes, layout_info=layout))
+
+        by_id, paragraph_region = self._regions(dfxp)
+        assert by_id[paragraph_region] == "before"
+
+    def test_an_empty_layout_still_gets_no_region_of_its_own(self):
+        dfxp = DFXPWriter().write(_caption_set(self.nodes, layout_info=Layout()))
+
+        by_id, paragraph_region = self._regions(dfxp)
+        assert list(by_id) == [paragraph_region]

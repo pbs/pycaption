@@ -425,9 +425,9 @@ class DFXPWriter(BaseWriter):
 
         No style tag in the run may leave it, or the wrapping span would
         cross a style span and produce invalid XML — which is what rules out
-        a tag split off on its own.  A run that is
-        nothing but one style span with a layout of its own already writes
-        the region on that span, so it needs no wrapper.
+        a tag split off on its own.  A run that is nothing but one style span
+        already writes any region of its own on that span, so it needs no
+        wrapper.
 
         :rtype: bool
         """
@@ -441,7 +441,6 @@ class DFXPWriter(BaseWriter):
         return not (
             first.type_ == CaptionNode.STYLE
             and first.start
-            and first.layout_info
             and partners.get(indices[0]) == indices[-1]
         )
 
@@ -554,7 +553,7 @@ class RegionCreator:
         """Create <region> tags in the <layout> section for each Layout.
 
         Skips Layout objects that have no positioning data (no origin,
-        extent, padding, alignment, or writing_direction).
+        extent, padding, alignment, writing_direction, or line_alignment).
 
         :param unique_layouts: iterable of geometry.Layout instances
         :type dfxp: BeautifulSoup
@@ -572,6 +571,7 @@ class RegionCreator:
                 or region_spec.padding
                 or region_spec.alignment
                 or region_spec.writing_direction
+                or region_spec.line_alignment
             ):
                 new_region = dfxp.new_tag("region")
                 new_id = id_factory()

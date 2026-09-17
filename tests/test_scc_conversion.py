@@ -173,9 +173,9 @@ class TestSCCtoDFXP:
             region["xml:id"]: region.get("tts:origin")
             for region in soup.find_all("region")
         }
-        assert "37.5% 89%" in origins.values(), (
-            "The position carried only by a text node must become a region"
-        )
+        assert (
+            "37.5% 89%" in origins.values()
+        ), "The position carried only by a text node must become a region"
 
         spans = soup.find_all("span")
         assert len(spans) == 2

@@ -52,8 +52,8 @@ Changelog
     both positions lost and their text concatenated without a separator.
     Nodes are now split into runs sharing one region, and a run whose region
     differs from the one already in effect is wrapped in a ``<span>``
-    carrying it, so every distinct positioned layout holding visible text reaches
-    ``<head><layout>`` and renders at its own position. Grouping keeps a
+    carrying it, so every distinct positioned layout holding visible text
+    reaches ``<head><layout>`` and renders at its own position. Grouping keeps a
     ``<br/>`` between two nodes of one region inside that region's span
     rather than splitting the run in two. A style tag whose partner falls
     outside its run — one crossing a region boundary, or left unclosed —
@@ -64,6 +64,14 @@ Changelog
   - Fix ``DFXPWriter`` closing spans it never opened, emitting a stray
     ``</span>`` — invalid XML — for any unclosed ``STYLE`` node whose content
     maps to no attributes, such as a WebVTT karaoke timestamp tag.
+
+  - Fix ``DFXPWriter`` dropping a layout that carries only a line alignment,
+    which ``WebVTT``'s ``line:auto,<alignment>`` produces — it asks for a
+    vertical placement without pinning a line, leaving every other field
+    empty. Region creation skipped such a layout, so the caption fell back to
+    the default bottom region and ``line:auto,start`` rendered at the bottom
+    rather than the top, inverting the placement it asked for. A layout
+    holding nothing at all still gets no region of its own.
 
 2.3.9
 ^^^^^^
