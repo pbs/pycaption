@@ -162,6 +162,28 @@ class TestSCCtoDFXP:
         assert first.get_text(strip=True) == "AB"
         assert second.get_text(strip=True) == "CD"
 
+    def test_positioning_carried_by_a_text_node_is_written(
+        self, sample_scc_positioning_on_text_node
+    ):
+        caption_set = SCCReader().read(sample_scc_positioning_on_text_node)
+        dfxp = DFXPWriter(relativize=False, fit_to_screen=False).write(caption_set)
+
+        soup = BeautifulSoup(dfxp, "lxml-xml")
+        origins = {
+            region["xml:id"]: region.get("tts:origin")
+            for region in soup.find_all("region")
+        }
+        assert (
+            "37.5% 89%" in origins.values()
+        ), "The position carried only by a text node must become a region"
+
+        spans = soup.find_all("span")
+        assert len(spans) == 2
+        assert spans[0].get_text(strip=True) == "A"
+        assert origins[spans[0]["region"]] == "37.5% 89%"
+        assert spans[1].get_text(strip=True) == "yaaruin?"
+        assert origins[spans[1]["region"]] == "40% 89%"
+
 
 class TestSCCTimestampOrdering:
     def test_scc_captions_are_in_order_when_short_text_followed_by_long(self):
