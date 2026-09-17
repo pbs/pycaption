@@ -640,6 +640,29 @@ class TestDFXPWriterNodePositioning:
         assert len(spans) == 1
         assert spans[0]["tts:fontStyle"] == "italic"
 
+    def test_text_after_a_positioned_style_span_keeps_its_region(self):
+        layout = _layout_at(70, 20)
+        nodes = [
+            CaptionNode.create_style(True, {"bold": True}, layout_info=layout),
+            CaptionNode.create_text("inside", layout_info=layout),
+            CaptionNode.create_style(False, {"bold": True}),
+            CaptionNode.create_text("after", layout_info=layout),
+        ]
+        dfxp = DFXPWriter().write(_caption_set(nodes, layout_info=_layout_at(30, 40)))
+
+        soup = BeautifulSoup(dfxp, "lxml-xml")
+        origins = {
+            region["xml:id"]: region.get("tts:origin")
+            for region in soup.find_all("region")
+        }
+        paragraph = soup.find("p")
+        wrapper = paragraph.find("span")
+        assert "tts:fontWeight" not in wrapper.attrs
+        assert origins[wrapper["region"]] == "70% 20%"
+        assert wrapper.get_text(strip=True) == "insideafter"
+        loose = paragraph.find_all(string=True, recursive=False)
+        assert not [text for text in loose if text.strip()]
+
     def test_a_region_already_in_effect_is_not_repeated(self):
         layout = _layout_at(70, 20)
         nodes = [
@@ -669,6 +692,27 @@ class TestDFXPWriterNodePositioning:
         outer = soup.find("p").find("span")
         assert outer["tts:fontStyle"] == "italic"
         assert outer.find("span").get_text(strip=True) == "there"
+        assert dfxp.count("<span") == dfxp.count("</span>")
+
+    def test_nested_style_spans_are_searched_from_the_innermost_out(self):
+        layout = _layout_at(10, 80)
+        nodes = [
+            CaptionNode.create_style(True, {"underline": True}, layout_info=layout),
+            CaptionNode.create_style(
+                True, {"bold": True}, layout_info=_layout_at(30, 40)
+            ),
+            CaptionNode.create_text("deep", layout_info=layout),
+        ]
+        dfxp = DFXPWriter().write(_caption_set(nodes, layout_info=_layout_at(70, 20)))
+
+        soup = BeautifulSoup(dfxp, "lxml-xml")
+        origins = {
+            region["xml:id"]: region.get("tts:origin")
+            for region in soup.find_all("region")
+        }
+        innermost = soup.find_all("span")[-1]
+        assert innermost.get_text(strip=True) == "deep"
+        assert origins[innermost["region"]] == "10% 80%"
         assert dfxp.count("<span") == dfxp.count("</span>")
 
     def test_text_beside_a_crossing_style_span_keeps_its_own_region(self):
