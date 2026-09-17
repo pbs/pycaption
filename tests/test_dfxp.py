@@ -567,6 +567,31 @@ class TestDFXPWriterNodePositioning:
         assert len(spans) == 1
         assert spans[0].get_text(strip=True) == "inherited"
 
+    def test_a_style_span_without_a_layout_keeps_the_region_around_it(self):
+        nodes = [
+            CaptionNode.create_style(
+                True, {"italics": True}, layout_info=_layout_at(70, 20)
+            ),
+            CaptionNode.create_style(True, {"bold": True}),
+            CaptionNode.create_text("one"),
+            CaptionNode.create_style(False, {"bold": True}),
+            CaptionNode.create_style(True, {"underline": True}),
+            CaptionNode.create_text("two"),
+            CaptionNode.create_style(False, {"underline": True}),
+            CaptionNode.create_style(False, {"italics": True}),
+        ]
+        dfxp = DFXPWriter().write(_caption_set(nodes, layout_info=_layout_at(30, 40)))
+
+        soup = BeautifulSoup(dfxp, "lxml-xml")
+        origins = {
+            region["xml:id"]: region.get("tts:origin")
+            for region in soup.find_all("region")
+        }
+        carrying = [span for span in soup.find_all("span") if span.get("region")]
+        assert len(carrying) == 1
+        assert origins[carrying[0]["region"]] == "70% 20%"
+        assert list(carrying[0].stripped_strings) == ["one", "two"]
+
     def test_a_text_node_without_a_layout_stays_with_the_paragraph(self):
         layout = _layout_at(70, 20)
         nodes = [
@@ -784,10 +809,12 @@ class TestDFXPWriterNodePositioning:
 
 
 class TestDFXPWriterLineAlignment:
-    """A layout holding only a line alignment still needs a region.
+    """A layout holding only a line alignment gets no region of its own.
 
-    WebVTT's ``line:auto,<alignment>`` produces one: it asks for a vertical
-    placement without pinning a line, so every other field is empty.
+    WebVTT's ``line:auto,<alignment>`` is the only thing that produces one,
+    and a ``line`` value carrying no digit means the whole setting is
+    discarded — so the cue keeps the default placement instead of taking a
+    vertical one from the qualifier the setting was thrown away with.
     """
 
     def setup_class(self):
@@ -802,19 +829,19 @@ class TestDFXPWriterLineAlignment:
         }
         return by_id, soup.find("p")["region"]
 
-    def test_a_line_alignment_alone_becomes_a_region(self):
-        layout = Layout(line_alignment=LineAlignmentEnum.START)
-        dfxp = DFXPWriter().write(_caption_set(self.nodes, layout_info=layout))
-
-        by_id, _ = self._regions(dfxp)
-        assert "before" in by_id.values()
-
-    def test_a_line_alignment_alone_positions_the_paragraph(self):
+    def test_a_line_alignment_alone_mints_no_region(self):
         layout = Layout(line_alignment=LineAlignmentEnum.START)
         dfxp = DFXPWriter().write(_caption_set(self.nodes, layout_info=layout))
 
         by_id, paragraph_region = self._regions(dfxp)
-        assert by_id[paragraph_region] == "before"
+        assert list(by_id) == [paragraph_region]
+
+    def test_a_line_alignment_alone_keeps_the_default_placement(self):
+        layout = Layout(line_alignment=LineAlignmentEnum.START)
+        dfxp = DFXPWriter().write(_caption_set(self.nodes, layout_info=layout))
+
+        by_id, paragraph_region = self._regions(dfxp)
+        assert by_id[paragraph_region] == "after"
 
     def test_an_empty_layout_still_gets_no_region_of_its_own(self):
         dfxp = DFXPWriter().write(_caption_set(self.nodes, layout_info=Layout()))
