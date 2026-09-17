@@ -227,12 +227,11 @@ class DFXPWriter(BaseWriter):
         """
         line = ""
         self._span_stack = []
-        paragraph_region, _ = self.region_creator.get_positioning_info(
-            lang, caption_set, caption
-        )
+        paragraph = self.region_creator.get_positioning_info(lang, caption_set, caption)
+        paragraph_region, _ = paragraph
 
         for region_id, region_attribs, nodes, wrappable in self._group_nodes_by_region(
-            caption, paragraph_region, caption_set, lang
+            caption, paragraph, caption_set, lang
         ):
             wrap = wrappable and region_id != self._innermost_region(paragraph_region)
             if wrap:
@@ -264,7 +263,7 @@ class DFXPWriter(BaseWriter):
 
         return line.rstrip()
 
-    def _group_nodes_by_region(self, caption, paragraph_region, caption_set, lang):
+    def _group_nodes_by_region(self, caption, paragraph, caption_set, lang):
         """Split a caption's nodes into consecutive runs sharing one region.
 
         Line breaks are neutral: a run absorbs one only when it continues
@@ -274,12 +273,12 @@ class DFXPWriter(BaseWriter):
         A run is split again around any style tag whose partner falls
         outside it, so one such tag costs only itself a wrapper.
 
-        :param paragraph_region: xml:id of the region on the enclosing <p>
+        :param paragraph: (region_id, positioning attributes) of the enclosing <p>
         :return: (region_id, positioning_attributes, nodes, wrappable) per run
         :rtype: list[tuple[str | None, dict, list[CaptionNode], bool]]
         """
         resolved, partners = self._resolve_node_regions(
-            caption, paragraph_region, caption_set, lang
+            caption, paragraph, caption_set, lang
         )
 
         groups = []
@@ -322,7 +321,29 @@ class DFXPWriter(BaseWriter):
         ]
 
     @staticmethod
-    def _split_at_crossing_styles(indices, partners, nodes):
+    def _crosses_run(index, partners, nodes, run):
+        """Check whether the node at an index leaves the run it belongs to.
+
+        A style tag whose partner sits outside the run does: a span wrapping
+        it would cross that tag's own span and produce invalid XML.  A
+        closing tag with no partner at all is the exception — nothing was
+        opened for it, so it writes no tag and crosses nothing.
+
+        :param run: the indices making up the run
+        :type run: set[int]
+        :rtype: bool
+        """
+        node = nodes[index]
+        if node.type_ != CaptionNode.STYLE:
+            return False
+
+        if not node.start and index not in partners:
+            return False
+
+        return partners.get(index) not in run
+
+    @classmethod
+    def _split_at_crossing_styles(cls, indices, partners, nodes):
         """Split a run around style tags whose partner sits outside it.
 
         A span wrapping such a tag would cross another span and produce
@@ -336,26 +357,26 @@ class DFXPWriter(BaseWriter):
         segments = [[]]
 
         for index in indices:
-            crossing = (
-                nodes[index].type_ == CaptionNode.STYLE
-                and partners.get(index) not in run
-            )
-            if crossing:
+            if cls._crosses_run(index, partners, nodes, run):
                 segments += [[index], []]
             else:
                 segments[-1].append(index)
 
         return [segment for segment in segments if segment]
 
-    def _resolve_node_regions(self, caption, paragraph_region, caption_set, lang):
+    def _resolve_node_regions(self, caption, paragraph, caption_set, lang):
         """Resolve the region every node of a caption belongs to.
 
         A node's own layout wins; lacking one it takes the region in effect
         around it — the innermost enclosing style span's, else the
         paragraph's.  For a closing style node that is its own opener's
         region, so a span is never separated from its own end tag.  Line
-        breaks belong to no region and resolve to None.
+        breaks belong to no region and resolve to None, as does a closing
+        tag with nothing open — it writes no tag at all.  A region travels
+        with the attributes that describe it, so a span reinstating one can
+        also write it inline.
 
+        :param paragraph: (region_id, positioning attributes) of the <p>
         :return: a (region_id, positioning_attributes) pair per node, plus a
             map pairing the index of each style tag with its partner's
         :rtype: tuple[list[tuple[str | None, dict]], dict]
@@ -366,45 +387,45 @@ class DFXPWriter(BaseWriter):
         open_styles = []
 
         for index, node in enumerate(caption.nodes):
-            in_effect = open_styles[-1][1] if open_styles else paragraph_region
+            in_effect = open_styles[-1][1] if open_styles else paragraph
 
             if node.type_ == CaptionNode.BREAK:
                 resolved.append((None, {}))
 
             elif node.type_ == CaptionNode.TEXT:
-                region_id, region_attribs = None, {}
+                own = (None, {})
                 if node.content.strip():
-                    region_id, region_attribs = creator.get_node_positioning_info(
-                        node.layout_info
-                    )
-                resolved.append((region_id or in_effect, region_attribs))
+                    own = creator.get_node_positioning_info(node.layout_info)
+                resolved.append(own if own[0] else in_effect)
 
             elif node.start:
                 if node.layout_info:
-                    region_id, region_attribs = creator.get_positioning_info(
+                    region = creator.get_positioning_info(
                         lang, caption_set, caption, node
                     )
                 else:
-                    region_id, region_attribs = in_effect, {}
-                open_styles.append((index, region_id))
-                resolved.append((region_id, region_attribs))
+                    region = in_effect
+                open_styles.append((index, region))
+                resolved.append(region)
+
+            elif open_styles:
+                opener, _ = open_styles.pop()
+                partners[opener] = index
+                partners[index] = opener
+                resolved.append(in_effect)
 
             else:
-                if open_styles:
-                    opener, _ = open_styles.pop()
-                    partners[opener] = index
-                    partners[index] = opener
-                resolved.append((in_effect, {}))
+                resolved.append((None, {}))
 
         return resolved, partners
 
-    @staticmethod
-    def _is_wrappable(indices, partners, nodes):
+    @classmethod
+    def _is_wrappable(cls, indices, partners, nodes):
         """Check whether a run of nodes can take a <span> holding its region.
 
-        Every style tag in the run must be matched inside the run, or the
-        wrapping span would cross a style span and produce invalid XML —
-        which is what rules out a tag split off on its own.  A run that is
+        No style tag in the run may leave it, or the wrapping span would
+        cross a style span and produce invalid XML — which is what rules out
+        a tag split off on its own.  A run that is
         nothing but one style span with a layout of its own already writes
         the region on that span, so it needs no wrapper.
 
@@ -412,9 +433,8 @@ class DFXPWriter(BaseWriter):
         """
         run = set(indices)
         for index in indices:
-            if nodes[index].type_ == CaptionNode.STYLE:
-                if partners.get(index) not in run:
-                    return False
+            if cls._crosses_run(index, partners, nodes, run):
+                return False
 
         first = nodes[indices[0]]
 
@@ -534,7 +554,7 @@ class RegionCreator:
         """Create <region> tags in the <layout> section for each Layout.
 
         Skips Layout objects that have no positioning data (no origin,
-        extent, padding, alignment, writing_direction, or line_alignment).
+        extent, padding, alignment, or writing_direction).
 
         :param unique_layouts: iterable of geometry.Layout instances
         :type dfxp: BeautifulSoup
@@ -552,7 +572,6 @@ class RegionCreator:
                 or region_spec.padding
                 or region_spec.alignment
                 or region_spec.writing_direction
-                or region_spec.line_alignment
             ):
                 new_region = dfxp.new_tag("region")
                 new_id = id_factory()

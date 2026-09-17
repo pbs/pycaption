@@ -65,14 +65,6 @@ Changelog
     ``</span>`` — invalid XML — for any unclosed ``STYLE`` node whose content
     maps to no attributes, such as a WebVTT karaoke timestamp tag.
 
-  - Fix ``DFXPWriter`` dropping a layout that carries only a line alignment,
-    which ``WebVTT``'s ``line:auto,<alignment>`` produces — it asks for a
-    vertical placement without pinning a line, leaving every other field
-    empty. Region creation skipped such a layout, so the caption fell back to
-    the default bottom region and ``line:auto,start`` rendered at the bottom
-    rather than the top, inverting the placement it asked for. A layout
-    holding nothing at all still gets no region of its own.
-
 2.3.9
 ^^^^^^
   - Fix ``SCCReader`` inserting phantom ``BREAK`` nodes when two independent,

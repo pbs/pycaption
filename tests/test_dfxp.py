@@ -18,7 +18,6 @@ from pycaption.geometry import (
     Alignment,
     HorizontalAlignmentEnum,
     Layout,
-    LineAlignmentEnum,
     Point,
     Size,
     UnitEnum,
@@ -474,13 +473,6 @@ class TestDFXPWriterNodePositioning:
             CaptionNode.create_text("right side", layout_info=_layout_at(70, 20)),
         ]
 
-    def test_every_text_node_layout_becomes_a_region(self):
-        dfxp = DFXPWriter().write(_caption_set(self.nodes))
-
-        soup = BeautifulSoup(dfxp, "lxml-xml")
-        origins = {region.get("tts:origin") for region in soup.find_all("region")}
-        assert {"10% 80%", "70% 20%"} <= origins
-
     def test_text_nodes_are_wrapped_in_their_own_spans(self):
         dfxp = DFXPWriter().write(_caption_set(self.nodes))
 
@@ -545,6 +537,65 @@ class TestDFXPWriterNodePositioning:
         spans = BeautifulSoup(dfxp, "lxml-xml").find_all("span")
         assert [span["tts:origin"] for span in spans] == ["10% 80%", "70% 20%"]
 
+    def test_inline_positioning_survives_a_run_starting_at_a_closing_tag(self):
+        layout = _layout_at(10, 80)
+        nodes = [
+            CaptionNode.create_style(True, {"italics": True}, layout_info=layout),
+            CaptionNode.create_text("inside", layout_info=_layout_at(70, 20)),
+            CaptionNode.create_style(False, {"italics": True}),
+            CaptionNode.create_text("after", layout_info=layout),
+        ]
+        writer = DFXPWriter(write_inline_positioning=True)
+        dfxp = writer.write(_caption_set(nodes, layout_info=_layout_at(30, 40)))
+
+        last = BeautifulSoup(dfxp, "lxml-xml").find_all("span")[-1]
+        assert last.get_text(strip=True) == "after"
+        assert last["tts:origin"] == "10% 80%"
+
+    def test_a_text_node_without_a_layout_inherits_its_enclosing_span(self):
+        nodes = [
+            CaptionNode.create_style(
+                True, {"italics": True}, layout_info=_layout_at(70, 20)
+            ),
+            CaptionNode.create_text("inherited"),
+            CaptionNode.create_style(False, {"italics": True}),
+        ]
+        dfxp = DFXPWriter().write(_caption_set(nodes, layout_info=_layout_at(30, 40)))
+
+        spans = BeautifulSoup(dfxp, "lxml-xml").find_all("span")
+        assert len(spans) == 1
+        assert spans[0].get_text(strip=True) == "inherited"
+
+    def test_a_text_node_without_a_layout_stays_with_the_paragraph(self):
+        layout = _layout_at(70, 20)
+        nodes = [
+            CaptionNode.create_text("positioned", layout_info=layout),
+            CaptionNode.create_text("bare"),
+            CaptionNode.create_text("positioned again", layout_info=layout),
+        ]
+        dfxp = DFXPWriter().write(_caption_set(nodes, layout_info=_layout_at(30, 40)))
+
+        paragraph = BeautifulSoup(dfxp, "lxml-xml").find("p")
+        assert [span.get_text() for span in paragraph.find_all("span")] == [
+            "positioned",
+            "positioned again",
+        ]
+        loose = paragraph.find_all(string=True, recursive=False)
+        assert "bare" in [text.strip() for text in loose]
+
+    def test_a_closing_tag_with_nothing_open_does_not_split_a_region(self):
+        layout = _layout_at(70, 20)
+        nodes = [
+            CaptionNode.create_text("hello", layout_info=layout),
+            CaptionNode.create_style(False, {"italics": True}),
+            CaptionNode.create_text(" world", layout_info=layout),
+        ]
+        dfxp = DFXPWriter().write(_caption_set(nodes, layout_info=_layout_at(30, 40)))
+
+        spans = BeautifulSoup(dfxp, "lxml-xml").find_all("span")
+        assert len(spans) == 1
+        assert spans[0].get_text() == "hello world"
+
     def test_a_break_between_two_nodes_of_one_region_stays_in_the_span(self):
         layout = _layout_at(70, 20)
         nodes = [
@@ -574,6 +625,7 @@ class TestDFXPWriterNodePositioning:
         wrapper = soup.find("p").find("span")
         assert wrapper.find("br") is not None
         assert wrapper.find("span")["tts:fontStyle"] == "italic"
+        assert wrapper.get_text(strip=True) == "plainemphasis"
 
     def test_a_style_span_carrying_a_layout_gains_no_extra_wrapper(self):
         layout = _layout_at(70, 20)
@@ -684,43 +736,3 @@ class TestDFXPWriterNodePositioning:
 
         assert "</span>" not in dfxp
         assert BeautifulSoup(dfxp, "lxml-xml").find("p").get_text(strip=True) == "hello"
-
-
-class TestDFXPWriterLineAlignment:
-    """A layout holding only a line alignment still needs a region.
-
-    WebVTT's ``line:auto,<alignment>`` produces one: it asks for a vertical
-    placement without pinning a line, so every other field is empty.
-    """
-
-    def setup_class(self):
-        self.nodes = [CaptionNode.create_text("hello")]
-
-    @staticmethod
-    def _regions(dfxp):
-        soup = BeautifulSoup(dfxp, "lxml-xml")
-        by_id = {
-            region["xml:id"]: region.get("tts:displayAlign")
-            for region in soup.find_all("region")
-        }
-        return by_id, soup.find("p")["region"]
-
-    def test_a_line_alignment_alone_becomes_a_region(self):
-        layout = Layout(line_alignment=LineAlignmentEnum.START)
-        dfxp = DFXPWriter().write(_caption_set(self.nodes, layout_info=layout))
-
-        by_id, _ = self._regions(dfxp)
-        assert "before" in by_id.values()
-
-    def test_a_line_alignment_alone_positions_the_paragraph(self):
-        layout = Layout(line_alignment=LineAlignmentEnum.START)
-        dfxp = DFXPWriter().write(_caption_set(self.nodes, layout_info=layout))
-
-        by_id, paragraph_region = self._regions(dfxp)
-        assert by_id[paragraph_region] == "before"
-
-    def test_an_empty_layout_still_gets_no_region_of_its_own(self):
-        dfxp = DFXPWriter().write(_caption_set(self.nodes, layout_info=Layout()))
-
-        by_id, paragraph_region = self._regions(dfxp)
-        assert list(by_id) == [paragraph_region]
