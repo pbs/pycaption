@@ -215,7 +215,7 @@ class DFXPWriter(BaseWriter):
 
         return p
 
-    def _recreate_text(self, caption, dfxp, caption_set=None, lang=None):
+    def _recreate_text(self, caption, dfxp, caption_set=None, lang=None):  # noqa: C901
         """Serialize all nodes of a caption into DFXP inline markup.
 
         Handles text nodes, line breaks (<br/>), and style spans.  Nodes are

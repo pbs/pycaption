@@ -510,7 +510,7 @@ class WebVTTWriter(BaseWriter):
         return self._drop_blank_groups(rendered)
 
     @classmethod
-    def _partition_nodes_by_layout(cls, nodes, fallback_layout):
+    def _partition_nodes_by_layout(cls, nodes, fallback_layout):  # noqa: C901
         """Assign every node to a layout group, without rendering.
 
         A new group opens whenever a TEXT node's layout differs from the
