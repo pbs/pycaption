@@ -1,4 +1,5 @@
 import re
+from xml.etree import ElementTree
 
 from pycaption import (
     DFXPReader,
@@ -277,6 +278,14 @@ class TestWebVTTStyleCrossFormat:
         result = DFXPWriter().write(caption_set)
         assert "<lang" not in result
         assert "Bonjour" in result
+
+    def test_structural_tags_produce_well_formed_dfxp(
+        self, sample_webvtt_with_structural_tags
+    ):
+        caption_set = WebVTTReader().read(sample_webvtt_with_structural_tags)
+        result = DFXPWriter().write(caption_set)
+
+        ElementTree.fromstring(result)
 
 
 class TestWebVTTCueSettingsConversion:

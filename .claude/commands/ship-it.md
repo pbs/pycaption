@@ -42,7 +42,7 @@ For each variant, present:
 
 Implement the chosen variant.
 
-- Create a feature branch from the current branch if you are on `main`. If already on a feature branch (e.g., `OCTO-*`, `fix/*`, `feat/*`), stay on it. Use `fix/<short-description>` for bug fixes, `feat/<short-description>` for features.
+- Create a feature branch from the current branch if you are on `main`. If already on a feature branch (`OCTO-*`), stay on it. Branch name is the ticket: `OCTO-#####`. Ask the user for the ticket number if you don't have it — do not invent a `fix/*` or `feat/*` name, this repo doesn't use them.
 - Follow existing project patterns and conventions
 - Keep changes minimal and focused
 - Ensure compliance with the relevant caption format specification (CEA-608 for SCC, TTML for DFXP, W3C for WebVTT)
@@ -57,7 +57,7 @@ Implement the chosen variant.
 
 Write tests for the implementation.
 
-- Tests go in `tests/` directory, matching existing test file for the format (e.g., `test_scc.py`)
+- Tests go in `tests/` directory, matching the existing test file for the component (e.g. `test_scc.py`, but `test_scc_writer.py` for writer changes and `test_scc_translator.py` for translator changes)
 - Define new fixtures in `tests/fixtures/<format>.py` (e.g., `fixtures/scc.py`) as session-scoped pytest fixtures
 - Add the import for any new fixtures to `tests/conftest.py` (this is the registration step — conftest re-exports, it doesn't define)
 - Use inline SCC/DFXP/WebVTT/SRT content strings as fixture data (follow existing pattern)
@@ -142,5 +142,5 @@ If the implementation already follows all principles, say so explicitly and skip
 6. If a compliance check skill exists for the format (`/check-scc-compliance`, `/check-dfxp-compliance`, or `/check-vtt-compliance`), re-run it to regenerate the report. If the task involves a format without a compliance skill (SRT, SAMI, MicroDVD), skip this step. If the compliance report shows new regressions not present before this change, STOP and present them to the user before committing.
 7. Check if `main` has advanced: `git fetch origin main && git log HEAD..origin/main --oneline`. If new commits exist on `main`, ask the user whether to rebase/merge before committing or proceed as-is.
 8. Stage only the files modified or created during this workflow — do not use `git add -A` or `git add .` (untracked files from other work must not be included).
-9. Commit with a descriptive message summarizing the fix/feature.
+9. Commit with a descriptive message summarizing the fix/feature, subject starting with the ticket ID (`OCTO-#####`).
 10. Present a final summary of ALL changes made throughout the entire workflow (Stages 3 through 6).

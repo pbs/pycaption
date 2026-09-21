@@ -12,8 +12,24 @@ description: Comprehensive PR analysis for merge decisions - compliance, code re
 1. **Auto-detects SCC, VTT, and/or DFXP flow** from changed files
 2. **Spec compliance checking** - only NEW issues introduced by the PR (not pre-existing), checked against `scc_specs_summary.md`, `vtt_specs_summary.md`, or `dfxp_specs_summary.md`
 3. **Full code review** - regressions, breaking changes, and missing tests
-4. **Change analysis** - explains what the changes do and how they solve the stated issue
-5. **Clear recommendation**: can be merged / needs work / do not merge
+4. **Behavior gate** - *executes* both checkouts instead of reading the diff: the test suite at the merge-base vs at HEAD (tests that passed before and fail now, tests that have disappeared), and the supported conversion flows (SCC -> VTT/SAMI/DFXP, VTT -> VTT/DFXP/SAMI/SRT) read -> written -> re-read and diffed against base
+5. **Change analysis** - explains what the changes do and how they solve the stated issue
+6. **Clear recommendation**: can be merged / needs work / do not merge
+
+Steps 1-3 and 5 are static analysis of the diff text — they can say "this *looks* like a regression". Only step 4 can say a regression *happened*.
+
+Severity in step 4 separates broken from merely different:
+
+| Finding | Severity | Meaning |
+|---|---|---|
+| A test passed at base and fails at HEAD | CRITICAL | Confirmed regression |
+| A test added by the PR fails | CRITICAL | PR is not green |
+| A flow throws, emits nothing, emits malformed XML, or its own reader rejects its output | CRITICAL | Broken regardless of the diff |
+| A test present at base is gone at HEAD | HIGH | Coverage removed |
+| Flow output differs from base, PR changes **no** test for that format | HIGH | Behavior moved with nothing pinning it |
+| Flow output differs from base, PR **does** change tests for that format | MEDIUM | Intended change — confirm the new output matches the ticket |
+
+An output difference is never CRITICAL: changing behavior is usually the point of the PR. Caption-count and visible-text preservation are deliberately *not* absolute assertions — several flows legitimately change both (`SRTWriter` emits a trailing space before a newline; `WebVTTWriter` splits one multi-positioned caption into several cues), so asserting them flagged healthy code. They are compared against base instead.
 
 ## Usage
 
@@ -33,7 +49,8 @@ Auto-fetches PR for current branch and generates comprehensive review.
 
 ```python
 #!/usr/bin/env python3
-import os, re, subprocess, json
+import os, re, subprocess, sys, json, tempfile, shutil
+import xml.etree.ElementTree as ET
 from datetime import datetime
 
 print("="*80)
@@ -53,6 +70,10 @@ def run(cmd, check=False):
         r = _FakeResult()
         r.stderr = f"Command not found: {cmd[0]}"
         return r
+
+# The workflow launches this script as `python3`, so a bare `python` may not
+# exist on PATH. Re-use our own interpreter for every child process.
+PY = sys.executable or 'python3'
 
 def is_test_file(path):
     return (
@@ -79,7 +100,7 @@ def detect_base_branch():
     return 'main'
 
 # ===== GET PR INFO =====
-print("\n[1/8] Getting PR information...")
+print("\n[1/9] Getting PR information...")
 
 pr_number = None
 pr_title = "Unknown"
@@ -144,13 +165,13 @@ print(f"  PR: #{pr_number} - {pr_title}")
 print(f"  Ref: {pr_ref}")
 
 # ===== FETCH LATEST BASE =====
-print("\n[2/8] Fetching latest base branch...")
+print("\n[2/9] Fetching latest base branch...")
 base_branch = detect_base_branch()
 run(['git', 'fetch', 'origin', base_branch])
 print(f"  Base: origin/{base_branch}")
 
 # ===== ANALYZE FILES =====
-print("\n[3/8] Analyzing changed files...")
+print("\n[3/9] Analyzing changed files...")
 
 r = run(['git', 'diff', '--name-only', f'origin/{base_branch}...{pr_ref}'])
 changed_files = [f for f in r.stdout.strip().split('\n') if f]
@@ -196,7 +217,7 @@ if not detected_flows:
     exit(0)
 
 # ===== PARSE DIFF WITH LINE NUMBERS =====
-print("\n[4/8] Parsing diff...")
+print("\n[4/9] Parsing diff...")
 
 diff_result = run(['git', 'diff', f'origin/{base_branch}...{pr_ref}'])
 
@@ -225,7 +246,7 @@ for raw in diff_result.stdout.split('\n'):
 print(f"  +{len(additions)} -{len(deletions)} lines")
 
 # ===== SECTION 1: COMPLIANCE CHECK (NEW ISSUES ONLY) =====
-print("\n[5/8] Compliance check - scanning for NEW issues introduced by PR...")
+print("\n[5/9] Compliance check - scanning for NEW issues introduced by PR...")
 
 compliance_issues = []
 
@@ -517,7 +538,7 @@ if 'SAMI' in flow:
 print(f"  Found: {len(compliance_issues)} NEW compliance issues")
 
 # ===== SECTION 2: CODE REVIEW =====
-print("\n[6/8] Code review (regressions, breaking changes, test coverage)...")
+print("\n[6/9] Code review (regressions, breaking changes, test coverage)...")
 
 code_review_findings = []
 
@@ -848,7 +869,7 @@ for (src, func), lineno in new_funcs.items():
 print(f"  Found: {len(code_review_findings)} findings")
 
 # ===== CODE QUALITY REVIEW =====
-print("\n[7/8] Code quality review...")
+print("\n[7/9] Code quality review...")
 
 quality_issues = []
 
@@ -888,7 +909,7 @@ for add in additions:
 print(f"  Found: {len(quality_issues)} code quality suggestions")
 
 # ===== SECTION 3: CHANGE ANALYSIS =====
-print("\n[8/8] Analyzing changes - what they do and how they solve the issue...")
+print("\n[8/9] Analyzing changes - what they do and how they solve the issue...")
 
 commit_log_r = run(['git', 'log', '--format=%s%n%b---', f'origin/{base_branch}..{pr_ref}'])
 commit_messages = commit_log_r.stdout.strip() if commit_log_r.returncode == 0 else ''
@@ -982,6 +1003,344 @@ for f in py_test_files:
 
 print(f"  Source: {len(new_files)} new, {len(modified_files)} modified, {len(deleted_files)} deleted")
 print(f"  Test changes: {len(test_details)} test files with new tests")
+
+# ===== SECTION 4: BEHAVIOR GATE (SUITE + CONVERSION FLOWS) =====
+# Everything above this point is static analysis of the diff text: it can say
+# "this looks like a regression" but never "this IS a regression". This section
+# executes both checkouts and compares observed behavior.
+#
+#   a) test suite at merge-base vs at HEAD -> tests that passed before and fail
+#      now, and tests that existed before and are gone now
+#   b) the conversion flows the platform depends on (SCC -> VTT/SAMI/DFXP,
+#      VTT -> VTT/DFXP/SAMI/SRT) exercised end to end, then diffed base vs HEAD
+#
+# Absolute failures and base-vs-HEAD differences are reported separately and
+# they mean different things. An absolute failure (exception, empty output,
+# malformed XML, a writer's own reader rejecting its output) is a bug. A
+# base-vs-HEAD difference is not: it is the PR changing behavior, which is
+# usually the point. It needs a human to confirm the change is intended, so it
+# is reported at HIGH and never CRITICAL.
+#
+# Deliberately NOT asserted absolutely: caption-count and visible-text
+# preservation across write -> read. Several flows legitimately change both
+# (SRTWriter emits a trailing space before a newline; WebVTTWriter splits one
+# multi-positioned caption into several cues). Asserting them produced false
+# positives on healthy code, so they are recorded as metrics and only reported
+# when they differ from base. See gotchas.md #8.
+print("\n[9/9] Behavior gate - suite and conversion flows vs base...")
+
+behavior_lines = []
+CONV_PROBE = r'''
+import hashlib, json, sys, warnings, xml.etree.ElementTree as ET
+warnings.filterwarnings("ignore")
+from pycaption import (CaptionNode, DFXPReader, DFXPWriter, SAMIReader,
+                       SAMIWriter, SCCReader, SRTReader, SRTWriter,
+                       WebVTTReader, WebVTTWriter)
+
+# Samples must exercise positioning and inline style, not just plain text: a
+# plain-text sample reports "same" on a PR that rewrote the positioning code.
+SAMPLES = {
+ "scc_popon": ("SCC", "Scenarist_SCC V1.0\n\n00:00:09:05 94ae 94ae 9420 9420 9470 9470 a820 e3ec efe3 6b20 f4e9 e36b e96e 6720 2980 942c 942c 942f 942f\n\n00:00:13:18 94ae 94ae 9420 9420 1370 1370 cdc1 ceba 94d0 94d0 5768 e56e 20f7 e520 f468 e96e 6b80 9470 9470 efe6 20a2 4520 e5f1 7561 ec73 206d 20e3 ad73 f175 61f2 e564 a22c 942c 942c 942f 942f\n"),
+ "scc_multipos": ("SCC", "Scenarist_SCC V1.0\n\n00:00:00:16 94ae 94ae 9420 9420 1370 1370 6162 6162 91d6 91d6 e364 e364 92fd 92fd e5e6 e5e6 942c 942c 942f 942f\n\n00:00:02:16 94ae 94ae 9420 9420 16f2 16f2 6768 6768 9752 9752 e9ea e9ea 97f2 97f2 6bec 6bec 942c 942c 942f 942f\n"),
+ "scc_textnode_pos": ("SCC", "Scenarist_SCC V1.0\n\n00:00:01:00\t9420 942f 94ae 9420 94f4 9723 c180 9476 91ae 7961 61f2 75e9 6ebf\n\n00:00:03:00\t9420 942f\n\n00:00:05:00\t942c\n\n"),
+ "vtt_rich": ("VTT", "WEBVTT\n\n00:09.209 --> 00:12.312\n( clock ticking )\n\n00:14.848 --> 00:17.000 line:10% position:20% align:start\nMAN:\nWhen we think\n\n00:17.000 --> 00:18.752\nwe have this <i>vision</i> of <b>Einstein</b>\n\n00:18.752 --> 00:20.887 align:end\nas an old, wrinkly man\nwith white hair.\n"),
+}
+READERS = {"SCC": SCCReader, "VTT": WebVTTReader, "DFXP": DFXPReader,
+           "SAMI": SAMIReader, "SRT": SRTReader}
+# DFXP twice: the default relativized output normalizes positioning and can
+# mask a positioning change that raw output exposes.
+TARGETS = {"VTT": [(WebVTTWriter, {}, "VTT")],
+           "DFXP": [(DFXPWriter, {}, "DFXP"),
+                    (DFXPWriter, {"relativize": False, "fit_to_screen": False}, "DFXP[raw]")],
+           "SAMI": [(SAMIWriter, {}, "SAMI")],
+           "SRT": [(SRTWriter, {}, "SRT")]}
+FLOWS = {"SCC": ["VTT", "SAMI", "DFXP"], "VTT": ["VTT", "DFXP", "SAMI", "SRT"]}
+
+def sha(t):
+    return hashlib.sha256((t or "").encode("utf-8")).hexdigest()[:12]
+
+def count(cs):
+    return sum(len(cs.get_captions(l)) for l in cs.get_languages())
+
+def text_of(cs):
+    return " | ".join(c.get_text() for l in cs.get_languages()
+                      for c in cs.get_captions(l))
+
+def style_shape(cs):
+    """Inline-style structure, so dropped or unbalanced markup shows up."""
+    return sha(str([(n.type_,
+                     sorted(n.content.items()) if isinstance(n.content, dict) else None,
+                     n.start if n.type_ == CaptionNode.STYLE else None)
+                    for l in cs.get_languages() for c in cs.get_captions(l)
+                    for n in c.nodes]))
+
+def probe(key, writer_cls, writer_kw, label):
+    src_fmt, content = SAMPLES[key]
+    rec = {"flow": key + " -> " + label, "status": "OK", "detail": ""}
+    try:
+        cs = READERS[src_fmt]().read(content)
+    except Exception as e:
+        rec.update(status="READ_FAIL", detail=type(e).__name__ + ": " + str(e))
+        return rec
+    rec["n_in"], rec["text_in"] = count(cs), sha(text_of(cs))
+    rec["style_in"] = style_shape(cs)
+    rec["timings"] = sha(str([(c.start, c.end) for l in cs.get_languages()
+                              for c in cs.get_captions(l)]))
+    if rec["n_in"] == 0:
+        rec.update(status="EMPTY_READ", detail="reader produced 0 captions")
+        return rec
+    try:
+        out = writer_cls(**writer_kw).write(cs)
+    except Exception as e:
+        rec.update(status="WRITE_FAIL", detail=type(e).__name__ + ": " + str(e))
+        return rec
+    if not out or not out.strip():
+        rec.update(status="EMPTY_WRITE", detail="writer produced no output")
+        return rec
+    rec["out_sha"], rec["out_len"] = sha(out), len(out)
+    problems = []
+    if label.startswith("DFXP"):
+        try:
+            ET.fromstring(out)
+        except ET.ParseError as e:
+            problems.append("output is not well-formed XML: " + str(e))
+    base_fmt = label.split("[")[0]
+    try:
+        if not READERS[base_fmt]().detect(out):
+            problems.append(base_fmt + "Reader.detect() rejects this writer's own output")
+        back = READERS[base_fmt]().read(out)
+        rec["n_out"], rec["text_out"] = count(back), sha(text_of(back))
+        rec["style_out"] = style_shape(back)
+        if rec["n_out"] == 0:
+            problems.append("re-read of the output produced 0 captions")
+    except Exception as e:
+        problems.append("re-read raised " + type(e).__name__ + ": " + str(e))
+    for l in cs.get_languages():
+        for c in cs.get_captions(l):
+            if c.start >= c.end:
+                problems.append("caption start >= end (%s >= %s)" % (c.start, c.end))
+                break
+    if problems:
+        rec.update(status="UNHEALTHY", detail="; ".join(problems))
+    return rec
+
+recs = {}
+for key, (src_fmt, _) in SAMPLES.items():
+    for target in FLOWS[src_fmt]:
+        for wc, kw, label in TARGETS[target]:
+            r = probe(key, wc, kw, label)
+            recs[r["flow"]] = r
+print(json.dumps(recs, sort_keys=True))
+'''
+
+def _suite_results(xml_path):
+    """Map test id -> pass/fail from a junit xml report."""
+    out = {}
+    try:
+        for tc in ET.parse(xml_path).getroot().iter('testcase'):
+            nid = f"{tc.get('classname')}::{tc.get('name')}"
+            out[nid] = 'fail' if any(c.tag in ('failure', 'error') for c in tc) else 'pass'
+    except Exception:
+        pass
+    return out
+
+# Only worth ~3s when library code actually changed.
+if not [f for f in py_src_files if is_library_file(f)]:
+    behavior_lines.append('Skipped - no `pycaption/` source files changed.')
+    print("  Skipped (no library source changes)")
+else:
+    repo_root = run(['git', 'rev-parse', '--show-toplevel']).stdout.strip() or os.getcwd()
+    mb = run(['git', 'merge-base', pr_ref, f'origin/{base_branch}']).stdout.strip()
+    tmp = tempfile.mkdtemp(prefix='pr_review_')
+    probe_path = os.path.join(tmp, 'conv_probe.py')
+    with open(probe_path, 'w') as fh:
+        fh.write(CONV_PROBE)
+    worktree = os.path.join(tmp, 'base_checkout')
+    wt_ok = False
+    try:
+        if not mb:
+            behavior_lines.append('Skipped - could not resolve merge-base with '
+                                  f'origin/{base_branch}.')
+            print("  Skipped (no merge-base)")
+        else:
+            r = run(['git', 'worktree', 'add', '-q', '--detach', worktree, mb])
+            wt_ok = r.returncode == 0
+            if not wt_ok:
+                behavior_lines.append(f'Skipped - `git worktree add` failed: '
+                                      f'{(r.stderr or "").strip()[:200]}')
+                print(f"  Skipped (worktree failed: {(r.stderr or '').strip()[:80]})")
+            else:
+                env_head = dict(os.environ, PYTHONPATH=repo_root)
+                env_base = dict(os.environ, PYTHONPATH=worktree)
+
+                # This gate runs code, so it needs pytest and pycaption's own
+                # runtime deps. The repo ships no requirements.txt, so a CI job
+                # that only upgrades pip has neither. Detect that and skip the
+                # affected half - reporting a missing interpreter dependency as
+                # a code defect would stamp DO NOT MERGE on every PR.
+                have_pytest = subprocess.run(
+                    [PY, '-m', 'pytest', '--version'],
+                    capture_output=True, text=True).returncode == 0
+                dep_check = subprocess.run(
+                    [PY, '-c', 'import pycaption'], cwd=repo_root,
+                    capture_output=True, text=True, env=env_head)
+                have_deps = dep_check.returncode == 0
+
+                # --- (a) suite at base vs at HEAD ---
+                base_res, head_res = {}, {}
+                head_failing, newly_failing, vanished = [], [], []
+                if not have_pytest:
+                    behavior_lines.append('Suite comparison skipped - pytest is not '
+                                          'installed in this environment.')
+                    print("  Suite: skipped (pytest unavailable)")
+                else:
+                    jb = os.path.join(tmp, 'base.xml')
+                    jh = os.path.join(tmp, 'head.xml')
+                    subprocess.run([PY, '-m', 'pytest', 'tests/', '-q', '--tb=no',
+                                    '-p', 'no:cacheprovider', f'--junitxml={jb}'],
+                                   cwd=worktree, capture_output=True, text=True)
+                    subprocess.run(
+                        [PY, '-m', 'pytest', 'tests/', '-q', '--tb=no',
+                         '-p', 'no:cacheprovider', f'--junitxml={jh}'],
+                        cwd=repo_root, capture_output=True, text=True)
+                    base_res, head_res = _suite_results(jb), _suite_results(jh)
+                    head_failing = sorted(t for t, v in head_res.items() if v == 'fail')
+                    newly_failing = sorted(t for t, v in base_res.items()
+                                           if v == 'pass' and head_res.get(t) == 'fail')
+                    vanished = sorted(t for t in base_res if t not in head_res)
+
+                    behavior_lines.append(
+                        f'Suite: {len(base_res)} tests at base, {len(head_res)} at HEAD '
+                        f'({len(head_failing)} failing at HEAD).')
+                    if head_failing and not base_res:
+                        behavior_lines.append('Base suite produced no results - treating '
+                                              'HEAD failures as absolute.')
+                    print(f"  Suite: {len(newly_failing)} regression(s), "
+                          f"{len(vanished)} test(s) removed, "
+                          f"{len(head_failing)} failing at HEAD")
+                for t in newly_failing:
+                    code_review_findings.append({
+                        'category': 'REGRESSION', 'type': 'TEST_REGRESSION',
+                        'severity': 'CRITICAL', 'file': t.split('::')[0], 'lineno': 0,
+                        'detail': f'Test passed at base and fails at HEAD: {t}',
+                        'impact': 'Confirmed regression - existing behavior is broken'})
+                # A HEAD failure with no base counterpart is a new test that
+                # does not pass: still blocking, but not a regression.
+                for t in head_failing:
+                    if t not in base_res:
+                        code_review_findings.append({
+                            'category': 'REGRESSION', 'type': 'NEW_TEST_FAILING',
+                            'severity': 'CRITICAL', 'file': t.split('::')[0], 'lineno': 0,
+                            'detail': f'Test added by this PR fails: {t}',
+                            'impact': 'PR is not green'})
+                for t in vanished:
+                    code_review_findings.append({
+                        'category': 'REGRESSION', 'type': 'TEST_REMOVED',
+                        'severity': 'HIGH', 'file': t.split('::')[0], 'lineno': 0,
+                        'detail': f'Test present at base is gone at HEAD: {t}',
+                        'impact': 'Coverage removed - confirm this was intentional'})
+
+                # --- (b) conversion flows, absolute health then base vs HEAD ---
+                head_flows, base_flows, unhealthy, changed_flows = {}, {}, [], []
+                if not have_deps:
+                    err = [l for l in (dep_check.stderr or '').strip().splitlines() if l]
+                    behavior_lines.append(
+                        'Conversion flows skipped - `import pycaption` fails in this '
+                        'environment: ' + (err[-1][:160] if err else 'unknown error'))
+                    print("  Flows: skipped (pycaption not importable)")
+                else:
+                    pb = subprocess.run([PY, probe_path], cwd=worktree,
+                                        capture_output=True, text=True, env=env_base)
+                    ph = subprocess.run([PY, probe_path], cwd=repo_root,
+                                        capture_output=True, text=True, env=env_head)
+                    try:
+                        head_flows = json.loads(ph.stdout)
+                    except Exception:
+                        head_flows = {}
+                        code_review_findings.append({
+                            'category': 'REGRESSION', 'type': 'CONVERSION_PROBE_CRASHED',
+                            'severity': 'CRITICAL', 'file': 'pycaption/', 'lineno': 0,
+                            'detail': 'Conversion probe failed to run at HEAD: '
+                                      + (ph.stderr or '').strip()[-400:],
+                            'impact': 'Cannot verify conversion flows - import or API break'})
+                    try:
+                        base_flows = json.loads(pb.stdout)
+                    except Exception:
+                        base_flows = {}
+                        behavior_lines.append('Conversion probe did not run at base; '
+                                              'only absolute health is reported.')
+
+                    unhealthy = [r for r in head_flows.values() if r['status'] != 'OK']
+                    behavior_lines.append(
+                        f'Conversion flows: {len(head_flows) - len(unhealthy)}/'
+                        f'{len(head_flows)} healthy at HEAD.')
+                    for r in unhealthy:
+                        code_review_findings.append({
+                            'category': 'REGRESSION', 'type': 'CONVERSION_UNHEALTHY',
+                            'severity': 'CRITICAL', 'file': 'pycaption/', 'lineno': 0,
+                            'detail': f"{r['flow']}: {r['status']} - {r['detail']}",
+                            'impact': 'Conversion flow is broken regardless of the diff'})
+
+                    CMP = ('status', 'n_in', 'n_out', 'text_in', 'text_out',
+                           'style_in', 'style_out', 'out_sha', 'timings')
+
+                    def _covered_by_tests(flow_name):
+                        """Did this PR touch tests for either format in the flow?
+
+                        An intended fix ships a test for the format it changes, so
+                        that case is informational. An output change with no test
+                        for that format is the dangerous one: behavior moved and
+                        nothing pins it.
+                        """
+                        src, _, dst = flow_name.partition(' -> ')
+                        fmts = {src.split('_')[0].lower(), dst.split('[')[0].lower()}
+                        fmts |= {'webvtt'} if 'vtt' in fmts else set()
+                        return any(any(k in t.lower() for k in fmts) for t in py_test_files)
+
+                    changed_flows = []
+                    # Not `flow`: that name holds the detected format flow and is
+                    # read again when the report header is built.
+                    for fname, hr in sorted(head_flows.items()):
+                        br = base_flows.get(fname)
+                        if not br:
+                            continue
+                        diff = [k for k in CMP if br.get(k) != hr.get(k)]
+                        if diff:
+                            covered = _covered_by_tests(fname)
+                            changed_flows.append((fname, diff, covered))
+                            code_review_findings.append({
+                                'category': 'REGRESSION', 'type': 'CONVERSION_OUTPUT_CHANGED',
+                                'severity': 'MEDIUM' if covered else 'HIGH',
+                                'file': 'pycaption/', 'lineno': 0,
+                                'detail': f'{fname} output differs from base ({", ".join(diff)})'
+                                          + ('' if covered else
+                                             ' and this PR changes no test for either format'),
+                                'impact': ('Intended behavior change - verify the new output is '
+                                           'what the ticket asked for'
+                                           if covered else
+                                           'Behavior moved in a supported flow with no test '
+                                           'pinning it - add one or confirm it is intended')})
+                    if changed_flows:
+                        behavior_lines.append(
+                            'Flows whose output changed vs base: '
+                            + ', '.join(f"{f}{'' if cov else ' (no test for this format)'}"
+                                        for f, _, cov in changed_flows) + '.')
+                    else:
+                        behavior_lines.append('No conversion flow changed output vs base.')
+                    print(f"  Flows: {len(unhealthy)} unhealthy, "
+                          f"{len(changed_flows)} changed vs base")
+    except Exception as exc:
+        # This gate is the only section that runs code, so it is the only one
+        # that can die on the environment rather than on the diff. Degrade to a
+        # skip: a broken gate must not cost the PR its report.
+        behavior_lines.append(f'Gate aborted - {type(exc).__name__}: '
+                              f'{str(exc)[:200]}')
+        print(f"  Gate aborted ({type(exc).__name__}: {str(exc)[:80]})")
+    finally:
+        if wt_ok:
+            run(['git', 'worktree', 'remove', '--force', worktree])
+        run(['git', 'worktree', 'prune'])
+        shutil.rmtree(tmp, ignore_errors=True)
 
 # ===== RECOMMENDATION + REPORT =====
 print("\n  Generating report...")
@@ -1081,6 +1440,19 @@ if regressions:
 """
 else:
     report += "No regressions or breaking changes detected.\n\n"
+
+# State what was actually executed, so an empty Regressions section is never
+# read as "verified" when the gate was skipped.
+report += "### Behavior Gate (executed, not inferred)\n\n"
+if behavior_lines:
+    for line in behavior_lines:
+        report += f"- {line}\n"
+else:
+    report += "- Not run.\n"
+report += ("\nFlows exercised: SCC -> VTT/SAMI/DFXP and VTT -> VTT/DFXP/SAMI/SRT, "
+           "each read -> written -> re-read, then diffed against the merge-base. "
+           "An output difference is a behavior change to confirm, not automatically "
+           "a defect.\n\n")
 
 report += f"### Test Coverage ({len(missing_tests)})\n\n"
 if missing_tests:

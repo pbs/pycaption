@@ -45,6 +45,27 @@ Changelog
     are all affected, the last no longer emitting cue lines of nothing but
     spaces — and write → read → write becomes a fixed point.
 
+  - Fix ``DFXPWriter`` discarding a position carried by a text node. Only a
+    position sitting on a ``STYLE`` node was written, so bare text rendered
+    wherever its ``<p>`` pointed — silent displacement for the per-node
+    positioning ``SCC`` produces, and, with no style span involved at all,
+    both positions lost and their text concatenated without a separator.
+    Nodes are now split into runs sharing one region, and a run whose region
+    differs from the one already in effect is wrapped in a ``<span>``
+    carrying it, so every distinct positioned layout holding visible text
+    reaches ``<head><layout>`` and renders at its own position. Grouping keeps a
+    ``<br/>`` between two nodes of one region inside that region's span
+    rather than splitting the run in two. A style tag whose partner falls
+    outside its run — one crossing a region boundary, or left unclosed —
+    still takes no wrapper of its own, since that span would cross another
+    and break well-formedness, but it no longer costs the text beside it a
+    wrapper too. Captions whose nodes carry no layout of their own, or one
+    matching the enclosing ``<p>``'s, are unchanged.
+
+  - Fix ``DFXPWriter`` closing spans it never opened, emitting a stray
+    ``</span>`` — invalid XML — for any unclosed ``STYLE`` node whose content
+    maps to no attributes, such as a WebVTT karaoke timestamp tag.
+
 2.3.9
 ^^^^^^
   - Fix ``SCCReader`` inserting phantom ``BREAK`` nodes when two independent,
