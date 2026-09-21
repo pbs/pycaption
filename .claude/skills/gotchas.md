@@ -181,3 +181,37 @@ if: env.REPORT_EXISTS == 'true' && env.SCRIPT_CRASHED != 'true'
 ---
 
 *Last updated: 2026-09-15*
+
+---
+
+## 15. Conversion "health" asserted absolutely, instead of against base
+
+**What happened:** The behavior gate added to `check-last-pr` first asserted that a conversion preserves caption count and visible text across read → write → re-read. On a completely healthy tree that flagged 6 of 17 flows: `SRTWriter` emits a trailing space before a newline (`'MAN:'` → `'MAN: '`), and `WebVTTWriter` correctly splits one multi-positioned SCC caption into two cues, so text and counts legitimately differ. Reported as-is, those six would have been false CRITICALs on a green PR.
+
+**Rule:** Split absolute checks from comparative ones.
+- **Absolute (a bug no matter the diff):** an exception, empty output, DFXP that is not well-formed XML, a writer's own reader rejecting its output via `detect()`, `start >= end`.
+- **Comparative (only meaningful vs the merge-base):** caption counts, visible text, style-node shape, output digest. Record them as metrics and report only when they differ from base.
+
+Also: an output difference is not automatically a defect — changing behavior is usually the point of the PR. Grade it by whether the PR ships a test for that format (MEDIUM if yes, HIGH if no), never CRITICAL.
+
+And: the samples decide the sensitivity. A plain-text sample reports "same" on a PR that rewrote positioning — this was observed, OCTO-11612 changed `DFXPWriter` region output and the first sample set missed it entirely. Keep samples that carry positioning and inline style, and probe `DFXPWriter` both with defaults and with `relativize=False, fit_to_screen=False`, since relativized output normalizes positioning and can hide the change.
+
+**Applies to:** `check-last-pr`
+
+---
+
+## 16. A gate that *runs* code must tell a missing environment from broken code
+
+**What happened:** The `check-last-pr` behavior gate shells out to `python -m pytest` and to a probe that does `import pycaption`. Locally both work, so it looked finished. But `pr_compliance_check.yml` only does `pip install --upgrade pip` plus `if [ -f requirements.txt ]`, and this repo has **no `requirements.txt`** — so in CI there is no pytest and none of pycaption's runtime deps. The probe would fail to import, `json.loads` of its stdout would raise, and the gate would append `CONVERSION_PROBE_CRASHED` at CRITICAL: **DO NOT MERGE on every PR**. The suite half was worse in a quieter way — no junit XML means empty result sets, so it silently reported nothing while appearing to have run.
+
+**Rule:** Before asserting anything from an executed check, prove the interpreter can execute it. Preflight `python -m pytest --version` and `python -c 'import <pkg>'`; if either fails, skip that half and say so in the report, never emit a finding. A missing dependency is an environment fact, not a defect in the diff. And when a check can be skipped, the report must print *why* — an empty findings list has to be distinguishable from a check that never ran.
+
+**Applies to:** `check-last-pr`, any skill that executes the package rather than reading its diff
+
+## 17. The environment preflight must itself survive a missing interpreter
+
+**What happened:** The guard written for #16 hardcoded `['python', '-m', 'pytest', '--version']` and bypassed the `run()` helper that swallows `FileNotFoundError`. `pr_compliance_check.yml` launches the script as `python3`, and an image with no bare `python` on PATH has nothing to launch — so the preflight raised before it could decide to skip, the gate's `try:`/`finally:` had no `except`, the script died before writing the report, and the `Fail job on script crash` step failed the PR job. The guard against "missing environment mistaken for broken code" was itself the thing that mistook them.
+
+**Rule:** Spawn children with `sys.executable`, never a bare `python` — the interpreter running the script is the one guaranteed to exist. Any section that shells out gets an `except Exception` that degrades to a reported skip; a gate must never be able to cost the PR its report. Verify by running under `env -i PATH=/usr/bin:/bin`, which has `python3` but no `python`.
+
+**Applies to:** `check-last-pr`, any skill spawning a subprocess interpreter
