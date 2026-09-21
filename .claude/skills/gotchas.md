@@ -207,3 +207,11 @@ And: the samples decide the sensitivity. A plain-text sample reports "same" on a
 **Rule:** Before asserting anything from an executed check, prove the interpreter can execute it. Preflight `python -m pytest --version` and `python -c 'import <pkg>'`; if either fails, skip that half and say so in the report, never emit a finding. A missing dependency is an environment fact, not a defect in the diff. And when a check can be skipped, the report must print *why* — an empty findings list has to be distinguishable from a check that never ran.
 
 **Applies to:** `check-last-pr`, any skill that executes the package rather than reading its diff
+
+## 17. The environment preflight must itself survive a missing interpreter
+
+**What happened:** The guard written for #16 hardcoded `['python', '-m', 'pytest', '--version']` and bypassed the `run()` helper that swallows `FileNotFoundError`. `pr_compliance_check.yml` launches the script as `python3`, and an image with no bare `python` on PATH has nothing to launch — so the preflight raised before it could decide to skip, the gate's `try:`/`finally:` had no `except`, the script died before writing the report, and the `Fail job on script crash` step failed the PR job. The guard against "missing environment mistaken for broken code" was itself the thing that mistook them.
+
+**Rule:** Spawn children with `sys.executable`, never a bare `python` — the interpreter running the script is the one guaranteed to exist. Any section that shells out gets an `except Exception` that degrades to a reported skip; a gate must never be able to cost the PR its report. Verify by running under `env -i PATH=/usr/bin:/bin`, which has `python3` but no `python`.
+
+**Applies to:** `check-last-pr`, any skill spawning a subprocess interpreter

@@ -49,7 +49,7 @@ Auto-fetches PR for current branch and generates comprehensive review.
 
 ```python
 #!/usr/bin/env python3
-import os, re, subprocess, json, tempfile, shutil
+import os, re, subprocess, sys, json, tempfile, shutil
 import xml.etree.ElementTree as ET
 from datetime import datetime
 
@@ -70,6 +70,10 @@ def run(cmd, check=False):
         r = _FakeResult()
         r.stderr = f"Command not found: {cmd[0]}"
         return r
+
+# The workflow launches this script as `python3`, so a bare `python` may not
+# exist on PATH. Re-use our own interpreter for every child process.
+PY = sys.executable or 'python3'
 
 def is_test_file(path):
     return (
@@ -1175,10 +1179,10 @@ else:
                 # affected half - reporting a missing interpreter dependency as
                 # a code defect would stamp DO NOT MERGE on every PR.
                 have_pytest = subprocess.run(
-                    ['python', '-m', 'pytest', '--version'],
+                    [PY, '-m', 'pytest', '--version'],
                     capture_output=True, text=True).returncode == 0
                 dep_check = subprocess.run(
-                    ['python', '-c', 'import pycaption'], cwd=repo_root,
+                    [PY, '-c', 'import pycaption'], cwd=repo_root,
                     capture_output=True, text=True, env=env_head)
                 have_deps = dep_check.returncode == 0
 
@@ -1192,11 +1196,11 @@ else:
                 else:
                     jb = os.path.join(tmp, 'base.xml')
                     jh = os.path.join(tmp, 'head.xml')
-                    subprocess.run(['python', '-m', 'pytest', 'tests/', '-q', '--tb=no',
+                    subprocess.run([PY, '-m', 'pytest', 'tests/', '-q', '--tb=no',
                                     '-p', 'no:cacheprovider', f'--junitxml={jb}'],
                                    cwd=worktree, capture_output=True, text=True)
                     subprocess.run(
-                        ['python', '-m', 'pytest', 'tests/', '-q', '--tb=no',
+                        [PY, '-m', 'pytest', 'tests/', '-q', '--tb=no',
                          '-p', 'no:cacheprovider', f'--junitxml={jh}'],
                         cwd=repo_root, capture_output=True, text=True)
                     base_res, head_res = _suite_results(jb), _suite_results(jh)
@@ -1245,9 +1249,9 @@ else:
                         'environment: ' + (err[-1][:160] if err else 'unknown error'))
                     print("  Flows: skipped (pycaption not importable)")
                 else:
-                    pb = subprocess.run(['python', probe_path], cwd=worktree,
+                    pb = subprocess.run([PY, probe_path], cwd=worktree,
                                         capture_output=True, text=True, env=env_base)
-                    ph = subprocess.run(['python', probe_path], cwd=repo_root,
+                    ph = subprocess.run([PY, probe_path], cwd=repo_root,
                                         capture_output=True, text=True, env=env_head)
                     try:
                         head_flows = json.loads(ph.stdout)
@@ -1294,19 +1298,21 @@ else:
                         return any(any(k in t.lower() for k in fmts) for t in py_test_files)
 
                     changed_flows = []
-                    for flow, hr in sorted(head_flows.items()):
-                        br = base_flows.get(flow)
+                    # Not `flow`: that name holds the detected format flow and is
+                    # read again when the report header is built.
+                    for fname, hr in sorted(head_flows.items()):
+                        br = base_flows.get(fname)
                         if not br:
                             continue
                         diff = [k for k in CMP if br.get(k) != hr.get(k)]
                         if diff:
-                            covered = _covered_by_tests(flow)
-                            changed_flows.append((flow, diff, covered))
+                            covered = _covered_by_tests(fname)
+                            changed_flows.append((fname, diff, covered))
                             code_review_findings.append({
                                 'category': 'REGRESSION', 'type': 'CONVERSION_OUTPUT_CHANGED',
                                 'severity': 'MEDIUM' if covered else 'HIGH',
                                 'file': 'pycaption/', 'lineno': 0,
-                                'detail': f'{flow} output differs from base ({", ".join(diff)})'
+                                'detail': f'{fname} output differs from base ({", ".join(diff)})'
                                           + ('' if covered else
                                              ' and this PR changes no test for either format'),
                                 'impact': ('Intended behavior change - verify the new output is '
@@ -1323,6 +1329,13 @@ else:
                         behavior_lines.append('No conversion flow changed output vs base.')
                     print(f"  Flows: {len(unhealthy)} unhealthy, "
                           f"{len(changed_flows)} changed vs base")
+    except Exception as exc:
+        # This gate is the only section that runs code, so it is the only one
+        # that can die on the environment rather than on the diff. Degrade to a
+        # skip: a broken gate must not cost the PR its report.
+        behavior_lines.append(f'Gate aborted - {type(exc).__name__}: '
+                              f'{str(exc)[:200]}')
+        print(f"  Gate aborted ({type(exc).__name__}: {str(exc)[:80]})")
     finally:
         if wt_ok:
             run(['git', 'worktree', 'remove', '--force', worktree])
