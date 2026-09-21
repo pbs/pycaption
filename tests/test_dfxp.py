@@ -807,14 +807,31 @@ class TestDFXPWriterNodePositioning:
         assert "</span>" not in dfxp
         assert BeautifulSoup(dfxp, "lxml-xml").find("p").get_text(strip=True) == "hello"
 
+    def test_a_run_holding_no_visible_text_gets_no_wrapper(self):
+        layout = _layout_at(70, 20)
+        nodes = [
+            CaptionNode.create_style(True, {"italics": True}, layout_info=layout),
+            CaptionNode.create_style(False, {"italics": True}),
+            CaptionNode.create_style(True, {"bold": True}, layout_info=layout),
+            CaptionNode.create_style(False, {"bold": True}),
+        ]
+        dfxp = DFXPWriter().write(_caption_set(nodes, layout_info=_layout_at(10, 80)))
+
+        spans = BeautifulSoup(dfxp, "lxml-xml").find("p").find_all("span")
+        styling = [
+            span.get("tts:fontStyle") or span.get("tts:fontWeight") for span in spans
+        ]
+        assert styling == ["italic", "bold"]
+
 
 class TestDFXPWriterLineAlignment:
     """A layout holding only a line alignment gets no region of its own.
 
-    WebVTT's ``line:auto,<alignment>`` is the only thing that produces one,
-    and a ``line`` value carrying no digit means the whole setting is
-    discarded — so the cue keeps the default placement instead of taking a
-    vertical one from the qualifier the setting was thrown away with.
+    A WebVTT ``line`` setting leaves one behind when its value yields no line
+    to place the cue at: ``line:auto,start``, where the value is valid but
+    names no line, or a value the grammar discards outright.  Either way the
+    cue keeps the default placement instead of taking a vertical one from the
+    qualifier alone.
     """
 
     def setup_class(self):

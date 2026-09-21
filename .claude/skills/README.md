@@ -24,7 +24,7 @@ analyze-*-docs --> check-*-compliance --> suggest-*-fixes
 | `/suggest-scc-fixes` | Analyzes latest SCC compliance report, generates code fix for the most critical issue |
 | `/suggest-vtt-fixes` | Analyzes latest VTT compliance report, generates code fix for the most critical issue |
 | `/suggest-dfxp-fixes` | Analyzes latest DFXP compliance report, generates code fix for the most critical issue |
-| `/check-last-pr` | Comprehensive PR review: compliance, code review, regressions, test coverage |
+| `/check-last-pr` | Comprehensive PR review: compliance, code review, test coverage, plus a behavior gate that runs the suite and the SCC/VTT conversion flows at the merge-base and at HEAD and diffs them |
 | `/run-all-compliance` | Runs all 4 compliance checks (SCC, VTT, DFXP, SAMI) in sequence, produces 4 dated reports |
 | `/generate-standards-summary` | Reads proprietary PDF standards (CEA-608, CEA-708, SMPTE ST 2052-1, RP 2052-10) and generates local-only `standards_summary.md` files for analyze skills |
 
@@ -85,7 +85,7 @@ Contributors with licensed copies of the relevant standards can run `/generate-s
 
 ## Gotchas
 
-[`gotchas.md`](gotchas.md) lists past mistakes (copyright, workflow bugs, false-positive reviews, security patterns) that skills must avoid. Skills reference it in pre-flight checks and append new gotchas post-run when they discover repeatable patterns. Currently 13 gotchas covering: proprietary content, source attribution, W3C licensing, expression injection, `set -e` bugs, Slack guards, IMPL regex, false-positive reviews, gitignore coverage, SHA pinning, crash guards, fork PR failures, and module-to-package refactors.
+[`gotchas.md`](gotchas.md) lists past mistakes (copyright, workflow bugs, false-positive reviews, security patterns) that skills must avoid. Skills reference it in pre-flight checks and append new gotchas post-run when they discover repeatable patterns. Currently 16 gotchas covering: proprietary content, source attribution, W3C licensing, expression injection, `set -e` bugs, Slack guards, IMPL regex, false-positive reviews, gitignore coverage, SHA pinning, crash guards, fork PR failures, module-to-package refactors, non-library `.py` files, absolute-vs-comparative conversion checks, and executed checks in a dependency-less CI job.
 
 ## Notes
 

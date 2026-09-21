@@ -221,7 +221,8 @@ class DFXPWriter(BaseWriter):
         the one already in effect is wrapped in a <span> carrying it, so text
         renders at its own position instead of inheriting the one on the
         enclosing <p>, and a <br/> between two nodes of one region stays
-        inside that region.
+        inside that region.  A run holding no visible text takes no wrapper:
+        there is nothing for the region to place.
 
         :rtype: str
         """
@@ -233,7 +234,11 @@ class DFXPWriter(BaseWriter):
         for region_id, region_attribs, nodes, wrappable in self._group_nodes_by_region(
             caption, paragraph, caption_set, lang
         ):
-            wrap = wrappable and region_id != self._innermost_region(paragraph_region)
+            wrap = (
+                wrappable
+                and region_id != self._innermost_region(paragraph_region)
+                and self._holds_visible_text(nodes)
+            )
             if wrap:
                 attrs = {"region": region_id}
                 if self.write_inline_positioning:
@@ -319,6 +324,19 @@ class DFXPWriter(BaseWriter):
                 indices, partners, caption.nodes
             )
         ]
+
+    @staticmethod
+    def _holds_visible_text(nodes):
+        """Check whether a run has any text for a region to place.
+
+        A run of nothing but style tags and breaks renders nothing, so a
+        wrapper carrying its region would be an empty span.
+
+        :rtype: bool
+        """
+        return any(
+            node.type_ == CaptionNode.TEXT and node.content.strip() for node in nodes
+        )
 
     @staticmethod
     def _crosses_run(index, partners, nodes, run):
@@ -554,9 +572,11 @@ class RegionCreator:
 
         Skips Layout objects that have no positioning data (no origin,
         extent, padding, alignment, or writing_direction).  A line alignment
-        on its own is not positioning data: the only thing that produces one
-        is a WebVTT ``line`` setting whose value did not parse, which the cue
-        settings grammar discards outright rather than placing the cue by.
+        on its own is not positioning data: it is what a WebVTT ``line``
+        setting leaves behind when its value yields no line to place the cue
+        at — ``line:auto,start``, or a value the grammar discards outright —
+        so the cue keeps the default placement rather than taking a vertical
+        one from the qualifier alone.
 
         :param unique_layouts: iterable of geometry.Layout instances
         :type dfxp: BeautifulSoup
