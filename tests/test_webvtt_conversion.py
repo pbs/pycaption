@@ -1,4 +1,5 @@
 import re
+
 from xml.etree import ElementTree
 
 from pycaption import (
