@@ -1397,29 +1397,21 @@ class TestMultipleLayoutsPerCaption:
         assert cues[0][1] == ["plain"]
         assert cues[1][1] == ["styled<i>"]
 
-    def test_scc_mid_row_code_splits_into_two_parsable_cues(self):
-        """End to end on the shape that occurs in real SCC: a mid-row
-        italics code that also moves the column, leaving one Caption with
-        two positions. This is the caption at 00:05:50.800 of
-        examples/2000370803_Original_en.txt, which was emitted as a single
-        fused block of two timing lines."""
-        scc = (
-            "Scenarist_SCC V1.0\n\n"
-            "00:00:01:00\t9420 942f 94ae 9420 94f4 9723 c180 "
-            "9476 91ae 7961 61f2 75e9 6ebf\n\n"
-            "00:00:03:00\t9420 942f\n\n"
-            "00:00:05:00\t942c\n\n"
+    def test_a_style_node_left_on_another_row_does_not_move_the_text(self):
+        """The one multi-layout shape SCC still produces: a caption whose
+        text sits at one origin while a trailing italics-off node was
+        stamped with another. The text must keep its own position rather
+        than being dragged to the style node's, and the style node, having
+        no text of its own, must not become a cue.
+        """
+        cues = self._cues(
+            [
+                self._italics(True, self.LAYOUT_A),
+                CaptionNode.create_text("♪ Come on ♪", layout_info=self.LAYOUT_A),
+                self._italics(False, self.LAYOUT_B),
+            ]
         )
-        webvtt = WebVTTWriter().write(SCCReader().read(scc))
 
-        blocks = [
-            block.strip("\n")
-            for block in webvtt.split("WEBVTT\n\n", 1)[1].split("\n\n")
-            if block.strip()
-        ]
-        assert [b.count("-->") for b in blocks] == [1, 1]
-        assert blocks[0].split("\n")[1:] == ["A"]
-        assert blocks[1].split("\n")[1:] == ["<i>yaaruin?</i>"]
-        assert "position:37.5%" in blocks[0]
-        assert "position:40%" in blocks[1]
-        assert WebVTTWriter().write(WebVTTReader().read(webvtt)) == webvtt
+        assert len(cues) == 1
+        assert "position:35% line:77%" in cues[0][0]
+        assert cues[0][1] == ["<i>♪ Come on ♪</i>"]

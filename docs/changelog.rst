@@ -1,5 +1,79 @@
 Changelog
 ---------
+2.3.12
+^^^^^^
+  - Fix ``SCCReader`` misclassifying mid-line PACs, which it judged by
+    distance from the line's origin rather than from the cursor.
+    ``_PositioningTracker`` now tracks where the text actually ends, so a
+    same-row PAC within a tab offset of the cursor continues the line
+    instead of opening a new cue mid-sentence, and one arriving after text
+    no longer nudges the origin — which had left a single ``Caption``
+    carrying text at two positions, written out as two regions or cues for
+    one line of text. Tab Offsets are recognised by command identity rather
+    than by coordinates, since mid-line they are computed from the last PAC
+    and can land well behind the text; one arriving before any text still
+    indents the origin, as before. The cursor comparison spans a tab offset
+    in both directions: a PAC is read before its own Tab Offset is applied,
+    so one that is about to be nudged forward onto the cursor first appears
+    up to three columns behind it. A PAC that merely restates the position
+    already in effect is never a repositioning, however much text has been
+    written since — there is nowhere new for it to go. Columns skipped by a
+    PAC landing ahead of the cursor are kept as spaces, so the words either
+    side of the gap are not run together; a Tab Offset reached part-way
+    through a line skips forward the same way, while one on a line still
+    empty after a break indents it instead. Those columns belong to the line
+    they were skipped on, so a break discards them rather than indenting the
+    line it opens. A consequence: a mid-row style
+    code that used to be read as a repositioning is now a continuation, so
+    the decorative space beside it is no longer suppressed; mid-row codes
+    also now account for the screen column they occupy, without which the
+    next PAC on the row looks one column further along than it is. When
+    nothing moves such a PAC forward and text follows it directly, it really
+    did point back over the line, and that text now covers those columns
+    instead of being appended after them — a line filling the row is 32
+    characters wide, not 34, and so is no longer rejected as too long. What
+    it covers is counted in screen columns, so it reaches back across as many
+    nodes as a style change happened to split the line into, stopping only at
+    a break or a repositioning.
+
+  - Fix ``SCCReader`` padding a wrapped line with blank columns when the PAC
+    that opened it carried a Tab Offset. The offset was measured against the
+    cursor of the line just abandoned, so it read as a forward jump and the
+    columns it "skipped" were written as spaces in front of the new line. It
+    now adjusts where that line starts, leaving the cue's origin alone, and
+    the cursor it sets is the one a later PAC on the row is compared against.
+
+  - Fix ``SCCReader`` swallowing a repositioning that followed a line break
+    with no text between them. The pending break outlived the line it was
+    opened for and was consumed first, joining two unrelated positions into
+    one ``Caption`` whose nodes disagreed on the origin; it is now discarded
+    with the line, and the two positions become two cues.
+
+  - Fix ``SCCReader`` dropping the Tab Offset behind a doubled PAC. Filtering
+    the duplicate also forgot that a PAC had been seen, leaving the offset
+    looking like a stray duplicate of its own, so the indentation it carried
+    was lost and the line rendered at the PAC's unadjusted column.
+
+  - Fix ``SCCReader`` letting the automatic backspace an extended character
+    carries erase a character on the row above, or in a different cue. The
+    backspace is skipped when the character is the first on its row, which
+    the reader only recognised once the break had been written out — it is
+    held until text arrives, so a break or repositioning still pending in the
+    tracker now counts just as much as one already in the output.
+
+  - Fix ``SCCReader`` stamping the node that closes an italic run with the
+    position the tracker had already moved on to, rather than that of the text
+    it closes. One ``Caption`` was left carrying two positions, which the
+    writers then had to place separately.
+
+  - Fix ``SRTWriter`` separating every pair of text nodes with a space
+    whether or not either side already supplied one. A style change splits a
+    line into several nodes, and each seam gained a double space; the space
+    appended after the last node of a line was stripped only at the ends of a
+    cue, so it dangled at the end of every line but the last. Nodes are now
+    separated only when neither side provides the space, and each line is
+    stripped in its own right.
+
 2.3.10
 ^^^^^^^
   - Fix ``WebVTTWriter`` producing unparseable output for a ``Caption``

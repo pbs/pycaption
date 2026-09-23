@@ -162,8 +162,12 @@ class SRTWriter(BaseWriter):
             for node in caption.nodes:
                 new_content = self._recreate_line(new_content, node)
 
-            # Eliminate excessive line breaks
-            new_content = new_content.strip()
+            # Eliminate excessive line breaks, and trailing space on each line
+            # rather than only at the ends of the cue — a node's own content can
+            # end with a space, which would otherwise dangle mid-cue.
+            new_content = "\n".join(
+                line.rstrip() for line in new_content.split("\n")
+            ).strip()
 
             srt += f"{new_content}\n\n"
             count += 1
@@ -174,7 +178,13 @@ class SRTWriter(BaseWriter):
     def _recreate_line(srt, line):
         """Append a single CaptionNode's content to the SRT output string."""
         if line.type_ == CaptionNode.TEXT:
-            return srt + f"{line.content} "
+            # Two runs of text need separating only when neither of them
+            # already supplies the space. Appending one after every node
+            # instead left a double space wherever a style change split a
+            # line in two, and a trailing space at the end of every line.
+            if srt and not srt[-1].isspace() and not line.content[:1].isspace():
+                srt += " "
+            return srt + line.content
         elif line.type_ == CaptionNode.BREAK:
             return srt + "\n"
         else:

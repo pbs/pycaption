@@ -393,7 +393,52 @@ class InstructionNodeCreator:
             self._collection.append(node)
             self._position_tracer.acknowledge_position_changed()
 
+        overlap = self._position_tracer.consume_pending_overlap()
+        if overlap:
+            self._overwrite_end_of_line(overlap)
+
+        padding = self._position_tracer.consume_pending_padding()
+        if padding:
+            node.add_chars(" " * padding)
         node.add_chars(*chars)
+        self._position_tracer.advance_cursor(len("".join(chars)))
+
+    def _overwrite_end_of_line(self, overlap):
+        """Drop the columns a PAC pointed back over from the end of the line
+
+        A PAC did point back over the line after all, so the characters arriving
+        next land on those columns instead of after them. Dropping what they
+        cover keeps the line the width the decoder would show, rather than
+        letting an overwrite push it past 32 characters.
+
+        Overlap counts screen columns, not nodes, so it spans however many nodes
+        a style change happened to split the line into. It stops at a break or a
+        repositioning, which end the line the PAC pointed into.
+
+        Dropping from the end is exact whenever the arriving text reaches the end
+        of the line it points into, which is the usual case: a PAC restating the
+        origin is followed by the rest of the row. Where less text arrives than
+        the PAC pointed back over, the columns past it are dropped too — the
+        nodes hold no column addresses, so a run cannot be cut out of the middle
+        of the line and rejoined.
+
+        :param overlap: how many columns the PAC pointed back over
+        """
+        remaining = overlap
+        for node in reversed(self._collection):
+            if not remaining:
+                break
+            if node._type in (
+                _InstructionNode.BREAK,
+                _InstructionNode.CHANGE_POSITION,
+            ):
+                break
+            if not node.is_text_node() or not node.text:
+                continue
+            overwritten = min(remaining, len(node.text))
+            node.text = node.text[: len(node.text) - overwritten]
+            remaining -= overwritten
+        self._position_tracer.advance_cursor(-(overlap - remaining))
 
     @staticmethod
     def get_style_for_command(command):
@@ -440,7 +485,17 @@ class InstructionNodeCreator:
             self._handle_style_command(command)
 
         if command in MID_ROW_CODES and command not in PAC_TAB_OFFSET_COMMANDS:
-            self._handle_mid_row_spacing(next_is_punctuation)
+            # The code itself takes the column a preceding PAC pointed at, so
+            # no text is about to overwrite what is already on the line. Has to
+            # come before the spacing, which may write a space of its own.
+            self._position_tracer.cancel_pending_overlap()
+            if not self._handle_mid_row_spacing(next_is_punctuation):
+                # A mid-row code occupies its column on screen whether or not
+                # a space was emitted for it, and the cursor counts columns,
+                # not characters — so the column has to be accounted for here
+                # or the next PAC on this row looks one column further on than
+                # it really is.
+                self._position_tracer.advance_cursor(1)
 
     def _handle_background_color(self):
         """Strip trailing space before a background color code (CEA-608 rule)."""
@@ -473,9 +528,14 @@ class InstructionNodeCreator:
         """Close an italics tag if currently open."""
         if self.last_style != "italics on":
             return
+        # The closing node belongs to the run of text it closes, which is where
+        # the previous text node sits. Taking the tracker's current position
+        # instead would stamp it with an origin a PAC has already moved on to,
+        # leaving one caption carrying nodes at two different positions.
+        previous = self.get_previous_text_node()
         self._collection.append(
             _InstructionNode.create_italics_style(
-                self._position_tracer.get_current_position(), turn_on=False
+                previous.position if previous else position, turn_on=False
             )
         )
         self.last_style = "italics off"
@@ -490,16 +550,21 @@ class InstructionNodeCreator:
         self._position_tracer.acknowledge_linebreak_consumed()
 
     def _handle_mid_row_spacing(self, next_is_punctuation):
-        """Insert spacing around mid-row code style transitions."""
+        """Insert spacing around mid-row code style transitions.
+
+        :rtype: bool
+        :return: whether the space was added through :meth:`add_chars`, which
+            already advanced the cursor for it.
+        """
         if self._position_tracer.is_repositioning_required():
             # A repositioning is already pending with no text written at the
             # current position — that position is about to be abandoned, so
             # padding it with a decorative space would wrongly consume the
             # pending repositioning before the real content arrives.
-            return
+            return False
         prev_text_node = self.get_previous_text_node()
         if not prev_text_node:
-            return
+            return False
         prev_node_is_break = any(
             x.is_explicit_break()
             for x in self._collection[self._collection.index(prev_text_node) :]
@@ -509,12 +574,14 @@ class InstructionNodeCreator:
             or prev_text_node.text[-1].isspace()
             or next_is_punctuation
         ):
-            return
+            return False
 
         if self.last_style == "italics off":
             self.add_chars(" ")
-        else:
-            prev_text_node.text = prev_text_node.text + " "
+            return True
+
+        prev_text_node.text = prev_text_node.text + " "
+        return False
 
     def _update_positioning(self, command, is_paint_on=False):
         """Sets the positioning information to use for the next nodes
@@ -536,12 +603,11 @@ class InstructionNodeCreator:
             except KeyError:
                 # if not PAC or OFFSET we're not changing position
                 return
-        offset_after_break = is_offset and self.has_break_before(self._collection)
-        if not offset_after_break:
-            # Tab offsets after line breaks will be ignored to avoid repositioning
-            self._position_tracer.update_positioning(
-                positioning, column_jump_forces_reposition=is_paint_on
-            )
+        self._position_tracer.update_positioning(
+            positioning,
+            column_jump_forces_reposition=is_paint_on,
+            is_offset=is_offset,
+        )
 
     def __iter__(self):
         return iter(_format_italics(self._collection))
@@ -602,6 +668,17 @@ class InstructionNodeCreator:
         # do nothing
         if node is None:
             return
+        if (
+            self.has_break_before(self._collection)
+            or self._position_tracer.is_linebreak_required()
+            or self._position_tracer.is_repositioning_required()
+        ):
+            # The character is the first on its row, so there is nothing to its
+            # left to erase — reaching back past the break would eat the last
+            # character of the line above, or of another caption entirely. The
+            # break is only written out once text arrives, so a break still
+            # pending in the tracker counts just as much as one already there.
+            return
         last_char = node.text[-1]
         delete_previous_condition = (
             word in EXTENDED_CHARS and last_char not in EXTENDED_CHARS.values()
@@ -610,6 +687,7 @@ class InstructionNodeCreator:
         # only if the previous character in not also extended
         if delete_previous_condition:
             node.text = node.text[:-1]
+            self._position_tracer.advance_cursor(-1)
 
     def get_previous_text_node(self):
         """Return the last non-empty text node in the collection, or None.
