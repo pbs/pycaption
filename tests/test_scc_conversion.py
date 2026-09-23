@@ -126,7 +126,9 @@ class TestSCCtoDFXP:
 
         first_region = soup.find("region", {"xml:id": first["region"]})
         second_region = soup.find("region", {"xml:id": second["region"]})
-        assert first_region["tts:origin"] == "20% 5%"
+        # The first row's PAC is doubled and carries a Tab Offset, so its
+        # column is 4 + 3; the second row's PAC has no offset.
+        assert first_region["tts:origin"] == "27.5% 5%"
         assert second_region["tts:origin"] == "10% 17%"
 
         assert first.get_text(strip=True) == "AB"
@@ -162,10 +164,15 @@ class TestSCCtoDFXP:
         assert first.get_text(strip=True) == "AB"
         assert second.get_text(strip=True) == "CD"
 
-    def test_positioning_carried_by_a_text_node_is_written(
-        self, sample_scc_positioning_on_text_node
+    def test_mid_row_code_at_the_cursor_stays_one_region(
+        self, sample_scc_mid_row_code_at_the_cursor
     ):
-        caption_set = SCCReader().read(sample_scc_positioning_on_text_node)
+        """A same-row PAC landing at the cursor continues the line, so the
+        whole caption keeps the one origin it started at and needs only one
+        region. It used to drift the origin one column and split 'A ' from
+        'yaaruin?' across two regions.
+        """
+        caption_set = SCCReader().read(sample_scc_mid_row_code_at_the_cursor)
         dfxp = DFXPWriter(relativize=False, fit_to_screen=False).write(caption_set)
 
         soup = BeautifulSoup(dfxp, "lxml-xml")
@@ -173,16 +180,19 @@ class TestSCCtoDFXP:
             region["xml:id"]: region.get("tts:origin")
             for region in soup.find_all("region")
         }
-        assert (
-            "37.5% 89%" in origins.values()
-        ), "The position carried only by a text node must become a region"
+        assert "37.5% 89%" in origins.values()
+        assert "40% 89%" not in origins.values()
 
+        paragraphs = soup.find_all("p")
+        assert len(paragraphs) == 1
+        assert origins[paragraphs[0]["region"]] == "37.5% 89%"
+        assert " ".join(paragraphs[0].get_text().split()) == "A yaaruin?"
+
+        # The only span left is the italic run, which shares the origin and
+        # so needs no region wrapper of its own.
         spans = soup.find_all("span")
-        assert len(spans) == 2
-        assert spans[0].get_text(strip=True) == "A"
-        assert origins[spans[0]["region"]] == "37.5% 89%"
-        assert spans[1].get_text(strip=True) == "yaaruin?"
-        assert origins[spans[1]["region"]] == "40% 89%"
+        assert len(spans) == 1
+        assert spans[0].get_text(strip=True) == "yaaruin?"
 
 
 class TestSCCTimestampOrdering:
@@ -269,7 +279,9 @@ class TestSCCToWebVTT:
         first, second = cues
         assert first.startswith("00:00:20.420 --> 00:00:24.420")
         assert second.startswith("00:00:20.420 --> 00:00:24.420")
-        assert "position:20%" in first and "line:5%" in first
+        # The first row's PAC is doubled and carries a Tab Offset, so its
+        # column is 4 + 3; the second row's PAC has no offset.
+        assert "position:27.5%" in first and "line:5%" in first
         assert "position:10%" in second and "line:17%" in second
         assert first.split("\n", 1)[1].strip() == "AB"
         assert second.split("\n", 1)[1].strip() == "CD"
@@ -295,3 +307,20 @@ class TestSCCToWebVTT:
         assert "position:60%" in second and "line:35%" in second
         assert first.split("\n", 1)[1].strip() == "AB"
         assert second.split("\n", 1)[1].strip() == "CD"
+
+    def test_mid_row_code_at_the_cursor_stays_one_cue(
+        self, sample_scc_mid_row_code_at_the_cursor
+    ):
+        """The same-row PAC at the cursor is a continuation, so the line
+        stays whole. It used to drift the origin one column, which the
+        writer then had to render as two independently positioned cues.
+        """
+        webvtt = WebVTTWriter().write(
+            SCCReader().read(sample_scc_mid_row_code_at_the_cursor)
+        )
+
+        cues = self._cue_blocks(webvtt)
+        assert len(cues) == 1
+        assert "position:37.5%" in cues[0] and "line:89%" in cues[0]
+        assert cues[0].split("\n", 1)[1].strip() == "A <i>yaaruin?</i>"
+        assert WebVTTWriter().write(WebVTTReader().read(webvtt)) == webvtt

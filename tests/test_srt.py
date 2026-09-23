@@ -1,6 +1,14 @@
 import pytest
 
-from pycaption import CaptionReadNoCaptions, SRTReader
+from pycaption import (
+    Caption,
+    CaptionList,
+    CaptionNode,
+    CaptionReadNoCaptions,
+    CaptionSet,
+    SRTReader,
+    SRTWriter,
+)
 from pycaption.exceptions import CaptionReadSyntaxError
 from tests.mixins import ReaderTestingMixIn
 
@@ -92,3 +100,47 @@ class TestSRTReader(ReaderTestingMixIn):
 
         assert 13000000 == first_paragraph.start
         assert 16000000 == first_paragraph.end
+
+
+class TestSRTWriter:
+    @staticmethod
+    def _cue(*nodes):
+        caption_set = CaptionSet(
+            {"en-US": CaptionList([Caption(1000000, 2000000, list(nodes))])}
+        )
+        return SRTWriter().write(caption_set).split("\n", 2)[2].rstrip("\n")
+
+    def test_adjacent_text_nodes_are_separated_by_a_single_space(self):
+        """A style change splits a line into several text nodes, which have to
+        be separated — but only when neither side already supplies the space.
+        Separating unconditionally left a double space at every such seam.
+        """
+        cue = self._cue(
+            CaptionNode.create_text("NOVA"),
+            CaptionNode.create_text(" is "),
+            CaptionNode.create_text("a"),
+            CaptionNode.create_text(" production"),
+        )
+
+        assert cue == "NOVA is a production"
+
+    def test_adjacent_text_nodes_with_no_whitespace_are_still_separated(self):
+        cue = self._cue(
+            CaptionNode.create_text("Hello"),
+            CaptionNode.create_text("world"),
+        )
+
+        assert cue == "Hello world"
+
+    def test_trailing_space_is_stripped_from_every_line_not_just_the_cue(self):
+        """A node's own content can end with a space, which dangles at the end
+        of a line in the middle of a cue. Stripping only the whole cue left it
+        there.
+        """
+        cue = self._cue(
+            CaptionNode.create_text("first line "),
+            CaptionNode.create_break(),
+            CaptionNode.create_text("second line "),
+        )
+
+        assert cue == "first line\nsecond line"

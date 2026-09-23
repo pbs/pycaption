@@ -364,7 +364,11 @@ class SCCReader(BaseReader):
         if self._is_doubled_type(word) and word == self.last_command:
             if word in CUE_STARTING_COMMAND:
                 self.double_starter = True
-            self.last_command = ""
+            # A doubled PAC stays on record so that a Tab Offset following it is
+            # still recognised as belonging to a PAC and applied; clearing it
+            # would leave the offset looking like a stray duplicate and drop the
+            # indentation it carries.
+            self.last_command = word if self._is_pac_command(word) else ""
             return True
 
         if self._is_pac_command(word) and word in self.last_command:
