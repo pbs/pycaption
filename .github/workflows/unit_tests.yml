@@ -28,7 +28,7 @@ jobs:
       - name: Run Test
         id: tests
         run: |
-          ./run_tests.sh test_${{ matrix.python-version }} 
+          ./run_tests.sh test_${{ matrix.python-version }}
         continue-on-error: true
 
       - name: Archive production artifacts

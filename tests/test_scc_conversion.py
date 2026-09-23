@@ -13,6 +13,7 @@ from pycaption import (
 )
 from tests.mixins import CaptionSetTestingMixIn
 
+
 # This is quite fuzzy at the moment.
 TOLERANCE_MICROSECONDS = 600 * 1000
 
@@ -173,9 +174,9 @@ class TestSCCtoDFXP:
             region["xml:id"]: region.get("tts:origin")
             for region in soup.find_all("region")
         }
-        assert (
-            "37.5% 89%" in origins.values()
-        ), "The position carried only by a text node must become a region"
+        assert "37.5% 89%" in origins.values(), (
+            "The position carried only by a text node must become a region"
+        )
 
         spans = soup.find_all("span")
         assert len(spans) == 2
@@ -210,9 +211,9 @@ class TestSCCTimestampOrdering:
         # SCC timestamps use HH:MM:SS:FF format (FF = frames)
         timestamps = re.findall(r"(\d+:\d+:\d+:\d+)", scc_output)
         for i in range(1, len(timestamps)):
-            assert (
-                timestamps[i] >= timestamps[i - 1]
-            ), f"Timestamps out of order: {timestamps[i - 1]} > {timestamps[i]}"
+            assert timestamps[i] >= timestamps[i - 1], (
+                f"Timestamps out of order: {timestamps[i - 1]} > {timestamps[i]}"
+            )
 
 
 class TestSCCToWebVTT:

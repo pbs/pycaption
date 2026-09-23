@@ -3,7 +3,12 @@
 from copy import deepcopy
 
 from .base import (
-    BaseReader, BaseWriter, Caption, CaptionList, CaptionNode, CaptionSet,
+    BaseReader,
+    BaseWriter,
+    Caption,
+    CaptionList,
+    CaptionNode,
+    CaptionSet,
     merge_caption_list,
 )
 from .exceptions import CaptionReadNoCaptions, CaptionReadSyntaxError

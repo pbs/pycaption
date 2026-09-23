@@ -47,6 +47,7 @@ from .constants import (
     VERTICAL_ALIGNMENT_TO_DFXP,
 )
 
+
 _LEADING_WHITESPACE_RE = re.compile("^(?:[\n\r]+\\s*)?(.+)")
 
 _DFXP_WRITING_MODE_MAP = {
@@ -147,7 +148,8 @@ class DFXPReader(BaseReader):
                     style_dict[id_] = self._convert_style(style)
 
         caption_set = CaptionSet(
-            caption_dict, styles=style_dict,
+            caption_dict,
+            styles=style_dict,
             visual_alignment_default=HorizontalAlignmentEnum.START,
         )
 
@@ -179,8 +181,7 @@ class DFXPReader(BaseReader):
             tickrate = float(tt_attrs["ttp:tickrate"])
         except ValueError:
             raise CaptionReadSyntaxError(
-                f"ttp:tickRate must be a number, "
-                f"got '{tt_attrs['ttp:tickrate']}'"
+                f"ttp:tickRate must be a number, got '{tt_attrs['ttp:tickrate']}'"
             )
         if tickrate <= 0:
             raise CaptionReadSyntaxError(
@@ -203,8 +204,7 @@ class DFXPReader(BaseReader):
             framerate_int = int(framerate_str)
         except ValueError:
             raise CaptionReadSyntaxError(
-                f"ttp:frameRate must be a positive integer, "
-                f"got '{framerate_str}'"
+                f"ttp:frameRate must be a positive integer, got '{framerate_str}'"
             )
         self.tickrate = float(framerate_int * sub_framerate)
 
@@ -396,7 +396,7 @@ class DFXPReader(BaseReader):
                 self._convert_tag_to_node(a)
 
     @staticmethod
-    def _convert_style(tag):
+    def _convert_style(tag):  # noqa: C901
         """Convert DFXP/TTS style attributes on a tag to an internal style dict.
 
         Maps tts:fontStyle, tts:fontWeight, tts:textDecoration, tts:textAlign,

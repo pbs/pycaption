@@ -11,6 +11,7 @@ from ..exceptions import CaptionReadNoCaptions, CaptionReadTimingError
 from ..geometry import Alignment, HorizontalAlignmentEnum, Layout, Padding, Size
 from .parser import SAMIParser
 
+
 _TAG_TO_STYLE = {"i": "italics", "b": "bold", "u": "underline"}
 
 

@@ -13,6 +13,7 @@ from ..base import BaseWriter, CaptionNode
 from ..geometry import HorizontalAlignmentEnum
 from .constants import HORIZONTAL_ALIGNMENT_MAP, SAMI_BASE_MARKUP
 
+
 _NON_CSS_KEYS = frozenset(
     {
         "classes",

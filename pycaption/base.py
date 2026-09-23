@@ -7,10 +7,12 @@ CaptionConverter orchestrator and base classes for readers/writers.
 
 import logging
 import os
+
 from datetime import timedelta
 from numbers import Number
 
 from .exceptions import CaptionReadError, CaptionReadTimingError, InvalidInputError
+
 
 logger = logging.getLogger(__name__)
 
@@ -40,8 +42,7 @@ class CaptionConverter:
         """
         if not hasattr(caption_reader, "read"):
             raise InvalidInputError(
-                "The caption_reader must be a BaseReader instance "
-                "with a read() method."
+                "The caption_reader must be a BaseReader instance with a read() method."
             )
         self.captions = caption_reader.read(content)
         return self

@@ -50,16 +50,16 @@ from tests.fixtures.dfxp import (  # noqa: F401
     sample_dfxp_with_templated_style,
     sample_dfxp_without_region_and_style,
 )
-from tests.fixtures.microdvd import missing_fps_sample_microdvd  # noqa: F401
-from tests.fixtures.microdvd import (
+from tests.fixtures.microdvd import (  # noqa: F401
+    missing_fps_sample_microdvd,
     sample_microdvd,
     sample_microdvd_2,
     sample_microdvd_empty,
     sample_microdvd_empty_cue_output,
     sample_microdvd_invalid_format,
 )
-from tests.fixtures.sami import sample_sami  # noqa: F401
-from tests.fixtures.sami import (
+from tests.fixtures.sami import (  # noqa: F401
+    sample_sami,
     sample_sami_double_br,
     sample_sami_empty,
     sample_sami_empty_cue_output,
@@ -142,9 +142,9 @@ from tests.fixtures.scc import (  # noqa: F401
     sample_scc_with_unknown_commands,
     scc_that_generates_webvtt_with_proper_newlines,
 )
-from tests.fixtures.srt import sample_srt_ascii  # noqa: F401
-from tests.fixtures.srt import (
+from tests.fixtures.srt import (  # noqa: F401
     sample_srt,
+    sample_srt_ascii,
     sample_srt_blank_lines,
     sample_srt_empty,
     sample_srt_empty_cue_output,

@@ -1,0 +1,63 @@
+# Ruff configuration — replaces flake8, isort, black, pyupgrade, autoflake, bandit
+
+# Global exclusions (match current .pre-commit-config.yaml exclude patterns)
+exclude = [
+    "tests/fixtures/",
+    "ai_artifacts/",
+    ".claude/",
+]
+
+# Match black's default line length
+line-length = 88
+
+[lint]
+# Rule sets:
+#   E, W = pycodestyle (flake8)
+#   F = pyflakes (flake8 + autoflake)
+#   C90 = mccabe complexity (flake8 max-complexity)
+#   I = isort
+#   UP = pyupgrade
+#   S = bandit (flake8-bandit)
+select = ["E", "W", "F", "C90", "I", "UP", "S", "T10"]
+
+# Match .flake8 ignore list + bandit LOW/MEDIUM severity rules
+# (original bandit config used --severity-level high)
+ignore = [
+    "S101",  # assert_used (LOW)
+    "S108",  # hardcoded_tmp_directory (MEDIUM)
+    "S110",  # try_except_pass (LOW)
+    "S112",  # try_except_continue (LOW)
+    "S113",  # request_without_timeout (MEDIUM)
+    "S305",  # insecure cipher mode (MEDIUM)
+    "S307",  # eval (MEDIUM)
+    "S308",  # mark_safe (MEDIUM)
+    "S310",  # urllib_urlopen (MEDIUM)
+    "S311",  # random (LOW)
+    "S314",  # xml_bad_etree (MEDIUM)
+    "S603",  # subprocess without shell=True (LOW)
+    "S607",  # start_process_with_partial_path (LOW)
+    "S608",  # hardcoded_sql_expressions (MEDIUM)
+]
+
+# Enable auto-fix (replaces autoflake --remove-all-unused-imports + pyupgrade --in-place)
+fixable = ["ALL"]
+
+[lint.per-file-ignores]
+# Match .flake8 per-file-ignores: allow unused and star imports in __init__.py
+"__init__.py" = ["F401", "F403"]
+# Match bandit exclude: no security checks on tests
+"**/tests/**" = ["S"]
+
+[lint.mccabe]
+# Match .flake8 max-complexity
+max-complexity = 10
+
+[lint.isort]
+# Match isort settings: --profile black
+known-first-party = ["pycaption"]
+lines-between-types = 1
+lines-after-imports = 2
+
+[format]
+# Match black --skip-string-normalization
+quote-style = "preserve"

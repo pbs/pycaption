@@ -1,5 +1,10 @@
 Changelog
 ---------
+2.3.11
+^^^^^^
+  - Replaced the existing linting tools with Ruff
+  - Added a linting check to the PyPI publishing workflow
+
 2.3.10
 ^^^^^^^
   - Fix ``WebVTTWriter`` producing unparseable output for a ``Caption``
