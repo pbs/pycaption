@@ -244,7 +244,7 @@ class SCCReader(BaseReader):
     def _validate_line_lengths(self):
         """Raise CaptionLineLengthError if any line exceeds 32 characters."""
         violations = [
-            f"around {cap.format_start()} - {line} - Length {len(line)}"
+            f"around {cap.format_start()} - {self._describe_line_length(line)}"
             for cap in (c.to_real_caption() for c in self.caption_stash._collection)
             for line in cap.get_text().split("\n")
             if len(line) > 32
@@ -254,6 +254,19 @@ class SCCReader(BaseReader):
                 "32 character limit for caption cue in scc file.\n"
                 "Lines longer than 32:\n" + "\n".join(violations)
             )
+
+    @staticmethod
+    def _describe_line_length(line):
+        """Describe a line too long for the row, separating the text from the
+        indentation that places it, which can be what pushes it off the row.
+        """
+        text = line.lstrip("\xa0")
+        indent = len(line) - len(text)
+        if not indent:
+            return f"{line} - Length {len(line)}"
+        return (
+            f"{text} - Length {len(text)} plus a {indent}-column indent = {len(line)}"
+        )
 
     @staticmethod
     def _fix_last_captions_without_ending(caption_list):
@@ -366,7 +379,11 @@ class SCCReader(BaseReader):
         if self._is_doubled_type(word) and word == self.last_command:
             if word in CUE_STARTING_COMMAND:
                 self.double_starter = True
-            self.last_command = ""
+            # A doubled PAC stays on record so that a Tab Offset following it is
+            # still recognised as belonging to a PAC and applied; clearing it
+            # would leave the offset looking like a stray duplicate and drop the
+            # indentation it carries.
+            self.last_command = word if self._is_pac_command(word) else ""
             return True
 
         if self._is_pac_command(word) and word in self.last_command:

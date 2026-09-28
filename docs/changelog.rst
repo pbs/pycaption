@@ -1,5 +1,40 @@
 Changelog
 ---------
+2.3.12
+^^^^^^
+  - Fix ``SCCReader`` misclassifying mid-line PACs by measuring them from
+    the line's origin instead of the cursor. A same-row PAC near the cursor
+    now continues the line rather than splitting it into two regions or
+    cues, and Tab Offsets are recognised by command rather than coordinates.
+    Skipped columns are kept as spaces, a PAC pointing back over the line
+    overwrites it (a full row is 32 characters, not 34), and mid-row codes
+    now count the column they occupy.
+  - Fix ``SCCReader`` padding a wrapped line with blanks when its PAC
+    carried a Tab Offset.
+  - Fix ``SCCReader`` merging two positions into one ``Caption`` when a
+    repositioning followed a line break with no text in between.
+  - Fix ``SCCReader`` dropping the Tab Offset behind a doubled PAC.
+  - Fix ``SCCReader`` letting an extended character's backspace erase a
+    character on the row above or in another cue.
+  - Fix ``SCCReader`` stamping the node that closes an italic run with the
+    next position instead of its own.
+  - Fix ``SCCReader`` placing a pop-on caption at its first line's column
+    when a later line starts further left, which made the cue too narrow and
+    wrapped that line. The cue now starts at its leftmost line, and lines
+    starting further right are indented with non-breaking spaces (SMPTE RP
+    2052-10), so centred and right-justified captions keep their shape.
+  - Fix ``SRTWriter`` doubling spaces between text nodes and leaving a
+    trailing space on every line but the last. Leading non-breaking spaces
+    on a cue's first line are now kept.
+  - Fix ``SCCWriter`` writing a non-breaking space as a pound sign; it is now
+    a transparent space.
+  - ``SCCWriter`` folds the non-breaking spaces indenting a line into its PAC
+    column and Tab Offset instead of writing them as transparent spaces.
+  - ``SCCWriter`` no longer always drops the previous cue's clear when there
+    is no room to send it before the next cue loads; it holds the load back
+    instead when that makes the smaller timing error.
+  - ``TranscriptWriter`` no longer writes line indentation into the prose.
+
 2.3.11
 ^^^^^^
   - Replaced the existing linting tools with Ruff

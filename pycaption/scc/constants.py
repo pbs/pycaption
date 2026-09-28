@@ -1319,6 +1319,9 @@ SPECIAL_OR_EXTENDED_CHAR_TO_CODE = {
 SPECIAL_OR_EXTENDED_CHAR_TO_CODE.update(
     {character: code for code, character in SPECIAL_CHARS.items()}
 )
+# A non-breaking space is what CEA-608's transparent space is: a blank column
+# that is not a break opportunity. Unmapped, it fell back to the pound sign.
+SPECIAL_OR_EXTENDED_CHAR_TO_CODE["\xa0"] = "91b9"
 
 # Time to transmit a single codeword = 1 second / 29.97
 MICROSECONDS_PER_CODEWORD = 1000.0 * 1000.0 / (30.0 * 1000.0 / 1001.0)

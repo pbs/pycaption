@@ -44,11 +44,17 @@ class TranscriptWriter(BaseWriter):
     def _strip_text(elements, lang_transcript):
         """Extract and concatenate text nodes, appending to the transcript."""
         parts = []
+        # Non-breaking spaces opening a line are its indentation (the SCC
+        # reader places lines with them), which is layout, not prose
+        at_line_start = True
         for el in elements:
             if el.type_ == CaptionNode.TEXT:
-                parts.append(el.content)
+                content = el.content.lstrip("\xa0") if at_line_start else el.content
+                parts.append(content)
+                at_line_start = at_line_start and not content
             elif el.type_ == CaptionNode.BREAK:
                 parts.append(" ")
+                at_line_start = True
         text = "".join(parts)
         if lang_transcript and text:
             return lang_transcript + " " + text

@@ -127,7 +127,9 @@ class TestSCCtoDFXP:
 
         first_region = soup.find("region", {"xml:id": first["region"]})
         second_region = soup.find("region", {"xml:id": second["region"]})
-        assert first_region["tts:origin"] == "20% 5%"
+        # The first row's PAC is doubled and carries a Tab Offset, so its
+        # column is 4 + 3; the second row's PAC has no offset.
+        assert first_region["tts:origin"] == "27.5% 5%"
         assert second_region["tts:origin"] == "10% 17%"
 
         assert first.get_text(strip=True) == "AB"
@@ -163,27 +165,30 @@ class TestSCCtoDFXP:
         assert first.get_text(strip=True) == "AB"
         assert second.get_text(strip=True) == "CD"
 
-    def test_positioning_carried_by_a_text_node_is_written(
-        self, sample_scc_positioning_on_text_node
-    ):
-        caption_set = SCCReader().read(sample_scc_positioning_on_text_node)
-        dfxp = DFXPWriter(relativize=False, fit_to_screen=False).write(caption_set)
 
-        soup = BeautifulSoup(dfxp, "lxml-xml")
-        origins = {
-            region["xml:id"]: region.get("tts:origin")
-            for region in soup.find_all("region")
-        }
-        assert "37.5% 89%" in origins.values(), (
-            "The position carried only by a text node must become a region"
+class TestSCCToSRT:
+    def test_pop_on_line_right_of_the_origin_keeps_its_indentation(
+        self, sample_scc_pop_on_line_starting_left_of_the_origin
+    ):
+        """SAM: sits 19 columns right of the line below it, and that is kept
+        even though it is the first line of the cue.
+        """
+        srt = SRTWriter().write(
+            SCCReader().read(sample_scc_pop_on_line_starting_left_of_the_origin)
         )
 
-        spans = soup.find_all("span")
-        assert len(spans) == 2
-        assert spans[0].get_text(strip=True) == "A"
-        assert origins[spans[0]["region"]] == "37.5% 89%"
-        assert spans[1].get_text(strip=True) == "yaaruin?"
-        assert origins[spans[1]["region"]] == "40% 89%"
+        cue_text = srt.split("\n", 2)[2].rstrip("\n")
+        assert cue_text == "\xa0" * 19 + "SAM:\nThe line below it"
+
+    def test_pac_restated_mid_word_does_not_split_the_word(
+        self, sample_scc_roll_up_pac_restating_the_row_mid_word
+    ):
+        srt = SRTWriter().write(
+            SCCReader().read(sample_scc_roll_up_pac_restating_the_row_mid_word)
+        )
+
+        cue_text = srt.split("\n", 2)[2].rstrip("\n")
+        assert cue_text == "WHEN YOU LOOK AT THE"
 
 
 class TestSCCTimestampOrdering:
@@ -270,7 +275,9 @@ class TestSCCToWebVTT:
         first, second = cues
         assert first.startswith("00:00:20.420 --> 00:00:24.420")
         assert second.startswith("00:00:20.420 --> 00:00:24.420")
-        assert "position:20%" in first and "line:5%" in first
+        # The first row's PAC is doubled and carries a Tab Offset, so its
+        # column is 4 + 3; the second row's PAC has no offset.
+        assert "position:27.5%" in first and "line:5%" in first
         assert "position:10%" in second and "line:17%" in second
         assert first.split("\n", 1)[1].strip() == "AB"
         assert second.split("\n", 1)[1].strip() == "CD"
@@ -296,3 +303,57 @@ class TestSCCToWebVTT:
         assert "position:60%" in second and "line:35%" in second
         assert first.split("\n", 1)[1].strip() == "AB"
         assert second.split("\n", 1)[1].strip() == "CD"
+
+    def test_mid_row_code_at_the_cursor_stays_one_cue(
+        self, sample_scc_mid_row_code_at_the_cursor
+    ):
+        """The same-row PAC at the cursor is a continuation, so the line
+        stays whole. It used to drift the origin one column, which the
+        writer then had to render as two independently positioned cues.
+        """
+        webvtt = WebVTTWriter().write(
+            SCCReader().read(sample_scc_mid_row_code_at_the_cursor)
+        )
+
+        cues = self._cue_blocks(webvtt)
+        assert len(cues) == 1
+        assert "position:37.5%" in cues[0] and "line:89%" in cues[0]
+        assert cues[0].split("\n", 1)[1].strip() == "A <i>yaaruin?</i>"
+        assert WebVTTWriter().write(WebVTTReader().read(webvtt)) == webvtt
+
+    def test_pop_on_line_starting_left_of_the_origin_fits_its_cue(
+        self, sample_scc_pop_on_line_starting_left_of_the_origin
+    ):
+        """The cue opens at the second line's column, so its width covers that
+        line. From the first line's column 28 it was 15% wide, and players
+        wrapped the second line a word at a time.
+        """
+        webvtt = WebVTTWriter().write(
+            SCCReader().read(sample_scc_pop_on_line_starting_left_of_the_origin)
+        )
+
+        cues = self._cue_blocks(webvtt)
+        assert len(cues) == 1
+        assert "position:27.5% line:17% size:62.5%" in cues[0]
+        # SAM: starts 19 columns right of the line below it
+        assert cues[0].split("\n", 1)[1] == (
+            "&nbsp;" * 19 + "SAM:\n<i>The line below it</i>"
+        )
+
+    def test_blank_columns_opening_a_line_keep_it_at_its_column(
+        self, sample_scc_pop_on_line_starting_with_skipped_columns
+    ):
+        """The cue starts at column 5 and "CD" at 8, three blank columns a PAC
+        skipped. Written as ordinary spaces they were stripped, and "CD"
+        rendered at column 5.
+        """
+        webvtt = WebVTTWriter().write(
+            SCCReader().read(sample_scc_pop_on_line_starting_with_skipped_columns)
+        )
+
+        cues = self._cue_blocks(webvtt)
+        assert len(cues) == 1
+        assert "position:22.5%" in cues[0]
+        assert cues[0].split("\n", 1)[1] == (
+            "&nbsp;" * 11 + "AB\n" + "&nbsp;" * 3 + "CD"
+        )

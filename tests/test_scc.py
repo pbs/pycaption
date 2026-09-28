@@ -72,7 +72,8 @@ class TestSCCReader(ReaderTestingMixIn):
         # A jump to the very next row uses a break (same cue); any other
         # row jump (a skipped row, or backwards) uses repositioning (new
         # cue). Each caption has independent positioning (not inherited
-        # from previous).
+        # from previous). The two captions at 25% are the ones whose doubled
+        # PAC is followed by a Tab Offset: 4 + 2 columns.
         expected_positioning = [
             ((10.0, UnitEnum.PERCENT), (77.0, UnitEnum.PERCENT)),
             ((40.0, UnitEnum.PERCENT), (5.0, UnitEnum.PERCENT)),
@@ -82,10 +83,10 @@ class TestSCCReader(ReaderTestingMixIn):
             ((40.0, UnitEnum.PERCENT), (53.0, UnitEnum.PERCENT)),
             ((70.0, UnitEnum.PERCENT), (17.0, UnitEnum.PERCENT)),
             ((20.0, UnitEnum.PERCENT), (35.0, UnitEnum.PERCENT)),
-            ((20.0, UnitEnum.PERCENT), (83.0, UnitEnum.PERCENT)),
+            ((25.0, UnitEnum.PERCENT), (83.0, UnitEnum.PERCENT)),
             ((70.0, UnitEnum.PERCENT), (11.0, UnitEnum.PERCENT)),
             ((40.0, UnitEnum.PERCENT), (41.0, UnitEnum.PERCENT)),
-            ((20.0, UnitEnum.PERCENT), (71.0, UnitEnum.PERCENT)),
+            ((25.0, UnitEnum.PERCENT), (71.0, UnitEnum.PERCENT)),
         ]
 
         actual_positioning = [
@@ -123,8 +124,14 @@ class TestSCCReader(ReaderTestingMixIn):
         assert len(captions) == 2
 
         first, second = captions
+        # The trailing " " is the mid-row code that closes italics at column
+        # 27, one column past where the text ended — a real blank cell. It
+        # used to be swallowed because the same-row PAC at column 24 left a
+        # repositioning pending; that PAC is now read as the continuation of
+        # this line that it is, so the spacing survives.
         assert [n.content for n in first.nodes if n.type_ == CaptionNode.TEXT] == [
-            "♪ Always by her side ♪"
+            "♪ Always by her side ♪",
+            " ",
         ]
         assert [n.content for n in second.nodes if n.type_ == CaptionNode.TEXT] == [
             "And Trini!"
@@ -221,11 +228,196 @@ class TestSCCReader(ReaderTestingMixIn):
         (caption,) = captions
         assert [n.content for n in caption.nodes if n.type_ == CaptionNode.TEXT] == [
             "AB",
-            "CD",
+            "\xa0" * 20 + "CD",
         ]
         assert any(node.type_ == CaptionNode.BREAK for node in caption.nodes), (
             "Cue must join the two PACs with a BREAK node, not split into two cues"
         )
+
+    def test_pop_on_line_starting_left_of_the_origin_moves_the_origin(
+        self, sample_scc_pop_on_line_starting_left_of_the_origin
+    ):
+        """The second line starts at column 7, left of the first line's 28, so
+        the cue takes column 7 as its origin. Kept at 28 it left the writers a
+        box too narrow for the second line, which wrapped.
+        """
+        captions = (
+            SCCReader()
+            .read(sample_scc_pop_on_line_starting_left_of_the_origin)
+            .get_captions("en-US")
+        )
+
+        assert len(captions) == 1
+        (caption,) = captions
+        assert caption.get_text() == "SAM:\nThe line below it"
+        assert caption.layout_info.origin.serialized() == (
+            (27.5, UnitEnum.PERCENT),
+            (17.0, UnitEnum.PERCENT),
+        )
+        assert all(node.layout_info == caption.layout_info for node in caption.nodes)
+
+    def test_pop_on_line_starts_at_the_first_column_a_pac_skipped(
+        self, sample_scc_pop_on_line_starting_with_skipped_columns
+    ):
+        """The second line's text lands at column 8, but the three blank
+        columns before it are part of the line, so the cue starts at 5. They
+        are non-breaking, since the writers strip ordinary spaces opening a
+        line and would pull "CD" back to column 5.
+        """
+        captions = (
+            SCCReader()
+            .read(sample_scc_pop_on_line_starting_with_skipped_columns)
+            .get_captions("en-US")
+        )
+
+        assert len(captions) == 1
+        (caption,) = captions
+        assert caption.get_text() == "AB\n" + "\xa0" * 3 + "CD"
+        assert caption.layout_info.origin.serialized() == (
+            (22.5, UnitEnum.PERCENT),
+            (83.0, UnitEnum.PERCENT),
+        )
+
+    def test_pac_overriding_an_empty_line_moves_where_it_starts(
+        self, sample_scc_pop_on_pac_overriding_the_line_start_before_text
+    ):
+        """The second PAC points back from column 12 to 4 on a line with no
+        text yet, so there is nothing to overwrite: "WORLD" starts at column 4,
+        under "HELLO". Taken as an overwrite, the line kept column 12 as its
+        start and was indented 8 columns.
+        """
+        captions = (
+            SCCReader()
+            .read(sample_scc_pop_on_pac_overriding_the_line_start_before_text)
+            .get_captions("en-US")
+        )
+
+        assert len(captions) == 1
+        (caption,) = captions
+        assert caption.get_text() == "HELLO\nWORLD"
+        assert caption.layout_info.origin.serialized() == (
+            (20.0, UnitEnum.PERCENT),
+            (83.0, UnitEnum.PERCENT),
+        )
+
+    def test_tab_offset_below_an_empty_row_indents_the_line_not_the_origin(
+        self, sample_scc_pop_on_tab_offset_on_the_line_below_an_empty_row
+    ):
+        """The row 14 PAC stays the cue's origin, so the Tab Offset on row 15
+        indents that line. Taken as a new origin it moved the cue onto row 15,
+        pushing the line it breaks onto below the last row.
+        """
+        captions = (
+            SCCReader()
+            .read(sample_scc_pop_on_tab_offset_on_the_line_below_an_empty_row)
+            .get_captions("en-US")
+        )
+
+        assert len(captions) == 1
+        (caption,) = captions
+        assert [node.type_ for node in caption.nodes] == [
+            CaptionNode.BREAK,
+            CaptionNode.TEXT,
+        ]
+        assert caption.nodes[1].content == "\xa0\xa0WORLD"
+        assert caption.layout_info.origin.serialized() == (
+            (10.0, UnitEnum.PERCENT),
+            (83.0, UnitEnum.PERCENT),
+        )
+
+    def test_pac_overriding_an_empty_line_far_from_it_continues_the_cue(
+        self, sample_scc_pop_on_pac_overriding_the_line_start_far_from_it
+    ):
+        """Only text makes a line worth abandoning. Before any arrives, the
+        second PAC just replaces the first, however far apart they are.
+        """
+        captions = (
+            SCCReader()
+            .read(sample_scc_pop_on_pac_overriding_the_line_start_far_from_it)
+            .get_captions("en-US")
+        )
+
+        assert len(captions) == 1
+        (caption,) = captions
+        assert caption.get_text() == "HELLO\n" + "\xa0" * 4 + "WORLD"
+        assert caption.layout_info.origin.serialized() == (
+            (10.0, UnitEnum.PERCENT),
+            (83.0, UnitEnum.PERCENT),
+        )
+
+    def test_pac_pulling_back_over_skipped_columns_cancels_them(
+        self, sample_scc_pop_on_pac_pulling_back_over_skipped_columns
+    ):
+        """Kept, the blank columns would start the line at column 0, eight
+        columns left of any text, and drag the cue's origin there with it.
+        """
+        captions = (
+            SCCReader()
+            .read(sample_scc_pop_on_pac_pulling_back_over_skipped_columns)
+            .get_captions("en-US")
+        )
+
+        assert len(captions) == 1
+        (caption,) = captions
+        assert [
+            node.content for node in caption.nodes if node.type_ == CaptionNode.TEXT
+        ] == [
+            "\xa0" * 8 + "HELLO",
+            "WORLD",
+        ]
+        assert caption.layout_info.origin.serialized() == (
+            (30.0, UnitEnum.PERCENT),
+            (83.0, UnitEnum.PERCENT),
+        )
+
+    def test_overwrite_does_not_reach_back_past_a_line_break(
+        self, sample_scc_pop_on_pac_pointing_back_past_the_start_of_the_line
+    ):
+        """The PAC points back 14 columns over a line holding 2 characters.
+        The overwrite stops at the break, so the line above is left intact.
+        """
+        captions = (
+            SCCReader()
+            .read(sample_scc_pop_on_pac_pointing_back_past_the_start_of_the_line)
+            .get_captions("en-US")
+        )
+
+        assert len(captions) == 1
+        assert captions[0].get_text().split("\n")[0] == "HELLO"
+
+    def test_pac_after_an_overwrite_is_measured_from_the_overwritten_text(
+        self, sample_scc_pac_within_a_tab_offset_of_an_overwrite
+    ):
+        """The PAC moves the cursor back to the end of "WX", so the PAC two
+        columns past it continues the line instead of starting a new cue. The
+        row fits in 32 columns appended, so the text the first PAC pointed back
+        over is kept rather than dropped.
+        """
+        captions = (
+            SCCReader()
+            .read(sample_scc_pac_within_a_tab_offset_of_an_overwrite)
+            .get_captions("en-US")
+        )
+
+        assert len(captions) == 1
+        assert captions[0].get_text() == "ABCDEFGHWX  YZ"
+
+    def test_mid_row_code_after_italics_takes_a_single_column(
+        self, sample_scc_pac_within_a_tab_offset_of_a_mid_row_code
+    ):
+        """The mid-row code ending italics is written as one space. Counting
+        it twice would put the cursor at 8, out of the PAC's reach, and split
+        "XY" into a cue of its own. The row fits in 32 columns appended, so
+        "DE" is kept rather than covered.
+        """
+        captions = (
+            SCCReader()
+            .read(sample_scc_pac_within_a_tab_offset_of_a_mid_row_code)
+            .get_captions("en-US")
+        )
+
+        assert len(captions) == 1
+        assert captions[0].get_text() == "ABCDE XY"
 
     def test_row_plus_one_large_column_jump_stays_one_cue_in_roll_up_mode(
         self, sample_scc_roll_up_row_plus_one_large_column_jump
@@ -337,14 +529,16 @@ class TestSCCReader(ReaderTestingMixIn):
     def test_tab_offset(self, sample_scc_tab_offset):
         captions = SCCReader().read(sample_scc_tab_offset)
 
-        # SCC generates only origin, and we always expect it.
+        # SCC generates only origin, and we always expect it. A cue whose
+        # second line starts further left than its first takes that line's
+        # column, so the cue is wide enough for both.
         expected_positioning = [
-            ((37.5, UnitEnum.PERCENT), (83.0, UnitEnum.PERCENT)),
+            ((12.5, UnitEnum.PERCENT), (83.0, UnitEnum.PERCENT)),
             ((17.5, UnitEnum.PERCENT), (89.0, UnitEnum.PERCENT)),
             ((12.5, UnitEnum.PERCENT), (83.0, UnitEnum.PERCENT)),
-            ((27.5, UnitEnum.PERCENT), (83.0, UnitEnum.PERCENT)),
+            ((15.0, UnitEnum.PERCENT), (83.0, UnitEnum.PERCENT)),
             ((30.0, UnitEnum.PERCENT), (89.0, UnitEnum.PERCENT)),
-            ((35.0, UnitEnum.PERCENT), (83.0, UnitEnum.PERCENT)),
+            ((22.5, UnitEnum.PERCENT), (83.0, UnitEnum.PERCENT)),
             ((17.5, UnitEnum.PERCENT), (83.0, UnitEnum.PERCENT)),
         ]
 
@@ -354,6 +548,447 @@ class TestSCCReader(ReaderTestingMixIn):
         ]
 
         assert expected_positioning == actual_positioning
+
+    @staticmethod
+    def _text_origins(caption):
+        return [
+            node.layout_info.origin.serialized()
+            for node in caption.nodes
+            if node.type_ == CaptionNode.TEXT
+        ]
+
+    def test_same_row_pac_near_the_origin_after_text_keeps_the_origin(
+        self, sample_scc_same_row_pac_near_the_origin_after_text
+    ):
+        """A same-row PAC arriving after text must not move the origin, even
+        when it lands within a tab offset of it. Every node of the caption
+        has to carry the one origin the caption started at.
+        """
+        captions = (
+            SCCReader()
+            .read(sample_scc_same_row_pac_near_the_origin_after_text)
+            .get_captions("en-US")
+        )
+
+        assert len(captions) == 1
+        origin = ((25.0, UnitEnum.PERCENT), (89.0, UnitEnum.PERCENT))
+        assert captions[0].get_text() == "A yes"
+        assert self._text_origins(captions[0]) == [origin, origin]
+
+    def test_same_row_pac_at_the_cursor_continues_the_line(
+        self, sample_scc_same_row_pac_at_the_cursor
+    ):
+        """A PAC landing exactly where the text ended is the encoder
+        restating its position, not a new region — one cue, not two.
+        """
+        captions = (
+            SCCReader()
+            .read(sample_scc_same_row_pac_at_the_cursor)
+            .get_captions("en-US")
+        )
+
+        assert len(captions) == 1
+        assert captions[0].get_text() == "Quyana, Atsaq."
+        assert captions[0].layout_info.origin.serialized() == (
+            (10.0, UnitEnum.PERCENT),
+            (89.0, UnitEnum.PERCENT),
+        )
+
+    def test_pac_restating_the_position_after_text_stays_one_cue(
+        self, sample_scc_pac_restating_the_position_after_text
+    ):
+        """A PAC that names the column the line already starts at is the
+        encoder re-asserting itself, so it cannot open a second cue on top of
+        the first. Nor does the text after it erase "Quyana": the row fits in
+        32 columns appended, so nothing forces the overwrite.
+        """
+        captions = (
+            SCCReader()
+            .read(sample_scc_pac_restating_the_position_after_text)
+            .get_captions("en-US")
+        )
+
+        assert len(captions) == 1
+        assert captions[0].get_text() == "Quyana Atsaq."
+        assert captions[0].layout_info.origin.serialized() == (
+            (10.0, UnitEnum.PERCENT),
+            (89.0, UnitEnum.PERCENT),
+        )
+
+    def test_tab_offset_resolving_behind_the_cursor_still_overwrites(
+        self, sample_scc_tab_offset_resolving_behind_the_cursor
+    ):
+        """An offset only cancels a pending overwrite when it lands at or ahead
+        of the cursor. Resolving at column 22 with the text reaching column 28,
+        it is moving back over that text, so 'AB' survives and the rest is
+        covered.
+        """
+        captions = (
+            SCCReader()
+            .read(sample_scc_tab_offset_resolving_behind_the_cursor)
+            .get_captions("en-US")
+        )
+
+        assert len(captions) == 1
+        assert captions[0].get_text() == "ABWXYZIJ"
+
+    def test_restated_origin_pac_refilling_a_long_line_stays_within_32(
+        self, sample_scc_restated_origin_pac_refilling_a_long_line
+    ):
+        """Appending what a restated origin covers can push a row the decoder
+        shows in 24 columns past the 32-character limit, so a well-formed file
+        fails validation on re-ingestion.
+        """
+        captions = (
+            SCCReader()
+            .read(sample_scc_restated_origin_pac_refilling_a_long_line)
+            .get_captions("en-US")
+        )
+
+        assert len(captions) == 1
+        assert captions[0].get_text() == "YZABCDEFGHIJKLMNOPQRSTUV"
+
+    def test_roll_up_pac_restating_the_row_mid_row_keeps_the_row(
+        self, sample_scc_roll_up_pac_restating_the_row_mid_row
+    ):
+        """The row fits in 32 columns appended, so the restated PAC is not
+        taken as an overwrite and the words before it are kept.
+        """
+        captions = (
+            SCCReader()
+            .read(sample_scc_roll_up_pac_restating_the_row_mid_row)
+            .get_captions("en-US")
+        )
+
+        assert len(captions) == 1
+        assert captions[0].get_text() == "HE'S YOUNG AND WELL"
+
+    def test_roll_up_pac_restating_the_row_mid_word_keeps_the_word_in_one_node(
+        self, sample_scc_roll_up_pac_restating_the_row_mid_word
+    ):
+        """Appended, the text after the restated PAC continues the node it
+        interrupted. Left as a node of its own, writers that separate text
+        nodes with a space split the word into "TH E".
+        """
+        captions = (
+            SCCReader()
+            .read(sample_scc_roll_up_pac_restating_the_row_mid_word)
+            .get_captions("en-US")
+        )
+
+        assert len(captions) == 1
+        assert [node.content for node in captions[0].nodes] == ["WHEN YOU LOOK AT THE"]
+
+    def test_roll_up_rows_are_settled_one_by_one_before_they_are_joined(
+        self, sample_scc_roll_up_restated_row_rolled_into_a_long_line
+    ):
+        """The first row fits appended, so it keeps "HE'S YOUNG" in the caption
+        it rolls into as well. Joined to the second row it is too long, which
+        the length check reports rather than the restated PAC erasing words to
+        make it fit.
+        """
+        with pytest.raises(CaptionLineLengthError) as exc_info:
+            SCCReader().read(
+                sample_scc_roll_up_restated_row_rolled_into_a_long_line,
+                simulate_roll_up=True,
+            )
+
+        assert "HE'S YOUNG AND WELL, OK ABCDEFGHIJ - Length 34" in str(exc_info.value)
+
+    def test_pac_pointing_back_over_a_full_row_with_less_text_is_rejected(
+        self, sample_scc_pac_pointing_back_over_a_full_row_with_less_text
+    ):
+        """Four characters cannot cover the 31 columns the PAC points back
+        over, so dropping them all would publish "AWXYZ" as if it were the
+        row. The line is left long, for the length check to report.
+        """
+        with pytest.raises(CaptionLineLengthError) as exc_info:
+            SCCReader().read(
+                sample_scc_pac_pointing_back_over_a_full_row_with_less_text
+            )
+
+        assert "Length 36" in str(exc_info.value)
+
+    def test_roll_up_row_refilled_then_rolled_keeps_the_refilled_row(
+        self, sample_scc_roll_up_row_refilled_then_rolled
+    ):
+        """The simulated roll-up reads the first row again for the caption the
+        second row rolls into, and it reads the same there: the overwrite is
+        settled against that row alone, not the rows joined together.
+        """
+        captions = (
+            SCCReader()
+            .read(sample_scc_roll_up_row_refilled_then_rolled, simulate_roll_up=True)
+            .get_captions("en-US")
+        )
+
+        assert [caption.get_text() for caption in captions] == [
+            "YZABCDEFGHIJKLMNOPQRSTUV",
+            "YZABCDEFGHIJKLMNOPQRSTUV YZ",
+        ]
+
+    def test_same_row_pac_ahead_of_the_cursor_keeps_the_columns_it_skipped(
+        self, sample_scc_same_row_pac_ahead_of_the_cursor
+    ):
+        """The line continues across the gap, so the blank columns between the
+        text and the PAC have to reach the output. Dropping them would run the
+        words on either side together.
+        """
+        captions = (
+            SCCReader()
+            .read(sample_scc_same_row_pac_ahead_of_the_cursor)
+            .get_captions("en-US")
+        )
+
+        assert len(captions) == 1
+        assert captions[0].get_text() == "Ah  there you are."
+
+    def test_same_row_pac_behind_the_cursor_overwrites_instead_of_appending(
+        self, sample_scc_same_row_pac_behind_the_cursor
+    ):
+        """Text following a PAC that points back over the line covers those
+        columns rather than being appended to them, so a line that fills the row
+        stays 32 characters wide instead of being rejected as too long.
+        """
+        captions = (
+            SCCReader()
+            .read(sample_scc_same_row_pac_behind_the_cursor)
+            .get_captions("en-US")
+        )
+
+        assert len(captions) == 1
+        assert captions[0].get_text() == "ABCDEFGHIJKLMNOPQRSTUVWXYZabWXYZ"
+
+    def test_same_row_pac_at_the_cursor_then_next_row_is_one_two_line_cue(
+        self, sample_scc_same_row_pac_at_the_cursor_then_next_row
+    ):
+        """Both defects at once, on the real shape from 00:14:25.566: the
+        same-row PAC at the cursor used to split line 1 off into its own
+        cue, and the italics that followed it used to carry a drifted
+        origin. One cue, two lines, one origin.
+        """
+        captions = (
+            SCCReader()
+            .read(sample_scc_same_row_pac_at_the_cursor_then_next_row)
+            .get_captions("en-US")
+        )
+
+        assert len(captions) == 1
+        # Line 2 starts at column 21, six right of line 1
+        assert captions[0].get_text() == (
+            "We call him yeil\n" + "\xa0" * 6 + "in Tlingit."
+        )
+        origin = ((47.5, UnitEnum.PERCENT), (5.0, UnitEnum.PERCENT))
+        assert set(self._text_origins(captions[0])) == {origin}
+        assert (
+            sum(1 for node in captions[0].nodes if node.type_ == CaptionNode.BREAK) == 1
+        )
+
+    def test_tab_offset_after_a_line_break_indents_that_line(
+        self, sample_scc_tab_offset_after_line_break
+    ):
+        """A Tab Offset following the PAC that opened a new line adjusts that
+        PAC, so it moves where the line starts without repositioning the cue.
+        It used to be measured against the old line's cursor instead and read
+        as a forward jump, padding the new line with the columns it "skipped".
+        The line is indented by the offset's two columns and nothing more.
+        """
+        captions = (
+            SCCReader()
+            .read(sample_scc_tab_offset_after_line_break)
+            .get_captions("en-US")
+        )
+
+        assert len(captions) == 1
+        assert captions[0].get_text() == "AB\n\xa0\xa0CDEF"
+        origin = ((10.0, UnitEnum.PERCENT), (83.0, UnitEnum.PERCENT))
+        assert set(self._text_origins(captions[0])) == {origin}
+
+    def test_line_break_then_repositioning_splits_into_two_cues(
+        self, sample_scc_line_break_then_repositioning
+    ):
+        """A line that never received text cannot still owe a break. Carrying
+        the break past the repositioning let it be consumed first, joining two
+        unrelated positions into one cue whose nodes disagreed on the origin.
+        """
+        captions = (
+            SCCReader()
+            .read(sample_scc_line_break_then_repositioning)
+            .get_captions("en-US")
+        )
+
+        assert len(captions) == 2
+        assert captions[0].get_text() == "AB"
+        assert captions[1].get_text() == "CD"
+        assert captions[0].layout_info.origin.serialized() == (
+            (10.0, UnitEnum.PERCENT),
+            (83.0, UnitEnum.PERCENT),
+        )
+        assert captions[1].layout_info.origin.serialized() == (
+            (60.0, UnitEnum.PERCENT),
+            (17.0, UnitEnum.PERCENT),
+        )
+        assert not [
+            node
+            for caption in captions
+            for node in caption.nodes
+            if node.type_ == CaptionNode.BREAK
+        ]
+
+    def test_italics_closing_node_keeps_the_position_of_the_text_it_closes(
+        self, sample_scc_italics_still_open_at_repositioning
+    ):
+        """The node closing an italic run belongs to that run. Stamping it with
+        the tracker's current position instead gave it the origin of the cue the
+        PAC had already moved on to, leaving one caption carrying two.
+        """
+        captions = (
+            SCCReader()
+            .read(sample_scc_italics_still_open_at_repositioning)
+            .get_captions("en-US")
+        )
+
+        assert len(captions) == 2
+        assert captions[0].get_text() == "♪ AB ♪"
+        origins = {
+            node.layout_info.origin.serialized()
+            for node in captions[0].nodes
+            if node.layout_info
+        }
+        assert origins == {((35.0, UnitEnum.PERCENT), (77.0, UnitEnum.PERCENT))}
+
+    def test_extended_char_first_on_a_wrapped_line_keeps_the_line_above(
+        self, sample_scc_extended_char_first_on_a_wrapped_line
+    ):
+        """The automatic backspace an extended character carries is skipped when
+        it is the first character on a row. The break is only written out once
+        text arrives, so the one still pending in the tracker counts too — it
+        used to be missed, and the line above lost its last character.
+        """
+        captions = (
+            SCCReader()
+            .read(sample_scc_extended_char_first_on_a_wrapped_line)
+            .get_captions("en-US")
+        )
+
+        assert len(captions) == 1
+        assert captions[0].get_text() == "AB\nÁBC"
+
+    def test_extended_char_first_at_a_new_position_keeps_the_previous_cue(
+        self, sample_scc_extended_char_first_at_a_new_position
+    ):
+        """Same rule across a repositioning, where the character the backspace
+        reached for belonged to a different cue entirely.
+        """
+        captions = (
+            SCCReader()
+            .read(sample_scc_extended_char_first_at_a_new_position)
+            .get_captions("en-US")
+        )
+
+        assert len(captions) == 2
+        assert captions[0].get_text() == "AB"
+        assert captions[1].get_text() == "ÁBC"
+
+    def test_doubled_pac_still_applies_its_tab_offset(
+        self, sample_scc_doubled_pac_with_tab_offset
+    ):
+        """Filtering the duplicate of a doubled PAC must not also forget that a
+        PAC was seen, or the Tab Offset behind it looks like a stray duplicate
+        and the indentation it carries is dropped.
+        """
+        captions = (
+            SCCReader()
+            .read(sample_scc_doubled_pac_with_tab_offset)
+            .get_captions("en-US")
+        )
+
+        assert len(captions) == 1
+        assert captions[0].get_text() == "AB"
+        assert captions[0].layout_info.origin.serialized() == (
+            (17.5, UnitEnum.PERCENT),
+            (83.0, UnitEnum.PERCENT),
+        )
+
+    def test_blank_columns_abandoned_by_a_break_do_not_overflow_the_next_line(
+        self, sample_scc_blank_columns_abandoned_before_a_full_line
+    ):
+        """The width check on the same rule: the second line already fills the
+        row, so two columns carried over from the line above would push it to 33
+        and fail validation.
+        """
+        captions = (
+            SCCReader()
+            .read(sample_scc_blank_columns_abandoned_before_a_full_line)
+            .get_captions("en-US")
+        )
+
+        assert len(captions) == 1
+        assert captions[0].get_text() == "AB\nABCDEFGHIJKLMNOPQRSTUVWXYZabcde"
+
+    def test_tab_offset_part_way_through_a_line_keeps_the_columns_it_skipped(
+        self, sample_scc_tab_offset_part_way_through_a_line
+    ):
+        """A Tab Offset reached once text is on the line is not an indent for it
+        — it skips forward over screen columns, which have to reach the output as
+        spaces the way a forward PAC's do. It used to be dropped entirely.
+        """
+        captions = (
+            SCCReader()
+            .read(sample_scc_tab_offset_part_way_through_a_line)
+            .get_captions("en-US")
+        )
+
+        assert len(captions) == 1
+        assert captions[0].get_text() == "AB    CD"
+
+    def test_style_command_does_not_spare_the_columns_a_pac_points_back_over(
+        self, sample_scc_style_command_between_the_text_and_a_refill_pac
+    ):
+        """An overwrite covers screen columns, so it spans however many nodes a
+        style change split the line into. Stopping at the last node meant a style
+        command in between left nothing to overwrite, and the line reached 34.
+        """
+        captions = (
+            SCCReader()
+            .read(sample_scc_style_command_between_the_text_and_a_refill_pac)
+            .get_captions("en-US")
+        )
+
+        assert len(captions) == 1
+        assert captions[0].get_text() == "ABCDEFGHIJKLMNOPQRSTUVWXYZabWXYZ"
+
+    def test_mid_row_code_after_a_pac_behind_the_cursor_cancels_the_overwrite(
+        self, sample_scc_mid_row_code_after_a_pac_behind_the_cursor
+    ):
+        """A PAC pointing back over the line is only an overwrite if text follows
+        it directly. A mid-row code moves the line on first, so the text after it
+        appends instead of landing on what is already written.
+        """
+        captions = (
+            SCCReader()
+            .read(sample_scc_mid_row_code_after_a_pac_behind_the_cursor)
+            .get_captions("en-US")
+        )
+
+        assert len(captions) == 1
+        assert captions[0].get_text() == "ABCD EF"
+
+    def test_backspace_is_counted_when_measuring_the_next_pac(
+        self, sample_scc_backspace_before_a_pac_ahead_of_the_cursor
+    ):
+        """The backspace an extended character carries moves the cursor back, so
+        the PAC that follows is measured from where the text really ends. Leaving
+        the cursor a column too far on swallowed the gap the PAC skipped.
+        """
+        captions = (
+            SCCReader()
+            .read(sample_scc_backspace_before_a_pac_ahead_of_the_cursor)
+            .get_captions("en-US")
+        )
+
+        assert len(captions) == 1
+        assert captions[0].get_text() == "ABCDEFGÁÉÓ WX"
 
     def test_italics_are_properly_read(self, sample_scc_with_italics):
         def switches_italics(node):
@@ -474,7 +1109,12 @@ class TestSCCReader(ReaderTestingMixIn):
         caption_set = SCCReader().read(sample_scc_with_extended_characters)
         captions = caption_set.get_captions("en-US")
         assert captions[0].nodes[0].content == "MÄRTHA:"
-        expected_result = ["JUNIOR: ¡Yum!", None, "Ya me siento mucho mejor."]
+        # JUNIOR's line starts at column 9, six right of the line below it
+        expected_result = [
+            "\xa0" * 6 + "JUNIOR: ¡Yum!",
+            None,
+            "Ya me siento mucho mejor.",
+        ]
         content = [node.content for node in captions[1].nodes]
         assert all(result in expected_result for result in content)
 
@@ -495,6 +1135,29 @@ class TestSCCReader(ReaderTestingMixIn):
             if node.type_ == CaptionNode.TEXT
         ]
         assert expected_lines == actual_lines
+
+    def test_tab_offset_after_a_pac_closing_italics_indents_its_line(
+        self, sample_scc_duplicate_tab_offset
+    ):
+        """Each line's PAC closes the italics before its Tab Offset arrives,
+        which emits the line's break first. The line still starts where the
+        offset puts it, so every line of a cue starts at the same column and
+        the cue keeps it as its origin.
+        """
+        captions = (
+            SCCReader().read(sample_scc_duplicate_tab_offset).get_captions("en-US")
+        )
+
+        assert [caption.layout_info.origin.x.value for caption in captions] == [
+            12.5,
+            15.0,
+        ]
+        assert not any(
+            node.content.startswith("\xa0")
+            for caption in captions
+            for node in caption.nodes
+            if node.type_ == CaptionNode.TEXT
+        )
 
     def test_skip_duplicate_special_characters(
         self, sample_scc_duplicate_special_characters
@@ -534,6 +1197,20 @@ class TestSCCReader(ReaderTestingMixIn):
         )
         assert "around 00:00:04.733" in exc_info.value.args[0].split("\n")[2]
         assert str_to_check in exc_info.value.args[0].split("\n")[2]
+
+    def test_line_too_long_names_the_indent_pushing_it_off_the_row(
+        self, sample_scc_with_line_indented_past_the_last_column
+    ):
+        """The text is 32 characters, which fits a row. Reported as a length
+        of 59 alone, the error pointed at the text rather than where it starts.
+        """
+        with pytest.raises(CaptionLineLengthError) as exc_info:
+            SCCReader().read(sample_scc_with_line_indented_past_the_last_column)
+
+        assert exc_info.value.args[0].split("\n")[2] == (
+            "around 00:00:03.036 - ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEF - "
+            "Length 32 plus a 27-column indent = 59"
+        )
 
     def test_mid_row_codes_not_adding_space_before_text(
         self,

@@ -173,13 +173,20 @@ class SCCWriter(BaseWriter):
                     prev_end is not None
                     and prev_end + 3 * MICROSECONDS_PER_CODEWORD >= code_start
                 ):
-                    codes[index - 1] = (
-                        prev_code,
-                        prev_start,
-                        None,
-                        prev_mode,
-                        prev_depth,
-                    )
+                    # Holding the load back past the clear makes this cue
+                    # late; dropping the clear keeps the previous cue up
+                    # until this one appears. Take the smaller error.
+                    clear_at = prev_end + 3 * MICROSECONDS_PER_CODEWORD
+                    if clear_at - code_start < start - prev_end:
+                        code_start = clear_at
+                    else:
+                        codes[index - 1] = (
+                            prev_code,
+                            prev_start,
+                            None,
+                            prev_mode,
+                            prev_depth,
+                        )
                 codes[index] = (code, code_start, end, mode, depth)
 
         return codes
@@ -373,6 +380,24 @@ class SCCWriter(BaseWriter):
         tab_offset = raw_col - base_col
         return min(base_col, 28), tab_offset
 
+    @staticmethod
+    def _compute_line_start(caption, segments):
+        """Return (base_col, tab_offset, segments) for one output line.
+        A run of non-breaking spaces opening the line is blank columns, so it
+        is folded into the PAC column and Tab Offset instead of being written
+        as transparent spaces, which would cost two words per column."""
+        line_text = "".join(text for text, _, _ in segments)
+        col, tab_offset = SCCWriter._compute_scc_indent(caption, line_text)
+        rest = line_text.lstrip("\xa0")
+        indent = len(line_text) - len(rest)
+        if not indent or not rest:
+            return col, tab_offset, segments
+
+        raw_col = max(0, min(col + tab_offset + indent, 31, 32 - len(rest)))
+        base_col = min((raw_col // 4) * 4, 28)
+        segments = SCCWriter._slice_segments(segments, indent, len(rest))
+        return base_col, raw_col - base_col, segments
+
     _PAC_STYLE_COL0 = {
         (True, True): "italic_underline",
         (True, False): "italic",
@@ -423,9 +448,8 @@ class SCCWriter(BaseWriter):
         num_lines = len(wrapped_lines)
 
         for line_index, segments in enumerate(wrapped_lines):
-            line_text = "".join(text for text, _, _ in segments)
             row = self._compute_scc_row(caption, num_lines, line_index)
-            col, tab_offset = self._compute_scc_indent(caption, line_text)
+            col, tab_offset, segments = self._compute_line_start(caption, segments)
 
             initial_italic, initial_underline = self._get_line_initial_style(segments)
             pac_code = self._get_pac_code(row, col, initial_italic, initial_underline)

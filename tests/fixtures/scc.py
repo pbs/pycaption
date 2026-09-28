@@ -3,9 +3,9 @@ import pytest
 
 # Real-world bytes reproducing the "phantom BREAK" bug: two independent,
 # simultaneously-timed paint-on captions ("Always by her side" / "And
-# Trini!") whose PAC sequence has a small row jump (13 -> 15) combined
-# with a same-row column jump (col 4 -> 24) that was left unconsumed
-# (no text written) before the row jump landed.
+# Trini!"). Row 13 is written from column 4, a same-row PAC then lands at
+# column 24 — two columns shy of where that text ended, so it continues the
+# line — and finally a skipped row jump (13 -> 15) forces the second cue.
 @pytest.fixture(scope="session")
 def sample_scc_row_jump_with_pending_reposition():
     return """\
@@ -612,6 +612,21 @@ Scenarist_SCC V1.0
 """
 
 
+# "HI" at row 14, column 4, then a PAC and Tab Offset putting the next line at
+# column 31, the last one, with 32 characters after it. The text alone fits a
+# row; starting 27 columns right of the cue's origin, it runs past the end.
+@pytest.fixture(scope="session")
+def sample_scc_with_line_indented_past_the_last_column():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01:00\t9420 942f 94ae 9420 9452 c849 94fe 9723 c1c2 43c4 4546 c7c8 494a cb4c cdce 4fd0 5152 d354 d5d6 5758 d9da c1c2 43c4 4546
+
+00:00:03:00\t942c 942f
+
+"""
+
+
 @pytest.fixture(scope="function")
 def sample_scc_mid_row_before_text_pop():
     return """\
@@ -788,11 +803,12 @@ Scenarist_SCC V1.0
 """
 
 
-# A mid-row italic command shifts the position of the text that follows it,
-# so 'A ' sits one column left of 'yaaruin?': two positions in one caption,
-# the first carried by a bare text node.
+# The caption at 00:05:50.800 of examples/2000370803_Original_en.txt: 'A ' is
+# written at column 11, then a PAC lands at column 12 — right at the cursor —
+# before the mid-row italic command and 'yaaruin?'. One line of text, so one
+# origin and one cue.
 @pytest.fixture(scope="session")
-def sample_scc_positioning_on_text_node():
+def sample_scc_mid_row_code_at_the_cursor():
     return """\
 Scenarist_SCC V1.0
 
@@ -823,5 +839,530 @@ Scenarist_SCC V1.0
 00:00:09:29 94ae 94ae 9420 9420 9470 9470 c865 ecec ef80 942c 942c 942f 942f
 
 00:00:12:00 942c 942c
+
+"""
+
+
+# A PAC plus a Tab Offset puts the origin at column 6, 'A ' takes the cursor
+# to column 8, and the next PAC lands exactly on it, so this is still the same
+# line. Measured off the origin at 6 instead, that PAC looked like a Tab Offset
+# two columns along and dragged the origin with it.
+@pytest.fixture(scope="session")
+def sample_scc_same_row_pac_near_the_origin_after_text():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01:00\t9420 942f 94ae 9420 94f2 97a2 c120 94f4 91ae 79e5 7380
+
+00:00:03:00\t942c 942f
+
+"""
+
+
+# 'Quyana, ' is written from column 0, so the cursor ends at column 8 and the
+# PAC that follows lands exactly on it: the same line, continuing.
+@pytest.fixture(scope="session")
+def sample_scc_same_row_pac_at_the_cursor():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01:00\t9420 942f 94ae 9420 94e0 5175 7961 6e61 2c20 94f4 c1f4 7361 f1ae
+
+00:00:03:00\t942c 942f
+
+"""
+
+
+# The shape at 00:14:25.566 of examples/2000370803_Original_en.txt: line 1
+# starts at column 15, a same-row PAC plus Tab Offset lands on the cursor at
+# column 26 before the italic run, then a row+1 PAC plus Tab Offset starts
+# line 2. One cue of two lines, at the line 1 origin.
+@pytest.fixture(scope="session")
+def sample_scc_same_row_pac_at_the_cursor_then_next_row():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01:00\t9420 942f 94ae 9420 91d6 9723 57e5 20e3 61ec ec20 68e9 6d80 91dc 97a2 91ae 79e5 e9ec 917a 97a1 e96e 2054 ece9 6e67 e9f4 ae80
+
+00:00:03:00\t942c 942f
+
+"""
+
+
+# The same PAC twice on one line, with text in between so it is not filtered
+# as a doubled command. Measured off the cursor at column 6 the second one
+# looks like a jump six columns back, but it names the column the line already
+# starts at, so there is nowhere new for it to go.
+@pytest.fixture(scope="session")
+def sample_scc_pac_restating_the_position_after_text():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01:00\t9420 942f 94ae 9420 94e0 5175 7961 6e61 94e0 20c1 f473 61f1 ae80
+
+00:00:03:00\t942c 942f
+
+"""
+
+
+# 'Ah' is written from column 0, so the cursor ends at column 2 and the PAC
+# that follows points at column 4: columns 2 and 3 are blank screen columns in
+# the middle of the line, and have to survive as spaces.
+@pytest.fixture(scope="session")
+def sample_scc_same_row_pac_ahead_of_the_cursor():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01:00\t9420 942f 94ae 9420 94e0 c168 94f2 f468 e5f2 e520 79ef 7520 61f2 e5ae
+
+00:00:03:00\t942c 942f
+
+"""
+
+
+# Thirty characters are written from column 0, then a PAC points at column 28
+# and 'WXYZ' follows it with nothing in between to move it on. Those four
+# characters take columns 28 to 31, so they land on top of the last two
+# already written: the line is 32 columns wide, not 34.
+@pytest.fixture(scope="session")
+def sample_scc_same_row_pac_behind_the_cursor():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01:00\t9420 942f 94ae 9420 94e0 c1c2 43c4 4546 c7c8 494a cb4c cdce 4fd0 5152 d354 d5d6 5758 d9da 6162 e364 94fe 5758 d9da
+
+00:00:03:00\t942c 942f
+
+"""
+
+
+# A row+1 PAC opens a second line and a Tab Offset follows it, so the offset
+# indents that line rather than repositioning the caption. The same-row PAC at
+# column 4 then lands exactly on the cursor the offset moved: one cue, two
+# lines, the second indented by the offset's two columns and nothing more.
+@pytest.fixture(scope="session")
+def sample_scc_tab_offset_after_line_break():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01:00\t9420 942f 94ae 9420 9440 c1c2 94e0 97a2 43c4 94f2 4546
+
+00:00:03:00\t942c 942f
+
+"""
+
+
+# A row+1 PAC opens a second line, then a PAC three rows up repositions before
+# any text arrives on it. The line that was never written cannot still owe a
+# break, so the repositioning stands: two separately positioned cues.
+@pytest.fixture(scope="session")
+def sample_scc_line_break_then_repositioning():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01:00\t9420 942f 94ae 9420 9440 c1c2 94e0 92da 43c4
+
+00:00:03:00\t942c 942f
+
+"""
+
+
+# The shape at 00:00:45;26 of examples/2000370803_Original_en.txt: an italic
+# run is still open when a row+2 PAC repositions, so the italics have to be
+# closed off. The closing node belongs to the text it closes, not to the
+# position the PAC has already moved to.
+@pytest.fixture(scope="session")
+def sample_scc_italics_still_open_at_repositioning():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01:00\t9420 942f 94ae 9420 13f4 97a2 91ae 9137 20c1 c220 9137 94f4 97a1 91ae 9137 2043 c420 9137
+
+00:00:03:00\t942c 942f
+
+"""
+
+
+# 'AB' is written, then a row+1 PAC wraps to the next line and an extended
+# character arrives first on it. Extended characters carry an automatic
+# backspace, but there is nothing to their left to erase when they open a row.
+@pytest.fixture(scope="session")
+def sample_scc_extended_char_first_on_a_wrapped_line():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01:00\t9420 942f 94ae 9420 9440 c1c2 94e0 9220 c243
+
+00:00:03:00\t942c 942f
+
+"""
+
+
+# The same, except the PAC repositions rather than wrapping, so the character
+# the automatic backspace would reach for belongs to a different cue.
+@pytest.fixture(scope="session")
+def sample_scc_extended_char_first_at_a_new_position():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01:00\t9420 942f 94ae 9420 9440 c1c2 92da 9220 c243
+
+00:00:03:00\t942c 942f
+
+"""
+
+
+# The same PAC twice for error correction, then a Tab Offset. The duplicate is
+# filtered out, but the offset still belongs to a PAC and still indents it:
+# column 0 + 3, not column 0.
+@pytest.fixture(scope="session")
+def sample_scc_doubled_pac_with_tab_offset():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01:00\t9420 942f 94ae 9420 9440 9440 9723 c1c2
+
+00:00:03:00\t942c 942f
+
+"""
+
+
+# The same shape, with line 2 filled out to the full 32 columns. Carrying the
+# abandoned line's blank columns into it would make it 33 wide and fail
+# validation, so this is the width check on the fix above.
+@pytest.fixture(scope="session")
+def sample_scc_blank_columns_abandoned_before_a_full_line():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01:00\t9420 942f 94ae 9420 9440 c1c2 9452 94e0 c1c2 43c4 4546 c7c8 494a cb4c cdce 4fd0 5152 d354 d5d6 5758 d9da 6162 e364 e520
+
+00:00:03:00\t942c 942f
+
+"""
+
+
+# 'AB' is written from column 0 and a PAC points at column 4, then a Tab Offset
+# carries it two further columns on to column 6. The offset arrives part-way
+# through a line, so the four columns between the text and column 6 are blank
+# screen columns rather than an indent for a line that has not started.
+@pytest.fixture(scope="session")
+def sample_scc_tab_offset_part_way_through_a_line():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01:00\t9420 942f 94ae 9420 9440 c1c2 9452 97a2 43c4
+
+00:00:03:00\t942c 942f
+
+"""
+
+
+# Thirty characters are written from column 0 and a PAC points back at column
+# 28, but a style-setting PAC stands between the text and the four characters
+# that follow. The columns those four overwrite are screen columns, not nodes,
+# so the style change in between cannot spare them: the line is 32 wide.
+@pytest.fixture(scope="session")
+def sample_scc_style_command_between_the_text_and_a_refill_pac():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01:00\t9420 942f 94ae 9420 946e c1c2 43c4 4546 c7c8 494a cb4c cdce 4fd0 5152 d354 d5d6 5758 d9da 6162 e364 94fe 5758 d9da
+
+00:00:03:00\t942c 942f
+
+"""
+
+
+# 'ABCD' is written from column 2 and a PAC points back at column 4, then a
+# mid-row code arrives instead of text. The mid-row code moves the line on, so
+# the PAC turns out not to have been an overwrite after all and 'EF' follows the
+# text rather than landing on top of it.
+@pytest.fixture(scope="session")
+def sample_scc_mid_row_code_after_a_pac_behind_the_cursor():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01:00\t9420 942f 94ae 9420 9470 97a2 c1c2 43c4 94f2 91ae 4546
+
+00:00:03:00\t942c 942f
+
+"""
+
+
+# Ten characters are written from column 5, one of them an extended character
+# whose automatic backspace erases the character before it. The PAC that follows
+# points at column 16, which is one column past where the text really ended —
+# so exactly one blank column survives, and only if the backspace was counted.
+@pytest.fixture(scope="session")
+def sample_scc_backspace_before_a_pac_ahead_of_the_cursor():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01:00\t9420 942f 94ae 9420 94f2 97a1 c1c2 43c4 4546 c7c8 9220 92a1 92a2 94f8 5758
+
+00:00:03:00\t942c 942f
+
+"""
+
+
+# Eight columns of text from column 20, then the restated PAC followed by a Tab
+# Offset, which resolves at column 22 — still behind the cursor at 28. An offset
+# that far back is moving over the text, not nudging the PAC onto the cursor, so
+# it must not cancel the overwrite: 'AB' survives and 'WXYZIJ' covers columns 22
+# to 27. Appended instead, the row would run past column 32.
+@pytest.fixture(scope="session")
+def sample_scc_tab_offset_resolving_behind_the_cursor():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01:00\t9420 942f 94ae 9420 947a c1c2 43c4 4546 c7c8 947a 97a2 5758 d9da 494a
+
+00:00:03:00\t942c 942f
+
+"""
+
+
+# Twenty-four columns of text, then the origin PAC restated and twenty-four more.
+# Treating that as a continuation appended them, making a 48-character line out
+# of a row the decoder shows in 24 columns.
+@pytest.fixture(scope="session")
+def sample_scc_restated_origin_pac_refilling_a_long_line():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01:00\t9420 942f 94ae 9420 9470 c1c2 43c4 4546 c7c8 494a cb4c cdce 4fd0 5152 d354 d5d6 5758 9470 d9da c1c2 43c4 4546 c7c8 494a cb4c cdce 4fd0 5152 d354 d5d6
+
+00:00:03:00\t942c 942f
+
+"""
+
+
+# A roll-up row restates its own PAC mid-row, then the rest of the row arrives
+# in pieces, as live-caption encoders send it. Taken as an overwrite, the nine
+# columns that follow cover "HE'S YOUNG" and the caption loses its first words;
+# appended, the row is 19 columns and fits.
+@pytest.fixture(scope="session")
+def sample_scc_roll_up_pac_restating_the_row_mid_row():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01:00\t9425 9425 94ad 94ad 1340 1340 c845 a7d3 20d9 4fd5 cec7 13d0
+
+00:00:01:10\t20c1 ce80
+
+00:00:01:13\tc480
+
+00:00:01:14\t2057 454c
+
+00:00:01:17\t4c80
+
+00:00:03:00\t942c 942c
+
+"""
+
+
+# Real-world bytes: a roll-up row restates its PAC in the middle of a word,
+# between "TH" and "E". The row fits appended, so the word has to come out whole.
+@pytest.fixture(scope="session")
+def sample_scc_roll_up_pac_restating_the_row_mid_word():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01:00\t9425 9425 94ad 94ad 1340 1340 57c8 45ce 20d9 4fd5 204c 4f4f cb80 20c1 5480 2054 c880 13d0 4580
+
+00:00:03:00\t942c 942c
+
+"""
+
+
+# The row restating its PAC mid-row fits appended on its own, 23 columns, then
+# rolls up into the caption of a second row. Joined to that row it is 34
+# columns, which would make the restated PAC look like an overwrite of
+# "HE'S YOUNG" if the rows were settled together instead of one by one.
+@pytest.fixture(scope="session")
+def sample_scc_roll_up_restated_row_rolled_into_a_long_line():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01:00\t9425 9425 94ad 94ad 1340 1340 c845 a7d3 20d9 4fd5 cec7 13d0 20c1 cec4 2057 454c 4c2c 204f cb80
+
+00:00:02:00\t94ad 94ad 1340 1340 c1c2 43c4 4546 c7c8 494a
+
+00:00:03:00\t94ad 94ad
+
+00:00:04:00\t942c 942c
+
+"""
+
+
+# A full 32-column row, then its PAC restated with a Tab Offset to column 1 and
+# four more characters. Neither reading fits: appended the row is 36 columns,
+# and covering from column 1 leaves the 27 columns past "WXYZ" on screen. The
+# row has to be rejected, not cut down to "AWXYZ".
+@pytest.fixture(scope="session")
+def sample_scc_pac_pointing_back_over_a_full_row_with_less_text():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01:00\t9420 942f 94ae 9420 9470 c1c2 43c4 4546 c7c8 494a cb4c cdce 4fd0 5152 d354 d5d6 5758 d9da 6162 e364 e5e6 9470 97a1 5758 d9da
+
+00:00:03:00\t942c 942f
+
+"""
+
+
+# A roll-up row sent again in full over itself, then a second row. Simulated,
+# the first row is read again for the caption the second rolls into.
+@pytest.fixture(scope="session")
+def sample_scc_roll_up_row_refilled_then_rolled():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01:00\t9425 9425 94ad 94ad 9470 9470 c1c2 43c4 4546 c7c8 494a cb4c cdce 4fd0 5152 d354 d5d6 5758 9470 9470 d9da c1c2 43c4 4546 c7c8 494a cb4c cdce 4fd0 5152 d354 d5d6
+
+00:00:02:00\t94ad 94ad 9470 9470 d9da
+
+00:00:02:15\t94ad 94ad
+
+00:00:03:00\t942c 942c
+
+"""
+
+
+# A pop-on caption right-justified by its PACs: 'SAM:' at row 3, column 26+2,
+# then the line below at row 4, column 4+3, opening with an italics code. The
+# cue's origin has to be the second line's column, or the box the writers draw
+# from the first line's is too narrow for it and it wraps.
+@pytest.fixture(scope="session")
+def sample_scc_pop_on_line_starting_left_of_the_origin():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01:00\t9420 942f 94ae 9420 92dc 97a2 d3c1 cdba 92f2 9723 91ae 5468 e520 ece9 6ee5 2062 e5ec eff7 20e9 f480
+
+00:00:03:00\t942c 942f
+
+"""
+
+
+# "AB" at row 14, column 16, then a second line whose PAC and Tab Offset put it
+# at column 5 before a PAC on the same row skips it on to column 8. The three
+# columns skipped are blank screen columns of the second line, so it starts at
+# column 5, not 8.
+@pytest.fixture(scope="session")
+def sample_scc_pop_on_line_starting_with_skipped_columns():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01:00\t9420 942f 94ae 9420 9458 c1c2 94f2 97a1 94f4 43c4
+
+00:00:03:00\t942c 942f
+
+"""
+
+
+# "HELLO" at row 14, column 4, then a PAC to row 15, column 12 that a second
+# PAC on the same row overrides with column 4 before any text arrives. "WORLD"
+# lands at column 4, under "HELLO", so the second line is not indented.
+@pytest.fixture(scope="session")
+def sample_scc_pop_on_pac_overriding_the_line_start_before_text():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01:00\t9420 942f 94ae 9420 9452 c845 4c4c 4f80 9476 94f2 574f 524c c480
+
+00:00:03:00\t942c 942f
+
+"""
+
+
+# A PAC to row 14 that no text follows, then a PAC to row 15, column 0 and a
+# Tab Offset of 2. The row 14 PAC is the cue's origin, so "WORLD" is placed by
+# indenting its line 2 columns, not by moving the origin down onto row 15.
+@pytest.fixture(scope="session")
+def sample_scc_pop_on_tab_offset_on_the_line_below_an_empty_row():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01:00\t9420 942f 94ae 9420 9440 94e0 97a2 574f 524c c480
+
+00:00:03:00\t942c 942f
+
+"""
+
+
+# "HELLO" at row 14, column 0, then a PAC to row 15, column 12 that a second
+# PAC on the same row overrides with column 4 before any text arrives. The
+# second PAC is more than a tab offset from the first, but the line has no
+# text yet, so "WORLD" still continues the cue, starting at column 4.
+@pytest.fixture(scope="session")
+def sample_scc_pop_on_pac_overriding_the_line_start_far_from_it():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01:00\t9420 942f 94ae 9420 9440 c845 4c4c 4f80 9476 94f2 574f 524c c480
+
+00:00:03:00\t942c 942f
+
+"""
+
+
+# "HELLO" at row 14, column 16, then PACs to row 15 at columns 16, 24 and 8
+# before "WORLD". The skip from 16 to 24 owes blank columns that the PAC back to
+# 8 cancels, so "WORLD" starts the line at column 8 and nothing is left of it.
+@pytest.fixture(scope="session")
+def sample_scc_pop_on_pac_pulling_back_over_skipped_columns():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01:00\t9420 942f 94ae 9420 9458 c845 4c4c 4f80 94f8 94fc 94f4 574f 524c c480
+
+00:00:03:00\t942c 942f
+
+"""
+
+
+# "HELLO" at row 14, column 0, then "AB" at row 15, column 12, then a PAC to
+# row 15, column 0 and "CD". The PAC points back further than the second line
+# reaches, so whatever it overwrites, it cannot reach into the line above.
+@pytest.fixture(scope="session")
+def sample_scc_pop_on_pac_pointing_back_past_the_start_of_the_line():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01:00\t9420 942f 94ae 9420 9440 c845 4c4c 4f80 9476 c1c2 94e0 43c4
+
+00:00:03:00\t942c 942f
+
+"""
+
+
+# "ABCDEFGH" at row 15, column 0, then a PAC back to column 0 overwrites it
+# with "WX", leaving the cursor at column 2. A PAC to column 4 is then within a
+# tab offset of the cursor and continues the line.
+@pytest.fixture(scope="session")
+def sample_scc_pac_within_a_tab_offset_of_an_overwrite():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01:00\t9420 942f 94ae 9420 9470 c1c2 43c4 4546 c7c8 9470 5758 94f2 d9da
+
+00:00:03:00\t942c 942f
+
+"""
+
+
+# Italic "ABCDE" at row 15, columns 1-5, then a mid-row code turning italics off
+# takes column 6, leaving the cursor at 7. A PAC to column 4 is within a tab
+# offset of it, so "XY" overwrites "DE" on the same line.
+@pytest.fixture(scope="session")
+def sample_scc_pac_within_a_tab_offset_of_a_mid_row_code():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01:00\t9420 942f 94ae 9420 9470 91ae c1c2 43c4 4580 9120 94f2 58d9
+
+00:00:03:00\t942c 942f
 
 """

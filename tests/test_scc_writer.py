@@ -185,6 +185,25 @@ class TestSCCWriterOverlappingCues:
         # (only the last cue gets a clear-screen at its end time)
         assert len(clear_lines) <= 1
 
+    def test_long_load_after_a_gap_keeps_the_clear_screen(self):
+        """A load long enough to start before the previous cue ends is held
+        back past the clear rather than dropping it: dropping it would keep
+        the previous cue up through the whole gap."""
+        line = "ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEF"
+        srt = (
+            "1\n00:00:01,000 --> 00:00:03,000\nFirst\n\n"
+            f"2\n00:00:05,000 --> 00:00:07,000\n{line}\n{line}\n{line}\n{line}\n"
+        )
+        captions = SRTReader().read(srt)
+        output = SCCWriter(drop_frame=False).write(captions)
+        reread = SCCReader().read(output)
+        first, second = reread.get_captions(reread.get_languages()[0])
+
+        assert abs(first.end - 3_000_000) < 100_000
+        # The hold-back costs the second cue less than the gap would have
+        # cost the first.
+        assert second.start - 5_000_000 < 5_000_000 - 3_000_000
+
     def test_dense_cues_never_produce_negative_duration(self):
         """When many dense cues push start times forward via timing
         adjustments, the end time must never be less than the start."""
@@ -583,3 +602,62 @@ class TestSCCWriterPaintOn:
         assert not result.is_empty()
         text = result.get_captions("en-US")[0].get_text()
         assert "Test" in text
+
+
+class TestSCCWriterNonBreakingSpace:
+    def test_non_breaking_space_is_written_as_a_transparent_space(self):
+        """The SCC reader indents a line with non-breaking spaces, and WebVTT
+        &nbsp; reads as one. Unmapped, each was written as a pound sign.
+        """
+        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:02.000\nh&nbsp;i\n"
+
+        output = SCCWriter().write(WebVTTReader().read(vtt))
+
+        assert "91b6" not in output
+        assert "6880 91b9 91b9 e980" in output
+
+    def test_non_breaking_spaces_opening_a_line_are_written_as_its_column(self):
+        """Blank columns ahead of the text are where the line starts, so the
+        PAC and a Tab Offset place it there. Written as transparent spaces
+        they cost two words a column, stretching the time a pop-on caption
+        takes to load until it runs into the one after it.
+        """
+        vtt = (
+            "WEBVTT\n\n00:00:01.000 --> 00:00:02.000\n"
+            "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;hi\n"
+        )
+
+        output = SCCWriter().write(WebVTTReader().read(vtt))
+
+        assert "91b9" not in output
+        assert "94f2 94f2 97a1 97a1 68e9" in output
+        caption = SCCReader().read(output).get_captions("en-US")[0]
+        assert caption.get_text() == "hi"
+        assert caption.layout_info.origin.x.value == 22.5
+
+    def test_indented_line_is_pulled_left_to_fit_the_row(self):
+        """At 60% the line would start at column 20, and its 5 blank columns
+        move the text to 25, where 20 characters run past column 31. The line
+        is pulled left until the text ends on the last column instead.
+        """
+        vtt = (
+            "WEBVTT\n\n00:00:01.000 --> 00:00:02.000 position:60% align:left\n"
+            + "&nbsp;" * 5
+            + "ABCDEFGHIJKLMNOPQRST\n"
+        )
+
+        output = SCCWriter().write(WebVTTReader().read(vtt))
+
+        assert "9476 9476 c1c2" in output
+        assert "97a1" not in output
+
+    def test_indented_scc_line_round_trips_to_its_column(
+        self, sample_scc_pop_on_line_starting_left_of_the_origin
+    ):
+        output = SCCWriter().write(
+            SCCReader().read(sample_scc_pop_on_line_starting_left_of_the_origin)
+        )
+
+        caption = SCCReader().read(output).get_captions("en-US")[0]
+        assert "£" not in caption.get_text()
+        assert caption.get_text().endswith("SAM:\nThe line below it")

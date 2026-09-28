@@ -204,4 +204,76 @@ class TestPositioningTracker:
         assert tracker._breaks_required == 0
         assert not tracker._repositioning_required
         assert tracker._last_column is None
+        assert tracker._cursor_column is None
+        assert not tracker._origin_locked
+        assert not tracker._line_has_text
+        assert tracker._pending_padding == 0
+        assert tracker._pending_overlap == 0
         assert tracker._positions == [None]
+
+    @pytest.mark.parametrize(
+        "new_col,continues",
+        [
+            (8, True),  # exactly at the cursor: the encoder restating itself
+            (11, True),  # a tab offset past it
+            (12, False),  # one column beyond a tab offset
+            (5, True),  # a tab offset behind it, the common real-world case
+            (4, False),  # one column further back than that
+        ],
+    )
+    def test_same_row_pac_continues_the_line_within_a_tab_offset_of_the_cursor(
+        self, new_col, continues
+    ):
+        """Origin (15, 0) with eight characters written, so the cursor is at
+        8. A same-row PAC within a tab offset of the cursor in either
+        direction continues the line and leaves the origin alone; anything
+        further out abandons it. Compared by absolute value, since encoders
+        back-correct as often as they skip forward.
+        """
+        tracker = _PositioningTracker((15, 0))
+        tracker.advance_cursor(8)
+
+        tracker.update_positioning((15, new_col))
+
+        assert tracker.is_repositioning_required() is not continues
+        assert not tracker.is_linebreak_required()
+        assert tracker.get_current_position() == (
+            (15, 0) if continues else (15, new_col)
+        )
+
+    def test_a_tab_offset_settles_the_columns_the_pac_pointed_back_over(self):
+        tracker = _PositioningTracker((15, 0))
+        tracker.advance_cursor(8)
+        tracker.update_positioning((15, 6))
+
+        # The offset is where the text really starts, so the PAC was never
+        # pointing back over anything
+        tracker.update_positioning((15, 8), is_offset=True)
+
+        assert tracker.consume_pending_overlap() == 0
+
+    def test_abandoning_the_line_discards_the_columns_it_owed(self):
+        tracker = _PositioningTracker((15, 0))
+        tracker.advance_cursor(2)
+        tracker.update_positioning((15, 4))
+        assert tracker._pending_padding == 2
+
+        # A repositioning starts a fresh line elsewhere, so the old line's
+        # blank columns must not be indented onto it
+        tracker.update_positioning((15, 24))
+
+        assert tracker.is_repositioning_required()
+        assert tracker.consume_pending_padding() == 0
+
+    def test_a_line_break_discards_the_columns_a_pac_pointed_back_over(self):
+        tracker = _PositioningTracker((14, 0))
+        tracker.advance_cursor(8)
+        tracker.update_positioning((14, 6))
+        assert tracker._pending_overlap == 2
+
+        # Text on the new line lands on a row of its own, so it cannot
+        # overwrite what the line above already put on those columns
+        tracker.update_positioning((15, 0))
+
+        assert tracker.is_linebreak_required()
+        assert tracker.consume_pending_overlap() == 0
