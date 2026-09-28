@@ -78,6 +78,7 @@ http://www.theneitherworld.com/mcpoodle/SCC_TOOLS/DOCS/SCC_FORMAT.HTML
 """
 
 import re
+
 from collections import deque
 from copy import deepcopy
 
@@ -107,6 +108,7 @@ from .specialized_collections import (
     PopOnCue,
 )
 from .state_machines import DefaultProvidingPositionTracker
+
 
 _TIMECODE_RE = re.compile(r"\d{2}:\d{2}:\d{2}[:;](\d{1,2})")
 
@@ -242,7 +244,7 @@ class SCCReader(BaseReader):
     def _validate_line_lengths(self):
         """Raise CaptionLineLengthError if any line exceeds 32 characters."""
         violations = [
-            f"around {cap.format_start()} - {line} - Length {len(line)}"
+            f"around {cap.format_start()} - {self._describe_line_length(line)}"
             for cap in (c.to_real_caption() for c in self.caption_stash._collection)
             for line in cap.get_text().split("\n")
             if len(line) > 32
@@ -252,6 +254,19 @@ class SCCReader(BaseReader):
                 "32 character limit for caption cue in scc file.\n"
                 "Lines longer than 32:\n" + "\n".join(violations)
             )
+
+    @staticmethod
+    def _describe_line_length(line):
+        """Describe a line too long for the row, separating the text from the
+        indentation that places it, which can be what pushes it off the row.
+        """
+        text = line.lstrip("\xa0")
+        indent = len(line) - len(text)
+        if not indent:
+            return f"{line} - Length {len(line)}"
+        return (
+            f"{text} - Length {len(text)} plus a {indent}-column indent = {len(line)}"
+        )
 
     @staticmethod
     def _fix_last_captions_without_ending(caption_list):

@@ -157,5 +157,3 @@ class TestMicroDVDReaderBytes:
 
     def test_detect_bytes(self, sample_microdvd):
         assert self.reader.detect(sample_microdvd.encode("utf-8")) is True
-
-

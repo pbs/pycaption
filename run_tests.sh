@@ -25,5 +25,3 @@ if [ $? != 0 ]; then
 else
   cleanup
 fi
-
-

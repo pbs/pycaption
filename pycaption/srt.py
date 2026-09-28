@@ -3,7 +3,12 @@
 from copy import deepcopy
 
 from .base import (
-    BaseReader, BaseWriter, Caption, CaptionList, CaptionNode, CaptionSet,
+    BaseReader,
+    BaseWriter,
+    Caption,
+    CaptionList,
+    CaptionNode,
+    CaptionSet,
     merge_caption_list,
 )
 from .exceptions import CaptionReadNoCaptions, CaptionReadSyntaxError
@@ -164,10 +169,11 @@ class SRTWriter(BaseWriter):
 
             # Eliminate excessive line breaks, and trailing space on each line
             # rather than only at the ends of the cue — a node's own content can
-            # end with a space, which would otherwise dangle mid-cue.
+            # end with a space, which would otherwise dangle mid-cue. Leading
+            # non-breaking spaces are indentation, so they are kept.
             new_content = "\n".join(
                 line.rstrip() for line in new_content.split("\n")
-            ).strip()
+            ).strip(" \t\r\n")
 
             srt += f"{new_content}\n\n"
             count += 1

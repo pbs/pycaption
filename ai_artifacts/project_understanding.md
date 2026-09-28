@@ -15,7 +15,7 @@ and web caption formats. It is the caption ingestion engine behind PBS's video p
 | Language | Python (see `setup.py` for version bounds) |
 | Framework | None (pure library) |
 | Testing | pytest, pytest-lazy-fixture |
-| Linting | flake8, pre-commit hooks |
+| Linting | ruff (lint + format), pre-commit hooks |
 | Packaging | setuptools (setup.py) |
 | Dependencies | beautifulsoup4, lxml, cssutils |
 | Optional | nltk (transcript features) |
@@ -91,7 +91,8 @@ pycaption/
 ├── examples/                     # Sample caption files
 ├── docs/                         # Sphinx documentation (introduction.rst)
 ├── setup.py                      # Package config (version here)
-├── .pre-commit-config.yaml       # Linting: end-of-file-fixer, trailing-whitespace, flake8
+├── .pre-commit-config.yaml       # Hook definitions (pre-commit-hooks + ruff)
+├── ruff.toml                     # Ruff lint/format rules
 └── README.rst                    # Project readme
 ```
 

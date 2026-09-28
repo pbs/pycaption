@@ -6,6 +6,7 @@ raw CEA-608 commands into CaptionNode trees.
 """
 
 import collections
+import copy
 
 from ..base import Caption, CaptionList, CaptionNode
 from ..geometry import (
@@ -28,6 +29,7 @@ from .constants import (
     STYLE_SETTING_COMMANDS,
     UNDERLINE_COMMANDS,
 )
+
 
 PopOnCue = collections.namedtuple("PopOnCue", "buffer, start, end")
 
@@ -265,49 +267,32 @@ class CaptionCreator:
         caption = self._new_precaption(start, end, caption_mode, roll_up_rows)
         self._still_editing = [caption]
 
-        for instruction in node_buffer:
+        instructions = list(node_buffer)
+        # Only pop-on is widened: roll-up joins its rows onto one line, and
+        # paint-on already splits a line that jumps columns into its own cue
+        leftmost_columns = (
+            _leftmost_line_starts(instructions) if caption_mode == "pop_on" else []
+        )
+        cue_index = 0
+        indenter = _LineIndenter(enabled=bool(leftmost_columns))
+
+        for instruction in instructions:
             if instruction.is_empty():
                 continue
 
-            elif instruction.requires_repositioning():
+            position = instruction.position
+            if cue_index < len(leftmost_columns) and position:
+                position = (position[0], leftmost_columns[cue_index])
+
+            if instruction.requires_repositioning():
                 caption = self._new_precaption(start, end, caption_mode, roll_up_rows)
                 self._still_editing.append(caption)
+                cue_index += 1
+                indenter.start_cue()
+                continue
 
-            elif instruction.is_explicit_break():
-                caption.nodes.append(
-                    CaptionNode.create_break(
-                        layout_info=_get_layout_from_tuple(instruction.position)
-                    )
-                )
-
-            elif instruction.sets_italics_on():
-                caption.nodes.append(
-                    CaptionNode.create_style(
-                        True,
-                        {"italics": True},
-                        layout_info=_get_layout_from_tuple(instruction.position),
-                    )
-                )
-
-            elif instruction.sets_italics_off():
-                caption.nodes.append(
-                    CaptionNode.create_style(
-                        False,
-                        {"italics": True},
-                        layout_info=_get_layout_from_tuple(instruction.position),
-                    )
-                )
-
-            elif instruction.is_text_node():
-                layout_info = _get_layout_from_tuple(instruction.position)
-                caption.nodes.append(
-                    CaptionNode.create_text(
-                        text=instruction.text,
-                        layout_info=layout_info,
-                        position=instruction.position,
-                    )
-                )
-                caption.layout_info = layout_info
+            text = indenter.text_for(instruction, position)
+            _append_caption_node(caption, instruction, text, position)
 
         self._collection.extend(self._still_editing)
 
@@ -372,9 +357,12 @@ class InstructionNodeCreator:
 
         # handle line break(s) - may be multiple for multi-row jumps
         if self._position_tracer.is_linebreak_required():
+            line_start = self._position_tracer.get_line_start_column()
             for _ in range(self._position_tracer._breaks_required):
                 self._collection.append(
-                    _InstructionNode.create_break(position=current_position)
+                    _InstructionNode.create_break(
+                        position=current_position, line_start=line_start
+                    )
                 )
             self._position_tracer.acknowledge_linebreak_consumed()
             node = _InstructionNode.create_text(current_position)
@@ -394,8 +382,9 @@ class InstructionNodeCreator:
             self._position_tracer.acknowledge_position_changed()
 
         overlap = self._position_tracer.consume_pending_overlap()
-        if overlap:
-            self._overwrite_end_of_line(overlap)
+        if overlap and self._mark_overwrite(overlap, current_position):
+            node = _InstructionNode.create_text(current_position)
+            self._collection.append(node)
 
         padding = self._position_tracer.consume_pending_padding()
         if padding:
@@ -403,42 +392,44 @@ class InstructionNodeCreator:
         node.add_chars(*chars)
         self._position_tracer.advance_cursor(len("".join(chars)))
 
-    def _overwrite_end_of_line(self, overlap):
-        """Drop the columns a PAC pointed back over from the end of the line
+    def _settle_line_start(self):
+        """Record on the break opening this line the column it now starts at
 
-        A PAC did point back over the line after all, so the characters arriving
-        next land on those columns instead of after them. Dropping what they
-        cover keeps the line the width the decoder would show, rather than
-        letting an overwrite push it past 32 characters.
+        A break can be emitted before the Tab Offset that indents its line
+        arrives (a PAC closing italics emits it), so the column it recorded then
+        is not where the line starts.
+        """
+        for node in reversed(self._collection):
+            if node.is_explicit_break():
+                node.line_start = self._position_tracer.get_line_start_column()
+                return
+            if node.is_text_node() and node.text:
+                return
+
+    def _mark_overwrite(self, overlap, position):
+        """Record that the characters arriving next land on columns a PAC
+        pointed back over, and move the cursor back onto them.
+
+        Whether they really replace those columns cannot be settled yet: that
+        depends on how much text follows and how long the line gets, which only
+        the finished line tells. So the text stays in place and a marker holds
+        the question until the buffer is read (see ``_resolve_overwrites``).
 
         Overlap counts screen columns, not nodes, so it spans however many nodes
         a style change happened to split the line into. It stops at a break or a
         repositioning, which end the line the PAC pointed into.
 
-        Dropping from the end is exact whenever the arriving text reaches the end
-        of the line it points into, which is the usual case: a PAC restating the
-        origin is followed by the rest of the row. Where less text arrives than
-        the PAC pointed back over, the columns past it are dropped too — the
-        nodes hold no column addresses, so a run cannot be cut out of the middle
-        of the line and rejoined.
-
         :param overlap: how many columns the PAC pointed back over
+        :type position: tuple[int]
+        :return: whether the line had any text for the PAC to point back over
+        :rtype: bool
         """
-        remaining = overlap
-        for node in reversed(self._collection):
-            if not remaining:
-                break
-            if node._type in (
-                _InstructionNode.BREAK,
-                _InstructionNode.CHANGE_POSITION,
-            ):
-                break
-            if not node.is_text_node() or not node.text:
-                continue
-            overwritten = min(remaining, len(node.text))
-            node.text = node.text[: len(node.text) - overwritten]
-            remaining -= overwritten
-        self._position_tracer.advance_cursor(-(overlap - remaining))
+        columns = min(overlap, _line_length(self._collection))
+        if not columns:
+            return False
+        self._collection.append(_InstructionNode.create_overwrite(position, columns))
+        self._position_tracer.advance_cursor(-columns)
+        return True
 
     @staticmethod
     def get_style_for_command(command):
@@ -545,8 +536,11 @@ class InstructionNodeCreator:
         """Emit any pending line breaks from the position tracer."""
         if not self._position_tracer.is_linebreak_required():
             return
+        line_start = self._position_tracer.get_line_start_column()
         for _ in range(self._position_tracer._breaks_required):
-            self._collection.append(_InstructionNode.create_break(position=position))
+            self._collection.append(
+                _InstructionNode.create_break(position=position, line_start=line_start)
+            )
         self._position_tracer.acknowledge_linebreak_consumed()
 
     def _handle_mid_row_spacing(self, next_is_punctuation):
@@ -608,9 +602,11 @@ class InstructionNodeCreator:
             column_jump_forces_reposition=is_paint_on,
             is_offset=is_offset,
         )
+        if is_offset:
+            self._settle_line_start()
 
     def __iter__(self):
-        return iter(_format_italics(self._collection))
+        return iter(_format_italics(_resolve_overwrites(self._collection)))
 
     @staticmethod
     def has_break_before(collection):
@@ -647,7 +643,9 @@ class InstructionNodeCreator:
         new_collection = instance._collection
 
         for idx, stash in enumerate(stash_list):
-            new_collection.extend(stash._collection)
+            # Resolved per stash: each is a row of its own, so an overwrite
+            # is measured against its row rather than the rows joined together
+            new_collection.extend(_resolve_overwrites(stash._collection))
 
             # use space to separate the stashes, but don't add final space
             if idx < len(stash_list) - 1:
@@ -700,6 +698,125 @@ class InstructionNodeCreator:
         return None
 
 
+def _append_caption_node(caption, instruction, text, position):
+    """Convert one instruction into the CaptionNode it stands for
+
+    :type caption: PreCaption
+    :type instruction: _InstructionNode
+    :param text: the instruction's text, already indented for its line
+    :param position: the position to stamp on the node, (row, column)
+    """
+    layout_info = _get_layout_from_tuple(position)
+    if instruction.is_explicit_break():
+        caption.nodes.append(CaptionNode.create_break(layout_info=layout_info))
+
+    elif instruction.sets_italics_on():
+        caption.nodes.append(
+            CaptionNode.create_style(True, {"italics": True}, layout_info=layout_info)
+        )
+
+    elif instruction.sets_italics_off():
+        caption.nodes.append(
+            CaptionNode.create_style(False, {"italics": True}, layout_info=layout_info)
+        )
+
+    elif instruction.is_text_node():
+        caption.nodes.append(
+            CaptionNode.create_text(
+                text=text, layout_info=layout_info, position=position
+            )
+        )
+        caption.layout_info = layout_info
+
+
+def _leftmost_line_starts(instructions):
+    """For each cue in a buffer, the leftmost column any of its lines starts at
+
+    A cue's origin is where its first line starts, but pop-on lines are placed
+    one by one, and a later line often starts further left (centred or
+    right-justified text). Left at the first line's column, the cue box is too
+    narrow for those lines and they wrap.
+
+    :type instructions: list[_InstructionNode]
+    :rtype: list[int | None]
+    """
+    columns = [None]
+    for instruction in instructions:
+        if instruction.requires_repositioning():
+            columns.append(None)
+            continue
+        candidates = [columns[-1]]
+        if instruction.is_text_node() and instruction.text and instruction.position:
+            candidates.append(instruction.position[1])
+        if instruction.is_explicit_break():
+            candidates.append(instruction.line_start)
+        candidates = [column for column in candidates if column is not None]
+        columns[-1] = min(candidates) if candidates else None
+    return columns
+
+
+def _indent_line(text, line_start, position):
+    """Indent a line of a cue by the columns it starts right of the cue's origin
+
+    CEA-608 has no justification command: centred and right-justified text is
+    placed by where each line's PAC puts it, so a line's offset from the cue's
+    leftmost line is the only record of its alignment. Following SMPTE RP
+    2052-10, the cue keeps the leftmost line's position and the others are
+    indented with whitespace. Non-breaking spaces, since the writers strip or
+    collapse ordinary ones at the start of a line. For the same reason the
+    spaces the line itself opens with become non-breaking: they are blank
+    columns a PAC skipped or the encoder sent, already counted in where the
+    line starts, and stripped they would pull the text left of its column.
+
+    :type text: str
+    :type line_start: int | None
+    :type position: tuple[int] | None
+    :rtype: str
+    """
+    if line_start is None or not position or position[1] is None:
+        return text
+    stripped = text.lstrip(" ")
+    blank_columns = len(text) - len(stripped)
+    return "\xa0" * (max(line_start - position[1], 0) + blank_columns) + stripped
+
+
+class _LineIndenter:
+    """Tracks the line of a cue being converted, indenting its first text
+    (see ``_indent_line``)
+
+    Holds the column the line starts at and whether its indentation is still to
+    be written. The first line of a cue starts at the cue's own position; a
+    later one at the column its break recorded.
+    """
+
+    def __init__(self, enabled):
+        self._enabled = enabled
+        self.start_cue()
+
+    def start_cue(self):
+        """Begin the first line of a new cue."""
+        self._line_start = None
+        self._pending = self._enabled
+
+    def text_for(self, instruction, position):
+        """Return the instruction's text, indented if it opens the line.
+
+        :type instruction: _InstructionNode
+        :type position: tuple[int] | None
+        :rtype: str | None
+        """
+        text = instruction.text
+        if instruction.is_explicit_break():
+            self._line_start = instruction.line_start
+            self._pending = self._enabled and self._line_start is not None
+        elif self._pending and instruction.is_text_node() and text:
+            self._pending = False
+            if self._line_start is None and instruction.position:
+                self._line_start = instruction.position[1]
+            text = _indent_line(text, self._line_start, position)
+        return text
+
+
 def _get_layout_from_tuple(position_tuple):
     """Create a Layout object from the positioning information given
 
@@ -738,17 +855,29 @@ class _InstructionNode:
     ITALICS_ON = 2
     ITALICS_OFF = 3
     CHANGE_POSITION = 4
+    OVERWRITE = 5
 
-    def __init__(self, text=None, position=None, type_=0):
+    def __init__(
+        self, text=None, position=None, type_=0, line_start=None, columns=None
+    ):
         """
         :type text: str
         :param position: a tuple of ints (row, column)
         :param type_: self.TEXT | self.BREAK | self.ITALICS
         :type type_: int
+        :param line_start: for a break, the column the line it opens starts at
+        :type line_start: int
+        :param columns: for an overwrite, how many columns of text before it
+            the text after it may land on
+        :type columns: int
         """
         self.text = text
         self.position = position
         self._type = type_
+        # The caption's origin is its first line's column, so a break is the
+        # only place a later line's own column survives
+        self.line_start = line_start
+        self.columns = columns
 
     def add_chars(self, *args):
         """This being a text node, add characters to it.
@@ -800,6 +929,13 @@ class _InstructionNode:
         """
         return self._type in (self.ITALICS_OFF, self.ITALICS_ON)
 
+    def is_overwrite(self):
+        """Whether the node marks text landing on columns already written
+
+        :rtype: bool
+        """
+        return self._type == self.OVERWRITE
+
     def requires_repositioning(self):
         """Whether the node must be interpreted as a change in positioning
 
@@ -812,15 +948,18 @@ class _InstructionNode:
         return " ".join(self.text.split())
 
     @classmethod
-    def create_break(cls, position):
+    def create_break(cls, position, line_start=None):
         """Create a node, interpretable as an explicit line break
 
         :type position: tuple[int]
         :param position: a tuple (row, col) containing the positioning info
 
+        :type line_start: int
+        :param line_start: the column the line this break opens starts at
+
         :rtype: _InstructionNode
         """
-        return cls(type_=cls.BREAK, position=position)
+        return cls(type_=cls.BREAK, position=position, line_start=line_start)
 
     @classmethod
     def create_text(cls, position, *chars):
@@ -861,9 +1000,22 @@ class _InstructionNode:
         """
         return cls(type_=cls.CHANGE_POSITION, position=position)
 
+    @classmethod
+    def create_overwrite(cls, position, columns):
+        """Create a node marking that the text after it may land on the last
+        ``columns`` columns of text before it
+
+        :type position: tuple[int]
+        :type columns: int
+        :rtype: _InstructionNode
+        """
+        return cls(type_=cls.OVERWRITE, position=position, columns=columns)
+
     def __repr__(self):  # pragma: no cover
         if self._type == self.BREAK:
             extra = "BR"
+        elif self._type == self.OVERWRITE:
+            extra = f"overwrite {self.columns}"
         elif self._type == self.TEXT:
             extra = f'"{self.text}"'
         elif self._type in (self.ITALICS_ON, self.ITALICS_OFF):
@@ -874,6 +1026,147 @@ class _InstructionNode:
             extra = "change position"
 
         return f"<INode: {extra} >"
+
+
+def _ends_line(node):
+    """Whether the node ends the line the nodes before it are on
+
+    :type node: _InstructionNode
+    :rtype: bool
+    """
+    return node.is_explicit_break() or node.requires_repositioning()
+
+
+def _line_length(collection):
+    """How many columns of text the line the collection ends on holds
+
+    :type collection: list[_InstructionNode]
+    :rtype: int
+    """
+    length = 0
+    for node in reversed(collection):
+        if _ends_line(node):
+            break
+        if node.is_text_node() and node.text:
+            length += len(node.text)
+    return length
+
+
+def _resolve_overwrites(collection):
+    """Settle each overwrite marker in the collection, returning a new list
+    without them
+
+    A PAC pointing back over text already on the row is ambiguous. On screen
+    the text that follows replaces what is under it, but encoders also restate
+    the position mid-row with the rest of the row still to come, and taking
+    that literally erases words the caption meant to keep. So the overwrite is
+    only taken where appending is provably wrong and dropping is exact: the
+    appended row would run past column 32, and the text arriving covers every
+    column it points back over, as when a row is sent again in full. Otherwise
+    the text is appended, and a row too long for the screen is left for the
+    line length check to reject rather than truncated into one that passes.
+
+    The collection is not modified: a roll-up row is read again in each of the
+    captions it rolls through, so its markers have to survive being settled.
+
+    :type collection: list[_InstructionNode]
+    :rtype: list[_InstructionNode]
+    """
+    if not any(node.is_overwrite() for node in collection):
+        return collection
+    resolved = []
+    line = []
+    line_start = None
+    for node in collection:
+        if _ends_line(node):
+            resolved.extend(_resolve_line_overwrites(line, line_start))
+            resolved.append(node)
+            line = []
+            line_start = node.line_start if node.is_explicit_break() else None
+        else:
+            line.append(node)
+    resolved.extend(_resolve_line_overwrites(line, line_start))
+    return resolved
+
+
+def _resolve_line_overwrites(line, line_start):
+    """Settle the overwrite markers of one line (see ``_resolve_overwrites``)
+
+    :type line: list[_InstructionNode]
+    :param line_start: the column the line starts at, if its break recorded it
+    :type line_start: int | None
+    :rtype: list[_InstructionNode]
+    """
+    if not any(node.is_overwrite() for node in line):
+        return line
+    line = [copy.copy(node) if node.is_text_node() else node for node in line]
+    if line_start is None:
+        line_start = next(
+            (
+                node.position[1]
+                for node in line
+                if node.is_text_node() and node.text and node.position
+            ),
+            0,
+        )
+    for index, marker in enumerate(line):
+        if not marker.is_overwrite():
+            continue
+        arriving = 0
+        for node in line[index + 1 :]:
+            if node.is_overwrite():
+                break
+            if node.is_text_node() and node.text:
+                arriving += len(node.text)
+        if line_start + _line_length(line) > 32 and arriving >= marker.columns:
+            _drop_last_columns(line[:index], marker.columns)
+    return _join_across_markers(line)
+
+
+def _join_across_markers(line):
+    """Drop the overwrite markers, joining the text nodes each one split
+
+    The marker opened a text node of its own for the text that followed it,
+    but once settled that text just continues the line, and writers that
+    separate text nodes with a space would break the word it lands in.
+
+    :type line: list[_InstructionNode]
+    :rtype: list[_InstructionNode]
+    """
+    joined = []
+    after_marker = False
+    for node in line:
+        if node.is_overwrite():
+            after_marker = True
+            continue
+        if (
+            after_marker
+            and node.is_text_node()
+            and joined
+            and joined[-1].is_text_node()
+        ):
+            if node.text:
+                joined[-1].add_chars(node.text)
+        else:
+            joined.append(node)
+        after_marker = False
+    return joined
+
+
+def _drop_last_columns(line, columns):
+    """Drop the last ``columns`` columns of text from the nodes of a line
+
+    :type line: list[_InstructionNode]
+    :type columns: int
+    """
+    for node in reversed(line):
+        if not columns:
+            return
+        if not node.is_text_node() or not node.text:
+            continue
+        dropped = min(columns, len(node.text))
+        node.text = node.text[: len(node.text) - dropped]
+        columns -= dropped
 
 
 def _format_italics(collection):

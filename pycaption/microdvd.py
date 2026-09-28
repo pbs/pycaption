@@ -5,6 +5,7 @@ A special line {0}{0}fps_value sets the framerate (default 25 fps).
 """
 
 import re
+
 from copy import deepcopy
 
 from .base import (

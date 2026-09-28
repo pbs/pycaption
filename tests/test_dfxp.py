@@ -1,4 +1,5 @@
 import pytest
+
 from bs4 import BeautifulSoup
 
 from pycaption import CaptionReadNoCaptions, DFXPReader, DFXPWriter, SRTWriter

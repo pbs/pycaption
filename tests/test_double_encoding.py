@@ -41,9 +41,7 @@ class TestDoubleEncodingEndToEnd:
     def test_srt_reader(self):
         garbled_note = _double_encode("♪")
         content = (
-            "1\n"
-            "00:00:01,000 --> 00:00:02,000\n"
-            f"{garbled_note} Music {garbled_note}\n"
+            f"1\n00:00:01,000 --> 00:00:02,000\n{garbled_note} Music {garbled_note}\n"
         )
         captions = SRTReader().read(content)
         nodes = captions.get_captions("en-US")[0].nodes

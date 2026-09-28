@@ -21,6 +21,7 @@ from .srt import SRTReader, SRTWriter
 from .transcript import TranscriptWriter
 from .webvtt import WebVTTReader, WebVTTWriter
 
+
 __all__ = [
     "CaptionConverter",
     "DFXPReader",

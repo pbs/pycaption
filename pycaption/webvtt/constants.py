@@ -8,6 +8,7 @@ import re
 
 from ..geometry import HorizontalAlignmentEnum, LineAlignmentEnum, PositionAlignmentEnum
 
+
 TIMING_LINE_PATTERN = re.compile(r"^(\S+)\s+-->\s+(\S+)(?:\s+(.*?))?\s*$")
 """
 Captures [start_timestamp], [end_timestamp], and optional [cue_settings]

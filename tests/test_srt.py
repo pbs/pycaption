@@ -144,3 +144,16 @@ class TestSRTWriter:
         )
 
         assert cue == "first line\nsecond line"
+
+    def test_leading_non_breaking_spaces_on_the_first_line_are_kept(self):
+        """Leading non-breaking spaces are a line's indentation, which the SCC
+        reader uses to place a line right of the cue's origin. Stripping the
+        cue took them off its first line.
+        """
+        cue = self._cue(
+            CaptionNode.create_text("\xa0\xa0MOLLY:"),
+            CaptionNode.create_break(),
+            CaptionNode.create_text("The story"),
+        )
+
+        assert cue == "\xa0\xa0MOLLY:\nThe story"

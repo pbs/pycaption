@@ -9,6 +9,7 @@ from pycaption import (
 
 from .mixins import SAMITestingMixIn
 
+
 # Arbitrary values used to test relativization
 VIDEO_WIDTH = 640
 VIDEO_HEIGHT = 360
@@ -148,18 +149,14 @@ class TestWebVTTtoSAMIStyles(SAMITestingMixIn):
         assert "color:red;" in result or "color: red;" in result
 
     def test_positioning_alignment(self):
-        vtt = (
-            "WEBVTT\n\n" "00:00:01.000 --> 00:00:04.000 align:right\n" "Right aligned\n"
-        )
+        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:04.000 align:right\nRight aligned\n"
         caption_set = WebVTTReader().read(vtt)
         result = SAMIWriter().write(caption_set)
 
         assert "text-align:right;" in result
 
     def test_writing_direction_dropped(self):
-        vtt = (
-            "WEBVTT\n\n" "00:00:01.000 --> 00:00:04.000 vertical:rl\n" "Vertical text\n"
-        )
+        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:04.000 vertical:rl\nVertical text\n"
         caption_set = WebVTTReader().read(vtt)
         result = SAMIWriter().write(caption_set)
 
@@ -168,7 +165,7 @@ class TestWebVTTtoSAMIStyles(SAMITestingMixIn):
         assert "Vertical text" in result
 
     def test_plain_cue_regression(self):
-        vtt = "WEBVTT\n\n" "00:00:01.000 --> 00:00:04.000\n" "Plain caption text\n"
+        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:04.000\nPlain caption text\n"
         caption_set = WebVTTReader().read(vtt)
         result = SAMIWriter().write(caption_set)
 

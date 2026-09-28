@@ -1,0 +1,15 @@
+# minimum supported version
+FROM python:3.10-slim-bookworm
+
+WORKDIR /pycaption
+
+ADD ./.pre-commit-config.yaml /pycaption/
+ADD ./ruff.toml /pycaption/
+
+RUN apt-get -y update && \
+    apt-get -y install git && \
+    git init && \
+    pip install pre-commit==4.6.2 && \
+    pre-commit install --install-hooks
+
+RUN git config --global --add safe.directory /pycaption

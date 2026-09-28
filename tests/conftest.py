@@ -50,16 +50,16 @@ from tests.fixtures.dfxp import (  # noqa: F401
     sample_dfxp_with_templated_style,
     sample_dfxp_without_region_and_style,
 )
-from tests.fixtures.microdvd import missing_fps_sample_microdvd  # noqa: F401
-from tests.fixtures.microdvd import (
+from tests.fixtures.microdvd import (  # noqa: F401
+    missing_fps_sample_microdvd,
     sample_microdvd,
     sample_microdvd_2,
     sample_microdvd_empty,
     sample_microdvd_empty_cue_output,
     sample_microdvd_invalid_format,
 )
-from tests.fixtures.sami import sample_sami  # noqa: F401
-from tests.fixtures.sami import (
+from tests.fixtures.sami import (  # noqa: F401
+    sample_sami,
     sample_sami_double_br,
     sample_sami_empty,
     sample_sami_empty_cue_output,
@@ -94,7 +94,6 @@ from tests.fixtures.scc import (  # noqa: F401
     sample_no_positioning_at_all_scc,
     sample_scc_backspace_before_a_pac_ahead_of_the_cursor,
     sample_scc_blank_columns_abandoned_before_a_full_line,
-    sample_scc_blank_columns_abandoned_by_a_line_break,
     sample_scc_created_dfxp_with_wrongly_closing_spans,
     sample_scc_doubled_mid_row_before_punctuation,
     sample_scc_doubled_pac_with_tab_offset,
@@ -126,18 +125,31 @@ from tests.fixtures.scc import (  # noqa: F401
     sample_scc_multiple_formats,
     sample_scc_multiple_positioning,
     sample_scc_no_explicit_end_to_last_caption,
-    sample_scc_pac_restating_the_origin_overwrites_the_line,
+    sample_scc_pac_pointing_back_over_a_full_row_with_less_text,
     sample_scc_pac_restating_the_position_after_text,
+    sample_scc_pac_within_a_tab_offset_of_a_mid_row_code,
+    sample_scc_pac_within_a_tab_offset_of_an_overwrite,
     sample_scc_paint_on_edm,
     sample_scc_paint_on_row_and_column_jump_in_one_pac,
     sample_scc_paint_on_row_plus_one_large_column_jump,
     sample_scc_pop_on,
+    sample_scc_pop_on_line_starting_left_of_the_origin,
+    sample_scc_pop_on_line_starting_with_skipped_columns,
+    sample_scc_pop_on_pac_overriding_the_line_start_before_text,
+    sample_scc_pop_on_pac_overriding_the_line_start_far_from_it,
+    sample_scc_pop_on_pac_pointing_back_past_the_start_of_the_line,
+    sample_scc_pop_on_pac_pulling_back_over_skipped_columns,
     sample_scc_pop_on_row_and_column_jump_in_one_pac,
     sample_scc_pop_on_row_plus_one_large_column_jump,
+    sample_scc_pop_on_tab_offset_on_the_line_below_an_empty_row,
     sample_scc_produces_captions_with_start_and_end_time_the_same,
     sample_scc_restated_origin_pac_refilling_a_long_line,
+    sample_scc_roll_up_pac_restating_the_row_mid_row,
+    sample_scc_roll_up_pac_restating_the_row_mid_word,
+    sample_scc_roll_up_restated_row_rolled_into_a_long_line,
     sample_scc_roll_up_row_and_column_jump_in_one_pac,
     sample_scc_roll_up_row_plus_one_large_column_jump,
+    sample_scc_roll_up_row_refilled_then_rolled,
     sample_scc_roll_up_ru2,
     sample_scc_roll_up_ru3,
     sample_scc_row_jump_with_pending_reposition,
@@ -156,6 +168,7 @@ from tests.fixtures.scc import (  # noqa: F401
     sample_scc_with_ampersand_character,
     sample_scc_with_extended_characters,
     sample_scc_with_italics,
+    sample_scc_with_line_indented_past_the_last_column,
     sample_scc_with_line_too_long,
     sample_scc_with_spaces_at_eol_paint,
     sample_scc_with_spaces_at_eol_pop,
@@ -163,9 +176,9 @@ from tests.fixtures.scc import (  # noqa: F401
     sample_scc_with_unknown_commands,
     scc_that_generates_webvtt_with_proper_newlines,
 )
-from tests.fixtures.srt import sample_srt_ascii  # noqa: F401
-from tests.fixtures.srt import (
+from tests.fixtures.srt import (  # noqa: F401
     sample_srt,
+    sample_srt_ascii,
     sample_srt_blank_lines,
     sample_srt_empty,
     sample_srt_empty_cue_output,

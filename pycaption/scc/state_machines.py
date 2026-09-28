@@ -65,7 +65,8 @@ class _PositioningTracker:
           further out abandons the line and repositions, unless it merely
           restates the position already in effect: re-asserting a position
           is not a move, so it cannot start a new cue however much text has
-          been written since.
+          been written since. On a line a break opened that has no text yet,
+          any column continues it: the PAC only overrides the one before it.
         - Any other row jump (a skipped row, or a jump backwards): Use
           repositioning (creates new cue). A skipped row is not an
           intentional blank line to preserve — CEA-608 PACs only declare an
@@ -115,95 +116,127 @@ class _PositioningTracker:
 
         # Handle row jumps
         if new_row > row:
-            is_large_column_jump = (
-                column_jump_forces_reposition and abs(new_col - col) > 3
+            self._jump_rows_forward(
+                positioning, row, col, column_jump_forces_reposition
             )
-
-            # A jump to the very next row: use a line break. But if a
-            # repositioning was already pending and unconsumed (no text was
-            # ever written at the current position), this row jump is
-            # continuing that same unresolved position change, not wrapping
-            # text — so it must stay a repositioning rather than become a
-            # break. Likewise, in paint-on mode, pairing the row+1 jump
-            # with a column jump bigger than a tab offset means the new PAC
-            # almost certainly targets an unrelated, independently-positioned
-            # region rather than wrapping the current text.
-            if (
-                new_row == row + 1
-                and not self._repositioning_required
-                and not is_large_column_jump
-            ):
-                self._positions.append((new_row, col))
-                self._breaks_required = 1
-                self._last_column = new_col
-                # The new line starts where the PAC points and carries no text
-                # yet, but the caption keeps _positions[0] as its origin.
-                self._cursor_column = new_col
-                # Text arriving on the new line cannot overwrite the old one,
-                # and blank columns owed to the line being left behind are not
-                # indentation for the line the break opens
-                self._pending_overlap = 0
-                self._pending_padding = 0
-                self._line_has_text = False
-            # A skipped row, a jump backwards, or a row+1 jump with a large
-            # paint-on column jump: use repositioning (new cue)
-            else:
-                self._reposition(positioning)
         # A jump backwards is never text flowing onto the next line
         elif new_row < row:
             self._reposition(positioning)
         # Same row, and either a Tab Offset, a PAC restating the position
-        # already in effect, or a column within a tab offset of where the text
-        # ended: a continuation of the line being written
-        elif is_offset or positioning == current or abs(new_col - cursor) <= 3:
-            if is_offset:
-                # The offset resolves the PAC it follows: this, not that PAC's
-                # own column, is where the text starts, so there is nothing
-                # behind the cursor left to overwrite. An offset that resolves
-                # behind the text is moving back over it rather than nudging the
-                # PAC onto the cursor, and the overwrite it does own is measured
-                # below.
-                self._pending_overlap = 0
-            if not self._origin_locked and not self._breaks_required:
-                # Nothing written at this origin yet, so the command still
-                # indents it (a PAC immediately followed by a Tab Offset)
-                self._positions = [positioning]
-                self._cursor_column = new_col
-            elif is_offset and not self._line_has_text:
-                # The line the break opened carries no text yet, so the offset
-                # still indents it. The caption keeps the origin it already has
-                # — only where this line starts moves.
-                self._last_column = new_col
-                self._cursor_column = new_col
-            elif is_offset and new_col >= cursor:
-                # A Tab Offset reached part-way through a line skips forward
-                # over screen columns the text never filled, so they arrive as
-                # spaces rather than closing up against the text before them
-                if new_col > cursor:
-                    self._pending_padding += new_col - cursor
-                    self._cursor_column = new_col
-            else:
-                overlap = cursor - new_col
-                if overlap < 0:
-                    # The columns between the text and the PAC are blank
-                    # screen columns, not a seam to close up
-                    self._pending_padding += -overlap
-                # A command pointing back over text already written is either a
-                # real overwrite or an evaluation-order artifact: a PAC read
-                # before the Tab Offset or mid-row code that nudges it forward
-                # onto the cursor. Nothing here can tell them apart, so record
-                # what it would cover and let the next command settle it — an
-                # offset or mid-row code cancels it, arriving text confirms it.
-                # A PAC sets the cursor, so however far back it points is
-                # covered, not just the tab-offset window: text following a PAC
-                # that restates a column behind the text overwrites from there.
-                self._pending_overlap = max(overlap, 0)
-                # Never rewind on the PAC alone: the cursor stays where the text
-                # left it until text arrives to confirm the overwrite, which is
-                # what settles the overlap and moves the cursor back.
-                self._cursor_column = max(cursor, new_col)
+        # already in effect, a column within a tab offset of where the text
+        # ended, or any column of a line a break opened (still pending, so no
+        # text has reached it yet): a continuation of the line being written
+        elif (
+            is_offset
+            or positioning == current
+            or abs(new_col - cursor) <= 3
+            or self._breaks_required
+        ):
+            self._continue_line(positioning, cursor, is_offset)
         else:
             self._reposition(positioning)
+
+    def _jump_rows_forward(self, positioning, row, col, column_jump_forces_reposition):
+        """Handle a PAC on a row below the current one: a line break when it is
+        the very next row, a repositioning otherwise.
+
+        :param col: the column the current line started at
+        """
+        new_row, new_col = positioning
+        is_large_column_jump = column_jump_forces_reposition and abs(new_col - col) > 3
+
+        # A jump to the very next row: use a line break. But if a
+        # repositioning was already pending and unconsumed (no text was
+        # ever written at the current position), this row jump is
+        # continuing that same unresolved position change, not wrapping
+        # text — so it must stay a repositioning rather than become a
+        # break. Likewise, in paint-on mode, pairing the row+1 jump
+        # with a column jump bigger than a tab offset means the new PAC
+        # almost certainly targets an unrelated, independently-positioned
+        # region rather than wrapping the current text.
+        if (
+            new_row == row + 1
+            and not self._repositioning_required
+            and not is_large_column_jump
+        ):
+            self._positions.append((new_row, col))
+            self._breaks_required = 1
+            self._last_column = new_col
+            # The new line starts where the PAC points and carries no text
+            # yet, but the caption keeps _positions[0] as its origin.
+            self._cursor_column = new_col
+            # Text arriving on the new line cannot overwrite the old one,
+            # and blank columns owed to the line being left behind are not
+            # indentation for the line the break opens
+            self._pending_overlap = 0
+            self._pending_padding = 0
+            self._line_has_text = False
+        # A skipped row, or a row+1 jump with a large paint-on column jump:
+        # use repositioning (new cue)
+        else:
+            self._reposition(positioning)
+
+    def _continue_line(self, positioning, cursor, is_offset):
+        """Handle a same-row command that continues the line being written.
+
+        :param cursor: the column just past the last character on the line
+        """
+        new_col = positioning[1]
+        if is_offset:
+            # The offset resolves the PAC it follows: this, not that PAC's
+            # own column, is where the text starts, so there is nothing
+            # behind the cursor left to overwrite. An offset that resolves
+            # behind the text is moving back over it rather than nudging the
+            # PAC onto the cursor, and the overwrite it does own is measured
+            # below.
+            self._pending_overlap = 0
+        if not self._origin_locked and not self._breaks_required:
+            # Nothing written at this origin yet, so the command still
+            # indents it (a PAC immediately followed by a Tab Offset)
+            self._positions = [positioning]
+            self._cursor_column = new_col
+        elif is_offset and not self._line_has_text:
+            # The line the break opened carries no text yet, so the offset
+            # still indents it. The caption keeps the origin it already has
+            # — only where this line starts moves.
+            self._last_column = new_col
+            self._cursor_column = new_col
+        elif is_offset and new_col >= cursor:
+            # A Tab Offset reached part-way through a line skips forward
+            # over screen columns the text never filled, so they arrive as
+            # spaces rather than closing up against the text before them
+            if new_col > cursor:
+                self._pending_padding += new_col - cursor
+                self._cursor_column = new_col
+        elif not self._line_has_text and new_col < cursor:
+            # A PAC pointing back over a line that carries no text yet has
+            # nothing to overwrite: it moves where the line starts, as a later
+            # PAC overrides an earlier one. Blank columns an earlier PAC skipped
+            # stay owed only up to the column this one points at.
+            self._pending_padding = max(self._pending_padding - (cursor - new_col), 0)
+            self._pending_overlap = 0
+            self._last_column = new_col
+            self._cursor_column = new_col
+        else:
+            overlap = cursor - new_col
+            if overlap < 0:
+                # The columns between the text and the PAC are blank
+                # screen columns, not a seam to close up
+                self._pending_padding += -overlap
+            # A command pointing back over text already written is either a
+            # real overwrite or an evaluation-order artifact: a PAC read
+            # before the Tab Offset or mid-row code that nudges it forward
+            # onto the cursor. Nothing here can tell them apart, so record
+            # what it would cover and let the next command settle it — an
+            # offset or mid-row code cancels it, arriving text confirms it.
+            # A PAC sets the cursor, so however far back it points is
+            # covered, not just the tab-offset window: text following a PAC
+            # that restates a column behind the text overwrites from there.
+            self._pending_overlap = max(overlap, 0)
+            # Never rewind on the PAC alone: the cursor stays where the text
+            # left it until text arrives to confirm the overwrite, which is
+            # what settles the overlap and moves the cursor back.
+            self._cursor_column = max(cursor, new_col)
 
     def _reposition(self, positioning):
         """Abandon the current origin for a new one, requiring a new cue.
@@ -267,6 +300,18 @@ class _PositioningTracker:
         command rather than by text.
         """
         self._pending_overlap = 0
+
+    def get_line_start_column(self):
+        """Return the column the line being written starts at, or None.
+
+        Only meaningful before any text lands on the line: blank columns a PAC
+        skipped are still owed to it, and they are where it starts on screen.
+
+        :rtype: int | None
+        """
+        if self._cursor_column is None:
+            return None
+        return self._cursor_column - self._pending_padding
 
     def get_current_position(self):
         """Returns the current usable position

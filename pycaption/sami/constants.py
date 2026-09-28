@@ -10,6 +10,7 @@ from cssutils import log
 
 from ..geometry import HorizontalAlignmentEnum
 
+
 log.setLevel(FATAL)
 
 SAMI_BASE_MARKUP = """

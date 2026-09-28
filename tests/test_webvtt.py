@@ -105,7 +105,7 @@ class TestWebVTTReader(ReaderTestingMixIn):
         # todo: same assert w/ different arguments -> this can be parametrized;
         with pytest.raises(CaptionReadError):
             WebVTTReader(ignore_timing_errors=False).read(
-                "WEBVTT\n\n" "00:00:20.000 --> 00:00:10.000\n" "foo bar baz"
+                "WEBVTT\n\n00:00:20.000 --> 00:00:10.000\nfoo bar baz"
             )
 
         with pytest.raises(CaptionReadError):
@@ -129,9 +129,7 @@ class TestWebVTTReader(ReaderTestingMixIn):
         # Even if timing errors are ignored, this has to raise an exception
         with pytest.raises(CaptionReadSyntaxError):
             WebVTTReader().read(
-                "WEBVTT\n\n"
-                "NOTE invalid cue stamp\n\n"
-                "00:00:20.000 --> \nfoo bar baz\n"
+                "WEBVTT\n\nNOTE invalid cue stamp\n\n00:00:20.000 --> \nfoo bar baz\n"
             )
 
         # And this too
@@ -311,9 +309,7 @@ class TestWebVTTRegionParsing:
         assert cue.layout_info.webvtt_positioning == "region:r1"
 
     def test_invalid_region_reference_ignored(self):
-        vtt = (
-            "WEBVTT\n\n" "00:00:01.000 --> 00:00:03.000 region:nonexistent\n" "Hello\n"
-        )
+        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000 region:nonexistent\nHello\n"
         captions = self.reader.read(vtt)
         cue = captions.get_captions("en-US")[0]
         # Falls back to raw positioning passthrough
@@ -589,7 +585,7 @@ class TestWebVTTInlineMarkupParsing:
     def test_multiline_cue_with_style_spanning_lines(self):
         from pycaption.base import CaptionNode
 
-        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\n" "<i>line one\nline two</i>\n"
+        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\n<i>line one\nline two</i>\n"
         captions = self.reader.read(vtt)
         cue = captions.get_captions("en-US")[0]
         nodes = cue.nodes
@@ -697,7 +693,7 @@ class TestWebVTTInlineMarkupParsing:
     def test_unclosed_tag_spanning_multiline_cue(self):
         from pycaption.base import CaptionNode
 
-        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\n" "<i>line one\nline two\n"
+        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\n<i>line one\nline two\n"
         captions = self.reader.read(vtt)
         cue = captions.get_captions("en-US")[0]
         nodes = cue.nodes
@@ -856,11 +852,7 @@ Hello
         assert layout.origin.x == Size(70, UnitEnum.PERCENT)
 
     def test_position_alignment_none_when_unspecified(self):
-        vtt = (
-            "WEBVTT\n\n"
-            "00:00:01.000 --> 00:00:03.000 position:50% line:80%\n"
-            "Hello\n"
-        )
+        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000 position:50% line:80%\nHello\n"
         captions = self.reader.read(vtt)
         cue = captions.get_captions("en-US")[0]
         layout = cue.layout_info
@@ -958,7 +950,7 @@ Hello
         assert cues[2].layout_info.origin.x == Size(20.0, UnitEnum.PERCENT)
 
     def test_line_with_alignment_subvalue(self):
-        vtt = "WEBVTT\n\n" "00:00:01.000 --> 00:00:03.000 line:80%,center\n" "Hello\n"
+        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000 line:80%,center\nHello\n"
         captions = self.reader.read(vtt)
         cue = captions.get_captions("en-US")[0]
         layout = cue.layout_info
@@ -1032,10 +1024,7 @@ Hello
 
     def test_position_only_no_false_overflow_warning(self):
         vtt = (
-            "WEBVTT\n\n"
-            "00:00:01.000 --> 00:00:03.000 position:70%\n"
-            "Line one\n"
-            "Line two\n"
+            "WEBVTT\n\n00:00:01.000 --> 00:00:03.000 position:70%\nLine one\nLine two\n"
         )
         with warnings.catch_warnings(record=True) as caught:
             warnings.simplefilter("always")
@@ -1657,7 +1646,7 @@ class TestWebVTTLineOverflowWarning:
             assert "3 lines" in str(caption_warnings[0].message)
 
     def test_no_warning_within_bounds(self):
-        vtt = "WEBVTT\n\n" "00:00:01.000 --> 00:00:03.000 line:50%\n" "Single line\n"
+        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000 line:50%\nSingle line\n"
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
             self.reader.read(vtt)
@@ -1668,11 +1657,7 @@ class TestWebVTTLineOverflowWarning:
 
     def test_no_warning_without_line_setting(self):
         vtt = (
-            "WEBVTT\n\n"
-            "00:00:01.000 --> 00:00:03.000\n"
-            "Line one\n"
-            "Line two\n"
-            "Line three\n"
+            "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\nLine one\nLine two\nLine three\n"
         )
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
@@ -1684,12 +1669,7 @@ class TestWebVTTLineOverflowWarning:
 
     def test_no_warning_at_boundary(self):
         # line:80% + 2 lines × 6.67% = 93.3% — within bounds
-        vtt = (
-            "WEBVTT\n\n"
-            "00:00:01.000 --> 00:00:03.000 line:80%\n"
-            "Line one\n"
-            "Line two\n"
-        )
+        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000 line:80%\nLine one\nLine two\n"
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
             self.reader.read(vtt)
@@ -1750,7 +1730,7 @@ class TestWebVTTRegionRoundtrip:
         assert "width:80%" in result
 
     def test_no_region_block_when_none_defined(self):
-        vtt = "WEBVTT\n\n" "00:00:01.000 --> 00:00:03.000\n" "Hello\n"
+        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\nHello\n"
         caption_set = self.reader.read(vtt)
         result = WebVTTWriter().write(caption_set)
         assert "REGION" not in result

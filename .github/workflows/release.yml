@@ -17,6 +17,9 @@ jobs:
     steps:
     - uses: actions/checkout@v7
 
+    - name: Code checks
+      run: ./scripts/code_checks/run_code_checks.sh --show-diff-on-failure
+
     - name: Set up Python
       uses: actions/setup-python@v6
       with:
