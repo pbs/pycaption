@@ -4,6 +4,8 @@ Parses SAMI documents into pycaption CaptionSet objects, handling CSS
 styles, margin-based positioning, and multi-language content.
 """
 
+import re
+
 from bs4 import BeautifulSoup, NavigableString
 
 from ..base import BaseReader, Caption, CaptionList, CaptionNode, CaptionSet
@@ -13,6 +15,9 @@ from .parser import SAMIParser
 
 
 _TAG_TO_STYLE = {"i": "italics", "b": "bold", "u": "underline"}
+
+# A line break plus the pretty-print indentation of the closing tag.
+_TRAILING_WHITESPACE_RE = re.compile("[\n\r][ \t\n\r]*$")
 
 
 class SAMIReader(BaseReader):
@@ -203,8 +208,9 @@ class SAMIReader(BaseReader):
         if isinstance(tag, NavigableString):
             tag_text = str(tag)
             if tag_text and tag_text[0] in "\n\r":
-                tag_text = tag_text.lstrip()
-            tag_text = tag_text.rstrip("\n\r")
+                # Not a bare lstrip(): U+00A0 is line indentation, not markup.
+                tag_text = tag_text.lstrip(" \t\n\r")
+            tag_text = _TRAILING_WHITESPACE_RE.sub("", tag_text)
             if not tag_text:
                 return
             self.line.append(CaptionNode.create_text(tag_text, inherit_from))

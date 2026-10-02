@@ -13,6 +13,7 @@ from bs4 import BeautifulSoup
 
 from ..base import BaseWriter, CaptionNode
 from ..geometry import HorizontalAlignmentEnum, LineAlignmentEnum, WritingDirectionEnum
+from ..utils import encode_leading_nbsp
 from .constants import (
     DFXP_ATTR_XML_ID,
     DFXP_ATTR_XML_LANG,
@@ -206,7 +207,9 @@ class DFXPWriter(BaseWriter):
         start = caption.format_start()
         end = caption.format_end()
         p = dfxp.new_tag("p", begin=start, end=end)
-        p.string = self._recreate_text(caption, dfxp, caption_set, lang)
+        p.string = encode_leading_nbsp(
+            self._recreate_text(caption, dfxp, caption_set, lang)
+        )
 
         if dfxp.find("style", {DFXP_ATTR_XML_ID: "p"}):
             p["style"] = "p"

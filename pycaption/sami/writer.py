@@ -11,6 +11,7 @@ from bs4 import BeautifulSoup
 
 from ..base import BaseWriter, CaptionNode
 from ..geometry import HorizontalAlignmentEnum
+from ..utils import encode_leading_nbsp
 from .constants import HORIZONTAL_ALIGNMENT_MAP, SAMI_BASE_MARKUP
 
 
@@ -104,7 +105,7 @@ class SAMIWriter(BaseWriter):
             p["style"] = p_style
 
         p["class"] = self._recreate_p_lang(caption, lang, captions)
-        p.string = self._recreate_text(caption.nodes)
+        p.string = encode_leading_nbsp(self._recreate_text(caption.nodes))
 
         sync.append(p)
 

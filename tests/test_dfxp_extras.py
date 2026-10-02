@@ -2,6 +2,7 @@ from copy import deepcopy
 
 from bs4 import BeautifulSoup
 
+from pycaption.base import Caption, CaptionList, CaptionNode, CaptionSet
 from pycaption.dfxp import (
     DFXP_DEFAULT_REGION,
     DFXP_DEFAULT_REGION_ID,
@@ -146,3 +147,22 @@ class TestLegacyDFXPWriter:
         result = LegacyDFXPWriter().write(caption_set)
 
         assert result.count("foxy_the_squirrel") == 2
+
+    def test_nbsp_line_indentation_is_kept(self):
+        nodes = [
+            CaptionNode.create_text("\xa0\xa0\xa0MOLLY:"),
+            CaptionNode.create_break(),
+            CaptionNode.create_text("\xa0\xa0Part one"),
+        ]
+        caption_set = CaptionSet(
+            {"en-US": CaptionList([Caption(1000000, 2000000, nodes)])}
+        )
+
+        result = LegacyDFXPWriter().write(caption_set)
+
+        assert "&#160;&#160;&#160;MOLLY:<br/>\n    \xa0\xa0Part one" in result
+        caption = DFXPReader().read(result).get_captions("en-US")[0]
+        assert [n.content for n in caption.nodes if n.type_ == CaptionNode.TEXT] == [
+            "\xa0\xa0\xa0MOLLY:",
+            "\xa0\xa0Part one",
+        ]

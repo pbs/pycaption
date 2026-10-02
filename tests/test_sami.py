@@ -2,7 +2,13 @@ from copy import deepcopy
 
 import pytest
 
-from pycaption import CaptionReadNoCaptions, CaptionReadSyntaxError, SAMIReader
+from pycaption import (
+    CaptionReadNoCaptions,
+    CaptionReadSyntaxError,
+    SAMIReader,
+    SAMIWriter,
+)
+from pycaption.base import Caption, CaptionList, CaptionNode, CaptionSet
 from pycaption.exceptions import CaptionReadTimingError
 from pycaption.geometry import HorizontalAlignmentEnum, Size, UnitEnum  # noqa
 from tests.mixins import ReaderTestingMixIn
@@ -207,3 +213,59 @@ class TestSAMIReader(ReaderTestingMixIn):
 
         assert paragraph_1.start == paragraph_2.start
         assert paragraph_1.end == paragraph_2.end
+
+    def test_nbsp_line_indentation_is_kept(self, sample_sami_with_nbsp_indentation):
+        caption = self.reader.read(sample_sami_with_nbsp_indentation).get_captions(
+            "en-US"
+        )[0]
+
+        assert _texts(caption) == [
+            "\xa0\xa0\xa0MOLLY:",
+            '"The Story Knife."',
+            "\xa0\xa0Part one",
+        ]
+
+    def test_pretty_print_whitespace_after_a_line_is_dropped(
+        self, sample_sami_with_nbsp_only_line
+    ):
+        caption = self.reader.read(sample_sami_with_nbsp_only_line).get_captions(
+            "en-US"
+        )[0]
+
+        assert _texts(caption) == ["one", "\xa0\xa0", "three"]
+
+
+def _texts(caption):
+    """Return the content of a caption's text nodes."""
+    return [node.content for node in caption.nodes if node.type_ == CaptionNode.TEXT]
+
+
+class TestSAMIWriterNbspIndentation:
+    def setup_class(self):
+        nodes = [
+            CaptionNode.create_text("\xa0\xa0\xa0MOLLY:"),
+            CaptionNode.create_break(),
+            CaptionNode.create_text('"The Story Knife."'),
+            CaptionNode.create_break(),
+            CaptionNode.create_text("\xa0\xa0Part one"),
+        ]
+        caption = Caption(1000000, 2000000, nodes)
+        self.caption_set = CaptionSet({"en-US": CaptionList([caption])})
+
+    def test_only_first_line_indentation_is_written_as_entities(self):
+        sami = SAMIWriter().write(self.caption_set)
+
+        assert (
+            '&#160;&#160;&#160;MOLLY:<br/>\n    "The Story Knife."<br/>\n'
+            "    \xa0\xa0Part one"
+        ) in sami
+
+    def test_indentation_survives_a_round_trip(self):
+        sami = SAMIWriter().write(self.caption_set)
+
+        caption = SAMIReader().read(sami).get_captions("en-US")[0]
+        assert _texts(caption) == [
+            "\xa0\xa0\xa0MOLLY:",
+            '"The Story Knife."',
+            "\xa0\xa0Part one",
+        ]
