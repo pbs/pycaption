@@ -1,5 +1,15 @@
 Changelog
 ---------
+2.3.13
+^^^^^^
+  - Fix ``DFXPWriter``, ``LegacyDFXPWriter`` and ``SAMIWriter`` dropping the
+    non-breaking spaces that indent a cue's first line, which drew centred
+    and right-justified captions flush left. They are now written as
+    ``&#160;``; indentation on later lines is unchanged.
+  - Fix ``DFXPReader`` and ``SAMIReader`` stripping non-breaking spaces at
+    the start of a line along with the markup's pretty-print whitespace, so
+    line indentation now survives a round trip.
+
 2.3.12
 ^^^^^^
   - Fix ``SCCReader`` misclassifying mid-line PACs by measuring them from

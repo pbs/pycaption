@@ -1620,3 +1620,21 @@ def sample_dfxp_with_custom_tickrate():
   </div>
  </body>
 </tt>"""
+
+
+@pytest.fixture(scope="session")
+def sample_dfxp_with_nbsp_indentation():
+    return """\
+<?xml version="1.0" encoding="utf-8"?>
+<tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml"
+    xmlns:tts="http://www.w3.org/ns/ttml#styling">
+ <body>
+  <div xml:lang="en-US">
+   <p begin="00:00:01.000" end="00:00:02.000">
+    &#160;&#160;&#160;MOLLY:<br/>
+    "The Story Knife."<br/>
+    &#160;&#160;Part one
+   </p>
+  </div>
+ </body>
+</tt>"""
