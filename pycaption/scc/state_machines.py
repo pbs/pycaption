@@ -43,6 +43,10 @@ class _PositioningTracker:
         self._pending_padding = 0
         # Columns a PAC pointed back over, not yet known to be an overwrite.
         self._pending_overlap = 0
+        # Text written next lands on a row that already holds text, reached
+        # with no PAC or row change of its own: a same-row PAC, or a later
+        # line of the file picking up where the row left off.
+        self._row_continued = False
 
     def update_positioning(
         self, positioning, column_jump_forces_reposition=False, is_offset=False
@@ -171,6 +175,7 @@ class _PositioningTracker:
             self._pending_overlap = 0
             self._pending_padding = 0
             self._line_has_text = False
+            self._row_continued = False
         # A skipped row, or a row+1 jump with a large paint-on column jump:
         # use repositioning (new cue)
         else:
@@ -218,6 +223,10 @@ class _PositioningTracker:
             self._last_column = new_col
             self._cursor_column = new_col
         else:
+            if not is_offset and self._line_has_text:
+                # A PAC on the row being written moves on along it instead of
+                # opening a row of its own
+                self._row_continued = True
             overlap = cursor - new_col
             if overlap < 0:
                 # The columns between the text and the PAC are blank
@@ -258,6 +267,7 @@ class _PositioningTracker:
         # and its text is no longer in front of the cursor to be overwritten
         self._pending_padding = 0
         self._pending_overlap = 0
+        self._row_continued = False
 
     def advance_cursor(self, count):
         """Notify the tracker that ``count`` columns of text were written.
@@ -294,6 +304,22 @@ class _PositioningTracker:
         """
         overlap, self._pending_overlap = self._pending_overlap, 0
         return overlap
+
+    def start_burst(self):
+        """Note that a new line of the file starts: text it writes before any
+        positioning command continues the row the previous line left off on.
+        """
+        if self._line_has_text:
+            self._row_continued = True
+
+    def consume_row_continuation(self):
+        """Return and clear whether the text arriving next continues a row
+        without a PAC or row change of its own.
+
+        :rtype: bool
+        """
+        continued, self._row_continued = self._row_continued, False
+        return continued
 
     def cancel_pending_overlap(self):
         """Drop the overlap, the column the PAC pointed at being taken by a
@@ -361,6 +387,7 @@ class _PositioningTracker:
         self._line_has_text = False
         self._pending_padding = 0
         self._pending_overlap = 0
+        self._row_continued = False
         # Reset positions to None so the next PAC sets position fresh
         self._positions = [None]
 
@@ -405,9 +432,19 @@ class DefaultProvidingPositionTracker(_PositioningTracker):
         :param positioning: a tuple of ints (row, col)
         :type positioning: tuple[int]
         """
+        # Text written before any PAC was placed on the default row
+        unplaced_row = (
+            self.default[0]
+            if self._line_has_text and not any(self._positions)
+            else None
+        )
         if positioning:
             self.default = positioning
 
         super().update_positioning(
             positioning, column_jump_forces_reposition, is_offset
         )
+        if not is_offset and positioning and positioning[0] == unplaced_row:
+            # The PAC names the row that text already took, so the text after
+            # it carries on along the row instead of opening one of its own
+            self._row_continued = True

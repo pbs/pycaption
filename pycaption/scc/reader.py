@@ -112,6 +112,10 @@ from .state_machines import DefaultProvidingPositionTracker
 
 _TIMECODE_RE = re.compile(r"\d{2}:\d{2}:\d{2}[:;](\d{1,2})")
 
+# Appended to a too-long line whose text kept going on the row with no PAC or
+# row change of its own. Matched downstream, so the wording is part of the API.
+ROW_CONTINUATION_SUFFIX = " (continues on the row without a row change)"
+
 
 class SCCReader(BaseReader):
     """Converts a given unicode string to a CaptionSet.
@@ -243,12 +247,18 @@ class SCCReader(BaseReader):
 
     def _validate_line_lengths(self):
         """Raise CaptionLineLengthError if any line exceeds 32 characters."""
-        violations = [
-            f"around {cap.format_start()} - {self._describe_line_length(line)}"
-            for cap in (c.to_real_caption() for c in self.caption_stash._collection)
-            for line in cap.get_text().split("\n")
-            if len(line) > 32
-        ]
+        violations = []
+        for precap in self.caption_stash._collection:
+            cap = precap.to_real_caption()
+            raw = "".join(cap.get_text_nodes())
+            # get_text() strips the caption, dropping any lines it opens with
+            skipped = raw[: len(raw) - len(raw.lstrip())].count("\n")
+            for index, line in enumerate(cap.get_text().split("\n")):
+                if len(line) > 32:
+                    description = self._describe_line_length(
+                        line, (index + skipped) in precap.continued_rows
+                    )
+                    violations.append(f"around {cap.format_start()} - {description}")
         if violations:
             raise CaptionLineLengthError(
                 "32 character limit for caption cue in scc file.\n"
@@ -256,17 +266,23 @@ class SCCReader(BaseReader):
             )
 
     @staticmethod
-    def _describe_line_length(line):
+    def _describe_line_length(line, continues_row=False):
         """Describe a line too long for the row, separating the text from the
-        indentation that places it, which can be what pushes it off the row.
+        indentation that places it, which can be what pushes it off the row,
+        and naming a missing PAC or row change when that is what joined it.
         """
         text = line.lstrip("\xa0")
         indent = len(line) - len(text)
         if not indent:
-            return f"{line} - Length {len(line)}"
-        return (
-            f"{text} - Length {len(text)} plus a {indent}-column indent = {len(line)}"
-        )
+            description = f"{line} - Length {len(line)}"
+        else:
+            description = (
+                f"{text} - Length {len(text)} plus a {indent}-column indent "
+                f"= {len(line)}"
+            )
+        if continues_row:
+            description += ROW_CONTINUATION_SUFFIX
+        return description
 
     @staticmethod
     def _fix_last_captions_without_ending(caption_list):
@@ -312,6 +328,7 @@ class SCCReader(BaseReader):
         parts = r.findall(line.lower())
 
         self.time_translator.start_at(parts[0][0])
+        self.position_tracker.start_burst()
         word_list = parts[0][2].split(" ")
 
         for idx, word in enumerate(word_list):
