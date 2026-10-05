@@ -48,7 +48,8 @@ from .constants import (
 )
 
 
-_LEADING_WHITESPACE_RE = re.compile("^(?:[\n\r]+\\s*)?(.+)")
+# Pretty-print indentation only: \s would also eat U+00A0 line indentation.
+_LEADING_WHITESPACE_RE = re.compile("^(?:[\n\r]+[ \t\n\r]*)?(.+)")
 
 _DFXP_WRITING_MODE_MAP = {
     "tbrl": WritingDirectionEnum.VERTICAL_RL,

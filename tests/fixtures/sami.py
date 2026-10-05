@@ -722,3 +722,38 @@ def sample_sami_missing_start():
     </P></SYNC>
     </BODY></SAMI>
     """
+
+
+@pytest.fixture(scope="session")
+def sample_sami_with_nbsp_indentation():
+    return """
+<SAMI><HEAD><STYLE TYPE="text/css">
+<!--
+.ENCC {Name: English; lang: en-US; SAMI_Type: CC;}
+--></STYLE></HEAD><BODY>
+<SYNC Start="1000"><P class="ENCC">
+    &#160;&#160;&#160;MOLLY:<br/>
+    "The Story Knife."<br/>
+    &nbsp;&nbsp;Part one
+</P></SYNC>
+<SYNC Start="2000"><P class="ENCC">&nbsp;</P></SYNC>
+</BODY></SAMI>
+"""
+
+
+@pytest.fixture(scope="session")
+def sample_sami_with_nbsp_only_line():
+    return """
+<SAMI><HEAD><STYLE TYPE="text/css">
+<!--
+.ENCC {Name: English; lang: en-US; SAMI_Type: CC;}
+--></STYLE></HEAD><BODY>
+<SYNC Start="1000"><P class="ENCC">
+    one<br/>
+    &nbsp;&nbsp;
+    <br/>
+    three
+   </P></SYNC>
+<SYNC Start="2000"><P class="ENCC">&nbsp;</P></SYNC>
+</BODY></SAMI>
+"""

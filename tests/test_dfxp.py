@@ -453,6 +453,17 @@ class TestDFXPReader(ReaderTestingMixIn):
             WritingDirectionEnum.VERTICAL_RL
         )
 
+    def test_nbsp_line_indentation_is_kept(self, sample_dfxp_with_nbsp_indentation):
+        caption = self.reader.read(sample_dfxp_with_nbsp_indentation).get_captions(
+            "en-US"
+        )[0]
+
+        assert _texts(caption) == [
+            "\xa0\xa0\xa0MOLLY:",
+            '"The Story Knife."',
+            "\xa0\xa0Part one",
+        ]
+
 
 def _layout_at(x, y):
     """Build a top-left anchored Layout at the given percentage origin."""
@@ -460,6 +471,11 @@ def _layout_at(x, y):
         origin=Point(Size(x, UnitEnum.PERCENT), Size(y, UnitEnum.PERCENT)),
         alignment=Alignment(HorizontalAlignmentEnum.LEFT, VerticalAlignmentEnum.TOP),
     )
+
+
+def _texts(caption):
+    """Return the content of a caption's text nodes."""
+    return [node.content for node in caption.nodes if node.type_ == CaptionNode.TEXT]
 
 
 def _caption_set(nodes, layout_info=None):
@@ -866,3 +882,32 @@ class TestDFXPWriterLineAlignment:
 
         by_id, paragraph_region = self._regions(dfxp)
         assert list(by_id) == [paragraph_region]
+
+
+class TestDFXPWriterNbspIndentation:
+    def setup_class(self):
+        self.nodes = [
+            CaptionNode.create_text("\xa0\xa0\xa0MOLLY:"),
+            CaptionNode.create_break(),
+            CaptionNode.create_text('"The Story Knife."'),
+            CaptionNode.create_break(),
+            CaptionNode.create_text("\xa0\xa0Part one"),
+        ]
+
+    def test_only_first_line_indentation_is_written_as_entities(self):
+        dfxp = DFXPWriter().write(_caption_set(self.nodes))
+
+        assert (
+            '&#160;&#160;&#160;MOLLY:<br/>\n    "The Story Knife."<br/>\n'
+            "    \xa0\xa0Part one"
+        ) in dfxp
+
+    def test_indentation_survives_a_round_trip(self):
+        dfxp = DFXPWriter().write(_caption_set(self.nodes))
+
+        caption = DFXPReader().read(dfxp).get_captions("en-US")[0]
+        assert _texts(caption) == [
+            "\xa0\xa0\xa0MOLLY:",
+            '"The Story Knife."',
+            "\xa0\xa0Part one",
+        ]

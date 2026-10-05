@@ -10,6 +10,7 @@ from xml.sax.saxutils import escape
 from bs4 import BeautifulSoup
 
 from ..base import BaseWriter, CaptionNode, merge_concurrent_captions
+from ..utils import encode_leading_nbsp
 from .constants import DFXP_DEFAULT_REGION
 from .writer import DFXPWriter
 
@@ -204,7 +205,7 @@ class LegacyDFXPWriter(BaseWriter):
         start = caption.format_start()
         end = caption.format_end()
         p = dfxp.new_tag("p", begin=start, end=end)
-        p.string = self._recreate_text(caption, dfxp)
+        p.string = encode_leading_nbsp(self._recreate_text(caption, dfxp))
 
         if dfxp.find("style", {"xml:id": "p"}):
             p["style"] = "p"
