@@ -215,3 +215,13 @@ And: the samples decide the sensitivity. A plain-text sample reports "same" on a
 **Rule:** Spawn children with `sys.executable`, never a bare `python` — the interpreter running the script is the one guaranteed to exist. Any section that shells out gets an `except Exception` that degrades to a reported skip; a gate must never be able to cost the PR its report. Verify by running under `env -i PATH=/usr/bin:/bin`, which has `python3` but no `python`.
 
 **Applies to:** `check-last-pr`, any skill spawning a subprocess interpreter
+
+---
+
+## 18. `Caption.get_text()` strips, so it hides leading/trailing whitespace changes
+
+**What happened:** Reviewing PR #436 (OCTO-11623, first-line NBSP indentation), a probe compared `caption.get_text()` before and after a DFXP round trip and showed the first line's NBSPs as lost — an apparent defect in the very thing the PR fixed. `Caption.get_text()` (`pycaption/base.py`) ends in `.strip()`, and Python's `str.strip()` counts U+00A0 as whitespace. The nodes were correct.
+
+**Rule:** Any check about indentation, NBSP, or edge whitespace must compare `caption.nodes` (or `get_text_nodes()`), never `get_text()`. The behavior gate's `text_of()` uses `get_text()` too, so it is blind to this whole class of change — its "no flow changed" says nothing about whitespace PRs. Its built-in samples also carry no NBSP indentation; add one when a PR touches whitespace handling.
+
+**Applies to:** `check-last-pr`

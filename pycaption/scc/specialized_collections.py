@@ -53,6 +53,9 @@ class PreCaption:
         self.nodes = []
         self.style = {}
         self.layout_info = None
+        # Indices of the lines whose text continued on the row without a PAC
+        # or row change, for the line length check to name the cause
+        self.continued_rows = set()
 
     def to_real_caption(self):
         """Convert this mutable holder into an immutable Caption instance.
@@ -274,6 +277,7 @@ class CaptionCreator:
             _leftmost_line_starts(instructions) if caption_mode == "pop_on" else []
         )
         cue_index = 0
+        line_index = 0
         indenter = _LineIndenter(enabled=bool(leftmost_columns))
 
         for instruction in instructions:
@@ -289,7 +293,13 @@ class CaptionCreator:
                 self._still_editing.append(caption)
                 cue_index += 1
                 indenter.start_cue()
+                line_index = 0
                 continue
+
+            if instruction.is_explicit_break():
+                line_index += 1
+            elif instruction.continues_row:
+                caption.continued_rows.add(line_index)
 
             text = indenter.text_for(instruction, position)
             _append_caption_node(caption, instruction, text, position)
@@ -381,16 +391,38 @@ class InstructionNodeCreator:
             self._collection.append(node)
             self._position_tracer.acknowledge_position_changed()
 
+        # Where a continuation is recorded: on the overwrite marker if the text
+        # lands on columns a PAC pointed back over, so a row sent again in full
+        # can drop it without dropping one of text arriving later
+        continued = node
         overlap = self._position_tracer.consume_pending_overlap()
         if overlap and self._mark_overwrite(overlap, current_position):
+            continued = self._collection[-1]
             node = _InstructionNode.create_text(current_position)
             self._collection.append(node)
+
+        # The tracker is shared by the buffers, so the row it saw text on may
+        # be another buffer's: only this buffer's own text can be continued
+        if self._position_tracer.consume_row_continuation() and self._line_has_text():
+            continued.continues_row = True
 
         padding = self._position_tracer.consume_pending_padding()
         if padding:
             node.add_chars(" " * padding)
         node.add_chars(*chars)
         self._position_tracer.advance_cursor(len("".join(chars)))
+
+    def _line_has_text(self):
+        """Whether the line being written in this buffer already holds text
+
+        :rtype: bool
+        """
+        for node in reversed(self._collection):
+            if _ends_line(node):
+                return False
+            if node.is_text_node() and node.text:
+                return True
+        return False
 
     def _settle_line_start(self):
         """Record on the break opening this line the column it now starts at
@@ -645,7 +677,11 @@ class InstructionNodeCreator:
         for idx, stash in enumerate(stash_list):
             # Resolved per stash: each is a row of its own, so an overwrite
             # is measured against its row rather than the rows joined together
-            new_collection.extend(_resolve_overwrites(stash._collection))
+            new_collection.extend(
+                _clear_continuations_of_fitting_rows(
+                    _resolve_overwrites(stash._collection)
+                )
+            )
 
             # use space to separate the stashes, but don't add final space
             if idx < len(stash_list) - 1:
@@ -878,6 +914,10 @@ class _InstructionNode:
         # only place a later line's own column survives
         self.line_start = line_start
         self.columns = columns
+        # For text, whether it continued a row already holding text, with no
+        # PAC or row change of its own; for an overwrite, whether the text
+        # after it did
+        self.continues_row = False
 
     def add_chars(self, *args):
         """This being a text node, add characters to it.
@@ -1099,7 +1139,10 @@ def _resolve_line_overwrites(line, line_start):
     """
     if not any(node.is_overwrite() for node in line):
         return line
-    line = [copy.copy(node) if node.is_text_node() else node for node in line]
+    line = [
+        copy.copy(node) if node.is_text_node() or node.is_overwrite() else node
+        for node in line
+    ]
     if line_start is None:
         line_start = next(
             (
@@ -1120,7 +1163,22 @@ def _resolve_line_overwrites(line, line_start):
                 arriving += len(node.text)
         if line_start + _line_length(line) > 32 and arriving >= marker.columns:
             _drop_last_columns(line[:index], marker.columns)
+            if not _line_length(line[:index]):
+                # The row was sent again in full: nothing is left of it for
+                # the text arriving to have continued
+                _clear_continuations(line[: index + 1])
     return _join_across_markers(line)
+
+
+def _clear_continuations(nodes):
+    """Clear the row continuation of the text and overwrite nodes, the line's
+    own copies
+
+    :type nodes: list[_InstructionNode]
+    """
+    for node in nodes:
+        if node.is_text_node() or node.is_overwrite():
+            node.continues_row = False
 
 
 def _join_across_markers(line):
@@ -1138,7 +1196,11 @@ def _join_across_markers(line):
     for node in line:
         if node.is_overwrite():
             after_marker = True
+            continued = node.continues_row
             continue
+        if after_marker and node.is_text_node():
+            # The text the marker opened, a copy, takes on its continuation
+            node.continues_row |= continued
         if (
             after_marker
             and node.is_text_node()
@@ -1147,10 +1209,36 @@ def _join_across_markers(line):
         ):
             if node.text:
                 joined[-1].add_chars(node.text)
+            joined[-1].continues_row |= node.continues_row
         else:
             joined.append(node)
         after_marker = False
     return joined
+
+
+def _clear_continuations_of_fitting_rows(collection):
+    """Clear the row continuation of every line that fits the row
+
+    Simulated roll-up joins its rows onto one line, which can run past column
+    32 although no row did. The continuation has to be judged on its own row,
+    before the join, or it would take the blame for a length it did not cause.
+
+    The nodes are cleared in place, not copied: the row's nodes are shared with
+    the stash it is re-read from, and a row that fits keeps fitting.
+
+    :type collection: list[_InstructionNode]
+    :rtype: list[_InstructionNode]
+    """
+    line = []
+    for node in collection + [None]:
+        if node is not None and not _ends_line(node):
+            line.append(node)
+            continue
+        if _line_length(line) <= 32:
+            for line_node in line:
+                line_node.continues_row = False
+        line = []
+    return collection
 
 
 def _drop_last_columns(line, columns):

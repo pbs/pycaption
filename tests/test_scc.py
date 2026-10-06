@@ -693,21 +693,28 @@ class TestSCCReader(ReaderTestingMixIn):
                 simulate_roll_up=True,
             )
 
-        assert "HE'S YOUNG AND WELL, OK ABCDEFGHIJ - Length 34" in str(exc_info.value)
+        # Joined by the simulation, not by a row continuing without a PAC
+        assert exc_info.value.args[0].split("\n")[2] == (
+            "around 00:00:02.002 - HE'S YOUNG AND WELL, OK ABCDEFGHIJ - Length 34"
+        )
 
     def test_pac_pointing_back_over_a_full_row_with_less_text_is_rejected(
         self, sample_scc_pac_pointing_back_over_a_full_row_with_less_text
     ):
         """Four characters cannot cover the 31 columns the PAC points back
         over, so dropping them all would publish "AWXYZ" as if it were the
-        row. The line is left long, for the length check to report.
+        row. The line is left long, for the length check to report, as text
+        a PAC naming the same row kept on it.
         """
         with pytest.raises(CaptionLineLengthError) as exc_info:
             SCCReader().read(
                 sample_scc_pac_pointing_back_over_a_full_row_with_less_text
             )
 
-        assert "Length 36" in str(exc_info.value)
+        assert exc_info.value.args[0].split("\n")[2] == (
+            "around 00:00:03.036 - ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefWXYZ - "
+            "Length 36 (continues on the row without a row change)"
+        )
 
     def test_roll_up_row_refilled_then_rolled_keeps_the_refilled_row(
         self, sample_scc_roll_up_row_refilled_then_rolled
@@ -1191,12 +1198,12 @@ class TestSCCReader(ReaderTestingMixIn):
         assert exc_info.value.args[0].startswith(
             "32 character limit for caption cue in scc file."
         )
-        str_to_check = (
-            "was Cal l l l l l l l l l l l l l l l l l l l l l l l l l l l l "
-            "Denison, a friend - Length 81"
+        # Sent in one go after its PAC, nothing tells too much text apart
+        # from a missing PAC, so no cause is named
+        assert exc_info.value.args[0].split("\n")[2] == (
+            "around 00:00:04.733 - was Cal l l l l l l l l l l l l l l l l l l l "
+            "l l l l l l l l l Denison, a friend - Length 81"
         )
-        assert "around 00:00:04.733" in exc_info.value.args[0].split("\n")[2]
-        assert str_to_check in exc_info.value.args[0].split("\n")[2]
 
     def test_line_too_long_names_the_indent_pushing_it_off_the_row(
         self, sample_scc_with_line_indented_past_the_last_column
@@ -1211,6 +1218,169 @@ class TestSCCReader(ReaderTestingMixIn):
             "around 00:00:03.036 - ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEF - "
             "Length 32 plus a 27-column indent = 59"
         )
+
+    @pytest.mark.parametrize(
+        "fixture_name, simulate_roll_up, expected",
+        [
+            (
+                "sample_scc_indented_line_on_the_same_row_without_a_pac",
+                False,
+                "around 00:00:03.036 - ABCDEFGHIJKLMNOPQRSTABCDEFGHIJ - Length 30 "
+                "plus a 8-column indent = 38 "
+                "(continues on the row without a row change)",
+            ),
+            (
+                "sample_scc_roll_up_next_line_without_a_carriage_return",
+                True,
+                "around 00:00:01.001 - ABCDEFGHIJKLMNOPQRSTABCDEFGHIJKLMNOPQRST - "
+                "Length 40 (continues on the row without a row change)",
+            ),
+            (
+                "sample_scc_text_before_its_pac_on_the_same_row",
+                False,
+                "around 00:00:02.769 - ABCDEFGHIJKLMNOPQRSTABCDEFGHIJKLMNOPQRST - "
+                "Length 40 (continues on the row without a row change)",
+            ),
+            (
+                "sample_scc_caption_opening_with_a_blank_line_then_continuing_its_row",
+                False,
+                "around 00:00:03.036 - ABCDEFGHIJKLMNOPQRSTABCDEFGHIJKLMNOPQRST - "
+                "Length 40 (continues on the row without a row change)",
+            ),
+            (
+                "sample_scc_two_cues_the_second_continuing_its_row",
+                False,
+                "around 00:00:03.036 - ABCDEFGHIJKLMNOPQRSTABCDEFGHIJKLMNOPQRST - "
+                "Length 40 (continues on the row without a row change)",
+            ),
+            (
+                "sample_scc_pac_resending_a_row_in_full_then_a_line_continuing_it",
+                False,
+                "around 00:00:04.037 - ABCDEFGHIJKLMNOPQRSTABCDEFGHIJKLMNOPQRSTXY - "
+                "Length 42 (continues on the row without a row change)",
+            ),
+        ],
+    )
+    def test_line_too_long_names_the_missing_pac_or_row_change(
+        self, request, fixture_name, simulate_roll_up, expected
+    ):
+        """The next line's text kept going on the row with no PAC or Carriage
+        Return of its own, or text sent before any PAC was carried on by one
+        naming its row, so the error names that rather than reading as too
+        much text, even after a row sent again in full. A PAC naming the same
+        row is pinned by
+        test_pac_pointing_back_over_a_full_row_with_less_text_is_rejected.
+        The wording is matched downstream and must not change.
+        """
+        with pytest.raises(CaptionLineLengthError) as exc_info:
+            SCCReader().read(
+                request.getfixturevalue(fixture_name),
+                simulate_roll_up=simulate_roll_up,
+            )
+
+        assert exc_info.value.args[0].split("\n")[2:] == [expected]
+
+    @pytest.mark.parametrize(
+        "fixture_name, expected",
+        [
+            (
+                "sample_scc_long_line_after_a_row_change",
+                "around 00:00:03.036 - ABCDEFGHIJKLMNOPQRSTABCDEFGHIJKLMNOPQRST - "
+                "Length 40",
+            ),
+            (
+                "sample_scc_long_line_after_a_repositioning",
+                "around 00:00:03.036 - ABCDEFGHIJKLMNOPQRSTABCDEFGHIJKLMNOPQRST - "
+                "Length 40",
+            ),
+            (
+                "sample_scc_roll_up_long_line_after_a_carriage_return",
+                "around 00:00:02.002 - ABCDEFGHIJKLMNOPQRSTABCDEFGHIJKLMNOPQRST - "
+                "Length 40",
+            ),
+            (
+                "sample_scc_pac_resending_a_continued_row_in_full_past_the_last_column",
+                "around 00:00:04.037 - ABCDEFGHIJKLMNOPQRSTABCDEFGHIJKLMNOPQRST - "
+                "Length 40",
+            ),
+            (
+                "sample_scc_text_before_its_pac_on_another_row",
+                "around 00:00:02.769 - ABCDEFGHIJKLMNOPQRSTABCDEFGHIJKLMNOPQRST - "
+                "Length 40",
+            ),
+        ],
+    )
+    def test_line_too_long_after_a_row_of_its_own_names_no_cause(
+        self, request, fixture_name, expected
+    ):
+        """A row change, repositioning or Carriage Return between the lines of
+        the file starts a row of its own, so a long line sent after it is too
+        much text, not a continued row. So is a row a PAC sends again in full,
+        which leaves nothing of the row to continue, and text sent before any
+        PAC when the first one names another row.
+        """
+        with pytest.raises(CaptionLineLengthError) as exc_info:
+            SCCReader().read(request.getfixturevalue(fixture_name))
+
+        assert exc_info.value.args[0].split("\n")[2:] == [expected]
+
+    def test_line_too_long_after_a_switch_of_memory_names_no_cause(
+        self, sample_scc_pop_on_text_then_paint_on_line_without_a_pac
+    ):
+        """The row the text before the switch is on belongs to the pop-on
+        memory, so text written to another memory continues nothing on it.
+        """
+        with pytest.raises(CaptionLineLengthError) as exc_info:
+            SCCReader().read(sample_scc_pop_on_text_then_paint_on_line_without_a_pac)
+
+        assert exc_info.value.args[0].split("\n")[2:] == [
+            "around 00:00:02.002 - ABCDEFGHIJKLMNOPQRSTABCDEFGHIJKLMNOPQRST - Length 40"
+        ]
+
+    def test_line_too_long_names_the_cause_only_on_the_continued_line(
+        self, sample_scc_long_line_then_a_line_continuing_its_row
+    ):
+        """Of two lines too long in one caption, only the one that continued
+        its row without a PAC is said to.
+        """
+        with pytest.raises(CaptionLineLengthError) as exc_info:
+            SCCReader().read(sample_scc_long_line_then_a_line_continuing_its_row)
+
+        assert exc_info.value.args[0].split("\n")[2:] == [
+            "around 00:00:04.037 - ABCDEFGHIJKLMNOPQRSTABCDEFGHIJKLMNOPQRST - "
+            "Length 40",
+            "around 00:00:04.037 - ABCDEFGHIJKLMNOPQRSTABCDEFGHIJKLMNOPQRST - "
+            "Length 40 (continues on the row without a row change)",
+        ]
+
+    def test_roll_up_row_continued_without_a_pac_rolls_as_one_sent_in_one_go(
+        self,
+        sample_scc_roll_up_row_continued_without_a_pac_then_rolled,
+        sample_scc_roll_up_row_sent_in_one_go_then_rolled,
+    ):
+        """Noting that a row was continued must not change how it is joined
+        to the rows rolled up under it, doubled separators included.
+        """
+        continued, in_one_go = (
+            [
+                caption.get_text()
+                for caption in SCCReader()
+                .read(content, simulate_roll_up=True)
+                .get_captions("en-US")
+            ]
+            for content in (
+                sample_scc_roll_up_row_continued_without_a_pac_then_rolled,
+                sample_scc_roll_up_row_sent_in_one_go_then_rolled,
+            )
+        )
+
+        assert continued == in_one_go
+        assert in_one_go == [
+            "ABCDEFGHIJ",
+            "ABCDEFGHIJ KLMNO",
+            "ABCDEFGHIJ  KLMNO UVWXYZ",
+            "KLMNO  UVWXYZ END",
+        ]
 
     def test_mid_row_codes_not_adding_space_before_text(
         self,

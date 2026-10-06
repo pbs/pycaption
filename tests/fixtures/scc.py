@@ -1366,3 +1366,281 @@ Scenarist_SCC V1.0
 00:00:03:00\t942c 942f
 
 """
+
+
+# A roll-up row carrying on in the next line of the file with no Carriage
+# Return to roll it up first: 40 columns on the base row.
+@pytest.fixture(scope="session")
+def sample_scc_roll_up_next_line_without_a_carriage_return():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01:00\t9425 9425 94ad 94ad 9470 9470 c1c2 43c4 4546 c7c8 494a cb4c cdce 4fd0 5152 d354
+
+00:00:02:00\tc1c2 43c4 4546 c7c8 494a cb4c cdce 4fd0 5152 d354
+
+00:00:03:00\t94ad 94ad
+
+00:00:04:00\t942c 942c
+
+"""
+
+
+# "HI" at row 14, column 0, then a second line at row 15, column 8, whose text
+# carries on in the next line of the file with no PAC: 30 characters, 8
+# columns right of the cue's origin.
+@pytest.fixture(scope="session")
+def sample_scc_indented_line_on_the_same_row_without_a_pac():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01:00\t9420 942f 94ae 9420 9440 c849 9475 c1c2 43c4 4546 c7c8 494a cb4c cdce 4fd0 5152 d354
+
+00:00:02:00\tc1c2 43c4 4546 c7c8 494a
+
+00:00:03:00\t942c 942f
+
+"""
+
+
+# "HI" places a first caption on row 15. The next one writes its first part
+# with no PAC, so it lands on that row by default, then a PAC naming the same
+# row carries the text on along it: 40 columns.
+@pytest.fixture(scope="session")
+def sample_scc_text_before_its_pac_on_the_same_row():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01:00\t9420 9470 c849 942f
+
+00:00:02:00\t94ae 9420 c1c2 43c4 4546 c7c8 494a cb4c cdce 4fd0 5152 d354 9470 c1c2 43c4 4546 c7c8 494a cb4c cdce 4fd0 5152 d354 942f
+
+00:00:03:00\t942c
+
+"""
+
+
+# A PAC on row 14 with no text before the one on row 15, so the caption opens
+# with an empty line, then the row 15 text carries on in the next line of the
+# file with no PAC: 40 columns on the second line.
+@pytest.fixture(scope="session")
+def sample_scc_caption_opening_with_a_blank_line_then_continuing_its_row():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01:00\t9420 942f 94ae 9420 9440 9470 c1c2 43c4 4546 c7c8 494a cb4c cdce 4fd0 5152 d354
+
+00:00:02:00\tc1c2 43c4 4546 c7c8 494a cb4c cdce 4fd0 5152 d354
+
+00:00:03:00\t942c 942f
+
+"""
+
+
+# A two-line cue on rows 1 and 2, then a cue on row 14 whose text carries on
+# in the next line of the file with no PAC: 40 columns on the second cue.
+@pytest.fixture(scope="session")
+def sample_scc_two_cues_the_second_continuing_its_row():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01:00\t9420 942f 94ae 9420 9140 c849 91e0 c849 9440 c1c2 43c4 4546 c7c8 494a cb4c cdce 4fd0 5152 d354
+
+00:00:02:00\tc1c2 43c4 4546 c7c8 494a cb4c cdce 4fd0 5152 d354
+
+00:00:03:00\t942c 942f
+
+"""
+
+
+# "HI" on row 14, then the next line of the file moves to row 15 before
+# sending 40 columns in one go: the row changed, so nothing continued it.
+@pytest.fixture(scope="session")
+def sample_scc_long_line_after_a_row_change():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01:00\t9420 942f 94ae 9420 9440 c849
+
+00:00:02:00\t9470 c1c2 43c4 4546 c7c8 494a cb4c cdce 4fd0 5152 d354 c1c2 43c4 4546 c7c8 494a cb4c cdce 4fd0 5152 d354
+
+00:00:03:00\t942c 942f
+
+"""
+
+
+# "HI" on row 15, then the next line of the file repositions to row 1 before
+# sending 40 columns in one go: a cue of its own, not a continued row.
+@pytest.fixture(scope="session")
+def sample_scc_long_line_after_a_repositioning():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01:00\t9420 942f 94ae 9420 9470 c849
+
+00:00:02:00\t9140 c1c2 43c4 4546 c7c8 494a cb4c cdce 4fd0 5152 d354 c1c2 43c4 4546 c7c8 494a cb4c cdce 4fd0 5152 d354
+
+00:00:03:00\t942c 942f
+
+"""
+
+
+# A roll-up row "HI" rolled up by a Carriage Return on a line of its own, then
+# 40 columns sent in one go: the Carriage Return started a row of its own.
+@pytest.fixture(scope="session")
+def sample_scc_roll_up_long_line_after_a_carriage_return():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01:00\t9425 9425 94ad 94ad 9470 9470 c849
+
+00:00:02:00\t94ad 94ad
+
+00:00:03:00\tc1c2 43c4 4546 c7c8 494a cb4c cdce 4fd0 5152 d354 c1c2 43c4 4546 c7c8 494a cb4c cdce 4fd0 5152 d354
+
+00:00:04:00\t942c 942c
+
+"""
+
+
+# "HI" left in pop-on memory, then the next line of the file switches to
+# paint-on and sends 40 columns in one go with no PAC: a memory of its own,
+# so nothing on its row was continued.
+@pytest.fixture(scope="session")
+def sample_scc_pop_on_text_then_paint_on_line_without_a_pac():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01:00\t9420 94ae 9470 c849
+
+00:00:02:00\t9429 c1c2 43c4 4546 c7c8 494a cb4c cdce 4fd0 5152 d354 c1c2 43c4 4546 c7c8 494a cb4c cdce 4fd0 5152 d354
+
+00:00:03:00\t942c
+
+"""
+
+
+# A 40-column line sent in one go on row 14, then a row 15 line whose text
+# carries on in the next line of the file with no PAC: two lines too long,
+# only the second because of a continued row.
+@pytest.fixture(scope="session")
+def sample_scc_long_line_then_a_line_continuing_its_row():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01:00\t9420 942f 94ae 9420 9440 c1c2 43c4 4546 c7c8 494a cb4c cdce 4fd0 5152 d354 c1c2 43c4 4546 c7c8 494a cb4c cdce 4fd0 5152 d354
+
+00:00:02:00\t9470 c1c2 43c4 4546 c7c8 494a cb4c cdce 4fd0 5152 d354
+
+00:00:03:00\tc1c2 43c4 4546 c7c8 494a cb4c cdce 4fd0 5152 d354
+
+00:00:04:00\t942c 942f
+
+"""
+
+
+# A roll-up row "ABCDE" carried on to "ABCDEFGHIJ" by the next line of the
+# file with no PAC, then rolled up under three more rows.
+@pytest.fixture(scope="session")
+def sample_scc_roll_up_row_continued_without_a_pac_then_rolled():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01:00\t9426 9426 94ad 94ad 9470 9470 c1c2 43c4 4580
+
+00:00:02:00\t46c7 c849 4a80
+
+00:00:03:00\t94ad 94ad
+
+00:00:04:00\t9470 cb4c cdce 4f80
+
+00:00:05:00\t94ad 94ad
+
+00:00:06:00\t9470 d5d6 5758 d9da
+
+00:00:07:00\t94ad 94ad
+
+00:00:08:00\t9470 45ce c480
+
+00:00:09:00\t94ad 94ad 942c
+
+"""
+
+
+# As above, the first row "ABCDEFGHIJ" sent in one go.
+@pytest.fixture(scope="session")
+def sample_scc_roll_up_row_sent_in_one_go_then_rolled():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01:00\t9426 9426 94ad 94ad 9470 9470 c1c2 43c4 4546 c7c8 494a
+
+00:00:03:00\t94ad 94ad
+
+00:00:04:00\t9470 cb4c cdce 4f80
+
+00:00:05:00\t94ad 94ad
+
+00:00:06:00\t9470 d5d6 5758 d9da
+
+00:00:07:00\t94ad 94ad
+
+00:00:08:00\t9470 45ce c480
+
+00:00:09:00\t94ad 94ad 942c
+
+"""
+
+
+# "ABC" carried on to "ABCDE" by the next line of the file, then a PAC
+# restating the row's origin sends the row again in full, 40 columns: the
+# overwrite drops "ABCDE", so nothing of the row is left to have continued.
+@pytest.fixture(scope="session")
+def sample_scc_pac_resending_a_continued_row_in_full_past_the_last_column():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01:00\t9420 942f 94ae 9420 9470 c1c2 4380
+
+00:00:02:00\tc445
+
+00:00:03:00\t9470 c1c2 43c4 4546 c7c8 494a cb4c cdce 4fd0 5152 d354 c1c2 43c4 4546 c7c8 494a cb4c cdce 4fd0 5152 d354
+
+00:00:04:00\t942c 942f
+
+"""
+
+
+# As sample_scc_text_before_its_pac_on_the_same_row, the PAC naming row 14
+# rather than the row 15 the text before it took: no row was carried on.
+@pytest.fixture(scope="session")
+def sample_scc_text_before_its_pac_on_another_row():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01:00\t9420 9470 c849 942f
+
+00:00:02:00\t94ae 9420 c1c2 43c4 4546 c7c8 494a cb4c cdce 4fd0 5152 d354 9440 c1c2 43c4 4546 c7c8 494a cb4c cdce 4fd0 5152 d354 942f
+
+00:00:03:00\t942c
+
+"""
+
+
+# "ABCDE" sent again in full by a PAC restating the row's origin, 40 columns,
+# then "XY" carried on by the next line of the file with no PAC: the resend
+# continued nothing, but "XY" continued the row it left.
+@pytest.fixture(scope="session")
+def sample_scc_pac_resending_a_row_in_full_then_a_line_continuing_it():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01:00\t9420 942f 94ae 9420 9470 c1c2 43c4 4580
+
+00:00:02:00\t9470 c1c2 43c4 4546 c7c8 494a cb4c cdce 4fd0 5152 d354 c1c2 43c4 4546 c7c8 494a cb4c cdce 4fd0 5152 d354
+
+00:00:03:00\t58d9
+
+00:00:04:00\t942c 942f
+
+"""

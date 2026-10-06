@@ -9,6 +9,9 @@ Changelog
   - Fix ``DFXPReader`` and ``SAMIReader`` stripping non-breaking spaces at
     the start of a line along with the markup's pretty-print whitespace, so
     line indentation now survives a round trip.
+  - ``SCCReader`` line-length errors now end with ``(continues on the row
+    without a row change)`` when a line ran long because the next line's
+    text stayed on the same row with no PAC or row change of its own.
 
 2.3.12
 ^^^^^^
