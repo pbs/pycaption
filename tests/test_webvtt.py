@@ -79,6 +79,115 @@ class TestWebVTTReader(ReaderTestingMixIn):
         assert cue.start == 16985000
         assert cue.end == 18737000
 
+    def test_negative_shift_clamps_cue_crossing_zero(
+        self, sample_webvtt_negative_shift
+    ):
+        captions = WebVTTReader(time_shift_milliseconds=-1000).read(
+            sample_webvtt_negative_shift
+        )
+        cue = captions.get_captions("en-US")[0]
+
+        assert cue.get_text() == "Straddles zero"
+        assert cue.start == 0
+        assert cue.end == 500000
+
+    def test_negative_shift_keeps_cue_starting_exactly_at_zero(
+        self, sample_webvtt_negative_shift
+    ):
+        captions = WebVTTReader(time_shift_milliseconds=-1000).read(
+            sample_webvtt_negative_shift
+        )
+        cue = captions.get_captions("en-US")[1]
+
+        assert cue.get_text() == "Fully before zero"
+        assert cue.start == 0
+        assert cue.end == 800000
+
+    def test_negative_shift_drops_cues_ending_at_or_before_zero(
+        self, sample_webvtt_negative_shift
+    ):
+        # -1500: "Straddles zero" ends exactly at 0, "Fully before zero"
+        # crosses 0. -2000: both end before 0.
+        captions = WebVTTReader(time_shift_milliseconds=-1500).read(
+            sample_webvtt_negative_shift
+        )
+        assert [c.get_text() for c in captions.get_captions("en-US")] == [
+            "Fully before zero",
+            "After zero",
+        ]
+
+        captions = WebVTTReader(time_shift_milliseconds=-2000).read(
+            sample_webvtt_negative_shift
+        )
+        cues = captions.get_captions("en-US")
+
+        assert [c.get_text() for c in cues] == ["After zero"]
+        assert cues[0].start == 1000000
+        assert cues[0].end == 3000000
+
+    def test_negative_shift_leaves_cue_after_zero_unchanged(
+        self, sample_webvtt_negative_shift
+    ):
+        captions = WebVTTReader(time_shift_milliseconds=-1000).read(
+            sample_webvtt_negative_shift
+        )
+        cue = captions.get_captions("en-US")[2]
+
+        assert cue.start == 2000000
+        assert cue.end == 4000000
+
+    def test_negative_shift_drops_last_cue_without_trailing_blank_line(self):
+        captions = WebVTTReader(time_shift_milliseconds=-3500).read(
+            "WEBVTT\n\n00:00:03.000 --> 00:00:04.000\nKept\n\n"
+            "00:00:03.000 --> 00:00:03.500\nDropped"
+        )
+
+        assert [c.get_text() for c in captions.get_captions("en-US")] == ["Kept"]
+
+    def test_negative_shift_dropping_every_cue_raises_no_captions(
+        self, sample_webvtt_negative_shift
+    ):
+        with pytest.raises(CaptionReadNoCaptions):
+            WebVTTReader(time_shift_milliseconds=-5000).read(
+                sample_webvtt_negative_shift
+            )
+
+    def test_negative_shift_clamping_passes_strict_timing_validation(
+        self, sample_webvtt_negative_shift
+    ):
+        captions = WebVTTReader(
+            ignore_timing_errors=False, time_shift_milliseconds=-1000
+        ).read(sample_webvtt_negative_shift)
+
+        assert [c.start for c in captions.get_captions("en-US")] == [
+            0,
+            0,
+            2000000,
+        ]
+
+    def test_negative_shift_still_rejects_inverted_dropped_cue(self):
+        with pytest.raises(CaptionReadError):
+            WebVTTReader(
+                ignore_timing_errors=False, time_shift_milliseconds=-5000
+            ).read("WEBVTT\n\n00:00:02.000 --> 00:00:01.000\nInverted\n")
+
+    def test_negative_float_shift_clamps(self, sample_webvtt_negative_shift):
+        captions = WebVTTReader(time_shift_milliseconds=-1000.5).read(
+            sample_webvtt_negative_shift
+        )
+        cues = captions.get_captions("en-US")
+
+        assert cues[0].start == 0
+        assert cues[0].end == 499500
+        assert cues[1].start == 0
+
+    def test_zero_shift_keeps_cue_at_zero(self):
+        captions = WebVTTReader(time_shift_milliseconds=0).read(
+            "WEBVTT\n\n00:00:00.000 --> 00:00:00.000\nZero length\n"
+        )
+
+        assert len(captions.get_captions("en-US")) == 1
+
     def test_webvtt_cue_components_parsed_from_text(self):
         nodes = self.reader._parse_cue_text(
             "<c vIntro><b>Wikipedia</b> is a great adventure. <i>It may have "

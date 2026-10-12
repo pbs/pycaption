@@ -594,3 +594,16 @@ def sample_webvtt_style_with_arrow():
 @pytest.fixture(scope="session")
 def sample_webvtt_numeric_entities():
     return "WEBVTT\n\n" "00:00:01.000 --> 00:00:03.000\n" "&#169; and &#x266B;\n"
+
+
+@pytest.fixture(scope="session")
+def sample_webvtt_negative_shift():
+    return (
+        "WEBVTT\n\n"
+        "00:00:00.500 --> 00:00:01.500\n"
+        "Straddles zero\n\n"
+        "00:00:01.000 --> 00:00:01.800\n"
+        "Fully before zero\n\n"
+        "00:00:03.000 --> 00:00:05.000\n"
+        "After zero\n"
+    )

@@ -2,6 +2,8 @@ import re
 
 from xml.etree import ElementTree
 
+import pytest
+
 from pycaption import (
     DFXPReader,
     DFXPWriter,
@@ -1383,3 +1385,31 @@ class TestMultipleLayoutsPerCaption:
         assert len(cues) == 2
         assert cues[0][1] == ["plain"]
         assert cues[1][1] == ["styled<i>"]
+
+
+class TestWebVTTNegativeTimeShiftConversion:
+    @pytest.mark.parametrize("shift", [-1000, -1500, -2000])
+    @pytest.mark.parametrize(
+        "writer", [WebVTTWriter, SRTWriter, DFXPWriter, SAMIWriter]
+    )
+    def test_no_wrapped_timestamp_written(
+        self, sample_webvtt_negative_shift, writer, shift
+    ):
+        caption_set = WebVTTReader(time_shift_milliseconds=shift).read(
+            sample_webvtt_negative_shift
+        )
+        output = writer().write(caption_set)
+
+        assert "23:59:" not in output
+        assert 'start="-' not in output
+
+    @pytest.mark.parametrize("shift", [-1000, -1500, -2000])
+    def test_webvtt_output_end_after_start(self, sample_webvtt_negative_shift, shift):
+        caption_set = WebVTTReader(time_shift_milliseconds=shift).read(
+            sample_webvtt_negative_shift
+        )
+        output = WebVTTWriter().write(caption_set)
+        timings = re.findall(r"(\S+) --> (\S+)", output)
+
+        assert timings
+        assert all(start < end for start, end in timings)

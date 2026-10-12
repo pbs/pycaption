@@ -1,5 +1,16 @@
 Changelog
 ---------
+2.3.14
+^^^^^^
+  - Fix ``WebVTTReader(time_shift_milliseconds=...)`` producing negative cue
+    times, which WebVTT, SRT and DFXP output wrapped to the end of a 24-hour
+    clock (``23:59:59.500``) and SAMI wrote as a negative ``start``. After a
+    negative shift, a cue crossing 0 now starts at ``00:00:00.000`` and keeps
+    its end, and a cue ending at or before 0 is dropped; if every cue is
+    dropped, ``CaptionReadNoCaptions`` is raised. With
+    ``ignore_timing_errors=False``, clamped cues no longer fail the
+    start-ordering check. Zero and positive shifts are unchanged.
+
 2.3.13
 ^^^^^^
   - Fix ``DFXPWriter``, ``LegacyDFXPWriter`` and ``SAMIWriter`` dropping the
