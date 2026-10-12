@@ -76,6 +76,7 @@ class _ParseState:
         "open_tags",
         "layout_info",
         "found_timing",
+        "drop_cue",
         "in_note_block",
         "in_style_block",
         "in_region_block",
@@ -90,6 +91,7 @@ class _ParseState:
         self.open_tags = []
         self.layout_info = None
         self.found_timing = False
+        self.drop_cue = False
         self.in_note_block = False
         self.in_style_block = False
         self.in_region_block = False
@@ -114,7 +116,9 @@ class WebVTTReader(BaseReader):
         :param ignore_timing_errors: When False, raises on non-monotonic
             or inverted timestamps. Default True for lenient parsing.
         :param time_shift_milliseconds: Offset applied to all timestamps
-            (positive = shift forward, negative = shift backward).
+            (positive = shift forward, negative = shift backward). After a
+            negative shift, a cue crossing 0 is clamped to start at 0 and a
+            cue ending at or before 0 is dropped.
         """
         super().__init__(*args, **kwargs)
         self.ignore_timing_errors = ignore_timing_errors
@@ -219,15 +223,7 @@ class WebVTTReader(BaseReader):
 
         # Flush the last cue if file doesn't end with a blank line
         if state.nodes:
-            captions.append(
-                self._build_cue(
-                    state.nodes,
-                    state.open_tags,
-                    state.start,
-                    state.end,
-                    state.layout_info,
-                )
-            )
+            self._finalize_cue(state, captions)
 
         return captions
 
@@ -251,6 +247,7 @@ class WebVTTReader(BaseReader):
             state.start, state.end, state.layout_info = self._read_timing(
                 line, line_index, last_start_time
             )
+            state.drop_cue = state.start is None
             return
 
         if not state.found_timing and line != "":
@@ -323,15 +320,17 @@ class WebVTTReader(BaseReader):
         """Close the current cue, append it to captions, and reset state
         for the next cue."""
         state.found_timing = False
-        captions.append(
-            self._build_cue(
-                state.nodes,
-                state.open_tags,
-                state.start,
-                state.end,
-                state.layout_info,
+        if not state.drop_cue:
+            captions.append(
+                self._build_cue(
+                    state.nodes,
+                    state.open_tags,
+                    state.start,
+                    state.end,
+                    state.layout_info,
+                )
             )
-        )
+        state.drop_cue = False
         state.nodes = []
         state.open_tags = []
 
@@ -438,7 +437,9 @@ class WebVTTReader(BaseReader):
         :param line: Raw timing line, e.g.
             "00:00:01.000 --> 00:00:05.000 line:80%"
         :param last_start_time: Start time of previous cue (for validation).
-        :returns: Tuple of (start_us, end_us, Layout or None).
+        :returns: Tuple of (start_us, end_us, Layout or None). start_us and
+            end_us are None when a negative time shift puts the cue end at
+            or before 0, meaning the cue is dropped.
         :raises CaptionReadSyntaxError: On unparseable timing format.
         """
         m = TIMING_LINE_PATTERN.search(line)
@@ -448,6 +449,15 @@ class WebVTTReader(BaseReader):
         start = self._parse_timestamp(m.group(1)) + self.time_shift_microseconds
         end = self._parse_timestamp(m.group(2)) + self.time_shift_microseconds
         cue_settings = m.group(3)
+
+        if self.time_shift_microseconds < 0:
+            if end <= 0:
+                # Shifted entirely before 0: drop. Still reject inverted
+                # timings; ordering is moot since the cue is not kept.
+                if not self.ignore_timing_errors:
+                    self._validate_timings(start, end, start)
+                return None, None, None
+            start = max(start, 0)
 
         if not self.ignore_timing_errors:
             self._validate_timings(start, end, last_start_time)

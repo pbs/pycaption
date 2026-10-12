@@ -233,6 +233,7 @@ from tests.fixtures.webvtt import (  # noqa: F401
     sample_webvtt_last_cue_zero_start,
     sample_webvtt_multi_lang_de,
     sample_webvtt_multi_lang_en,
+    sample_webvtt_negative_shift,
     sample_webvtt_no_blank_after_header,
     sample_webvtt_no_header,
     sample_webvtt_note_with_arrow,
