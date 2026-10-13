@@ -262,8 +262,6 @@ class WebVTTReader(BaseReader):
             self._finalize_cue(state, captions)
             return
 
-        if not state.found_timing or line == "":
-            return
         if state.nodes:
             state.nodes.append(CaptionNode.create_break())
         state.nodes.extend(self._parse_cue_text(line, state.open_tags))

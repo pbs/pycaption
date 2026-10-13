@@ -304,6 +304,8 @@ class TestWebVTTReader(ReaderTestingMixIn):
         [
             "sample_webvtt_empty_cue_then_id",
             "sample_webvtt_empty_cue_then_note",
+            "sample_webvtt_empty_cue_then_style",
+            "sample_webvtt_empty_cue_then_region",
             "sample_webvtt_empty_cue_multiple_blanks",
         ],
     )
@@ -344,6 +346,26 @@ class TestWebVTTReader(ReaderTestingMixIn):
         assert [
             (c.start, c.end, c.get_text()) for c in captions.get_captions("en-US")
         ] == [(1000000, 2000000, "C")]
+
+    @pytest.mark.parametrize("ignore_timing_errors", [True, False])
+    def test_orphan_text_after_empty_cue_is_ignored(
+        self, sample_webvtt_empty_cue_then_orphan_text, ignore_timing_errors
+    ):
+        captions = WebVTTReader(ignore_timing_errors=ignore_timing_errors).read(
+            sample_webvtt_empty_cue_then_orphan_text
+        )
+
+        assert [
+            (c.start, c.end, c.get_text()) for c in captions.get_captions("en-US")
+        ] == [(4000000, 5000000, "C")]
+
+    @pytest.mark.parametrize("ignore_timing_errors", [True, False])
+    def test_only_orphan_text_after_empty_cue_raises_no_captions(
+        self, sample_webvtt_empty_cue_only_orphan_text, ignore_timing_errors
+    ):
+        reader = WebVTTReader(ignore_timing_errors=ignore_timing_errors)
+        with pytest.raises(CaptionReadNoCaptions):
+            reader.read(sample_webvtt_empty_cue_only_orphan_text)
 
 
 class TestWebVTTWriter:

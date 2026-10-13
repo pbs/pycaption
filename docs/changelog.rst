@@ -12,10 +12,13 @@ Changelog
     start-ordering check. Zero and positive shifts are unchanged.
   - Fix ``WebVTTReader`` not closing a cue with no text at the blank line
     that ends it, so the next block was read as that cue's text: a following
-    cue's ID appeared above its caption, and a ``NOTE`` comment became a
-    caption at the empty cue's time. Empty cues are still dropped; the
-    following ID now counts towards the duplicate-ID warning. Files without
-    empty cues are unchanged.
+    cue's ID appeared above its caption, and a ``NOTE`` comment, ``STYLE``
+    block or ``REGION`` block became a caption at the empty cue's time; these
+    blocks are now skipped. Empty cues are still dropped; the
+    following ID now counts towards the duplicate-ID warning. Text after an
+    empty cue that is not part of a cue is now ignored, so a file whose only
+    text sits there raises ``CaptionReadNoCaptions``. Files without empty
+    cues are unchanged.
 
 2.3.13
 ^^^^^^

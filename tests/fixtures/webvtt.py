@@ -370,6 +370,34 @@ C
 
 
 @pytest.fixture(scope="session")
+def sample_webvtt_empty_cue_then_style():
+    return """WEBVTT
+
+00:00.000 --> 00:02.000
+
+STYLE
+::cue { color: red }
+
+00:04.000 --> 00:05.000
+C
+"""
+
+
+@pytest.fixture(scope="session")
+def sample_webvtt_empty_cue_then_region():
+    return """WEBVTT
+
+00:00.000 --> 00:02.000
+
+REGION
+id:r1
+
+00:04.000 --> 00:05.000
+C
+"""
+
+
+@pytest.fixture(scope="session")
 def sample_webvtt_empty_cue_multiple_blanks():
     return """WEBVTT
 
@@ -406,6 +434,30 @@ cue-1
 cue-1
 00:04.000 --> 00:05.000
 C
+"""
+
+
+@pytest.fixture(scope="session")
+def sample_webvtt_empty_cue_then_orphan_text():
+    return """WEBVTT
+
+00:00.000 --> 00:02.000
+
+hello
+world
+
+00:04.000 --> 00:05.000
+C
+"""
+
+
+@pytest.fixture(scope="session")
+def sample_webvtt_empty_cue_only_orphan_text():
+    return """WEBVTT
+
+00:00.000 --> 00:02.000
+
+hello
 """
 
 
