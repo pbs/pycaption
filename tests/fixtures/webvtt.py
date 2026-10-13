@@ -344,6 +344,72 @@ Transcribed by Celestials
 
 
 @pytest.fixture(scope="session")
+def sample_webvtt_empty_cue_then_id():
+    return """WEBVTT
+
+cue-1
+00:00.000 --> 00:02.000
+
+cue-2
+00:04.000 --> 00:05.000
+C
+"""
+
+
+@pytest.fixture(scope="session")
+def sample_webvtt_empty_cue_then_note():
+    return """WEBVTT
+
+00:00.000 --> 00:02.000
+
+NOTE hello
+
+00:04.000 --> 00:05.000
+C
+"""
+
+
+@pytest.fixture(scope="session")
+def sample_webvtt_empty_cue_multiple_blanks():
+    return """WEBVTT
+
+00:00.000 --> 00:02.000
+
+
+
+cue-2
+00:04.000 --> 00:05.000
+C
+"""
+
+
+@pytest.fixture(scope="session")
+def sample_webvtt_empty_last_cue():
+    return """WEBVTT
+
+cue-1
+00:00.000 --> 00:02.000
+A
+
+cue-2
+00:03.000 --> 00:04.000
+"""
+
+
+@pytest.fixture(scope="session")
+def sample_webvtt_empty_cue_then_duplicate_id():
+    return """WEBVTT
+
+cue-1
+00:00.000 --> 00:02.000
+
+cue-1
+00:04.000 --> 00:05.000
+C
+"""
+
+
+@pytest.fixture(scope="session")
 def sample_webvtt_multi_lang_en():
     return """WEBVTT
 

@@ -10,6 +10,12 @@ Changelog
     dropped, ``CaptionReadNoCaptions`` is raised. With
     ``ignore_timing_errors=False``, clamped cues no longer fail the
     start-ordering check. Zero and positive shifts are unchanged.
+  - Fix ``WebVTTReader`` not closing a cue with no text at the blank line
+    that ends it, so the next block was read as that cue's text: a following
+    cue's ID appeared above its caption, and a ``NOTE`` comment became a
+    caption at the empty cue's time. Empty cues are still dropped; the
+    following ID now counts towards the duplicate-ID warning. Files without
+    empty cues are unchanged.
 
 2.3.13
 ^^^^^^

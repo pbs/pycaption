@@ -110,6 +110,30 @@ class TestWebVTTtoWebVTT(WebVTTTestingMixIn):
         assert re.match(expected_timestamp_line_pattern, results[5])
 
 
+class TestWebVTTEmptyCueConversion:
+    @pytest.mark.parametrize(
+        "writer", [WebVTTWriter, SRTWriter, DFXPWriter, SAMIWriter]
+    )
+    @pytest.mark.parametrize("ignore_timing_errors", [True, False])
+    @pytest.mark.parametrize(
+        "fixture_name, leaked_text",
+        [
+            ("sample_webvtt_empty_cue_then_id", "cue-2"),
+            ("sample_webvtt_empty_cue_then_note", "hello"),
+            ("sample_webvtt_empty_cue_multiple_blanks", "cue-2"),
+        ],
+    )
+    def test_no_leak_after_empty_cue(
+        self, request, fixture_name, leaked_text, ignore_timing_errors, writer
+    ):
+        caption_set = WebVTTReader(ignore_timing_errors=ignore_timing_errors).read(
+            request.getfixturevalue(fixture_name)
+        )
+        results = writer().write(caption_set)
+
+        assert leaked_text not in results
+
+
 #     # TODO: Write a test that includes a WebVTT file with style tags
 #     # That will fail because the styles used in the cues are not tracked.
 

@@ -298,6 +298,53 @@ class TestWebVTTReader(ReaderTestingMixIn):
     def test_webvtt_empty_cue(self, sample_webvtt_empty_cue):
         assert 1 == len(self.reader.read(sample_webvtt_empty_cue).get_captions("en-US"))
 
+    @pytest.mark.parametrize("ignore_timing_errors", [True, False])
+    @pytest.mark.parametrize(
+        "fixture_name",
+        [
+            "sample_webvtt_empty_cue_then_id",
+            "sample_webvtt_empty_cue_then_note",
+            "sample_webvtt_empty_cue_multiple_blanks",
+        ],
+    )
+    def test_blank_line_closes_empty_cue(
+        self, request, fixture_name, ignore_timing_errors
+    ):
+        captions = WebVTTReader(ignore_timing_errors=ignore_timing_errors).read(
+            request.getfixturevalue(fixture_name)
+        )
+
+        assert [
+            (c.start, c.end, c.get_text()) for c in captions.get_captions("en-US")
+        ] == [(4000000, 5000000, "C")]
+
+    def test_empty_last_cue_is_dropped(self, sample_webvtt_empty_last_cue):
+        captions = self.reader.read(sample_webvtt_empty_last_cue)
+
+        assert [
+            (c.start, c.end, c.get_text()) for c in captions.get_captions("en-US")
+        ] == [(0, 2000000, "A")]
+
+    @pytest.mark.parametrize("ignore_timing_errors", [True, False])
+    def test_empty_cue_id_counts_for_duplicate_warning(
+        self, sample_webvtt_empty_cue_then_duplicate_id, ignore_timing_errors
+    ):
+        reader = WebVTTReader(ignore_timing_errors=ignore_timing_errors)
+        with pytest.warns(CaptionReadWarning, match="Duplicate cue identifier 'cue-1'"):
+            captions = reader.read(sample_webvtt_empty_cue_then_duplicate_id)
+
+        assert [c.get_text() for c in captions.get_captions("en-US")] == ["C"]
+
+    def test_dropped_empty_cue_before_zero_is_closed(self):
+        captions = WebVTTReader(time_shift_milliseconds=-2000).read(
+            "WEBVTT\n\n00:00.000 --> 00:01.000\n\n"
+            "cue-2\n00:03.000 --> 00:04.000\nC\n"
+        )
+
+        assert [
+            (c.start, c.end, c.get_text()) for c in captions.get_captions("en-US")
+        ] == [(1000000, 2000000, "C")]
+
 
 class TestWebVTTWriter:
     def setup_method(self):
