@@ -258,12 +258,10 @@ class WebVTTReader(BaseReader):
             state.pending_id = None
             return
 
-        if line == "" and state.found_timing and state.nodes:
+        if line == "" and state.found_timing:
             self._finalize_cue(state, captions)
             return
 
-        if not state.found_timing or line == "":
-            return
         if state.nodes:
             state.nodes.append(CaptionNode.create_break())
         state.nodes.extend(self._parse_cue_text(line, state.open_tags))
@@ -317,10 +315,10 @@ class WebVTTReader(BaseReader):
         state.seen_ids.add(cue_id)
 
     def _finalize_cue(self, state, captions):
-        """Close the current cue, append it to captions, and reset state
-        for the next cue."""
+        """Close the current cue, append it to captions unless it is dropped
+        or empty, and reset state for the next cue."""
         state.found_timing = False
-        if not state.drop_cue:
+        if not state.drop_cue and state.nodes:
             captions.append(
                 self._build_cue(
                     state.nodes,
