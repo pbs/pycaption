@@ -2,6 +2,8 @@ Changelog
 ---------
 2.3.14
 ^^^^^^
+  - Fix ``DFXPReader`` dropping earlier captions when multiple divisions
+    share a language.
   - Fix ``WebVTTReader(time_shift_milliseconds=...)`` producing negative cue
     times, which WebVTT, SRT and DFXP output wrapped to the end of a 24-hour
     clock (``23:59:59.500``) and SAMI wrote as a negative ``start``. After a

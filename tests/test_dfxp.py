@@ -56,6 +56,26 @@ class TestDFXPReader(ReaderTestingMixIn):
 
         assert 7 == len(captions.get_captions("en-US"))
 
+    @pytest.mark.parametrize("div_language", ["", ' xml:lang="en"'])
+    @pytest.mark.parametrize("nested", [False, True])
+    def test_multiple_divs_with_same_language(self, div_language, nested):
+        divs = (
+            f'<div{div_language}><p begin="1s" end="2s">First</p></div>'
+            f'<div{div_language}><p begin="3s" end="4s">Second</p></div>'
+        )
+        if nested:
+            divs = f"<div>{divs}</div>"
+        content = (
+            '<tt xmlns="http://www.w3.org/ns/ttml" xml:lang="en">'
+            f"<body>{divs}</body></tt>"
+        )
+        captions = DFXPReader().read(content).get_captions("en")
+
+        assert [
+            (1000000, 2000000, "First"),
+            (3000000, 4000000, "Second"),
+        ] == [(c.start, c.end, c.get_text()) for c in captions]
+
     def test_proper_timestamps(self, sample_dfxp):
         captions = DFXPReader().read(sample_dfxp)
         paragraph = captions.get_captions("en-US")[2]
