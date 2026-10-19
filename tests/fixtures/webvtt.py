@@ -725,3 +725,16 @@ def sample_webvtt_negative_shift():
         "00:00:03.000 --> 00:00:05.000\n"
         "After zero\n"
     )
+
+
+@pytest.fixture(scope="session")
+def sample_webvtt_overlapping_cues():
+    return (
+        "WEBVTT\n\n"
+        "00:00:00.500 --> 00:00:01.500\n"
+        "A\n\n"
+        "00:00:01.000 --> 00:00:01.800\n"
+        "B\n\n"
+        "00:00:03.000 --> 00:00:05.000\n"
+        "C\n"
+    )

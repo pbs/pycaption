@@ -118,6 +118,40 @@ class TestWebVTTtoSAMI(SAMITestingMixIn):
         self.assert_sami_captions_equal(sample_sami, result)
 
 
+class TestOverlappingCuesToSAMI(SAMITestingMixIn):
+    def test_overlapping_webvtt_gives_in_order_syncs(
+        self, sample_webvtt_overlapping_cues
+    ):
+        caption_set = WebVTTReader().read(sample_webvtt_overlapping_cues)
+        result = SAMIWriter().write(caption_set)
+
+        self.assert_sami_syncs_equal(
+            result,
+            [
+                (500, [("en-US", "A")]),
+                (1000, [("en-US", "A"), ("en-US", "B")]),
+                (1500, [("en-US", "B")]),
+                (1800, [("en-US", "")]),
+                (3000, [("en-US", "C")]),
+                (5000, [("en-US", "")]),
+            ],
+        )
+
+    def test_overlapping_dfxp_gives_in_order_syncs(self, sample_dfxp_overlapping_cues):
+        caption_set = DFXPReader().read(sample_dfxp_overlapping_cues)
+        result = SAMIWriter().write(caption_set)
+
+        self.assert_sami_syncs_equal(
+            result,
+            [
+                (500, [("en-US", "A")]),
+                (1000, [("en-US", "A"), ("en-US", "B")]),
+                (1800, [("en-US", "A")]),
+                (3000, [("en-US", "")]),
+            ],
+        )
+
+
 class TestWebVTTtoSAMIStyles(SAMITestingMixIn):
     """Tests for WebVTT structured style/layout → SAMI conversion."""
 
