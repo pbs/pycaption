@@ -140,7 +140,11 @@ class DFXPReader(BaseReader):
 
         for div in dfxp_document.find_all("div"):
             lang = div.attrs.get(DFXP_ATTR_XML_LANG, default_language)
-            caption_dict[lang] = self._convert_div_to_caption_list(div)
+            captions = self._convert_div_to_caption_list(div)
+            if lang in caption_dict:
+                caption_dict[lang].extend(captions)
+            else:
+                caption_dict[lang] = captions
 
         for style in dfxp_document.find_all("style"):
             id_ = style.attrs.get(DFXP_ATTR_XML_ID) or style.attrs.get("id")
@@ -220,7 +224,7 @@ class DFXPReader(BaseReader):
                 caption
                 for caption in (
                     self._convert_p_tag_to_caption(p_tag)
-                    for p_tag in div.find_all("p")
+                    for p_tag in div.find_all("p", recursive=False)
                     if p_tag.get_text().strip()
                 )
                 if caption is not None

@@ -1,5 +1,10 @@
 Changelog
 ---------
+2.3.15
+^^^^^^
+  - Fix ``DFXPReader`` dropping earlier captions when multiple divisions
+    share a language.
+
 2.3.14
 ^^^^^^
   - Fix ``WebVTTReader(time_shift_milliseconds=...)`` producing negative cue
