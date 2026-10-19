@@ -19,6 +19,12 @@ Changelog
     empty cue that is not part of a cue is now ignored, so a file whose only
     text sits there raises ``CaptionReadNoCaptions``. Files without empty
     cues are unchanged.
+  - Fix ``SAMIWriter`` writing out-of-order ``<SYNC>`` start times when cues
+    overlap, and clearing the next cue early in languages other than the
+    first. Overlapping cues are now merged: each ``<SYNC>`` repeats every
+    cue still on screen, start times never decrease, and no start time
+    appears twice. Zero-length cues are no longer written. Cues that touch
+    or have a gap between them are written as before.
 
 2.3.13
 ^^^^^^

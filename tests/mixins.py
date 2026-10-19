@@ -4,6 +4,7 @@ import pytest
 
 from bs4 import BeautifulSoup
 
+from pycaption import SAMIReader
 from pycaption.exceptions import InvalidInputError
 
 
@@ -175,6 +176,24 @@ class SAMITestingMixIn:
         second_items = self._extract_sami_captions(second_soup)
 
         assert self._strip_blanks(first_items) == self._strip_blanks(second_items)
+
+    def assert_sami_syncs_equal(self, sami, expected):
+        """Assert the SYNCs as (start, [(class, text), ...]); "" is a blank.
+
+        Start values must strictly increase, and the output must read back.
+        """
+        syncs = [
+            (
+                int(sync["start"]),
+                [(" ".join(p["class"]), p.text.strip()) for p in sync.find_all("p")],
+            )
+            for sync in BeautifulSoup(sami, "lxml").select("sync")
+        ]
+        starts = [start for start, _ in syncs]
+
+        assert starts == sorted(set(starts))
+        assert syncs == expected
+        SAMIReader().read(sami)
 
 
 class MicroDVDTestingMixIn:

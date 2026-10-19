@@ -1638,3 +1638,17 @@ def sample_dfxp_with_nbsp_indentation():
   </div>
  </body>
 </tt>"""
+
+
+@pytest.fixture(scope="session")
+def sample_dfxp_overlapping_cues():
+    return """\
+<?xml version="1.0" encoding="utf-8"?>
+<tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml">
+ <body>
+  <div xml:lang="en-US">
+   <p begin="00:00:00.500" end="00:00:03.000">A</p>
+   <p begin="00:00:01.000" end="00:00:01.800">B</p>
+  </div>
+ </body>
+</tt>"""
