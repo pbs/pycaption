@@ -37,7 +37,6 @@ class SAMIWriter(BaseWriter):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._span_stack = []
-        self.last_time = None
         self._promote_center = False
 
     def write(self, caption_set, **kwargs):
@@ -51,13 +50,8 @@ class SAMIWriter(BaseWriter):
             caption_set.layout_info
         )
 
-        primary = None
-
+        timelines = {}
         for lang in caption_set.get_languages():
-            self.last_time = None
-            if primary is None:
-                primary = lang
-
             caption_set.set_layout_info(
                 lang,
                 self._relativize_and_fit_to_screen(caption_set.get_layout_info(lang)),
@@ -72,12 +66,11 @@ class SAMIWriter(BaseWriter):
                     node.layout_info = self._relativize_and_fit_to_screen(
                         node.layout_info
                     )
-                sami = self._recreate_p_tag(caption, sami, lang, primary, caption_set)
+            cues = self._build_timeline(captions)
+            if cues:
+                timelines[lang] = cues
 
-            if self.last_time and captions:
-                sami = self._recreate_blank_tag(
-                    sami, captions[-1], lang, primary, caption_set
-                )
+        self._recreate_syncs(sami, timelines, caption_set)
 
         stylesheet = self._recreate_stylesheet(caption_set)
         sami.find("style").append(stylesheet)
@@ -86,17 +79,64 @@ class SAMIWriter(BaseWriter):
         caption_content = "\n".join(a[1:])
         return caption_content
 
-    def _recreate_p_tag(self, caption, sami, lang, primary, captions):
-        """Build a <sync><p> block for a single caption with styling and alignment."""
-        time = int(caption.start // 1000)
+    @staticmethod
+    def _build_timeline(captions):
+        """Return (start_ms, end_ms, caption) cues sorted by start.
 
-        if self.last_time and time != self.last_time:
-            sami = self._recreate_blank_tag(sami, caption, lang, primary, captions)
+        Zero-length cues are never on screen, so they are dropped.
+        """
+        cues = []
+        for caption in captions:
+            start = int(caption.start // 1000)
+            end = int(caption.end // 1000)
+            if end > start:
+                cues.append((start, end, caption))
+        cues.sort(key=lambda cue: cue[0])
+        return cues
 
-        self.last_time = int(caption.end // 1000)
+    def _recreate_syncs(self, sami, timelines, captions):
+        """Append one <sync> per time at which any language's visible cues change.
 
-        sami, sync = self._recreate_sync(sami, lang, primary, time)
+        Overlapping cues of a language are merged: a <sync> repeats every cue
+        of that language still on screen, so start times never decrease and
+        no cue is cleared early.
+        """
+        times = sorted(
+            {time for cues in timelines.values() for cue in cues for time in cue[:2]}
+        )
+        shown = {lang: [] for lang in timelines}
+        pending = {lang: 0 for lang in timelines}
 
+        for time in times:
+            sync = None
+            for lang, cues in timelines.items():
+                active = [i for i in shown[lang] if cues[i][1] > time]
+                while pending[lang] < len(cues) and cues[pending[lang]][0] <= time:
+                    active.append(pending[lang])
+                    pending[lang] += 1
+                if active == shown[lang]:
+                    continue
+                shown[lang] = active
+
+                if sync is None:
+                    sync = sami.new_tag("sync", start=time)
+                    sami.body.append(sync)
+
+                if active:
+                    for i in active:
+                        sync.append(
+                            self._recreate_p_tag(cues[i][2], sami, lang, captions)
+                        )
+                else:
+                    # The blank takes the class of the next cue, or of the
+                    # last cue once the language has no cues left.
+                    upcoming = cues[min(pending[lang], len(cues) - 1)][2]
+                    sync.append(
+                        self._recreate_blank_tag(upcoming, sami, lang, captions)
+                    )
+
+    def _recreate_p_tag(self, caption, sami, lang, captions):
+        """Build a <p> for a single caption with styling and alignment."""
         p = sami.new_tag("p")
 
         p_style = self._build_p_style(caption)
@@ -107,9 +147,7 @@ class SAMIWriter(BaseWriter):
         p["class"] = self._recreate_p_lang(caption, lang, captions)
         p.string = encode_leading_nbsp(self._recreate_text(caption.nodes))
 
-        sync.append(p)
-
-        return sami
+        return p
 
     def _build_p_style(self, caption):
         """Build the inline CSS style string for a <p> element."""
@@ -158,45 +196,13 @@ class SAMIWriter(BaseWriter):
 
         return HORIZONTAL_ALIGNMENT_MAP.get(h)
 
-    def _recreate_sync(self, sami, lang, primary, time):
-        """Find or create a <sync> tag at the given millisecond timestamp."""
-        if lang == primary:
-            sync = sami.new_tag("sync", start=time)
-            sami.body.append(sync)
-        else:
-            sync = sami.find("sync", start=time)
-            if sync is None:
-                sami, sync = self._find_closest_sync(sami, time)
-
-        return sami, sync
-
-    @staticmethod
-    def _find_closest_sync(sami, time):
-        """Insert a new <sync> tag in chronological order among existing syncs."""
-        sync = sami.new_tag("sync", start=time)
-
-        earlier = sami.find_all("sync", start=lambda x: int(x) < time)
-        if earlier:
-            last_sync = earlier[-1]
-            last_sync.insert_after(sync)
-        else:
-            later = sami.find_all("sync", start=lambda x: int(x) > time)
-            if later:
-                last_sync = later[0]
-                last_sync.insert_before(sync)
-        return sami, sync
-
-    def _recreate_blank_tag(self, sami, caption, lang, primary, captions):
-        """Insert an &nbsp; paragraph to clear the previous caption at its end time."""
-        sami, sync = self._recreate_sync(sami, lang, primary, self.last_time)
-
+    def _recreate_blank_tag(self, caption, sami, lang, captions):
+        """Build an &nbsp; <p> that clears the language's previous caption."""
         p = sami.new_tag("p")
         p["class"] = self._recreate_p_lang(caption, lang, captions)
         p.string = "&nbsp;"
 
-        sync.append(p)
-
-        return sami
+        return p
 
     @staticmethod
     def _recreate_p_lang(caption, lang, captions):

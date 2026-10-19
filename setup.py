@@ -17,11 +17,11 @@ dependencies = [
 
 dev_dependencies = ["pytest", "pytest-lazy-fixture"]
 
-transcript_dependencies = ["nltk==3.10.0"]
+transcript_dependencies = ["nltk==3.10.3"]
 
 setup(
     name="pycaption",
-    version="2.3.14.dev1",
+    version="2.3.14",
     description="Closed caption converter",
     long_description=open(README_PATH).read(),
     author="Joe Norton",

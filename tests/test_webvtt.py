@@ -339,8 +339,7 @@ class TestWebVTTReader(ReaderTestingMixIn):
 
     def test_dropped_empty_cue_before_zero_is_closed(self):
         captions = WebVTTReader(time_shift_milliseconds=-2000).read(
-            "WEBVTT\n\n00:00.000 --> 00:01.000\n\n"
-            "cue-2\n00:03.000 --> 00:04.000\nC\n"
+            "WEBVTT\n\n00:00.000 --> 00:01.000\n\ncue-2\n00:03.000 --> 00:04.000\nC\n"
         )
 
         assert [

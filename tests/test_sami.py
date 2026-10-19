@@ -11,7 +11,7 @@ from pycaption import (
 from pycaption.base import Caption, CaptionList, CaptionNode, CaptionSet
 from pycaption.exceptions import CaptionReadTimingError
 from pycaption.geometry import HorizontalAlignmentEnum, Size, UnitEnum  # noqa
-from tests.mixins import ReaderTestingMixIn
+from tests.mixins import ReaderTestingMixIn, SAMITestingMixIn
 
 
 class TestSAMIReader(ReaderTestingMixIn):
@@ -269,3 +269,124 @@ class TestSAMIWriterNbspIndentation:
             '"The Story Knife."',
             "\xa0\xa0Part one",
         ]
+
+
+def _captions(*cues):
+    """Build a CaptionList from (start_ms, end_ms, text) tuples."""
+    return CaptionList(
+        [
+            Caption(start * 1000, end * 1000, [CaptionNode.create_text(text)])
+            for start, end, text in cues
+        ]
+    )
+
+
+PARTIAL_OVERLAP = [(500, 1500, "A"), (1000, 1800, "B"), (3000, 5000, "C")]
+TOUCHING = [(500, 1000, "A"), (1000, 1800, "B")]
+
+
+class TestSAMIWriterOverlappingCues(SAMITestingMixIn):
+    """Overlapping cues are merged so SYNC start values never decrease."""
+
+    def _write(self, **languages):
+        return SAMIWriter().write(
+            CaptionSet(
+                {
+                    lang.replace("_", "-"): _captions(*cues)
+                    for lang, cues in languages.items()
+                }
+            )
+        )
+
+    def test_partial_overlap(self):
+        sami = self._write(en_US=PARTIAL_OVERLAP)
+
+        self.assert_sami_syncs_equal(
+            sami,
+            [
+                (500, [("en-US", "A")]),
+                (1000, [("en-US", "A"), ("en-US", "B")]),
+                (1500, [("en-US", "B")]),
+                (1800, [("en-US", "")]),
+                (3000, [("en-US", "C")]),
+                (5000, [("en-US", "")]),
+            ],
+        )
+
+    def test_nested_overlap(self):
+        sami = self._write(en_US=[(500, 3000, "A"), (1000, 1800, "B")])
+
+        self.assert_sami_syncs_equal(
+            sami,
+            [
+                (500, [("en-US", "A")]),
+                (1000, [("en-US", "A"), ("en-US", "B")]),
+                (1800, [("en-US", "A")]),
+                (3000, [("en-US", "")]),
+            ],
+        )
+
+    def test_same_start(self):
+        sami = self._write(en_US=[(0, 500, "A"), (0, 800, "B")])
+
+        self.assert_sami_syncs_equal(
+            sami,
+            [
+                (0, [("en-US", "A"), ("en-US", "B")]),
+                (500, [("en-US", "B")]),
+                (800, [("en-US", "")]),
+            ],
+        )
+
+    def test_touching_cues_are_unchanged(self):
+        sami = self._write(en_US=TOUCHING)
+
+        self.assert_sami_syncs_equal(
+            sami,
+            [
+                (500, [("en-US", "A")]),
+                (1000, [("en-US", "B")]),
+                (1800, [("en-US", "")]),
+            ],
+        )
+
+    def test_overlap_only_in_second_language(self):
+        sami = self._write(en_US=TOUCHING, de_DE=PARTIAL_OVERLAP)
+
+        self.assert_sami_syncs_equal(
+            sami,
+            [
+                (500, [("en-US", "A"), ("de-DE", "A")]),
+                (1000, [("en-US", "B"), ("de-DE", "A"), ("de-DE", "B")]),
+                (1500, [("de-DE", "B")]),
+                (1800, [("en-US", ""), ("de-DE", "")]),
+                (3000, [("de-DE", "C")]),
+                (5000, [("de-DE", "")]),
+            ],
+        )
+
+    def test_cues_out_of_input_order(self):
+        sami = self._write(en_US=[(3000, 5000, "C"), (500, 1500, "A")])
+
+        self.assert_sami_syncs_equal(
+            sami,
+            [
+                (500, [("en-US", "A")]),
+                (1500, [("en-US", "")]),
+                (3000, [("en-US", "C")]),
+                (5000, [("en-US", "")]),
+            ],
+        )
+
+    def test_zero_length_cue_is_dropped(self):
+        sami = self._write(en_US=[(0, 1000, "A"), (2000, 2000, "Z"), (3000, 4000, "B")])
+
+        self.assert_sami_syncs_equal(
+            sami,
+            [
+                (0, [("en-US", "A")]),
+                (1000, [("en-US", "")]),
+                (3000, [("en-US", "B")]),
+                (4000, [("en-US", "")]),
+            ],
+        )
