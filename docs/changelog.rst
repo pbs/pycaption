@@ -2,8 +2,16 @@ Changelog
 ---------
 2.3.15
 ^^^^^^
-  - Fix ``DFXPReader`` dropping earlier captions when multiple divisions
-    share a language.
+  - Fix ``DFXPReader`` keeping only the last division when several share a
+    language, and adding a nested division's paragraphs to its parent's
+    language as well as its own. Each division's paragraphs are now read
+    once, into its own language, and captions merged from several divisions
+    are sorted by start time, keeping document order for equal starts. A
+    language whose captions all come from one division, including one
+    inside a wrapper division, keeps their document order. A division
+    without ``xml:lang`` now takes its language from the nearest enclosing
+    division, ``<body>`` or ``<tt>`` that sets one, instead of always from
+    ``<tt>``.
 
 2.3.14
 ^^^^^^

@@ -76,6 +76,99 @@ class TestDFXPReader(ReaderTestingMixIn):
             (3000000, 4000000, "Second"),
         ] == [(c.start, c.end, c.get_text()) for c in captions]
 
+    def test_divs_out_of_time_order_are_merged_in_time_order(
+        self, sample_dfxp_divs_out_of_time_order
+    ):
+        captions = (
+            DFXPReader().read(sample_dfxp_divs_out_of_time_order).get_captions("en")
+        )
+
+        assert [
+            (1000000, 2000000, "early"),
+            (5000000, 6000000, "late"),
+        ] == [(c.start, c.end, c.get_text()) for c in captions]
+        assert isinstance(captions, CaptionList)
+        assert captions.layout_info is not None
+
+    def test_paragraphs_and_nested_divs_are_merged_in_time_order(
+        self, sample_dfxp_paragraphs_and_divs_as_siblings
+    ):
+        captions = (
+            DFXPReader()
+            .read(sample_dfxp_paragraphs_and_divs_as_siblings)
+            .get_captions("en")
+        )
+
+        assert [
+            (1000000, 2000000, "A"),
+            (2000000, 3000000, "B"),
+            (3000000, 4000000, "C"),
+        ] == [(c.start, c.end, c.get_text()) for c in captions]
+
+    def test_merged_captions_with_the_same_start_keep_document_order(
+        self, sample_dfxp_divs_with_same_start
+    ):
+        captions = (
+            DFXPReader().read(sample_dfxp_divs_with_same_start).get_captions("en")
+        )
+
+        assert ["top", "bottom"] == [c.get_text() for c in captions]
+
+    def test_single_div_keeps_its_paragraph_order(
+        self, sample_dfxp_single_div_with_unsorted_paragraphs
+    ):
+        captions = (
+            DFXPReader()
+            .read(sample_dfxp_single_div_with_unsorted_paragraphs)
+            .get_captions("en")
+        )
+
+        assert ["late", "early"] == [c.get_text() for c in captions]
+
+    def test_wrapper_div_keeps_its_inner_paragraph_order(
+        self, sample_dfxp_wrapper_div_with_unsorted_paragraphs
+    ):
+        """The empty wrapper registers the language first, so the inner div's
+        paragraphs arrive as a merge — but they all come from one div, and
+        stay in document order like any single div's.
+        """
+        captions = (
+            DFXPReader()
+            .read(sample_dfxp_wrapper_div_with_unsorted_paragraphs)
+            .get_captions("en")
+        )
+
+        assert ["late", "early"] == [c.get_text() for c in captions]
+
+    def test_nested_div_in_another_language_merges_only_into_its_language(
+        self, sample_dfxp_nested_div_in_another_language
+    ):
+        """The English paragraphs all come from the outer div, so they keep
+        document order; the French ones come from two divs and are sorted.
+        """
+        caption_set = DFXPReader().read(sample_dfxp_nested_div_in_another_language)
+
+        assert ["en late", "en early"] == [
+            c.get_text() for c in caption_set.get_captions("en")
+        ]
+        assert ["fr early", "fr middle"] == [
+            c.get_text() for c in caption_set.get_captions("fr")
+        ]
+
+    def test_nested_div_inherits_the_enclosing_div_language(
+        self, sample_dfxp_nested_div_inheriting_language
+    ):
+        caption_set = DFXPReader().read(sample_dfxp_nested_div_inheriting_language)
+
+        assert ["fr"] == caption_set.get_languages()
+        assert ["bonjour"] == [c.get_text() for c in caption_set.get_captions("fr")]
+
+    def test_div_inherits_the_body_language(self, sample_dfxp_language_on_body):
+        caption_set = DFXPReader().read(sample_dfxp_language_on_body)
+
+        assert ["de"] == caption_set.get_languages()
+        assert ["hallo"] == [c.get_text() for c in caption_set.get_captions("de")]
+
     def test_proper_timestamps(self, sample_dfxp):
         captions = DFXPReader().read(sample_dfxp)
         paragraph = captions.get_captions("en-US")[2]
