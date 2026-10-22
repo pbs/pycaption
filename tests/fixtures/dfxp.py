@@ -1652,3 +1652,132 @@ def sample_dfxp_overlapping_cues():
   </div>
  </body>
 </tt>"""
+
+
+@pytest.fixture(scope="session")
+def sample_dfxp_divs_out_of_time_order():
+    return """\
+<?xml version="1.0" encoding="utf-8"?>
+<tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml">
+ <body>
+  <div>
+   <p begin="00:00:05.000" end="00:00:06.000">late</p>
+  </div>
+  <div>
+   <p begin="00:00:01.000" end="00:00:02.000">early</p>
+  </div>
+ </body>
+</tt>"""
+
+
+@pytest.fixture(scope="session")
+def sample_dfxp_paragraphs_and_divs_as_siblings():
+    return """\
+<?xml version="1.0" encoding="utf-8"?>
+<tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml">
+ <body>
+  <div>
+   <p begin="00:00:01.000" end="00:00:02.000">A</p>
+   <div>
+    <p begin="00:00:02.000" end="00:00:03.000">B</p>
+   </div>
+   <p begin="00:00:03.000" end="00:00:04.000">C</p>
+  </div>
+ </body>
+</tt>"""
+
+
+@pytest.fixture(scope="session")
+def sample_dfxp_divs_with_same_start():
+    return """\
+<?xml version="1.0" encoding="utf-8"?>
+<tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml">
+ <body>
+  <div>
+   <p begin="00:00:01.000" end="00:00:02.000">top</p>
+  </div>
+  <div>
+   <p begin="00:00:01.000" end="00:00:02.000">bottom</p>
+  </div>
+ </body>
+</tt>"""
+
+
+@pytest.fixture(scope="session")
+def sample_dfxp_single_div_with_unsorted_paragraphs():
+    return """\
+<?xml version="1.0" encoding="utf-8"?>
+<tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml">
+ <body>
+  <div>
+   <p begin="00:00:05.000" end="00:00:06.000">late</p>
+   <p begin="00:00:01.000" end="00:00:02.000">early</p>
+  </div>
+ </body>
+</tt>"""
+
+
+@pytest.fixture(scope="session")
+def sample_dfxp_wrapper_div_with_unsorted_paragraphs():
+    return """\
+<?xml version="1.0" encoding="utf-8"?>
+<tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml">
+ <body>
+  <div>
+   <div>
+    <p begin="00:00:05.000" end="00:00:06.000">late</p>
+    <p begin="00:00:01.000" end="00:00:02.000">early</p>
+   </div>
+  </div>
+ </body>
+</tt>"""
+
+
+@pytest.fixture(scope="session")
+def sample_dfxp_nested_div_in_another_language():
+    return """\
+<?xml version="1.0" encoding="utf-8"?>
+<tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml">
+ <body>
+  <div>
+   <p begin="00:00:04.000" end="00:00:05.000">en late</p>
+   <div xml:lang="fr">
+    <p begin="00:00:03.000" end="00:00:04.000">fr middle</p>
+   </div>
+   <p begin="00:00:02.000" end="00:00:03.000">en early</p>
+  </div>
+  <div xml:lang="fr">
+   <p begin="00:00:01.000" end="00:00:02.000">fr early</p>
+  </div>
+ </body>
+</tt>"""
+
+
+@pytest.fixture(scope="session")
+def sample_dfxp_nested_div_inheriting_language():
+    return """\
+<?xml version="1.0" encoding="utf-8"?>
+<tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml">
+ <body>
+  <div xml:lang="fr">
+   <div>
+    <div>
+     <p begin="00:00:01.000" end="00:00:02.000">bonjour</p>
+    </div>
+   </div>
+  </div>
+ </body>
+</tt>"""
+
+
+@pytest.fixture(scope="session")
+def sample_dfxp_language_on_body():
+    return """\
+<?xml version="1.0" encoding="utf-8"?>
+<tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml">
+ <body xml:lang="de">
+  <div>
+   <p begin="00:00:01.000" end="00:00:02.000">hallo</p>
+  </div>
+ </body>
+</tt>"""

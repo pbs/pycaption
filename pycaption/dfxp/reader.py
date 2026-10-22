@@ -139,12 +139,18 @@ class DFXPReader(BaseReader):
         default_language = tt_attrs.get(DFXP_ATTR_XML_LANG, DEFAULT_LANGUAGE_CODE)
 
         for div in dfxp_document.find_all("div"):
-            lang = div.attrs.get(DFXP_ATTR_XML_LANG, default_language)
+            lang = self._find_language(div, default_language)
             captions = self._convert_div_to_caption_list(div)
-            if lang in caption_dict:
-                caption_dict[lang].extend(captions)
-            else:
+            if lang not in caption_dict:
                 caption_dict[lang] = captions
+            elif caption_dict[lang] and captions:
+                # Divs need not be in time order; sort only a genuine merge,
+                # so one div's paragraphs keep document order even when an
+                # empty wrapper div registered the language first.
+                caption_dict[lang].extend(captions)
+                caption_dict[lang].sort(key=lambda caption: caption.start)
+            else:
+                caption_dict[lang].extend(captions)
 
         for style in dfxp_document.find_all("style"):
             id_ = style.attrs.get(DFXP_ATTR_XML_ID) or style.attrs.get("id")
@@ -212,6 +218,18 @@ class DFXPReader(BaseReader):
                 f"ttp:frameRate must be a positive integer, got '{framerate_str}'"
             )
         self.tickrate = float(framerate_int * sub_framerate)
+
+    @staticmethod
+    def _find_language(div, default_language):
+        """Return the xml:lang in effect for a <div>.
+
+        xml:lang is inherited, so a div without one takes it from the nearest
+        enclosing div, <body> or <tt> that sets it.
+        """
+        for element in (div, *div.parents):
+            if DFXP_ATTR_XML_LANG in element.attrs:
+                return element.attrs[DFXP_ATTR_XML_LANG]
+        return default_language
 
     def _convert_div_to_caption_list(self, div):
         """Convert a <div> element into a CaptionList for one language.

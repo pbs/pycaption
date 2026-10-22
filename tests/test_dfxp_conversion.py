@@ -6,6 +6,7 @@ from pycaption import (
     MicroDVDWriter,
     SAMIReader,
     SRTReader,
+    WebVTTReader,
     WebVTTWriter,
 )
 from pycaption.dfxp.constants import (
@@ -246,6 +247,19 @@ class TestDFXPtoWebVTT(WebVTTTestingMixIn):
         assert start_align_count == 3, (
             f"{3 - start_align_count} default alignment(s) missing."
         )
+
+    def test_divs_out_of_time_order_write_cues_in_time_order(
+        self, sample_dfxp_divs_out_of_time_order
+    ):
+        caption_set = DFXPReader().read(sample_dfxp_divs_out_of_time_order)
+        results = WebVTTWriter().write(caption_set)
+
+        # WebVTT cues must be in start-time order; a strict reader enforces it
+        reread = WebVTTReader(ignore_timing_errors=False).read(results)
+
+        assert ["early", "late"] == [
+            c.get_text() for c in reread.get_captions(reread.get_languages()[0])
+        ]
 
 
 class TestDFXPtoMicroDVD(MicroDVDTestingMixIn):
