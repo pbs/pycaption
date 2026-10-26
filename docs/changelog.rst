@@ -12,6 +12,13 @@ Changelog
     without ``xml:lang`` now takes its language from the nearest enclosing
     division, ``<body>`` or ``<tt>`` that sets one, instead of always from
     ``<tt>``.
+  - Fix ``SRTReader`` silently dropping every caption after a line that is
+    not a caption number, such as text left after a blank line inside a cue.
+    The reader stopped at that line and returned only the captions before
+    it. It now raises ``CaptionReadSyntaxError`` naming the line, as it
+    already does for a number with no timing line after it. Text after the
+    last caption is still ignored, and input that already raised is
+    unchanged.
 
 2.3.14
 ^^^^^^

@@ -78,6 +78,41 @@ class TestSRTReader(ReaderTestingMixIn):
         with pytest.raises(CaptionReadSyntaxError):
             self.reader.read(content)
 
+    @pytest.mark.parametrize(
+        "content",
+        [
+            # text after a blank line inside a cue, then a normal second cue
+            "1\n00:00:01,000 --> 00:00:02,500\nHello\n\nthere\n\n"
+            "2\n00:00:03,000 --> 00:00:04,000\nWorld\n",
+            # the stray line runs straight into the next caption number
+            "1\n00:00:01,000 --> 00:00:02,500\nHello\n\nthere\n"
+            "2\n00:00:03,000 --> 00:00:04,000\nWorld\n",
+            # the stray line is in the middle of the file, not the first block
+            "1\n00:00:01,000 --> 00:00:02,500\nHello\n\n"
+            "2\n00:00:03,000 --> 00:00:04,000\nWorld\n\nthere\n\n"
+            "3\n00:00:05,000 --> 00:00:06,000\nAgain\n",
+        ],
+    )
+    def test_stray_text_between_captions_raises_instead_of_dropping_the_rest(
+        self, content
+    ):
+        with pytest.raises(CaptionReadSyntaxError, match="Expected a caption number"):
+            self.reader.read(content)
+
+    def test_stray_text_error_names_the_line(self):
+        content = (
+            "1\n00:00:01,000 --> 00:00:02,500\nHello\n\nthere\n\n"
+            "2\n00:00:03,000 --> 00:00:04,000\nWorld\n"
+        )
+        with pytest.raises(CaptionReadSyntaxError, match=r"line 5 .*'there'"):
+            self.reader.read(content)
+
+    def test_trailing_text_after_the_last_caption_is_still_ignored(self):
+        content = "1\n00:00:01,000 --> 00:00:02,500\nHello\n\nEND OF FILE\n"
+        paragraphs = self.reader.read(content).get_captions("en-US")
+
+        assert [p.get_text() for p in paragraphs] == ["Hello"]
+
     def test_extra_empty_line(self, sample_srt_blank_lines):
         captions = self.reader.read(sample_srt_blank_lines)
         paragraphs = captions.get_captions("en-US")
