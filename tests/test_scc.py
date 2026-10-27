@@ -1539,6 +1539,44 @@ class TestSCCReader(ReaderTestingMixIn):
         SCCReader._fix_last_captions_without_ending([caption_with_end])
         assert caption_with_end.end == 5000000
 
+    def test_offset_drops_cues_ending_before_it(self, sample_scc_two_pop_on_cues):
+        captions = SCCReader().read(sample_scc_two_pop_on_cues, offset=3)
+        cues = captions.get_captions("en-US")
+
+        assert [c.get_text() for c in cues] == ["<LAUGHING & WHOOPS!>"]
+        assert cues[0].start == pytest.approx(2600000)
+        assert cues[0].end == pytest.approx(4000000)
+
+    def test_offset_drops_a_cue_ending_exactly_at_it(self, sample_scc_two_pop_on_cues):
+        captions = SCCReader().read(sample_scc_two_pop_on_cues, offset=2)
+        cues = captions.get_captions("en-US")
+
+        assert [c.get_text() for c in cues] == ["<LAUGHING & WHOOPS!>"]
+
+    def test_offset_starts_a_cue_crossing_it_at_zero(self, sample_scc_two_pop_on_cues):
+        captions = SCCReader().read(sample_scc_two_pop_on_cues, offset=6)
+        cues = captions.get_captions("en-US")
+
+        assert [c.get_text() for c in cues] == ["<LAUGHING & WHOOPS!>"]
+        assert cues[0].start == 0
+        assert cues[0].end == pytest.approx(1000000)
+
+    def test_offset_shortens_a_last_cue_without_ending(
+        self, sample_scc_two_pop_on_cues
+    ):
+        # The last cue is never erased, so it gets the default 4 seconds,
+        # 5.6s to 9.6s, before the offset is applied.
+        content = sample_scc_two_pop_on_cues.replace("00:00:07;00 942c 942c\n", "")
+        cues = SCCReader().read(content, offset=8).get_captions("en-US")
+
+        assert [c.get_text() for c in cues] == ["<LAUGHING & WHOOPS!>"]
+        assert cues[0].start == 0
+        assert cues[0].end == pytest.approx(1600000)
+
+    def test_offset_past_every_cue_raises_no_captions(self, sample_scc_two_pop_on_cues):
+        with pytest.raises(CaptionReadNoCaptions):
+            SCCReader().read(sample_scc_two_pop_on_cues, offset=8)
+
 
 class TestCoverageOnly:
     """In order to refactor safely, we need coverage of 95% or more.
