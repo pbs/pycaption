@@ -123,7 +123,11 @@ class SCCReader(BaseReader):
     This can be then later used for converting into any other supported formats
     """
 
-    def __init__(self, *args, **kw):
+    def __init__(self, *args, simulate_roll_up=False, **kw):
+        """
+        :type simulate_roll_up: bool
+        :param simulate_roll_up: the default for ``read`` (see there)
+        """
         super().__init__(*args, **kw)
         self.caption_stash = CaptionCreator()
         self.time_translator = _SccTimeTranslator()
@@ -146,8 +150,10 @@ class SCCReader(BaseReader):
         self.pop_ons_queue = deque()
 
         self.roll_rows = []
+        self._rows_rolled = 0
         self.roll_rows_expected = 0
-        self.simulate_roll_up = False
+        self._simulate_roll_up_default = simulate_roll_up
+        self.simulate_roll_up = simulate_roll_up
 
         self._raw_lines = []
         self.time = 0
@@ -166,7 +172,7 @@ class SCCReader(BaseReader):
         else:
             return False
 
-    def read(self, content, lang="en-US", simulate_roll_up=False, offset=0):
+    def read(self, content, lang="en-US", simulate_roll_up=None, offset=0):
         """Converts the unicode string into a CaptionSet
 
         :type content: str
@@ -178,7 +184,8 @@ class SCCReader(BaseReader):
         :type simulate_roll_up: bool
         :param simulate_roll_up: If True, when converting to other formats,
             the resulting captions will contain all the rows that were visible
-            on the screen when the captions were rolling up.
+            on the screen when the captions were rolling up, one per line.
+            None (the default) uses the value given to the constructor.
 
         :type offset: int
         :param offset:
@@ -187,6 +194,8 @@ class SCCReader(BaseReader):
         """
         content = self._decode_content(content)
 
+        if simulate_roll_up is None:
+            simulate_roll_up = self._simulate_roll_up_default
         self.simulate_roll_up = simulate_roll_up
         self.time_translator.offset = offset * 1000000
         lines = content.splitlines()
@@ -248,13 +257,32 @@ class SCCReader(BaseReader):
     def _validate_line_lengths(self):
         """Raise CaptionLineLengthError if any line exceeds 32 characters."""
         violations = []
+        reported_rows = set()
         for precap in self.caption_stash._collection:
             cap = precap.to_real_caption()
             raw = "".join(cap.get_text_nodes())
-            # get_text() strips the caption, dropping any lines it opens with
-            skipped = raw[: len(raw) - len(raw.lstrip())].count("\n")
-            for index, line in enumerate(cap.get_text().split("\n")):
+            if precap.window_rows:
+                # Each line of a simulated roll-up window is a row, measured
+                # with the indentation lining it up, which get_text() strips
+                # off the first, and without the spaces it ends with, which it
+                # strips off the last. Rows above row 1 were left out of the
+                # window.
+                lines = [line.rstrip() for line in raw.split("\n")]
+                rows = precap.window_rows[-len(lines) :]
+                skipped = 0
+            else:
+                lines = cap.get_text().split("\n")
+                rows = None
+                # get_text() strips the caption, dropping any lines it opens with
+                skipped = raw[: len(raw) - len(raw.lstrip())].count("\n")
+            for index, line in enumerate(lines):
                 if len(line) > 32:
+                    if rows:
+                        # A row rolling up through the windows is in each of
+                        # them: it is named in the first it is too long in
+                        if rows[index] in reported_rows:
+                            continue
+                        reported_rows.add(rows[index])
                     description = self._describe_line_length(
                         line, (index + skipped) in precap.continued_rows
                     )
@@ -460,10 +488,12 @@ class SCCReader(BaseReader):
     def _cmd_pop_on(self):
         """Handle Resume Caption Loading [RCL] - switch to pop-on mode."""
         self.buffer_dict.set_active("pop")
+        self.roll_rows = []
 
     def _cmd_paint_on(self):
         """Handle Resume Direct Captioning [RDC] - switch to paint-on mode."""
         self.buffer_dict.set_active("paint")
+        self.roll_rows = []
         self.roll_rows_expected = 1
         if not self.buffer.is_empty():
             self.caption_stash.create_and_store(
@@ -479,15 +509,11 @@ class SCCReader(BaseReader):
         self.roll_rows_expected = self._ROLL_UP_DEPTH[word]
 
         if not self.buffer.is_empty():
-            self.caption_stash.create_and_store(
-                self.buffer,
-                self.time,
-                caption_mode="roll_up",
-                roll_up_rows=prev_rows or self.roll_rows_expected,
-            )
+            self._store_roll_up_row(rows=prev_rows or self.roll_rows_expected)
             self._reset_buffer()
 
-        self.roll_rows = []
+        # Sent again while rolling up, the command only sets the depth: the
+        # rows on screen stay, and the next row trims them to it
         self.time = self.time_translator.get_time()
 
     def _cmd_erase_non_displayed(self):
@@ -515,25 +541,17 @@ class SCCReader(BaseReader):
         edm_time = self.time_translator.get_time()
         if self.pop_ons_queue:
             self._pop_on(end=edm_time)
-        if (
-            self.buffer_dict.active_key in ("paint", "roll")
-            and not self.buffer.is_empty()
-        ):
-            mode = "paint_on" if self.buffer_dict.active_key == "paint" else "roll_up"
-            roll_rows = (
-                self.roll_rows_expected
-                if self.buffer_dict.active_key == "roll"
-                else None
-            )
+        if self.buffer_dict.active_key == "paint" and not self.buffer.is_empty():
             self.caption_stash.create_and_store(
-                self.buffer,
-                self.time,
-                edm_time,
-                caption_mode=mode,
-                roll_up_rows=roll_rows,
+                self.buffer, self.time, edm_time, caption_mode="paint_on"
             )
             self._reset_buffer()
             self.time = edm_time
+        elif self.buffer_dict.active_key == "roll" and not self.buffer.is_empty():
+            self._store_roll_up_row(end=edm_time)
+            self._reset_buffer()
+            self.time = edm_time
+        self.roll_rows = []
 
     def _new_buffer(self):
         """Create a fresh InstructionNodeCreator bound to the shared
@@ -577,23 +595,7 @@ class SCCReader(BaseReader):
     def _roll_up(self):
         """Flush the roll-up buffer as a caption and prepare for the next row."""
         # We expect the active buffer to be the roll buffer
-        if self.simulate_roll_up:
-            if self.roll_rows_expected > 1:
-                if len(self.roll_rows) >= self.roll_rows_expected:
-                    self.roll_rows.pop(0)
-
-                self.roll_rows.append(self.buffer)
-                self.buffer = InstructionNodeCreator.from_list(
-                    self.roll_rows, position_tracker=self.position_tracker
-                )
-
-        # convert buffer and empty
-        self.caption_stash.create_and_store(
-            self.buffer,
-            self.time,
-            caption_mode="roll_up",
-            roll_up_rows=self.roll_rows_expected,
-        )
+        self._store_roll_up_row()
         self._reset_buffer()
 
         # configure time
@@ -601,6 +603,57 @@ class SCCReader(BaseReader):
 
         # try to insert the proper ending time for the previous caption
         self.caption_stash.correct_last_timing(self.time, force=True)
+
+    def _store_roll_up_row(self, end=0, rows=None):
+        """Store the roll-up buffer's row as a caption: the row alone, or when
+        simulating roll-up, the window of the last rows it rolls in with.
+
+        :type end: float
+        :param end: the end time in microseconds, if already known
+        :type rows: int
+        :param rows: the roll-up depth the row was sent at, if not the current
+        """
+        rows = rows or self.roll_rows_expected
+        window = (
+            self.simulate_roll_up and rows > 1 and self.buffer_dict.active_key == "roll"
+        )
+        if window and not self.buffer.holds_one_row():
+            # A PAC moved the text off its row: with no one base row to roll up
+            # from, it is read as without the simulation and starts a new window
+            self.roll_rows = []
+            window = False
+        if window and self.buffer.is_blank():
+            # Read alone, a row of spaces leaves no caption: it doesn't roll in
+            # either, and the window on screen stays until the next row
+            if end:
+                self.caption_stash.correct_last_timing(end)
+            return
+        if not window:
+            self.caption_stash.create_and_store(
+                self.buffer,
+                self.time,
+                end,
+                caption_mode="roll_up",
+                roll_up_rows=rows,
+            )
+            return
+
+        # Numbered, so the line length check can tell the row apart from
+        # another with the same text in each window it rolls through
+        self._rows_rolled += 1
+        self.roll_rows.append((self._rows_rolled, self.buffer.settled_row()))
+        del self.roll_rows[:-rows]
+        self.caption_stash.create_and_store(
+            InstructionNodeCreator.from_rows(
+                [row for _, row in self.roll_rows],
+                position_tracker=self.position_tracker,
+            ),
+            self.time,
+            end,
+            caption_mode="roll_up",
+            roll_up_rows=rows,
+            window_rows=[number for number, _ in self.roll_rows],
+        )
 
     def _pop_on(self, end=0):
         """Dequeue and store the oldest pop-on cue as a finalized caption."""

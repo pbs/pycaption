@@ -56,6 +56,8 @@ class PreCaption:
         # Indices of the lines whose text continued on the row without a PAC
         # or row change, for the line length check to name the cause
         self.continued_rows = set()
+        # For a simulated roll-up window, the number of the row on each line
+        self.window_rows = None
 
     def to_real_caption(self):
         """Convert this mutable holder into an immutable Caption instance.
@@ -244,7 +246,13 @@ class CaptionCreator:
         return caption
 
     def create_and_store(
-        self, node_buffer, start, end=0, caption_mode=None, roll_up_rows=None
+        self,
+        node_buffer,
+        start,
+        end=0,
+        caption_mode=None,
+        roll_up_rows=None,
+        window_rows=None,
     ):
         """Interpreter method, will convert the buffer into one or more Caption
         objects, storing them internally.
@@ -263,18 +271,25 @@ class CaptionCreator:
         :param caption_mode: CEA-608 mode ("pop_on", "roll_up", "paint_on")
         :type roll_up_rows: int or None
         :param roll_up_rows: roll-up depth (2, 3, or 4) when mode is roll_up
+        :type window_rows: list[int] or None
+        :param window_rows: for a roll-up window, the number of each row in
+            it, oldest first; its rows are lined up as pop-on's are
         """
         if node_buffer.is_empty():
             return
 
         caption = self._new_precaption(start, end, caption_mode, roll_up_rows)
+        caption.window_rows = window_rows
         self._still_editing = [caption]
 
         instructions = list(node_buffer)
-        # Only pop-on is widened: roll-up joins its rows onto one line, and
-        # paint-on already splits a line that jumps columns into its own cue
+        # Pop-on and roll-up windows are widened: a roll-up row read alone is
+        # one line, and paint-on already splits a line that jumps columns into
+        # its own cue
         leftmost_columns = (
-            _leftmost_line_starts(instructions) if caption_mode == "pop_on" else []
+            _leftmost_line_starts(instructions)
+            if window_rows or caption_mode == "pop_on"
+            else []
         )
         cue_index = 0
         line_index = 0
@@ -656,14 +671,49 @@ class InstructionNodeCreator:
                 return True
         return False
 
-    @classmethod
-    def from_list(cls, stash_list, position_tracker):
-        """Having received a list of instances of this class, creates a new
-        instance that contains all the nodes of the previous instances
-        (basically concatenates the many stashes into one)
+    def settled_row(self):
+        """The buffer's nodes as a roll-up row, overwrites settled, to be read
+        again in each window it rolls through
 
-        :type stash_list: list[InstructionNodeCreator]
-        :param stash_list: a list of instances of this class
+        :rtype: list[_InstructionNode]
+        """
+        return list(_resolve_overwrites(self._collection))
+
+    def is_blank(self):
+        """Whether the buffer's text is only spaces
+
+        :rtype: bool
+        """
+        return not any(
+            node.is_text_node() and node.text and node.text.strip()
+            for node in self._collection
+        )
+
+    def holds_one_row(self):
+        """Whether the buffer's text stays on the row it started on, no PAC or
+        row change moving it to another
+
+        :rtype: bool
+        """
+        return not any(
+            node.is_explicit_break() or node.requires_repositioning()
+            for node in self._collection
+        )
+
+    @classmethod
+    def from_rows(cls, rows, position_tracker):
+        """Create an instance holding the roll-up window the rows make on screen
+
+        The rows run oldest to newest, one per line, the newest on the base row
+        its PAC set and the others stacked above it. Rows that would be pushed
+        above row 1 are off the screen and left out. A row's style does not
+        carry over to the row below it, so italics it leaves open are closed.
+
+        The rows are copied, not modified: each is read again in the next
+        window, one row further up.
+
+        :type rows: list[list[_InstructionNode]]
+        :param rows: settled rows (see ``settled_row``), oldest first
 
         :type position_tracker: .state_machines.DefaultProvidingPositionTracker
         :param position_tracker: state machine to be interrogated about the
@@ -671,25 +721,29 @@ class InstructionNodeCreator:
 
         :rtype: InstructionNodeCreator
         """
+        base = _row_position(rows[-1])
+        if base:
+            rows = rows[-base[0] :]
+        top_row = base[0] - len(rows) + 1 if base else None
+
         instance = cls(position_tracker=position_tracker)
-        new_collection = instance._collection
-
-        for idx, stash in enumerate(stash_list):
-            # Resolved per stash: each is a row of its own, so an overwrite
-            # is measured against its row rather than the rows joined together
-            new_collection.extend(
-                _clear_continuations_of_fitting_rows(
-                    _resolve_overwrites(stash._collection)
+        for index, row in enumerate(rows):
+            row = copy.deepcopy(row)
+            for node in row:
+                if top_row and node.position:
+                    node.position = (top_row, node.position[1])
+            start = _row_position(row)
+            if index:
+                instance._collection.append(
+                    _InstructionNode.create_break(
+                        position=start, line_start=start[1] if start else None
+                    )
                 )
-            )
-
-            # use space to separate the stashes, but don't add final space
-            if idx < len(stash_list) - 1:
-                try:
-                    instance._collection[-1].add_chars(" ")
-                except AttributeError:
-                    pass
-
+            instance._collection.extend(row)
+            if _leaves_italics_open(row):
+                instance._collection.append(
+                    _InstructionNode.create_italics_style(start, turn_on=False)
+                )
         return instance
 
     def handle_backspace(self, word):
@@ -1216,29 +1270,32 @@ def _join_across_markers(line):
     return joined
 
 
-def _clear_continuations_of_fitting_rows(collection):
-    """Clear the row continuation of every line that fits the row
+def _row_position(row):
+    """The position of a row's first text, (row, column), or None
 
-    Simulated roll-up joins its rows onto one line, which can run past column
-    32 although no row did. The continuation has to be judged on its own row,
-    before the join, or it would take the blame for a length it did not cause.
-
-    The nodes are cleared in place, not copied: the row's nodes are shared with
-    the stash it is re-read from, and a row that fits keeps fitting.
-
-    :type collection: list[_InstructionNode]
-    :rtype: list[_InstructionNode]
+    :type row: list[_InstructionNode]
+    :rtype: tuple[int] | None
     """
-    line = []
-    for node in collection + [None]:
-        if node is not None and not _ends_line(node):
-            line.append(node)
-            continue
-        if _line_length(line) <= 32:
-            for line_node in line:
-                line_node.continues_row = False
-        line = []
-    return collection
+    return next(
+        (
+            node.position
+            for node in row
+            if node.is_text_node() and node.text and node.position
+        ),
+        None,
+    )
+
+
+def _leaves_italics_open(row):
+    """Whether the last italics node of the row turns them on
+
+    :type row: list[_InstructionNode]
+    :rtype: bool
+    """
+    for node in reversed(row):
+        if node.is_italics_node():
+            return node.sets_italics_on()
+    return False
 
 
 def _drop_last_columns(line, columns):

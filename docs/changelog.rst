@@ -19,6 +19,24 @@ Changelog
     already does for a number with no timing line after it. Text after the
     last caption is still ignored, and input that already raised is
     unchanged.
+  - Fix ``SCCReader(simulate_roll_up=True)``, which never built the roll-up
+    window. Each roll-up caption now holds the rows on screen, the last 2, 3
+    or 4, one per line, oldest on top and the newest on the base row its PAC
+    set. A roll-up command sent again before each row, as production files
+    do, no longer restarts the window, rows are no longer joined by spaces
+    (doubled at times) onto one line that could fail the 32-character
+    check, and the row cleared by EDM rolls in with the others. A change of
+    depth keeps the rows the new depth holds; EDM or a switch to pop-on or
+    paint-on empties the window. The option can now be given to the
+    constructor, so it reaches the reader through ``CaptionConverter``;
+    passing it to ``read()`` still overrides it. A window lines its rows up
+    by column as pop-on does, so a row starting too far right for its text
+    is rejected on any line of the window, the top one included (pop-on
+    does not check its first line's indentation), and named once rather
+    than in each window it rolls through. A row that a PAC moves to another
+    row before its carriage return has no one base row to roll up from: it
+    is read as without the option, and the rows after it start a new window.
+    The default is still ``False``, and its output is unchanged.
 
 2.3.14
 ^^^^^^

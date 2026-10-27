@@ -140,12 +140,16 @@ Supported Styling: - italics - underline
 
 **Reader**
 
-By default, the SCC Reader does not simulate roll-up captions. To enable
-roll-ups:
+By default, the SCC Reader does not simulate roll-up captions: each roll-up
+row becomes a caption of its own. To enable roll-ups, so that each caption
+holds the rows on screen (the last 2, 3 or 4, one per line):
 
 ::
 
-    pycaps = SCCReader().read(scc_content, simulate_roll_up=True)
+    pycaps = SCCReader(simulate_roll_up=True).read(scc_content)
+
+The constructor form also works through ``CaptionConverter``. Passing
+``simulate_roll_up`` to ``read()`` overrides the constructor's value.
 
 Also, assumes input language is english. To change:
 

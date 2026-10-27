@@ -225,3 +225,13 @@ And: the samples decide the sensitivity. A plain-text sample reports "same" on a
 **Rule:** Any check about indentation, NBSP, or edge whitespace must compare `caption.nodes` (or `get_text_nodes()`), never `get_text()`. The behavior gate's `text_of()` uses `get_text()` too, so it is blind to this whole class of change — its "no flow changed" says nothing about whitespace PRs. Its built-in samples also carry no NBSP indentation; add one when a PR touches whitespace handling.
 
 **Applies to:** `check-last-pr`
+
+---
+
+## 19. `python -I` makes a PR-checkout probe import the wrong pycaption
+
+**What happened:** Reviewing PR #446, an edge-case probe was run as `python -I probe.py` from a worktree of the PR. `-I` ignores `PYTHONPATH` and drops the cwd from `sys.path`, so it imported the editable-installed pycaption (the main checkout). The "PR" and "main" outputs came out identical, which looked like the fix did nothing.
+
+**Rule:** When probing a specific checkout, run with `PYTHONPATH=<checkout>` and no `-I`, and print `pycaption.__file__` first to confirm which code was loaded. Identical base and HEAD output on a behavior-changing PR means: check the import path before concluding anything.
+
+**Applies to:** `check-last-pr`, any manual base-vs-PR probe

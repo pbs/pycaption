@@ -1177,9 +1177,9 @@ Scenarist_SCC V1.0
 
 
 # The row restating its PAC mid-row fits appended on its own, 23 columns, then
-# rolls up into the caption of a second row. Joined to that row it is 34
-# columns, which would make the restated PAC look like an overwrite of
-# "HE'S YOUNG" if the rows were settled together instead of one by one.
+# rolls up into the caption of a second row. Read on one line with that row it
+# would be 34 columns, which would make the restated PAC look like an overwrite
+# of "HE'S YOUNG" if the rows were settled together instead of one by one.
 @pytest.fixture(scope="session")
 def sample_scc_roll_up_restated_row_rolled_into_a_long_line():
     return """\
@@ -1642,5 +1642,466 @@ Scenarist_SCC V1.0
 00:00:03:00\t58d9
 
 00:00:04:00\t942c 942f
+
+"""
+
+
+# RU2: 3 rows, one more than the window holds, the roll-up command
+# sent again before every row as production files do, then cleared by EDM.
+@pytest.fixture(scope="session")
+def sample_scc_roll_up_ru2_sent_per_row():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01;00\t9425 9425 94ad 94ad 9470 9470 524f 5720 4fce 4580
+
+00:00:03;00\t9425 9425 94ad 94ad 9470 9470 524f 5720 5457 4f80
+
+00:00:05;00\t9425 9425 94ad 94ad 9470 9470 524f 5720 54c8 5245 4580
+
+00:00:07;00\t942c 942c
+
+"""
+
+
+# As above, the RU2 command sent only before the first row.
+@pytest.fixture(scope="session")
+def sample_scc_roll_up_ru2_sent_once():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01;00\t9425 9425 94ad 94ad 9470 9470 524f 5720 4fce 4580
+
+00:00:03;00\t94ad 94ad 9470 9470 524f 5720 5457 4f80
+
+00:00:05;00\t94ad 94ad 9470 9470 524f 5720 54c8 5245 4580
+
+00:00:07;00\t942c 942c
+
+"""
+
+
+# RU3: 4 rows, one more than the window holds, the roll-up command
+# sent again before every row as production files do, then cleared by EDM.
+@pytest.fixture(scope="session")
+def sample_scc_roll_up_ru3_sent_per_row():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01;00\t9426 9426 94ad 94ad 9470 9470 524f 5720 4fce 4580
+
+00:00:03;00\t9426 9426 94ad 94ad 9470 9470 524f 5720 5457 4f80
+
+00:00:05;00\t9426 9426 94ad 94ad 9470 9470 524f 5720 54c8 5245 4580
+
+00:00:07;00\t9426 9426 94ad 94ad 9470 9470 524f 5720 464f d552
+
+00:00:09;00\t942c 942c
+
+"""
+
+
+# As above, the RU3 command sent only before the first row.
+@pytest.fixture(scope="session")
+def sample_scc_roll_up_ru3_sent_once():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01;00\t9426 9426 94ad 94ad 9470 9470 524f 5720 4fce 4580
+
+00:00:03;00\t94ad 94ad 9470 9470 524f 5720 5457 4f80
+
+00:00:05;00\t94ad 94ad 9470 9470 524f 5720 54c8 5245 4580
+
+00:00:07;00\t94ad 94ad 9470 9470 524f 5720 464f d552
+
+00:00:09;00\t942c 942c
+
+"""
+
+
+# RU4: 5 rows, one more than the window holds, the roll-up command
+# sent again before every row as production files do, then cleared by EDM.
+@pytest.fixture(scope="session")
+def sample_scc_roll_up_ru4_sent_per_row():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01;00\t94a7 94a7 94ad 94ad 9470 9470 524f 5720 4fce 4580
+
+00:00:03;00\t94a7 94a7 94ad 94ad 9470 9470 524f 5720 5457 4f80
+
+00:00:05;00\t94a7 94a7 94ad 94ad 9470 9470 524f 5720 54c8 5245 4580
+
+00:00:07;00\t94a7 94a7 94ad 94ad 9470 9470 524f 5720 464f d552
+
+00:00:09;00\t94a7 94a7 94ad 94ad 9470 9470 524f 5720 4649 d645
+
+00:00:11;00\t942c 942c
+
+"""
+
+
+# As above, the RU4 command sent only before the first row.
+@pytest.fixture(scope="session")
+def sample_scc_roll_up_ru4_sent_once():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01;00\t94a7 94a7 94ad 94ad 9470 9470 524f 5720 4fce 4580
+
+00:00:03;00\t94ad 94ad 9470 9470 524f 5720 5457 4f80
+
+00:00:05;00\t94ad 94ad 9470 9470 524f 5720 54c8 5245 4580
+
+00:00:07;00\t94ad 94ad 9470 9470 524f 5720 464f d552
+
+00:00:09;00\t94ad 94ad 9470 9470 524f 5720 4649 d645
+
+00:00:11;00\t942c 942c
+
+"""
+
+
+# RU3 rows "ROW ONE" to "ROW THREE", then RU2 for "ROW FOUR" and "ROW FIVE".
+@pytest.fixture(scope="session")
+def sample_scc_roll_up_depth_changed_mid_stream():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01;00\t9426 9426 94ad 94ad 9470 9470 524f 5720 4fce 4580
+
+00:00:03;00\t94ad 94ad 9470 9470 524f 5720 5457 4f80
+
+00:00:05;00\t94ad 94ad 9470 9470 524f 5720 54c8 5245 4580
+
+00:00:07;00\t9425 9425 94ad 94ad 9470 9470 524f 5720 464f d552
+
+00:00:09;00\t94ad 94ad 9470 9470 524f 5720 4649 d645
+
+00:00:11;00\t942c 942c
+
+"""
+
+
+# RU3 rows "ROW ONE", a row of four spaces, "ROW TWO" and "ROW THREE".
+@pytest.fixture(scope="session")
+def sample_scc_roll_up_blank_row_mid_window():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01;00\t9426 9426 94ad 94ad 9470 9470 524f 5720 4fce 4580
+
+00:00:03;00\t9426 9426 94ad 94ad 9470 9470 2020 2020
+
+00:00:05;00\t9426 9426 94ad 94ad 9470 9470 524f 5720 5457 4f80
+
+00:00:07;00\t9426 9426 94ad 94ad 9470 9470 524f 5720 54c8 5245 4580
+
+00:00:09;00\t942c 942c
+
+"""
+
+
+# RU3 rows "ROW ONE", "ROW TWO" and a row of four spaces, erased by EDM, then
+# "ROW THREE".
+@pytest.fixture(scope="session")
+def sample_scc_roll_up_blank_row_erased():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01;00\t9426 9426 94ad 94ad 9470 9470 524f 5720 4fce 4580
+
+00:00:03;00\t9426 9426 94ad 94ad 9470 9470 524f 5720 5457 4f80
+
+00:00:05;00\t9426 9426 94ad 94ad 9470 9470 2020 2020
+
+00:00:07;00\t942c 942c
+
+00:00:08;00\t9426 9426 94ad 94ad 9470 9470 524f 5720 54c8 5245 4580
+
+00:00:10;00\t942c 942c
+
+"""
+
+
+# RU3 rows "ROW ONE" and "ROW TWO", erased by EDM, then "ROW THREE" and
+# "ROW FOUR" rolled up with no new roll-up command.
+@pytest.fixture(scope="session")
+def sample_scc_roll_up_erased_mid_window():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01;00\t9426 9426 94ad 94ad 9470 9470 524f 5720 4fce 4580
+
+00:00:03;00\t94ad 94ad 9470 9470 524f 5720 5457 4f80
+
+00:00:05;00\t942c 942c
+
+00:00:06;00\t94ad 94ad 9470 9470 524f 5720 54c8 5245 4580
+
+00:00:08;00\t94ad 94ad 9470 9470 524f 5720 464f d552
+
+00:00:10;00\t942c 942c
+
+"""
+
+
+# RU3 rows "ROW ONE" and "ROW TWO", the file ending before the window fills.
+@pytest.fixture(scope="session")
+def sample_scc_roll_up_ending_mid_window():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01;00\t9426 9426 94ad 94ad 9470 9470 524f 5720 4fce 4580
+
+00:00:03;00\t94ad 94ad 9470 9470 524f 5720 5457 4f80
+
+"""
+
+
+# RU2 rows "ROW ONE" and "ROW TWO", a pop-on caption "POP", then RU2 again
+# for "ROW THREE", with no EDM in between.
+@pytest.fixture(scope="session")
+def sample_scc_roll_up_then_pop_on_mid_window():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01;00\t9425 9425 94ad 94ad 9470 9470 524f 5720 4fce 4580
+
+00:00:03;00\t9425 9425 94ad 94ad 9470 9470 524f 5720 5457 4f80
+
+00:00:05;00\t9420 9420 94ae 94ae 9470 9470 d04f d080 942f 942f
+
+00:00:07;00\t9425 9425 94ad 94ad 9470 9470 524f 5720 54c8 5245 4580
+
+00:00:09;00\t942c 942c
+
+"""
+
+
+# RU2 rows "ROW ONE" and "ROW TWO", a paint-on caption "POP", then RU2 again
+# for "ROW THREE", with no EDM in between.
+@pytest.fixture(scope="session")
+def sample_scc_roll_up_then_paint_on_mid_window():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01;00\t9425 9425 94ad 94ad 9470 9470 524f 5720 4fce 4580
+
+00:00:03;00\t94ad 94ad 9470 9470 524f 5720 5457 4f80
+
+00:00:05;00\t9429 9429 9470 9470 d04f d080
+
+00:00:07;00\t9425 9425 94ad 94ad 9470 9470 524f 5720 54c8 5245 4580
+
+00:00:09;00\t942c 942c
+
+"""
+
+
+# RU2 row "ROW ONE", then a pop-on caption whose rows "AB" and "CD" are each
+# followed by a CR, while the depth RU2 set is still on record.
+@pytest.fixture(scope="session")
+def sample_scc_roll_up_then_carriage_return_in_pop_on():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01;00\t9425 9425 94ad 94ad 9470 9470 524f 5720 4fce 4580
+
+00:00:03;00\t9420 9420 94ae 94ae 9440 9440 c1c2 94ad 94ad 9470 9470 43c4 94ad 94ad 942f 942f
+
+00:00:05;00\t942c 942c
+
+"""
+
+
+# RU2 row "ROW ONE", then a row a PAC moves from row 13 ("AB", column 28) to
+# row 15 ("CD", column 8) before its CR, then "ROW THREE".
+@pytest.fixture(scope="session")
+def sample_scc_roll_up_row_moved_off_its_row_mid_window():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01;00\t9425 9425 94ad 94ad 9470 9470 524f 5720 4fce 4580
+
+00:00:03;00\t94ad 94ad 13fe 13fe c1c2 94f4 94f4 43c4
+
+00:00:05;00\t94ad 94ad 9470 9470 524f 5720 54c8 5245 4580
+
+00:00:07;00\t942c 942c
+
+"""
+
+
+# RU3 row of 33 characters, one too many, then "ROW TWO" and "ROW THREE",
+# so that the long row is in each of the three windows.
+@pytest.fixture(scope="session")
+def sample_scc_roll_up_long_row_in_every_window():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01;00\t9426 9426 94ad 94ad 9470 9470 c1c1 c1c1 c1c1 c1c1 c1c1 c1c1 c1c1 c1c1 c1c1 c1c1 c1c1 c1c1 c1c1 c1c1 c1c1 c1c1 c180
+
+00:00:03;00\t94ad 94ad 9470 9470 524f 5720 5457 4f80
+
+00:00:05;00\t94ad 94ad 9470 9470 524f 5720 54c8 5245 4580
+
+00:00:07;00\t942c 942c
+
+"""
+
+
+# RU2: two rows of the same 33 characters, one too many, each a row of its own.
+@pytest.fixture(scope="session")
+def sample_scc_roll_up_two_long_rows_alike():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01;00\t9425 9425 94ad 94ad 9470 9470 c1c1 c1c1 c1c1 c1c1 c1c1 c1c1 c1c1 c1c1 c1c1 c1c1 c1c1 c1c1 c1c1 c1c1 c1c1 c1c1 c180
+
+00:00:03;00\t9425 9425 94ad 94ad 9470 9470 c1c1 c1c1 c1c1 c1c1 c1c1 c1c1 c1c1 c1c1 c1c1 c1c1 c1c1 c1c1 c1c1 c1c1 c1c1 c1c1 c180
+
+00:00:05;00\t942c 942c
+
+"""
+
+
+# RU2 row of 13 characters placed by its PAC at column 24, where it runs past
+# column 32, then "ROW TWO" and "ROW THREE" at column 0. The long row is the
+# top line of the window it is lined up in.
+@pytest.fixture(scope="session")
+def sample_scc_roll_up_row_past_the_last_column_on_top():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01;00\t9425 9425 94ad 94ad 947c 947c c2c2 c2c2 c2c2 c2c2 c2c2 c2c2 c280
+
+00:00:03;00\t9425 9425 94ad 94ad 9470 9470 524f 5720 5457 4f80
+
+00:00:05;00\t9425 9425 94ad 94ad 9470 9470 524f 5720 54c8 5245 4580
+
+00:00:07;00\t942c 942c
+
+"""
+
+
+# RU4 rows at columns 0, 4, 24, 8 and 4, the one at column 24 of 13 characters,
+# past column 32. It is too long in every window it rolls through, but by fewer
+# columns once the row at column 0 has rolled off.
+@pytest.fixture(scope="session")
+def sample_scc_roll_up_long_row_as_the_window_shifts():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01;00\t94a7 94a7 94ad 94ad 9470 9470 c180
+
+00:00:03;00\t94a7 94a7 94ad 94ad 94f2 94f2 4680
+
+00:00:05;00\t94a7 94a7 94ad 94ad 947c 947c c2c2 c2c2 c2c2 c2c2 c2c2 c2c2 c280
+
+00:00:07;00\t94a7 94a7 94ad 94ad 94f4 94f4 4380
+
+00:00:09;00\t94a7 94a7 94ad 94ad 94f2 94f2 4580
+
+00:00:11;00\t942c 942c
+
+"""
+
+
+# RU3 rows "ROW ONE" to "ROW THREE" on base row 2, where only two rows fit.
+@pytest.fixture(scope="session")
+def sample_scc_roll_up_base_row_above_the_depth():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01;00\t9426 9426 94ad 94ad 91e0 91e0 524f 5720 4fce 4580
+
+00:00:03;00\t9426 9426 94ad 94ad 91e0 91e0 524f 5720 5457 4f80
+
+00:00:05;00\t9426 9426 94ad 94ad 91e0 91e0 524f 5720 54c8 5245 4580
+
+00:00:07;00\t942c 942c
+
+"""
+
+
+# As above, the second and third rows 33 characters long, one too many.
+@pytest.fixture(scope="session")
+def sample_scc_roll_up_long_rows_on_a_base_row_above_the_depth():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01;00\t9426 9426 94ad 94ad 91e0 91e0 524f 5720 4fce 4580
+
+00:00:03;00\t9426 9426 94ad 94ad 91e0 91e0 c1c1 c1c1 c1c1 c1c1 c1c1 c1c1 c1c1 c1c1 c1c1 c1c1 c1c1 c1c1 c1c1 c1c1 c1c1 c1c1 c180
+
+00:00:05;00\t9426 9426 94ad 94ad 91e0 91e0 c2c2 c2c2 c2c2 c2c2 c2c2 c2c2 c2c2 c2c2 c2c2 c2c2 c2c2 c2c2 c2c2 c2c2 c2c2 c2c2 c280
+
+00:00:07;00\t942c 942c
+
+"""
+
+
+# RU2 rows of 32 characters each, the most a row holds.
+@pytest.fixture(scope="session")
+def sample_scc_roll_up_full_rows():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01;00\t9425 9425 94ad 94ad 9470 9470 c1c1 c1c1 c1c1 c1c1 c1c1 c1c1 c1c1 c1c1 c1c1 c1c1 c1c1 c1c1 c1c1 c1c1 c1c1 c1c1
+
+00:00:03;00\t9425 9425 94ad 94ad 9470 9470 c2c2 c2c2 c2c2 c2c2 c2c2 c2c2 c2c2 c2c2 c2c2 c2c2 c2c2 c2c2 c2c2 c2c2 c2c2 c2c2
+
+00:00:05;00\t942c 942c
+
+"""
+
+
+# RU2 row of 32 characters in italics (PAC) and a space after them, which the
+# italics closing at the end of the row keeps from being trimmed off the line,
+# then "ROW TWO".
+@pytest.fixture(scope="session")
+def sample_scc_roll_up_full_italic_row_and_a_space():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01;00\t9425 9425 94ad 94ad 946e 946e c1c1 c1c1 c1c1 c1c1 c1c1 c1c1 c1c1 c1c1 c1c1 c1c1 c1c1 c1c1 c1c1 c1c1 c1c1 c1c1 2080
+
+00:00:03;00\t9425 9425 94ad 94ad 9470 9470 524f 5720 5457 4f80
+
+00:00:05;00\t942c 942c
+
+"""
+
+
+# RU2 row "ROW ONE" in italics (PAC), then plain "ROW TWO".
+@pytest.fixture(scope="session")
+def sample_scc_roll_up_italic_row():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01;00\t9425 9425 94ad 94ad 94ce 94ce 524f 5720 4fce 4580
+
+00:00:03;00\t9425 9425 94ad 94ad 9470 9470 524f 5720 5457 4f80
+
+00:00:05;00\t942c 942c
+
+"""
+
+
+# RU2 row "ROW ONE", then "ROW TWO" placed by its PAC at column 28, where it
+# runs past column 32. Read alone the row keeps no column; lined up in a window
+# under "ROW ONE" it does.
+@pytest.fixture(scope="session")
+def sample_scc_roll_up_row_past_the_last_column():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01;00\t9425 9425 94ad 94ad 9470 9470 524f 5720 4fce 4580
+
+00:00:03;00\t9425 9425 94ad 94ad 947f 947f 524f 5720 5457 4f80
+
+00:00:05;00\t942c 942c
 
 """
