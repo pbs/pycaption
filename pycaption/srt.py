@@ -50,6 +50,13 @@ class SRTReader(BaseReader):
 
         while start_line < len(lines):
             if not lines[start_line].isdigit():
+                if start_line > 0 and self._has_cue_after(lines, start_line):
+                    # Stopping here would silently drop every later caption.
+                    raise CaptionReadSyntaxError(
+                        f"Expected a caption number on line {start_line + 1} but "
+                        f"found {lines[start_line]!r}; captions after it would be "
+                        "lost."
+                    )
                 break
 
             end_line = self._find_text_line(start_line, lines)
@@ -107,6 +114,14 @@ class SRTReader(BaseReader):
             raise CaptionReadSyntaxError(f"Invalid SRT timestamp: {stamp!r}.")
 
         return microseconds
+
+    @staticmethod
+    def _has_cue_after(lines, start_line):
+        """Return True if a caption number and timing line follow ``start_line``."""
+        return any(
+            lines[i].isdigit() and "-->" in lines[i + 1]
+            for i in range(start_line + 1, len(lines) - 1)
+        )
 
     @staticmethod
     def _find_text_line(start_line, lines):
