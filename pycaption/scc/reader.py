@@ -188,7 +188,9 @@ class SCCReader(BaseReader):
             None (the default) uses the value given to the constructor.
 
         :type offset: int
-        :param offset:
+        :param offset: Seconds to subtract from every timestamp. A caption
+            crossing the new 0 starts at 0, and one ending at or before it is
+            dropped.
 
         :rtype: CaptionSet
         """
@@ -197,7 +199,6 @@ class SCCReader(BaseReader):
         if simulate_roll_up is None:
             simulate_roll_up = self._simulate_roll_up_default
         self.simulate_roll_up = simulate_roll_up
-        self.time_translator.offset = offset * 1000000
         lines = content.splitlines()
         self._raw_lines = lines
 
@@ -211,10 +212,27 @@ class SCCReader(BaseReader):
             {lang: self.caption_stash.get_all()},
             visual_alignment_default=HorizontalAlignmentEnum.CENTER,
         )
-        self._validate_captions(captions, lang)
+        # An end of 0 means "not ended yet", so shift only once every end is set.
         self._fix_last_captions_without_ending(captions.get_captions(lang))
+        self._apply_offset(captions.get_captions(lang), offset * 1000000)
+        self._validate_captions(captions, lang)
 
         return captions
+
+    @staticmethod
+    def _apply_offset(caption_list, offset):
+        """Move captions ``offset`` microseconds earlier, dropping those that
+        end at or before 0 and starting those that cross 0 at 0. An end of 0
+        was never set, so it is neither shifted nor a reason to drop."""
+        caption_list[:] = [
+            caption
+            for caption in caption_list
+            if not caption.end or caption.end > offset
+        ]
+        for caption in caption_list:
+            caption.start = max(caption.start - offset, 0)
+            if caption.end:
+                caption.end -= offset
 
     def _validate_captions(self, captions, lang):
         """Validate parsed captions for SCC-specific constraints.
@@ -685,28 +703,23 @@ class _SccTimeTranslator:
     def __init__(self):
         self._time = "00:00:00;00"
 
-        # microseconds. The offset from which we begin the time calculation
-        self.offset = 0
         self._frames = 0
 
     def get_time(self):
         """Returns the time, in microseconds. Takes into account the number of
-        frames passed, and the offset
+        frames passed
 
         :rtype: int
         """
         base_frames = int(self._time[-2:])
         total_frames = base_frames + self._frames
         stamp = self._time[:-2] + str(total_frames)
-        return self._translate_time(stamp, self.offset)
+        return self._translate_time(stamp)
 
     @staticmethod
-    def _translate_time(stamp, offset):
+    def _translate_time(stamp):
         """
         :param stamp:
-        :type offset: int
-        :param offset: Subtract this many microseconds from the calculated time
-            Helpful for when the captions are off by some time interval.
         :rtype: int
         """
         if not re.match(r"\d{2}:\d{2}:\d{2}[:;]\d{1,2}", stamp):
@@ -734,10 +747,7 @@ class _SccTimeTranslator:
         )
 
         seconds = timestamp_seconds * seconds_per_timestamp_second
-        microseconds = seconds * 1000 * 1000 - offset
-
-        if microseconds < 0:
-            microseconds = 0
+        microseconds = seconds * 1000 * 1000
 
         return microseconds
 
