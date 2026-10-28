@@ -192,6 +192,7 @@ from tests.fixtures.scc import (  # noqa: F401
     sample_scc_text_before_its_pac_on_another_row,
     sample_scc_text_before_its_pac_on_the_same_row,
     sample_scc_two_cues_the_second_continuing_its_row,
+    sample_scc_two_pop_on_cues,
     sample_scc_with_ampersand_character,
     sample_scc_with_extended_characters,
     sample_scc_with_italics,

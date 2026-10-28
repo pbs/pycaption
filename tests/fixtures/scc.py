@@ -411,6 +411,23 @@ Scenarist_SCC V1.0
 """
 
 
+# "( clock ticking )" from 1.57s to 2s, "<LAUGHING & WHOOPS!>" from 5.6s to 7s.
+@pytest.fixture(scope="session")
+def sample_scc_two_pop_on_cues():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01;00 94ae 94ae 9420 9420 9470 9470 a820 e3ec efe3 6b20 f4e9 e36b e96e 6720 2980 942c 942c 942f 942f
+
+00:00:02;00 942c 942c
+
+00:00:05;00 94ae 94ae 9420 9420 9470 9470 bc4c c1d5 c7c8 49ce c720 2620 57c8 4f4f d0d3 a13e 942c 942c 942f 942f
+
+00:00:07;00 942c 942c
+
+"""
+
+
 @pytest.fixture(scope="session")
 def sample_scc_flashing_cue():
     return """\
