@@ -1,6 +1,6 @@
 import pytest
 
-from pycaption import CaptionNode, CaptionReadNoCaptions, SCCReader
+from pycaption import CaptionConverter, CaptionNode, CaptionReadNoCaptions, SCCReader
 from pycaption.exceptions import CaptionLineLengthError, CaptionReadTimingError
 from pycaption.geometry import HorizontalAlignmentEnum, UnitEnum, VerticalAlignmentEnum
 from pycaption.scc.constants import MICROSECONDS_PER_CODEWORD
@@ -679,24 +679,26 @@ class TestSCCReader(ReaderTestingMixIn):
         assert len(captions) == 1
         assert [node.content for node in captions[0].nodes] == ["WHEN YOU LOOK AT THE"]
 
-    def test_roll_up_rows_are_settled_one_by_one_before_they_are_joined(
+    def test_roll_up_rows_are_settled_one_by_one_on_lines_of_their_own(
         self, sample_scc_roll_up_restated_row_rolled_into_a_long_line
     ):
         """The first row fits appended, so it keeps "HE'S YOUNG" in the caption
-        it rolls into as well. Joined to the second row it is too long, which
-        the length check reports rather than the restated PAC erasing words to
-        make it fit.
+        it rolls into as well, on a line of its own above the second row: the
+        two rows together are too long for one line, but neither is alone.
         """
-        with pytest.raises(CaptionLineLengthError) as exc_info:
-            SCCReader().read(
+        captions = (
+            SCCReader()
+            .read(
                 sample_scc_roll_up_restated_row_rolled_into_a_long_line,
                 simulate_roll_up=True,
             )
-
-        # Joined by the simulation, not by a row continuing without a PAC
-        assert exc_info.value.args[0].split("\n")[2] == (
-            "around 00:00:02.002 - HE'S YOUNG AND WELL, OK ABCDEFGHIJ - Length 34"
+            .get_captions("en-US")
         )
+
+        assert [caption.get_text() for caption in captions] == [
+            "HE'S YOUNG AND WELL, OK",
+            "HE'S YOUNG AND WELL, OK\nABCDEFGHIJ",
+        ]
 
     def test_pac_pointing_back_over_a_full_row_with_less_text_is_rejected(
         self, sample_scc_pac_pointing_back_over_a_full_row_with_less_text
@@ -721,7 +723,7 @@ class TestSCCReader(ReaderTestingMixIn):
     ):
         """The simulated roll-up reads the first row again for the caption the
         second row rolls into, and it reads the same there: the overwrite is
-        settled against that row alone, not the rows joined together.
+        settled against that row alone, on a line of its own.
         """
         captions = (
             SCCReader()
@@ -731,7 +733,7 @@ class TestSCCReader(ReaderTestingMixIn):
 
         assert [caption.get_text() for caption in captions] == [
             "YZABCDEFGHIJKLMNOPQRSTUV",
-            "YZABCDEFGHIJKLMNOPQRSTUV YZ",
+            "YZABCDEFGHIJKLMNOPQRSTUV\nYZ",
         ]
 
     def test_same_row_pac_ahead_of_the_cursor_keeps_the_columns_it_skipped(
@@ -1358,8 +1360,8 @@ class TestSCCReader(ReaderTestingMixIn):
         sample_scc_roll_up_row_continued_without_a_pac_then_rolled,
         sample_scc_roll_up_row_sent_in_one_go_then_rolled,
     ):
-        """Noting that a row was continued must not change how it is joined
-        to the rows rolled up under it, doubled separators included.
+        """Noting that a row was continued must not change how it rolls up
+        with the rows under it, each on a line of its own.
         """
         continued, in_one_go = (
             [
@@ -1377,9 +1379,9 @@ class TestSCCReader(ReaderTestingMixIn):
         assert continued == in_one_go
         assert in_one_go == [
             "ABCDEFGHIJ",
-            "ABCDEFGHIJ KLMNO",
-            "ABCDEFGHIJ  KLMNO UVWXYZ",
-            "KLMNO  UVWXYZ END",
+            "ABCDEFGHIJ\nKLMNO",
+            "ABCDEFGHIJ\nKLMNO\nUVWXYZ",
+            "KLMNO\nUVWXYZ\nEND",
         ]
 
     def test_mid_row_codes_not_adding_space_before_text(
@@ -1539,6 +1541,429 @@ class TestSCCReader(ReaderTestingMixIn):
         SCCReader._fix_last_captions_without_ending([caption_with_end])
         assert caption_with_end.end == 5000000
 
+    @staticmethod
+    def _read_roll_up(content, **kwargs):
+        """(start, end, text) of each caption, seconds and the lines of text"""
+        return [
+            (caption.start / 1e6, caption.end / 1e6, caption.get_text().split("\n"))
+            for caption in SCCReader(**kwargs).read(content).get_captions("en-US")
+        ]
+
+    @pytest.mark.parametrize("sent", ["per_row", "once"])
+    @pytest.mark.parametrize(
+        "depth, expected",
+        [
+            (
+                2,
+                [
+                    (1, 3, ["ROW ONE"]),
+                    (3, 5, ["ROW ONE", "ROW TWO"]),
+                    (5, 7, ["ROW TWO", "ROW THREE"]),
+                ],
+            ),
+            (
+                3,
+                [
+                    (1, 3, ["ROW ONE"]),
+                    (3, 5, ["ROW ONE", "ROW TWO"]),
+                    (5, 7, ["ROW ONE", "ROW TWO", "ROW THREE"]),
+                    (7, 9, ["ROW TWO", "ROW THREE", "ROW FOUR"]),
+                ],
+            ),
+            (
+                4,
+                [
+                    (1, 3, ["ROW ONE"]),
+                    (3, 5, ["ROW ONE", "ROW TWO"]),
+                    (5, 7, ["ROW ONE", "ROW TWO", "ROW THREE"]),
+                    (7, 9, ["ROW ONE", "ROW TWO", "ROW THREE", "ROW FOUR"]),
+                    (9, 11, ["ROW TWO", "ROW THREE", "ROW FOUR", "ROW FIVE"]),
+                ],
+            ),
+        ],
+    )
+    def test_simulated_roll_up_holds_the_last_rows_on_screen(
+        self, request, depth, sent, expected
+    ):
+        """Each caption holds the rows a decoder shows, oldest on top, until
+        the next row rolls them up. The roll-up command sent again before a
+        row, as production files do, keeps the rows on screen; the last row,
+        cleared by EDM, rolls in with them.
+        """
+        content = request.getfixturevalue(f"sample_scc_roll_up_ru{depth}_sent_{sent}")
+
+        assert self._read_roll_up(content, simulate_roll_up=True) == expected
+
+    @pytest.mark.parametrize("depth", [2, 3, 4])
+    def test_roll_up_rows_read_alone_by_default(self, request, depth):
+        content = request.getfixturevalue(f"sample_scc_roll_up_ru{depth}_sent_per_row")
+        words = ["ONE", "TWO", "THREE", "FOUR", "FIVE"][: depth + 1]
+
+        assert [text for _, _, text in self._read_roll_up(content)] == [
+            [f"ROW {word}"] for word in words
+        ]
+
+    def test_simulated_roll_up_window_sits_on_the_base_row(
+        self, sample_scc_roll_up_ru3_sent_per_row
+    ):
+        """The window's origin is its top row, so that its newest row lands on
+        the base row the PAC set, row 15: rows 15, 14 to 15, 13 to 15.
+        """
+        captions = (
+            SCCReader(simulate_roll_up=True)
+            .read(sample_scc_roll_up_ru3_sent_per_row)
+            .get_captions("en-US")
+        )
+
+        assert [caption.layout_info.origin.y.value for caption in captions] == [
+            89.0,
+            83.0,
+            77.0,
+            77.0,
+        ]
+
+    def test_simulated_roll_up_leaves_out_rows_above_the_first(
+        self, sample_scc_roll_up_base_row_above_the_depth
+    ):
+        """On base row 2 only two of the three rows fit on screen."""
+        captions = (
+            SCCReader(simulate_roll_up=True)
+            .read(sample_scc_roll_up_base_row_above_the_depth)
+            .get_captions("en-US")
+        )
+
+        assert [caption.get_text().split("\n") for caption in captions] == [
+            ["ROW ONE"],
+            ["ROW ONE", "ROW TWO"],
+            ["ROW TWO", "ROW THREE"],
+        ]
+        assert [caption.layout_info.origin.y.value for caption in captions] == [
+            11.0,
+            5.0,
+            5.0,
+        ]
+
+    def test_simulated_roll_up_depth_change_keeps_the_rows_the_new_depth_holds(
+        self, sample_scc_roll_up_depth_changed_mid_stream
+    ):
+        assert self._read_roll_up(
+            sample_scc_roll_up_depth_changed_mid_stream, simulate_roll_up=True
+        ) == [
+            (1, 3, ["ROW ONE"]),
+            (3, 5, ["ROW ONE", "ROW TWO"]),
+            (5, 7, ["ROW ONE", "ROW TWO", "ROW THREE"]),
+            (7, 9, ["ROW THREE", "ROW FOUR"]),
+            (9, 11, ["ROW FOUR", "ROW FIVE"]),
+        ]
+
+    def test_simulated_roll_up_window_is_emptied_by_erase_displayed_memory(
+        self, sample_scc_roll_up_erased_mid_window
+    ):
+        """The row EDM clears rolls in with the window, and the rows after it
+        start a new one. The row after EDM starts at the EDM, as it does
+        without the simulation.
+        """
+        assert self._read_roll_up(
+            sample_scc_roll_up_erased_mid_window, simulate_roll_up=True
+        ) == [
+            (1, 3, ["ROW ONE"]),
+            (3, 5, ["ROW ONE", "ROW TWO"]),
+            (5, 8, ["ROW THREE"]),
+            (8, 10, ["ROW THREE", "ROW FOUR"]),
+        ]
+
+    def test_simulated_roll_up_window_holds_the_last_row_of_the_file(
+        self, sample_scc_roll_up_ending_mid_window
+    ):
+        captions = self._read_roll_up(
+            sample_scc_roll_up_ending_mid_window, simulate_roll_up=True
+        )
+
+        assert [text for _, _, text in captions] == [
+            ["ROW ONE"],
+            ["ROW ONE", "ROW TWO"],
+        ]
+
+    @pytest.mark.parametrize("mode", ["pop_on", "paint_on"])
+    def test_simulated_roll_up_window_is_emptied_by_a_mode_switch(self, request, mode):
+        """No EDM comes between the modes: the switch alone empties it."""
+        content = request.getfixturevalue(f"sample_scc_roll_up_then_{mode}_mid_window")
+
+        assert [
+            text for _, _, text in self._read_roll_up(content, simulate_roll_up=True)
+        ] == [["ROW ONE"], ["ROW ONE", "ROW TWO"], ["POP"], ["ROW THREE"]]
+
+    def test_simulated_roll_up_leaves_carriage_returns_outside_roll_up_alone(
+        self, sample_scc_roll_up_then_carriage_return_in_pop_on
+    ):
+        """A CR in pop-on mode, with a roll-up depth still on record, does not
+        build a window of the pop-on rows.
+        """
+        content = sample_scc_roll_up_then_carriage_return_in_pop_on
+
+        assert self._read_roll_up(content, simulate_roll_up=True) == (
+            self._read_roll_up(content)
+        )
+
+    @pytest.mark.parametrize(
+        "fixture",
+        [
+            "sample_scc_multiple_positioning",
+            "sample_scc_roll_up_row_and_column_jump_in_one_pac",
+            "sample_scc_roll_up_row_plus_one_large_column_jump",
+        ],
+    )
+    def test_simulated_roll_up_reads_a_row_moved_off_its_row_as_without_it(
+        self, request, fixture
+    ):
+        """A PAC that moves a row's text to another row before its CR leaves it
+        no one base row to roll up from, so its lines keep their own rows and
+        columns rather than being stacked as one row of the window.
+        """
+        content = request.getfixturevalue(fixture)
+
+        def read(**kwargs):
+            return [
+                (
+                    caption.start,
+                    caption.end,
+                    caption.get_text(),
+                    caption.layout_info.serialized(),
+                )
+                for caption in SCCReader(**kwargs).read(content).get_captions("en-US")
+            ]
+
+        assert read(simulate_roll_up=True) == read()
+
+    def test_simulated_roll_up_window_restarts_after_a_row_moved_off_its_row(
+        self, sample_scc_roll_up_row_moved_off_its_row_mid_window
+    ):
+        assert self._read_roll_up(
+            sample_scc_roll_up_row_moved_off_its_row_mid_window, simulate_roll_up=True
+        ) == [
+            (1, 3, ["ROW ONE"]),
+            (3, 5, ["AB"]),
+            (3, 5, ["CD"]),
+            (5, 7, ["ROW THREE"]),
+        ]
+
+    def test_simulated_roll_up_leaves_out_a_row_of_spaces(
+        self, sample_scc_roll_up_blank_row_mid_window
+    ):
+        """Read alone, the row of spaces leaves no caption, so it doesn't roll
+        in as an empty line: the window before it stays until the next row.
+        Without the simulation, the row before it stays too, rather than
+        being left with no end.
+        """
+        content = sample_scc_roll_up_blank_row_mid_window
+
+        assert self._read_roll_up(content, simulate_roll_up=True) == [
+            (1, 5, ["ROW ONE"]),
+            (5, 7, ["ROW ONE", "ROW TWO"]),
+            (7, 9, ["ROW ONE", "ROW TWO", "ROW THREE"]),
+        ]
+        assert self._read_roll_up(content) == [
+            (1, 5, ["ROW ONE"]),
+            (5, 7, ["ROW TWO"]),
+            (7, 9, ["ROW THREE"]),
+        ]
+
+    def test_simulated_roll_up_window_ends_at_erase_of_a_row_of_spaces(
+        self, sample_scc_roll_up_blank_row_erased
+    ):
+        content = sample_scc_roll_up_blank_row_erased
+
+        assert self._read_roll_up(content, simulate_roll_up=True) == [
+            (1, 3, ["ROW ONE"]),
+            (3, 7, ["ROW ONE", "ROW TWO"]),
+            (8, 10, ["ROW THREE"]),
+        ]
+        assert self._read_roll_up(content) == [
+            (1, 3, ["ROW ONE"]),
+            (3, 7, ["ROW TWO"]),
+            (8, 10, ["ROW THREE"]),
+        ]
+
+    def test_simulated_roll_up_names_a_long_row_once(
+        self, sample_scc_roll_up_long_row_in_every_window
+    ):
+        """The row is too long in each of the three windows it rolls through,
+        but is reported once, as it is without the simulation.
+        """
+        reports = []
+        for simulate_roll_up in (False, True):
+            with pytest.raises(CaptionLineLengthError) as exc_info:
+                SCCReader(simulate_roll_up=simulate_roll_up).read(
+                    sample_scc_roll_up_long_row_in_every_window
+                )
+            reports.append(exc_info.value.args[0].split("\n")[2:])
+
+        assert reports == [[f"around 00:00:01.000 - {'A' * 33} - Length 33"]] * 2
+
+    def test_simulated_roll_up_names_each_long_row_although_their_text_is_alike(
+        self, sample_scc_roll_up_two_long_rows_alike
+    ):
+        """Two rows, not one rolling up: both are reported, as they are without
+        the simulation.
+        """
+        with pytest.raises(CaptionLineLengthError) as exc_info:
+            SCCReader(simulate_roll_up=True).read(
+                sample_scc_roll_up_two_long_rows_alike
+            )
+
+        assert exc_info.value.args[0].split("\n")[2:] == [
+            f"around 00:00:01.000 - {'A' * 33} - Length 33",
+            f"around 00:00:03.000 - {'A' * 33} - Length 33",
+        ]
+
+    def test_simulated_roll_up_names_a_long_row_once_as_the_window_shifts(
+        self, sample_scc_roll_up_long_row_as_the_window_shifts
+    ):
+        """The row is lined up by fewer columns once the row at column 0 rolls
+        off, so it is too long by less, but it is still the same row.
+        """
+        with pytest.raises(CaptionLineLengthError) as exc_info:
+            SCCReader(simulate_roll_up=True).read(
+                sample_scc_roll_up_long_row_as_the_window_shifts
+            )
+
+        assert exc_info.value.args[0].split("\n")[2:] == [
+            f"around 00:00:05.000 - {'B' * 13} - Length 13 plus a 24-column indent = 37"
+        ]
+
+    def test_simulated_roll_up_names_long_rows_once_with_rows_above_the_first(
+        self, sample_scc_roll_up_long_rows_on_a_base_row_above_the_depth
+    ):
+        """On base row 2 the last window leaves out its oldest row, so its
+        lines are the window's last two rows, each named once.
+        """
+        with pytest.raises(CaptionLineLengthError) as exc_info:
+            SCCReader(simulate_roll_up=True).read(
+                sample_scc_roll_up_long_rows_on_a_base_row_above_the_depth
+            )
+
+        assert exc_info.value.args[0].split("\n")[2:] == [
+            f"around 00:00:03.000 - {'A' * 33} - Length 33",
+            f"around 00:00:05.000 - {'B' * 33} - Length 33",
+        ]
+
+    def test_simulated_roll_up_full_rows_fit_on_lines_of_their_own(
+        self, sample_scc_roll_up_full_rows
+    ):
+        """Two rows of 32 characters are each as long as a row allows, but no
+        longer: read as a window they must not fail the line length check.
+        """
+        assert self._read_roll_up(
+            sample_scc_roll_up_full_rows, simulate_roll_up=True
+        ) == [
+            (1, 3, ["A" * 32]),
+            (3, 5, ["A" * 32, "B" * 32]),
+        ]
+
+    def test_simulated_roll_up_does_not_count_the_spaces_a_row_ends_with(
+        self, sample_scc_roll_up_full_italic_row_and_a_space
+    ):
+        """The row is 32 characters and a space, which its length is not
+        measured with when it is read alone: nor is it in a window, where the
+        space stays in the text as it does read alone.
+        """
+        assert self._read_roll_up(
+            sample_scc_roll_up_full_italic_row_and_a_space, simulate_roll_up=True
+        ) == [
+            (1, 3, ["A" * 32]),
+            (3, 5, ["A" * 32 + " ", "ROW TWO"]),
+        ]
+
+    def test_simulated_roll_up_rejects_a_row_past_the_last_column(
+        self, sample_scc_roll_up_row_past_the_last_column
+    ):
+        """Lined up in a window, a row its PAC starts too far right runs past
+        column 32 and is rejected, as a pop-on line would be: the row is not
+        pulled left to fit.
+        """
+        with pytest.raises(CaptionLineLengthError) as exc_info:
+            SCCReader(simulate_roll_up=True).read(
+                sample_scc_roll_up_row_past_the_last_column
+            )
+
+        assert exc_info.value.args[0].split("\n")[2:] == [
+            "around 00:00:03.000 - ROW TWO - Length 7 plus a 28-column indent = 35"
+        ]
+
+    def test_simulated_roll_up_rejects_a_row_past_the_last_column_on_top(
+        self, sample_scc_roll_up_row_past_the_last_column_on_top
+    ):
+        """The window's top line keeps the indentation lining it up when its
+        length is checked.
+        """
+        with pytest.raises(CaptionLineLengthError) as exc_info:
+            SCCReader(simulate_roll_up=True).read(
+                sample_scc_roll_up_row_past_the_last_column_on_top
+            )
+
+        assert exc_info.value.args[0].split("\n")[2:] == [
+            f"around 00:00:03.000 - {'B' * 13} - Length 13 plus a 24-column indent = 37"
+        ]
+
+    def test_simulated_roll_up_italics_end_with_their_row(
+        self, sample_scc_roll_up_italic_row
+    ):
+        caption = (
+            SCCReader(simulate_roll_up=True)
+            .read(sample_scc_roll_up_italic_row)
+            .get_captions("en-US")[1]
+        )
+
+        assert [(node.type_, node.content) for node in caption.nodes] == [
+            (CaptionNode.STYLE, {"italics": True}),
+            (CaptionNode.TEXT, "ROW ONE"),
+            (CaptionNode.STYLE, {"italics": True}),
+            (CaptionNode.BREAK, None),
+            (CaptionNode.TEXT, "ROW TWO"),
+        ]
+        assert [
+            node.start for node in caption.nodes if node.type_ == CaptionNode.STYLE
+        ] == [True, False]
+
+    def test_simulate_roll_up_given_to_the_constructor(
+        self, sample_scc_roll_up_ru2_sent_per_row
+    ):
+        """The option reaches the reader through CaptionConverter, which
+        calls read() with the content alone.
+        """
+        reader = SCCReader(simulate_roll_up=True)
+        captions = (
+            CaptionConverter()
+            .read(sample_scc_roll_up_ru2_sent_per_row, reader)
+            .captions.get_captions("en-US")
+        )
+
+        assert reader.simulate_roll_up is True
+        assert [caption.get_text() for caption in captions] == [
+            "ROW ONE",
+            "ROW ONE\nROW TWO",
+            "ROW TWO\nROW THREE",
+        ]
+
+    @pytest.mark.parametrize(
+        "constructor, read, expected_lines",
+        [
+            ({"simulate_roll_up": True}, {}, 2),
+            ({"simulate_roll_up": True}, {"simulate_roll_up": False}, 1),
+            ({}, {"simulate_roll_up": True}, 2),
+        ],
+    )
+    def test_simulate_roll_up_given_to_read_overrides_the_constructor(
+        self, sample_scc_roll_up_ru2_sent_per_row, constructor, read, expected_lines
+    ):
+        captions = (
+            SCCReader(**constructor)
+            .read(sample_scc_roll_up_ru2_sent_per_row, **read)
+            .get_captions("en-US")
+        )
+
+        assert len(captions[-1].get_text().split("\n")) == expected_lines
+
     def test_offset_drops_cues_ending_before_it(self, sample_scc_two_pop_on_cues):
         captions = SCCReader().read(sample_scc_two_pop_on_cues, offset=3)
         cues = captions.get_captions("en-US")
@@ -1572,6 +1997,24 @@ class TestSCCReader(ReaderTestingMixIn):
         assert [c.get_text() for c in cues] == ["<LAUGHING & WHOOPS!>"]
         assert cues[0].start == 0
         assert cues[0].end == pytest.approx(1600000)
+
+    @pytest.mark.parametrize("offset", [0, 2])
+    def test_offset_keeps_a_row_ended_past_a_row_of_spaces(
+        self, sample_scc_roll_up_blank_row_mid_window, offset
+    ):
+        # "ROW ONE" ends at the next row, 5s, not at the row of spaces, so it
+        # ends after the offset and is kept.
+        cues = (
+            SCCReader()
+            .read(sample_scc_roll_up_blank_row_mid_window, offset=offset)
+            .get_captions("en-US")
+        )
+
+        assert [(c.start / 1e6, c.end / 1e6, c.get_text()) for c in cues] == [
+            (max(1 - offset, 0), 5 - offset, "ROW ONE"),
+            (5 - offset, 7 - offset, "ROW TWO"),
+            (7 - offset, 9 - offset, "ROW THREE"),
+        ]
 
     def test_offset_past_every_cue_raises_no_captions(self, sample_scc_two_pop_on_cues):
         with pytest.raises(CaptionReadNoCaptions):
@@ -2031,6 +2474,38 @@ class TestInterpretableNodeCreator:
         new_collection = _ensure_final_italics_node_closes(node_creator._collection)
         # it should close italics at the end
         assert new_collection[-1].sets_italics_off()
+
+    def test_roll_up_window_leaves_its_rows_as_they_were(self):
+        """Each row is read again in the next window, one row up, so building
+        a window must not move or extend the rows it is built from.
+        """
+        tracker = DefaultProvidingPositionTracker()
+        rows = []
+        for text in ("ONE", "TWO"):
+            node_creator = InstructionNodeCreator(position_tracker=tracker)
+            node_creator.interpret_command("9470")  # row 15, col 0
+            node_creator.add_chars(*text)
+            rows.append(node_creator.settled_row())
+            tracker.reset_for_new_caption()
+        before = [[(node.text, node.position) for node in row] for row in rows]
+
+        windows = [
+            InstructionNodeCreator.from_rows(rows, position_tracker=tracker)
+            for _ in range(2)
+        ]
+
+        assert [[(node.text, node.position) for node in row] for row in rows] == (
+            before
+        )
+        for window in windows:
+            assert [
+                (node.text, node.position, node.is_explicit_break())
+                for node in window._collection
+            ] == [
+                ("ONE", (14, 0), False),
+                (None, (14, 0), True),
+                ("TWO", (14, 0), False),
+            ]
 
 
 class CaptionDummy:

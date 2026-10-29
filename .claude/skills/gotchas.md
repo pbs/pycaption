@@ -225,3 +225,23 @@ And: the samples decide the sensitivity. A plain-text sample reports "same" on a
 **Rule:** Any check about indentation, NBSP, or edge whitespace must compare `caption.nodes` (or `get_text_nodes()`), never `get_text()`. The behavior gate's `text_of()` uses `get_text()` too, so it is blind to this whole class of change — its "no flow changed" says nothing about whitespace PRs. Its built-in samples also carry no NBSP indentation; add one when a PR touches whitespace handling.
 
 **Applies to:** `check-last-pr`
+
+---
+
+## 19. `python -I` makes a PR-checkout probe import the wrong pycaption
+
+**What happened:** Reviewing PR #446, an edge-case probe was run as `python -I probe.py` from a worktree of the PR. `-I` ignores `PYTHONPATH` and drops the cwd from `sys.path`, so it imported the editable-installed pycaption (the main checkout). The "PR" and "main" outputs came out identical, which looked like the fix did nothing.
+
+**Rule:** When probing a specific checkout, run with `PYTHONPATH=<checkout>` and no `-I`, and print `pycaption.__file__` first to confirm which code was loaded. Identical base and HEAD output on a behavior-changing PR means: check the import path before concluding anything.
+
+**Applies to:** `check-last-pr`, any manual base-vs-PR probe
+
+---
+
+## 20. The behavior gate only runs default `read()` arguments, and only on the checked-out tree
+
+**What happened:** Reviewing PR #447 (`SCCReader.read(offset=...)`), the skill reported "0 findings, no flow changed, CAN BE MERGED". Its probe never passes `offset`, so it could not see the change at all. A manual base-vs-PR sweep over every SCC fixture with several offsets found ~500 differences (dropped stale captions, `CaptionReadNoCaptions`, shifted error-message timestamps). Separately, the script treats the cwd as HEAD and detects the PR from the current branch, so it can't review another PR from a dirty feature branch.
+
+**Rule:** When a PR changes a reader/writer parameter, sweep the fixtures with non-default values of that parameter, base vs PR, and check results against an independent expectation (e.g. the offset-0 output shifted by hand), not only against base. To review a PR other than the current branch, run the script from a detached worktree of the PR.
+
+**Applies to:** `check-last-pr`

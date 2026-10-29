@@ -1,3 +1,7 @@
+import re
+
+from bs4 import BeautifulSoup
+
 from pycaption import (
     DFXPReader,
     SAMIReader,
@@ -249,3 +253,22 @@ class TestSCCtoSAMI(SAMITestingMixIn):
         assert "text-align:left;" in result
         assert "margin-left:" in result
         assert "margin-top:" in result
+
+    def test_scc_simulated_roll_up_to_sami(self, sample_scc_roll_up_ru2_sent_per_row):
+        """Each sync holds the rows on screen, one per line, its top row
+        placed above the base row.
+        """
+        caption_set = SCCReader(simulate_roll_up=True).read(
+            sample_scc_roll_up_ru2_sent_per_row
+        )
+        soup = BeautifulSoup(SAMIWriter().write(caption_set), "html.parser")
+        paragraphs = [sync.p for sync in soup.find_all("sync")][:3]
+
+        assert [
+            [text.strip() for text in p.find_all(string=True) if text.strip()]
+            for p in paragraphs
+        ] == [["ROW ONE"], ["ROW ONE", "ROW TWO"], ["ROW TWO", "ROW THREE"]]
+        assert [len(p.find_all("br")) for p in paragraphs] == [0, 1, 1]
+        assert [
+            re.search(r"margin-top:([\d.]+)%", p["style"]).group(1) for p in paragraphs
+        ] == ["89", "83", "83"]

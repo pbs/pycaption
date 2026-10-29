@@ -5,6 +5,7 @@ from pycaption import (
     DFXPWriter,
     MicroDVDWriter,
     SAMIReader,
+    SCCReader,
     SRTReader,
     WebVTTReader,
     WebVTTWriter,
@@ -351,6 +352,39 @@ class TestSAMItoDFXP(DFXPTestingMixIn):
         assert isinstance(results, str)
         assert 'xmlns="http://www.w3.org/ns/ttml"' in results
         assert 'xmlns:tts="http://www.w3.org/ns/ttml#styling"' in results
+
+
+class TestSCCtoDFXP(DFXPTestingMixIn):
+    def test_scc_simulated_roll_up_to_dfxp(self, sample_scc_roll_up_ru3_sent_once):
+        """Each paragraph holds the rows on screen, one per line, in a region
+        tall enough for them that ends on the base row.
+        """
+        caption_set = SCCReader(simulate_roll_up=True).read(
+            sample_scc_roll_up_ru3_sent_once
+        )
+        soup = BeautifulSoup(DFXPWriter().write(caption_set), "lxml-xml")
+        regions = {
+            region["xml:id"]: (region["tts:origin"], region["tts:extent"])
+            for region in soup.find_all("region")
+            if region.get("tts:origin")
+        }
+
+        assert [
+            [text.strip() for text in p.find_all(string=True) if text.strip()]
+            for p in soup.find_all("p")
+        ] == [
+            ["ROW ONE"],
+            ["ROW ONE", "ROW TWO"],
+            ["ROW ONE", "ROW TWO", "ROW THREE"],
+            ["ROW TWO", "ROW THREE", "ROW FOUR"],
+        ]
+        assert [len(p.find_all("br")) for p in soup.find_all("p")] == [0, 1, 2, 2]
+        assert [regions[p["region"]] for p in soup.find_all("p")] == [
+            ("10% 89%", "80% 6%"),
+            ("10% 83%", "80% 12%"),
+            ("10% 77%", "80% 18%"),
+            ("10% 77%", "80% 18%"),
+        ]
 
 
 class TestSRTtoDFXP(DFXPTestingMixIn):
