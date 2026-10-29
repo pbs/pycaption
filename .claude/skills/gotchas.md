@@ -235,3 +235,13 @@ And: the samples decide the sensitivity. A plain-text sample reports "same" on a
 **Rule:** When probing a specific checkout, run with `PYTHONPATH=<checkout>` and no `-I`, and print `pycaption.__file__` first to confirm which code was loaded. Identical base and HEAD output on a behavior-changing PR means: check the import path before concluding anything.
 
 **Applies to:** `check-last-pr`, any manual base-vs-PR probe
+
+---
+
+## 20. The behavior gate only runs default `read()` arguments, and only on the checked-out tree
+
+**What happened:** Reviewing PR #447 (`SCCReader.read(offset=...)`), the skill reported "0 findings, no flow changed, CAN BE MERGED". Its probe never passes `offset`, so it could not see the change at all. A manual base-vs-PR sweep over every SCC fixture with several offsets found ~500 differences (dropped stale captions, `CaptionReadNoCaptions`, shifted error-message timestamps). Separately, the script treats the cwd as HEAD and detects the PR from the current branch, so it can't review another PR from a dirty feature branch.
+
+**Rule:** When a PR changes a reader/writer parameter, sweep the fixtures with non-default values of that parameter, base vs PR, and check results against an independent expectation (e.g. the offset-0 output shifted by hand), not only against base. To review a PR other than the current branch, run the script from a detached worktree of the PR.
+
+**Applies to:** `check-last-pr`

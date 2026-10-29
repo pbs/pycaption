@@ -222,17 +222,11 @@ class SCCReader(BaseReader):
     @staticmethod
     def _apply_offset(caption_list, offset):
         """Move captions ``offset`` microseconds earlier, dropping those that
-        end at or before 0 and starting those that cross 0 at 0. An end of 0
-        was never set, so it is neither shifted nor a reason to drop."""
-        caption_list[:] = [
-            caption
-            for caption in caption_list
-            if not caption.end or caption.end > offset
-        ]
+        end at or before 0 and starting those that cross 0 at 0."""
+        caption_list[:] = [caption for caption in caption_list if caption.end > offset]
         for caption in caption_list:
             caption.start = max(caption.start - offset, 0)
-            if caption.end:
-                caption.end -= offset
+            caption.end -= offset
 
     def _validate_captions(self, captions, lang):
         """Validate parsed captions for SCC-specific constraints.
@@ -631,6 +625,14 @@ class SCCReader(BaseReader):
         :type rows: int
         :param rows: the roll-up depth the row was sent at, if not the current
         """
+        if self.buffer.is_blank():
+            # A row of spaces leaves no caption, and in a window it doesn't roll
+            # in either: what is on screen stays until the next row. Stored, it
+            # would take the end meant for the row before it, leaving that row
+            # never ended.
+            if end:
+                self.caption_stash.correct_last_timing(end)
+            return
         rows = rows or self.roll_rows_expected
         window = (
             self.simulate_roll_up and rows > 1 and self.buffer_dict.active_key == "roll"
@@ -640,12 +642,6 @@ class SCCReader(BaseReader):
             # from, it is read as without the simulation and starts a new window
             self.roll_rows = []
             window = False
-        if window and self.buffer.is_blank():
-            # Read alone, a row of spaces leaves no caption: it doesn't roll in
-            # either, and the window on screen stays until the next row
-            if end:
-                self.caption_stash.correct_last_timing(end)
-            return
         if not window:
             self.caption_stash.create_and_store(
                 self.buffer,

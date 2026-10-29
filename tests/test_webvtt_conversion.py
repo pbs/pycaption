@@ -65,6 +65,40 @@ class TestSAMItoWebVTT(WebVTTTestingMixIn):
         self.assert_webvtt_equals(sample_webvtt_from_sami_with_id_style, results)
 
 
+class TestSCCtoWebVTT(WebVTTTestingMixIn):
+    def test_scc_simulated_roll_up_to_webvtt(self, sample_scc_roll_up_ru2_sent_per_row):
+        """Each cue holds the rows on screen, one per line, placed from the top
+        row of the window."""
+        caption_set = SCCReader(simulate_roll_up=True).read(
+            sample_scc_roll_up_ru2_sent_per_row
+        )
+        results = WebVTTWriter().write(caption_set)
+
+        assert results == (
+            "WEBVTT\n\nREGION\nid:scroll2\nlines:2\nscroll:up\n\n"
+            "00:00:01.000 --> 00:00:03.000 align:left position:10% line:89% "
+            "size:80% region:scroll2\nROW ONE\n\n"
+            "00:00:03.000 --> 00:00:05.000 align:left position:10% line:83% "
+            "size:80% region:scroll2\nROW ONE\nROW TWO\n\n"
+            "00:00:05.000 --> 00:00:07.000 align:left position:10% line:83% "
+            "size:80% region:scroll2\nROW TWO\nROW THREE\n"
+        )
+
+    def test_scc_roll_up_with_a_row_of_spaces_to_webvtt(
+        self, sample_scc_roll_up_blank_row_mid_window
+    ):
+        """The row before the row of spaces ends at the next row, rather than
+        being written ending before it starts."""
+        caption_set = SCCReader().read(sample_scc_roll_up_blank_row_mid_window)
+        results = WebVTTWriter().write(caption_set)
+
+        assert re.findall(r"^(\S+) --> (\S+)", results, re.MULTILINE) == [
+            ("00:00:01.000", "00:00:05.000"),
+            ("00:00:05.000", "00:00:07.000"),
+            ("00:00:07.000", "00:00:09.000"),
+        ]
+
+
 class TestSRTtoWebVTT(WebVTTTestingMixIn):
     def test_srt_to_webvtt_conversion(self, sample_webvtt_from_srt, sample_srt):
         caption_set = SRTReader().read(sample_srt)

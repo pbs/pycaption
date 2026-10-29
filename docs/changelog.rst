@@ -36,7 +36,10 @@ Changelog
     than in each window it rolls through. A row that a PAC moves to another
     row before its carriage return has no one base row to roll up from: it
     is read as without the option, and the rows after it start a new window.
-    The default is still ``False``, and its output is unchanged.
+    The default is still ``False``, and its output changes only where a row
+    of spaces follows a row: that row was left with no end, so WebVTT, SRT
+    and DFXP wrote it ending before it started, and it now ends at the next
+    row, or at the EDM that erases the row of spaces.
   - Fix ``SCCReader.read(offset=...)`` showing captions that end before the
     offset from ``00:00:00.000``. As with
     ``WebVTTReader(time_shift_milliseconds=...)``, they are now dropped, a

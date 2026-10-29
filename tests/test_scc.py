@@ -1752,6 +1752,8 @@ class TestSCCReader(ReaderTestingMixIn):
     ):
         """Read alone, the row of spaces leaves no caption, so it doesn't roll
         in as an empty line: the window before it stays until the next row.
+        Without the simulation, the row before it stays too, rather than
+        being left with no end.
         """
         content = sample_scc_roll_up_blank_row_mid_window
 
@@ -1760,20 +1762,25 @@ class TestSCCReader(ReaderTestingMixIn):
             (5, 7, ["ROW ONE", "ROW TWO"]),
             (7, 9, ["ROW ONE", "ROW TWO", "ROW THREE"]),
         ]
-        assert [text for _, _, text in self._read_roll_up(content)] == [
-            ["ROW ONE"],
-            ["ROW TWO"],
-            ["ROW THREE"],
+        assert self._read_roll_up(content) == [
+            (1, 5, ["ROW ONE"]),
+            (5, 7, ["ROW TWO"]),
+            (7, 9, ["ROW THREE"]),
         ]
 
     def test_simulated_roll_up_window_ends_at_erase_of_a_row_of_spaces(
         self, sample_scc_roll_up_blank_row_erased
     ):
-        assert self._read_roll_up(
-            sample_scc_roll_up_blank_row_erased, simulate_roll_up=True
-        ) == [
+        content = sample_scc_roll_up_blank_row_erased
+
+        assert self._read_roll_up(content, simulate_roll_up=True) == [
             (1, 3, ["ROW ONE"]),
             (3, 7, ["ROW ONE", "ROW TWO"]),
+            (8, 10, ["ROW THREE"]),
+        ]
+        assert self._read_roll_up(content) == [
+            (1, 3, ["ROW ONE"]),
+            (3, 7, ["ROW TWO"]),
             (8, 10, ["ROW THREE"]),
         ]
 
@@ -1992,19 +1999,22 @@ class TestSCCReader(ReaderTestingMixIn):
         assert cues[0].end == pytest.approx(1600000)
 
     @pytest.mark.parametrize("offset", [0, 2])
-    def test_offset_keeps_a_cue_never_ended(
+    def test_offset_keeps_a_row_ended_past_a_row_of_spaces(
         self, sample_scc_roll_up_blank_row_mid_window, offset
     ):
-        # The row of spaces leaves "ROW ONE" with no end, which is not an end
-        # at or before the offset.
+        # "ROW ONE" ends at the next row, 5s, not at the row of spaces, so it
+        # ends after the offset and is kept.
         cues = (
             SCCReader()
             .read(sample_scc_roll_up_blank_row_mid_window, offset=offset)
             .get_captions("en-US")
         )
 
-        assert [c.get_text() for c in cues] == ["ROW ONE", "ROW TWO", "ROW THREE"]
-        assert cues[0].end == 0
+        assert [(c.start / 1e6, c.end / 1e6, c.get_text()) for c in cues] == [
+            (max(1 - offset, 0), 5 - offset, "ROW ONE"),
+            (5 - offset, 7 - offset, "ROW TWO"),
+            (7 - offset, 9 - offset, "ROW THREE"),
+        ]
 
     def test_offset_past_every_cue_raises_no_captions(self, sample_scc_two_pop_on_cues):
         with pytest.raises(CaptionReadNoCaptions):
