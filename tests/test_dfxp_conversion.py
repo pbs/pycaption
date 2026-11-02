@@ -254,14 +254,14 @@ class TestDFXPtoWebVTT(WebVTTTestingMixIn):
             ("10%", "80%", "start"),
         ]
 
-    def test_centered_cue_without_region_has_no_settings(
+    def test_centered_cue_without_region_states_align_center(
         self, sample_dfxp_centered_without_region
     ):
-        # With no position to anchor, center is WebVTT's default and is left out
+        # center is WebVTT's default, but is written so the intent is explicit
         caption_set = DFXPReader().read(sample_dfxp_centered_without_region)
         results = WebVTTWriter().write(caption_set)
 
-        assert "00:00:01.000 --> 00:00:02.000\ncentered\n" in results
+        assert "00:00:01.000 --> 00:00:02.000 align:center\ncentered\n" in results
 
     def test_preserve_proper_alignment(
         self, webvtt_from_dfxp_with_conflicting_align, dfxp_style_region_align_conflict

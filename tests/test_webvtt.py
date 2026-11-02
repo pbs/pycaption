@@ -1126,6 +1126,18 @@ Hello
 
         assert cue.layout_info.position_alignment == PositionAlignmentEnum.LINE_LEFT
 
+    def test_position_alignment_middle_maps_to_center(self):
+        # Legacy qualifier, like start and end
+        vtt = (
+            "WEBVTT\n\n"
+            "00:00:01.000 --> 00:00:03.000 align:left position:40%,middle line:10%\n"
+            "Hello\n"
+        )
+        captions = self.reader.read(vtt)
+        cue = captions.get_captions("en-US")[0]
+
+        assert cue.layout_info.position_alignment == PositionAlignmentEnum.CENTER
+
     def test_position_alignment_vertical_rl_adjusts_x(self):
         vtt = (
             "WEBVTT\n\n"
@@ -1222,12 +1234,13 @@ Hello
         assert cue.layout_info is None or cue.layout_info.origin is None
 
     def test_position_only_dfxp_output_has_horizontal(self):
+        # Centered on 70% with the default size: the box is 40-100%, which
+        # fit_to_screen trims to 90%
         vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000 position:70%\nHello\n"
         captions = self.reader.read(vtt)
         output = DFXPWriter().write(captions)
 
-        assert "70%" in output
-        assert "tts:origin" in output
+        assert 'tts:extent="50% 1.67%" tts:origin="40% 93.33%"' in output
 
     def test_position_only_sami_output_has_margin_left(self):
         vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000 position:70%\nHello\n"

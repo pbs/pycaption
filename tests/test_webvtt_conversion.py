@@ -242,6 +242,11 @@ class TestWebVTTtoDFXP(DFXPTestingMixIn):
             ("align:end position:90% size:40%", "50%"),
             ("position:50%,center size:40%", "30%"),
             ("align:start position:30% size:40%", "30%"),
+            # No size is WebVTT's 100%: 40-100% and 0-50%
+            ("position:70%", "40%"),
+            ("align:right position:50%", "0%"),
+            # Legacy middle qualifier is center
+            ("align:left position:50%,middle size:40%", "30%"),
         ],
     )
     def test_position_gives_the_left_edge_without_fit_to_screen(

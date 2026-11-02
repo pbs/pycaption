@@ -821,15 +821,13 @@ class Layout:
         Writers that place a box by its origin call this when they don't
         fit_to_screen, which does the same resolution. The width may shrink
         so the box stays on screen (see _resolve_position_alignment). Returns
-        self when there is nothing to resolve: no position_alignment, no
-        extent, a line-left box that fits, or units that aren't percentages.
+        self when there is nothing to resolve: no origin or position_alignment,
+        a line-left box that fits or has no extent, or units that aren't
+        percentages.
         """
-        if not self.origin or not self.extent:
+        if not self.origin or self.origin.x.unit != UnitEnum.PERCENT:
             return self
-        if (
-            self.origin.x.unit != UnitEnum.PERCENT
-            or self.extent.horizontal.unit != UnitEnum.PERCENT
-        ):
+        if self.extent and self.extent.horizontal.unit != UnitEnum.PERCENT:
             return self
 
         origin, extent = self._resolve_position_alignment()
@@ -857,36 +855,58 @@ class Layout:
         left edge. A position outside the screen leaves no room; such a box
         keeps its width and is only kept from starting left of the screen.
 
+        With no extent, the width is WebVTT's default size, 100%, and an
+        extent is made for it (full height, as the reader gives one with a
+        size). A line-left box needs none: it already reaches the right edge.
+        Nor does one with no room, which is left as it is.
+
         Returns (origin, extent), the same objects when nothing changes.
         """
-        if not self.position_alignment or not self.extent:
+        if not self.position_alignment:
             return self.origin, self.extent
+        if self.extent:
+            size = self.extent.horizontal.value
+            vertical = self.extent.vertical
+        elif self.position_alignment == PositionAlignmentEnum.LINE_LEFT:
+            return self.origin, self.extent
+        else:
+            size = 100
+            vertical = Size(100, UnitEnum.PERCENT)
 
         position = self.origin.x.value
-        size = self.extent.horizontal.value
 
-        if self.position_alignment == PositionAlignmentEnum.CENTER:
-            max_size = 2 * min(position, 100 - position)
-        elif self.position_alignment == PositionAlignmentEnum.LINE_RIGHT:
-            max_size = position
-        else:
-            max_size = 100 - position
+        max_size = self._max_size(self.position_alignment, position)
+        if max_size <= 0 and not self.extent:
+            # No room and no width to keep: the box stays where it is
+            return self.origin, self.extent
         width = min(size, max_size) if max_size > 0 else size
-
-        if self.position_alignment == PositionAlignmentEnum.CENTER:
-            left_edge = max(0, position - width / 2)
-        elif self.position_alignment == PositionAlignmentEnum.LINE_RIGHT:
-            left_edge = max(0, position - width)
-        else:
-            left_edge = position
+        left_edge = self._left_edge(self.position_alignment, position, width)
 
         origin = self.origin
         if left_edge != position:
             origin = Point(Size(left_edge, UnitEnum.PERCENT), self.origin.y)
         extent = self.extent
-        if width != size:
-            extent = Stretch(Size(width, UnitEnum.PERCENT), self.extent.vertical)
+        if not extent or width != size:
+            extent = Stretch(Size(width, UnitEnum.PERCENT), vertical)
         return origin, extent
+
+    @staticmethod
+    def _max_size(position_alignment, position):
+        """Return WebVTT's maximum size: the room towards the edge the box grows to."""
+        if position_alignment == PositionAlignmentEnum.CENTER:
+            return 2 * min(position, 100 - position)
+        if position_alignment == PositionAlignmentEnum.LINE_RIGHT:
+            return position
+        return 100 - position
+
+    @staticmethod
+    def _left_edge(position_alignment, position, width):
+        """Return the left edge of a box of this width anchored at position."""
+        if position_alignment == PositionAlignmentEnum.CENTER:
+            return max(0, position - width / 2)
+        if position_alignment == PositionAlignmentEnum.LINE_RIGHT:
+            return max(0, position - width)
+        return position
 
     @staticmethod
     def _corrected_extent_from(origin, extent, diff_horizontal, diff_vertical):

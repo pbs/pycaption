@@ -335,12 +335,43 @@ class TestResolvePositionAlignment:
         assert result.position_alignment is None
 
     @pytest.mark.parametrize(
+        "x, position_alignment, left_edge, width",
+        [
+            # No size is WebVTT's default 100%, cut to the maximum size
+            (50, PositionAlignmentEnum.CENTER, 0, 100),
+            (70, PositionAlignmentEnum.CENTER, 40, 60),
+            (20, PositionAlignmentEnum.CENTER, 0, 40),
+            (50, PositionAlignmentEnum.LINE_RIGHT, 0, 50),
+            (90, PositionAlignmentEnum.LINE_RIGHT, 0, 90),
+        ],
+    )
+    def test_box_without_extent_takes_the_default_size(
+        self, x, position_alignment, left_edge, width
+    ):
+        layout = Layout(
+            origin=Point(Size(x, UnitEnum.PERCENT), Size(50, UnitEnum.PERCENT)),
+            position_alignment=position_alignment,
+        )
+
+        result = layout.resolve_position_alignment()
+
+        assert result.origin == Point(
+            Size(left_edge, UnitEnum.PERCENT), Size(50, UnitEnum.PERCENT)
+        )
+        assert result.extent == Stretch(
+            Size(width, UnitEnum.PERCENT), Size(100, UnitEnum.PERCENT)
+        )
+        assert result.position_alignment is None
+
+    @pytest.mark.parametrize(
         "position_alignment, has_extent, unit",
         [
             (None, True, UnitEnum.PERCENT),
             (PositionAlignmentEnum.LINE_LEFT, True, UnitEnum.PERCENT),
-            (PositionAlignmentEnum.CENTER, False, UnitEnum.PERCENT),
+            # Already reaches the right edge, as the default size would
+            (PositionAlignmentEnum.LINE_LEFT, False, UnitEnum.PERCENT),
             (PositionAlignmentEnum.CENTER, True, UnitEnum.PIXEL),
+            (PositionAlignmentEnum.CENTER, False, UnitEnum.PIXEL),
         ],
     )
     def test_nothing_to_resolve_returns_self(
@@ -350,6 +381,22 @@ class TestResolvePositionAlignment:
         layout = Layout(
             origin=Point(Size(50, unit), Size(50, unit)),
             extent=extent,
+            position_alignment=position_alignment,
+        )
+
+        assert layout.resolve_position_alignment() is layout
+
+    @pytest.mark.parametrize(
+        "x, position_alignment",
+        [
+            (100, PositionAlignmentEnum.CENTER),
+            (0, PositionAlignmentEnum.CENTER),
+            (0, PositionAlignmentEnum.LINE_RIGHT),
+        ],
+    )
+    def test_box_without_extent_or_room_is_left_as_it_is(self, x, position_alignment):
+        layout = Layout(
+            origin=Point(Size(x, UnitEnum.PERCENT), Size(50, UnitEnum.PERCENT)),
             position_alignment=position_alignment,
         )
 

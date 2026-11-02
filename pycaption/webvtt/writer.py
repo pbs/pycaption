@@ -459,11 +459,11 @@ class WebVTTWriter(BaseWriter):
     def _format_cue_settings(layout, left_offset, top_offset, cue_width):
         """Build the cue settings string from resolved positioning values.
 
-        Emits only non-default settings: vertical (if not horizontal),
-        align (if not center), position, line, size. The position is the
-        cue box's left edge, so where align would anchor it elsewhere (the
-        center for center, the right edge for right and end), it is
-        qualified with line-left and align is written even if center.
+        Emits vertical (if not horizontal), align, position, line, size.
+        align is written even when center, the WebVTT default, so a centered
+        source states it. The position is the cue box's left edge, so where
+        align would anchor it elsewhere (the center for center, the right
+        edge for right and end), it is qualified with line-left.
 
         :param layout: Resolved Layout (for alignment and writing direction).
         :param left_offset: Horizontal position (Size or None).
@@ -485,7 +485,7 @@ class WebVTTWriter(BaseWriter):
         ):
             cue_settings += f" vertical:{layout.writing_direction.value}"
         anchor_left = left_offset is not None and alignment in _ANCHORED_AWAY_FROM_LEFT
-        if alignment and (alignment != "center" or anchor_left):
+        if alignment:
             cue_settings += f" align:{alignment}"
         if left_offset is not None:
             cue_settings += f" position:{left_offset}"

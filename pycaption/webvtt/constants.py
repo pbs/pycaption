@@ -110,9 +110,11 @@ POSITION_ALIGN_MAP = {
     "center": PositionAlignmentEnum.CENTER,
     "line-right": PositionAlignmentEnum.LINE_RIGHT,
     "start": PositionAlignmentEnum.LINE_LEFT,
+    "middle": PositionAlignmentEnum.CENTER,
     "end": PositionAlignmentEnum.LINE_RIGHT,
 }
-"""Maps WebVTT positionAlign qualifier strings to PositionAlignmentEnum."""
+"""Maps WebVTT positionAlign qualifier strings to PositionAlignmentEnum,
+including the legacy ``start``/``middle``/``end`` of earlier WebVTT drafts."""
 
 DEFAULT_POSITION_ALIGN_FOR = {
     "left": PositionAlignmentEnum.LINE_LEFT,
