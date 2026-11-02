@@ -398,6 +398,19 @@ class TestWebVTTWriter:
         results = WebVTTWriter().write(caption_set, "en-US")
         assert sample_webvtt_multi_lang_en == results
 
+    def test_anchored_position_is_written_as_left_edge_without_fit_to_screen(self):
+        # A layout with no raw cue settings left, still anchored at its center
+        vtt = (
+            "WEBVTT\n\n"
+            "00:00:01.000 --> 00:00:02.000 align:center position:50% size:40%\nHi\n"
+        )
+        caption_set = WebVTTReader().read(vtt)
+        caption_set.get_captions("en-US")[0].layout_info.webvtt_positioning = None
+
+        results = WebVTTWriter(fit_to_screen=False).write(caption_set)
+
+        assert "align:center position:30%,line-left line:93.33% size:40%" in results
+
 
 class TestWebVTTRegionParsing:
     def setup_method(self):
@@ -1028,11 +1041,35 @@ Hello
         assert layout.position_alignment == PositionAlignmentEnum.LINE_RIGHT
         assert layout.origin.x == Size(70, UnitEnum.PERCENT)
 
-    def test_position_alignment_none_when_unspecified(self):
-        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000 position:50% line:80%\nHello\n"
-        captions = self.reader.read(vtt)
-        cue = captions.get_captions("en-US")[0]
-        layout = cue.layout_info
+    @pytest.mark.parametrize(
+        "align, expected",
+        [
+            ("", PositionAlignmentEnum.CENTER),
+            (" align:center", PositionAlignmentEnum.CENTER),
+            (" align:middle", PositionAlignmentEnum.CENTER),
+            (" align:left", PositionAlignmentEnum.LINE_LEFT),
+            (" align:start", PositionAlignmentEnum.LINE_LEFT),
+            (" align:right", PositionAlignmentEnum.LINE_RIGHT),
+            (" align:end", PositionAlignmentEnum.LINE_RIGHT),
+        ],
+    )
+    def test_unqualified_position_anchors_where_align_puts_the_text(
+        self, align, expected
+    ):
+        # An invalid align (middle) is ignored, leaving the center default
+        vtt = (
+            "WEBVTT\n\n"
+            f"00:00:01.000 --> 00:00:03.000 position:50% line:80%{align}\n"
+            "Hello\n"
+        )
+        layout = self.reader.read(vtt).get_captions("en-US")[0].layout_info
+
+        assert layout.position_alignment == expected
+        assert layout.origin.x == Size(50, UnitEnum.PERCENT)
+
+    def test_position_alignment_none_without_position(self):
+        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000 line:80% align:end\nHello\n"
+        layout = self.reader.read(vtt).get_captions("en-US")[0].layout_info
 
         assert layout.position_alignment is None
 

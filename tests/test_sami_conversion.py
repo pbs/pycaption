@@ -1,5 +1,7 @@
 import re
 
+import pytest
+
 from bs4 import BeautifulSoup
 
 from pycaption import (
@@ -120,6 +122,30 @@ class TestWebVTTtoSAMI(SAMITestingMixIn):
 
         assert isinstance(result, str)
         self.assert_sami_captions_equal(sample_sami, result)
+
+    @pytest.mark.parametrize(
+        "settings, fit_to_screen, margin_left, width",
+        [
+            # WebVTT anchors an unqualified position where align puts the text
+            ("align:center position:30% size:40%", True, "10%", "40%"),
+            ("align:end position:90% size:40%", True, "50%", "40%"),
+            # Too close to the bottom to be fit, but still placed by its left edge
+            ("line:96% align:end position:90% size:40%", True, "50%", "40%"),
+            # Too wide for the room on its side: shrinks, as in WebVTT
+            ("align:right position:25% size:50%", True, "0%", "25%"),
+            ("align:end position:90% size:40%", False, "50%", "40%"),
+            ("position:10% size:40%", False, "0%", "20%"),
+        ],
+    )
+    def test_position_gives_the_left_margin_and_width(
+        self, settings, fit_to_screen, margin_left, width
+    ):
+        vtt = f"WEBVTT\n\n00:00:01.000 --> 00:00:02.000 {settings}\nHello\n"
+        result = SAMIWriter(fit_to_screen=fit_to_screen).write(WebVTTReader().read(vtt))
+
+        assert re.search(
+            rf"margin-left:{margin_left};margin-top:[\d.]+%;width:{width};", result
+        )
 
 
 class TestOverlappingCuesToSAMI(SAMITestingMixIn):

@@ -773,9 +773,10 @@ class Layout:
         technically valid but contain inconsistent settings that may cause
         long captions to be cut out of the screen.
 
-        When position_alignment is set, the origin is first adjusted so that
-        origin.x represents the true left edge of the cue box (the W3C spec
-        allows the position to anchor to center or right edge).
+        When position_alignment is set, the cue box is first resolved as
+        WebVTT does (see _resolve_position_alignment), so that origin.x is its
+        true left edge. This holds even when the cue is too close to the edge
+        for the extent to be fit.
 
         ATTENTION: This must be called on relativized objects (such as the one
         returned by as_percentage_of). All units are presumed to be percentages.
@@ -789,19 +790,20 @@ class Layout:
         ):
             return self
 
-        origin = self._resolve_position_alignment()
+        origin, extent = self._resolve_position_alignment()
 
         if origin.x.value >= 90 or origin.y.value >= 95:
-            return self
+            # Too close to the edge to fit, but still placed by its left edge
+            return self.resolve_position_alignment()
 
         diff_horizontal = Size(90 - origin.x.value, UnitEnum.PERCENT)
         diff_vertical = Size(95 - origin.y.value, UnitEnum.PERCENT)
 
-        if not self.extent:
+        if not extent:
             new_extent = Stretch(diff_horizontal, diff_vertical)
         else:
             new_extent = self._corrected_extent_from(
-                origin, diff_horizontal, diff_vertical
+                origin, extent, diff_horizontal, diff_vertical
             )
 
         return Layout(
@@ -813,33 +815,83 @@ class Layout:
             line_alignment=self.line_alignment,
         )
 
+    def resolve_position_alignment(self):
+        """Return a Layout whose origin.x is the cue box's left edge.
+
+        Writers that place a box by its origin call this when they don't
+        fit_to_screen, which does the same resolution. The width may shrink
+        so the box stays on screen (see _resolve_position_alignment). Returns
+        self when there is nothing to resolve: no position_alignment, no
+        extent, a line-left box that fits, or units that aren't percentages.
+        """
+        if not self.origin or not self.extent:
+            return self
+        if (
+            self.origin.x.unit != UnitEnum.PERCENT
+            or self.extent.horizontal.unit != UnitEnum.PERCENT
+        ):
+            return self
+
+        origin, extent = self._resolve_position_alignment()
+        if origin is self.origin and extent is self.extent:
+            return self
+
+        return Layout(
+            origin=origin,
+            extent=extent,
+            padding=self.padding,
+            alignment=self.alignment,
+            writing_direction=self.writing_direction,
+            line_alignment=self.line_alignment,
+        )
+
     def _resolve_position_alignment(self):
-        """Adjust origin.x based on position_alignment and extent width.
+        """Return the cue box's left edge and extent, as WebVTT computes them.
 
         The VTT reader always stores the ``position`` setting in origin.x
         and ``size`` in extent.horizontal, regardless of writing direction.
-        This method adjusts origin.x so it represents the true left edge
-        of the cue box.
+        As in WebVTT, the box is first made no wider than the room between
+        the position and the screen edge it grows towards (the "maximum
+        size": 100 - position for line-left, position for line-right, twice
+        the distance to the nearer edge for center), then placed by its
+        left edge. A position outside the screen leaves no room; such a box
+        keeps its width and is only kept from starting left of the screen.
 
-        Returns a new Point (or self.origin unchanged for LINE_LEFT/None).
+        Returns (origin, extent), the same objects when nothing changes.
         """
         if not self.position_alignment or not self.extent:
-            return self.origin
+            return self.origin, self.extent
 
-        width = self.extent.horizontal.value
+        position = self.origin.x.value
+        size = self.extent.horizontal.value
 
         if self.position_alignment == PositionAlignmentEnum.CENTER:
-            adjusted_x = max(0, self.origin.x.value - width / 2)
+            max_size = 2 * min(position, 100 - position)
         elif self.position_alignment == PositionAlignmentEnum.LINE_RIGHT:
-            adjusted_x = max(0, self.origin.x.value - width)
+            max_size = position
         else:
-            return self.origin
+            max_size = 100 - position
+        width = min(size, max_size) if max_size > 0 else size
 
-        return Point(Size(adjusted_x, UnitEnum.PERCENT), self.origin.y)
+        if self.position_alignment == PositionAlignmentEnum.CENTER:
+            left_edge = max(0, position - width / 2)
+        elif self.position_alignment == PositionAlignmentEnum.LINE_RIGHT:
+            left_edge = max(0, position - width)
+        else:
+            left_edge = position
 
-    def _corrected_extent_from(self, origin, diff_horizontal, diff_vertical):
+        origin = self.origin
+        if left_edge != position:
+            origin = Point(Size(left_edge, UnitEnum.PERCENT), self.origin.y)
+        extent = self.extent
+        if width != size:
+            extent = Stretch(Size(width, UnitEnum.PERCENT), self.extent.vertical)
+        return origin, extent
+
+    @staticmethod
+    def _corrected_extent_from(origin, extent, diff_horizontal, diff_vertical):
         """Return extent clamped so origin + extent doesn't exceed the screen."""
-        bottom_right = origin.add_stretch(self.extent)
+        bottom_right = origin.add_stretch(extent)
 
         if (
             bottom_right.x.unit != UnitEnum.PERCENT
@@ -850,8 +902,8 @@ class Layout:
                 "can be calculated based on origin."
             )
 
-        new_horizontal = self.extent.horizontal
-        new_vertical = self.extent.vertical
+        new_horizontal = extent.horizontal
+        new_vertical = extent.vertical
         if bottom_right.x.value > 90:
             new_horizontal = diff_horizontal
         if bottom_right.y.value > 95:

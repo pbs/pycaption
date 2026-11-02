@@ -7,6 +7,7 @@ from pycaption.geometry import (
     Layout,
     Padding,
     Point,
+    PositionAlignmentEnum,
     Size,
     Stretch,
     UnitEnum,
@@ -263,6 +264,96 @@ class TestFitToScreen:
         result = layout.fit_to_screen()
 
         assert result is layout
+
+    @pytest.mark.parametrize(
+        "x, y, width, position_alignment, left_edge",
+        [
+            (50, 96, 40, PositionAlignmentEnum.CENTER, 30),
+            (90, 100, 40, PositionAlignmentEnum.LINE_RIGHT, 50),
+            (100, 50, 5, PositionAlignmentEnum.LINE_RIGHT, 95),
+        ],
+    )
+    def test_origin_too_close_to_the_edge_still_takes_its_left_edge(
+        self, x, y, width, position_alignment, left_edge
+    ):
+        # The extent is left as it is, but the origin is still the box's
+        # left edge, so writers that place by origin don't use the anchor
+        extent = Stretch(Size(width, UnitEnum.PERCENT), Size(20, UnitEnum.PERCENT))
+        layout = Layout(
+            origin=Point(Size(x, UnitEnum.PERCENT), Size(y, UnitEnum.PERCENT)),
+            extent=extent,
+            position_alignment=position_alignment,
+        )
+
+        result = layout.fit_to_screen()
+
+        assert result.origin == Point(
+            Size(left_edge, UnitEnum.PERCENT), Size(y, UnitEnum.PERCENT)
+        )
+        assert result.extent == extent
+        assert result.position_alignment is None
+
+
+class TestResolvePositionAlignment:
+    @pytest.mark.parametrize(
+        "x, size, position_alignment, left_edge, width",
+        [
+            # W3C maximum size: room between the position and the edge the
+            # box grows towards
+            (25, 50, PositionAlignmentEnum.LINE_RIGHT, 0, 25),
+            (30, 60, PositionAlignmentEnum.LINE_RIGHT, 0, 30),
+            (10, 40, PositionAlignmentEnum.CENTER, 0, 20),
+            (90, 40, PositionAlignmentEnum.CENTER, 80, 20),
+            (90, 40, PositionAlignmentEnum.LINE_LEFT, 90, 10),
+            # A box that fits keeps its width; only the origin moves
+            (50, 40, PositionAlignmentEnum.CENTER, 30, 40),
+            (90, 40, PositionAlignmentEnum.LINE_RIGHT, 50, 40),
+            (60, 40, PositionAlignmentEnum.LINE_RIGHT, 20, 40),
+            # A position off the screen leaves no room: the width is kept
+            (150, 40, PositionAlignmentEnum.CENTER, 130, 40),
+            (-10, 40, PositionAlignmentEnum.LINE_RIGHT, 0, 40),
+            (120, 40, PositionAlignmentEnum.LINE_RIGHT, 80, 40),
+        ],
+    )
+    def test_box_is_no_wider_than_the_room_webvtt_gives_it(
+        self, x, size, position_alignment, left_edge, width
+    ):
+        layout = Layout(
+            origin=Point(Size(x, UnitEnum.PERCENT), Size(50, UnitEnum.PERCENT)),
+            extent=Stretch(Size(size, UnitEnum.PERCENT), Size(10, UnitEnum.PERCENT)),
+            position_alignment=position_alignment,
+        )
+
+        result = layout.resolve_position_alignment()
+
+        assert result.origin == Point(
+            Size(left_edge, UnitEnum.PERCENT), Size(50, UnitEnum.PERCENT)
+        )
+        assert result.extent == Stretch(
+            Size(width, UnitEnum.PERCENT), Size(10, UnitEnum.PERCENT)
+        )
+        assert result.position_alignment is None
+
+    @pytest.mark.parametrize(
+        "position_alignment, has_extent, unit",
+        [
+            (None, True, UnitEnum.PERCENT),
+            (PositionAlignmentEnum.LINE_LEFT, True, UnitEnum.PERCENT),
+            (PositionAlignmentEnum.CENTER, False, UnitEnum.PERCENT),
+            (PositionAlignmentEnum.CENTER, True, UnitEnum.PIXEL),
+        ],
+    )
+    def test_nothing_to_resolve_returns_self(
+        self, position_alignment, has_extent, unit
+    ):
+        extent = Stretch(Size(40, unit), Size(10, unit)) if has_extent else None
+        layout = Layout(
+            origin=Point(Size(50, unit), Size(50, unit)),
+            extent=extent,
+            position_alignment=position_alignment,
+        )
+
+        assert layout.resolve_position_alignment() is layout
 
 
 class TestViewportUnitConversion:

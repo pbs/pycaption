@@ -420,6 +420,9 @@ class WebVTTWriter(BaseWriter):
 
         if self.fit_to_screen:
             layout = layout.fit_to_screen()
+        else:
+            # The position written is the left edge (see _format_cue_settings)
+            layout = layout.resolve_position_alignment()
 
         return layout
 

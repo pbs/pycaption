@@ -21,6 +21,7 @@ from ..geometry import (
     HorizontalAlignmentEnum,
     Layout,
     Point,
+    PositionAlignmentEnum,
     Size,
     Stretch,
     UnitEnum,
@@ -29,6 +30,7 @@ from ..geometry import (
 from .constants import (
     ALIGN_SETTING_MAP,
     CUE_SETTING_PATTERN,
+    DEFAULT_POSITION_ALIGN_FOR,
     KNOWN_TAGS,
     LINE_ALIGN_MAP,
     LINE_GRID_SIZE,
@@ -867,9 +869,16 @@ class WebVTTReader(BaseReader):
         writing_direction = WebVTTReader._parse_vertical_value(
             parsed.get("vertical", "")
         )
-        pos_alignment = (
-            POSITION_ALIGN_MAP.get(position_align) if position_align else None
-        )
+        if position_align:
+            pos_alignment = POSITION_ALIGN_MAP.get(position_align)
+        elif origin_x is not None:
+            # An unqualified position anchors where align puts the text
+            # (an invalid align is ignored, leaving center)
+            pos_alignment = DEFAULT_POSITION_ALIGN_FOR.get(
+                parsed.get("align"), PositionAlignmentEnum.CENTER
+            )
+        else:
+            pos_alignment = None
         ln_alignment = LINE_ALIGN_MAP.get(line_align) if line_align else None
 
         origin = None

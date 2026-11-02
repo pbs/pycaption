@@ -25,6 +25,21 @@ Changelog
     from the wrong edge. Such cues now get ``position:N%,line-left``, and
     centered ones also get ``align:center``. Left- and start-aligned cues
     are unchanged.
+  - Fix ``WebVTTReader`` reading a ``position`` without a qualifier as the
+    cue box's left edge. As in WebVTT, it now anchors where ``align`` puts
+    the text: the center for center or no ``align``, the right edge for
+    right and end.
+  - Fix ``DFXPWriter`` and ``SAMIWriter`` placing a WebVTT cue anchored at
+    its center or right edge by that anchor instead of its left edge when
+    the cue is too near the bottom or right edge to be fit, or when
+    ``fit_to_screen=False``. This includes explicit qualifiers such as
+    ``position:50%,center``.
+  - Fix ``DFXPWriter`` and ``SAMIWriter`` keeping the full ``size`` of a
+    WebVTT cue too wide for the room between its position and the screen
+    edge it grows towards, so a centered or right-anchored cue near the left
+    edge ended further right than its anchor. As in WebVTT, the box now
+    shrinks to fit: ``align:right position:25% size:50%`` is ``0-25%``
+    instead of ``0-50%``. A position off the screen keeps its width.
 
 2.3.14
 ^^^^^^

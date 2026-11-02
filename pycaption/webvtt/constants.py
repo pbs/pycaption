@@ -114,6 +114,17 @@ POSITION_ALIGN_MAP = {
 }
 """Maps WebVTT positionAlign qualifier strings to PositionAlignmentEnum."""
 
+DEFAULT_POSITION_ALIGN_FOR = {
+    "left": PositionAlignmentEnum.LINE_LEFT,
+    "start": PositionAlignmentEnum.LINE_LEFT,
+    "center": PositionAlignmentEnum.CENTER,
+    "right": PositionAlignmentEnum.LINE_RIGHT,
+    "end": PositionAlignmentEnum.LINE_RIGHT,
+}
+"""Edge of the cue box an unqualified ``position`` anchors to, by ``align``
+value (WebVTT's "auto" position alignment). ``start`` and ``end`` assume
+left-to-right text; a missing ``align`` means center."""
+
 LINE_ALIGN_MAP = {
     "start": LineAlignmentEnum.START,
     "center": LineAlignmentEnum.CENTER,

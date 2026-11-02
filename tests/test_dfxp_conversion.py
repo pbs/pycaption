@@ -224,7 +224,8 @@ class TestDFXPtoWebVTT(WebVTTTestingMixIn):
     ):
         """WebVTT anchors an unqualified position where align puts the text:
         the center for center, the right edge for right and end. The region's
-        left edge is written, so those cues say it is the line-left one."""
+        left edge is written, so those cues say it is the line-left one, and
+        the same region reads back."""
         caption_set = DFXPReader().read(sample_dfxp_regions_with_each_text_align)
         results = WebVTTWriter().write(caption_set)
 
@@ -238,13 +239,6 @@ class TestDFXPtoWebVTT(WebVTTTestingMixIn):
             "00:00:04.000 --> 00:00:05.000 align:left position:10% line:80% size:80%",
             "00:00:05.000 --> 00:00:06.000 align:start position:10% line:80% size:80%",
         ]
-
-    def test_region_position_reads_back_as_the_same_region(
-        self, sample_dfxp_regions_with_each_text_align
-    ):
-        caption_set = DFXPReader().read(sample_dfxp_regions_with_each_text_align)
-        results = WebVTTWriter().write(caption_set)
-
         assert [
             (
                 str(caption.layout_info.origin.x),
