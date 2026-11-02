@@ -219,6 +219,56 @@ class TestDFXPtoWebVTT(WebVTTTestingMixIn):
 
         assert sample_webvtt_output_long_cue == results
 
+    def test_region_position_is_anchored_to_its_left_edge(
+        self, sample_dfxp_regions_with_each_text_align
+    ):
+        """WebVTT anchors an unqualified position where align puts the text:
+        the center for center, the right edge for right and end. The region's
+        left edge is written, so those cues say it is the line-left one."""
+        caption_set = DFXPReader().read(sample_dfxp_regions_with_each_text_align)
+        results = WebVTTWriter().write(caption_set)
+
+        assert [line for line in results.splitlines() if "-->" in line] == [
+            "00:00:01.000 --> 00:00:02.000 align:center position:10%,line-left "
+            "line:80% size:80%",
+            "00:00:02.000 --> 00:00:03.000 align:right position:10%,line-left "
+            "line:80% size:80%",
+            "00:00:03.000 --> 00:00:04.000 align:end position:10%,line-left "
+            "line:80% size:80%",
+            "00:00:04.000 --> 00:00:05.000 align:left position:10% line:80% size:80%",
+            "00:00:05.000 --> 00:00:06.000 align:start position:10% line:80% size:80%",
+        ]
+
+    def test_region_position_reads_back_as_the_same_region(
+        self, sample_dfxp_regions_with_each_text_align
+    ):
+        caption_set = DFXPReader().read(sample_dfxp_regions_with_each_text_align)
+        results = WebVTTWriter().write(caption_set)
+
+        assert [
+            (
+                str(caption.layout_info.origin.x),
+                str(caption.layout_info.extent.horizontal),
+                caption.layout_info.alignment.horizontal.value,
+            )
+            for caption in WebVTTReader().read(results).get_captions("en-US")
+        ] == [
+            ("10%", "80%", "center"),
+            ("10%", "80%", "right"),
+            ("10%", "80%", "end"),
+            ("10%", "80%", "left"),
+            ("10%", "80%", "start"),
+        ]
+
+    def test_centered_cue_without_region_has_no_settings(
+        self, sample_dfxp_centered_without_region
+    ):
+        # With no position to anchor, center is WebVTT's default and is left out
+        caption_set = DFXPReader().read(sample_dfxp_centered_without_region)
+        results = WebVTTWriter().write(caption_set)
+
+        assert "00:00:01.000 --> 00:00:02.000\ncentered\n" in results
+
     def test_preserve_proper_alignment(
         self, webvtt_from_dfxp_with_conflicting_align, dfxp_style_region_align_conflict
     ):

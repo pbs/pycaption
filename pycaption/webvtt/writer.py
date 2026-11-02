@@ -13,7 +13,7 @@ from copy import deepcopy
 from datetime import timedelta
 
 from ..base import BaseWriter, CaptionNode
-from ..geometry import WritingDirectionEnum
+from ..geometry import PositionAlignmentEnum, WritingDirectionEnum
 from .constants import DEFAULT_ALIGN, WEBVTT_VERSION_OF
 
 
@@ -23,6 +23,10 @@ _SIMPLE_STRUCTURAL_TAGS = {
 }
 """Maps style content keys to their open/close WebVTT tag pairs for
 structural tags that need no special logic."""
+
+_ANCHORED_AWAY_FROM_LEFT = frozenset({"center", "right", "end"})
+"""``align`` values whose default position alignment is not the cue box's
+left edge (center, or line-right for right and end in left-to-right text)."""
 
 
 class WebVTTWriter(BaseWriter):
@@ -453,7 +457,10 @@ class WebVTTWriter(BaseWriter):
         """Build the cue settings string from resolved positioning values.
 
         Emits only non-default settings: vertical (if not horizontal),
-        align (if not center), position, line, size.
+        align (if not center), position, line, size. The position is the
+        cue box's left edge, so where align would anchor it elsewhere (the
+        center for center, the right edge for right and end), it is
+        qualified with line-left and align is written even if center.
 
         :param layout: Resolved Layout (for alignment and writing direction).
         :param left_offset: Horizontal position (Size or None).
@@ -474,10 +481,13 @@ class WebVTTWriter(BaseWriter):
             and layout.writing_direction != WritingDirectionEnum.HORIZONTAL
         ):
             cue_settings += f" vertical:{layout.writing_direction.value}"
-        if alignment and alignment != "center":
+        anchor_left = left_offset is not None and alignment in _ANCHORED_AWAY_FROM_LEFT
+        if alignment and (alignment != "center" or anchor_left):
             cue_settings += f" align:{alignment}"
         if left_offset is not None:
             cue_settings += f" position:{left_offset}"
+            if anchor_left:
+                cue_settings += f",{PositionAlignmentEnum.LINE_LEFT.value}"
         if top_offset is not None:
             line_part = f" line:{top_offset}"
             if layout.line_alignment:

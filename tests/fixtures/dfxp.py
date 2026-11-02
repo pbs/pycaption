@@ -1781,3 +1781,49 @@ def sample_dfxp_language_on_body():
   </div>
  </body>
 </tt>"""
+
+
+@pytest.fixture(scope="session")
+def sample_dfxp_regions_with_each_text_align():
+    return """\
+<?xml version="1.0" encoding="utf-8"?>
+<tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml"
+    xmlns:tts="http://www.w3.org/ns/ttml#styling">
+ <head>
+  <layout>
+   <region xml:id="center" tts:origin="10% 80%" tts:extent="80% 15%"
+       tts:textAlign="center"/>
+   <region xml:id="right" tts:origin="10% 80%" tts:extent="80% 15%"
+       tts:textAlign="right"/>
+   <region xml:id="end" tts:origin="10% 80%" tts:extent="80% 15%"
+       tts:textAlign="end"/>
+   <region xml:id="left" tts:origin="10% 80%" tts:extent="80% 15%"
+       tts:textAlign="left"/>
+   <region xml:id="start" tts:origin="10% 80%" tts:extent="80% 15%"
+       tts:textAlign="start"/>
+  </layout>
+ </head>
+ <body>
+  <div>
+   <p begin="00:00:01.000" end="00:00:02.000" region="center">center</p>
+   <p begin="00:00:02.000" end="00:00:03.000" region="right">right</p>
+   <p begin="00:00:03.000" end="00:00:04.000" region="end">end</p>
+   <p begin="00:00:04.000" end="00:00:05.000" region="left">left</p>
+   <p begin="00:00:05.000" end="00:00:06.000" region="start">start</p>
+  </div>
+ </body>
+</tt>"""
+
+
+@pytest.fixture(scope="session")
+def sample_dfxp_centered_without_region():
+    return """\
+<?xml version="1.0" encoding="utf-8"?>
+<tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml"
+    xmlns:tts="http://www.w3.org/ns/ttml#styling">
+ <body>
+  <div>
+   <p begin="00:00:01.000" end="00:00:02.000" tts:textAlign="center">centered</p>
+  </div>
+ </body>
+</tt>"""
