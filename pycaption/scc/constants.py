@@ -1331,7 +1331,17 @@ HEADER = "Scenarist_SCC V1.0"
 
 # taken from
 # http://www.theneitherworld.com/mcpoodle/SCC_TOOLS/DOCS/CC_CHARS.HTML
+# The first substitute of each extended character is the standard character
+# SCCWriter sends before it, for the extended character's backspace to erase.
 SUBSTITUTE_CHARACTERS = {
+    "*": ["#"],
+    "\\": ["/"],
+    "^": ["/"],
+    "_": ["-"],
+    "{": ["["],
+    "|": ["/"],
+    "}": ["]"],
+    "~": ["-"],
     "¡": ["!", "i"],  # inverted exclamation mark
     "¤": ["C"],  # currency
     "¥": ["Y"],  # yen
@@ -1356,7 +1366,7 @@ SUBSTITUTE_CHARACTERS = {
     "Ï": ["I"],
     "Ò": ["O"],
     "Ó": ["O"],
-    "Ô": [")"],
+    "Ô": ["O"],
     "Õ": ["O"],
     "Ö": ["O"],
     "Ø": ["O"],

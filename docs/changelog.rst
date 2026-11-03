@@ -46,6 +46,13 @@ Changelog
     caption crossing the offset starts at ``00:00:00.000``, and
     ``CaptionReadNoCaptions`` is raised if none are left. Zero and negative
     offsets are unchanged.
+  - Fix ``SCCWriter`` erasing the character before each extended character
+    (such as ã, õ, Ê, ß, curly quotes and the em dash), so "ação" was read
+    back as "aão". An extended character backspaces over the column before
+    it, and the writer now sends its standard substitute there first, which
+    a decoder without the extended set shows instead. The substitutes come
+    from ``SUBSTITUTE_CHARACTERS``, which gains the 8 extended characters it
+    lacked, and Ô now falls back to "O" instead of ")".
   - Fix ``WebVTTWriter`` placing centered, right-, end- and start-aligned
     cues from the wrong edge. Their position is the cue box's left edge, so
     it is now written as ``position:N%,line-left``; only ``align:left``,
