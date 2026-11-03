@@ -1,5 +1,7 @@
 import re
 
+import pytest
+
 from pycaption import SCCReader, SCCWriter, SRTReader, WebVTTReader
 
 
@@ -296,6 +298,7 @@ class TestSCCWriterRoundTrip:
 
 from pycaption.scc import SCC_TOKENS_PER_CAPTION_MAX  # noqa: E402
 from pycaption.scc.constants import (  # noqa: E402
+    EXTENDED_CHARS,
     MID_ROW_ITALIC,
     MID_ROW_ITALIC_UNDERLINE,
     MID_ROW_PLAIN,
@@ -661,3 +664,32 @@ class TestSCCWriterNonBreakingSpace:
         caption = SCCReader().read(output).get_captions("en-US")[0]
         assert "£" not in caption.get_text()
         assert caption.get_text().endswith("SAM:\nThe line below it")
+
+
+class TestSCCWriterExtendedCharacters:
+    def test_substitute_is_written_before_an_extended_character(self):
+        """An extended character backspaces over the column before it, so
+        "ação" was read back as "aão". Its substitute "a" now goes first.
+        """
+        srt = "1\n00:00:01,000 --> 00:00:02,000\nação\n"
+
+        output = SCCWriter().write(SRTReader().read(srt))
+
+        assert "61fb 6180 13a1 13a1 ef80" in output
+
+    @pytest.mark.parametrize("char", EXTENDED_CHARS.values())
+    def test_extended_character_keeps_the_character_before_it(self, char):
+        srt = f"1\n00:00:01,000 --> 00:00:02,000\nx{char}y\n"
+
+        output = SCCWriter().write(SRTReader().read(srt))
+
+        caption = SCCReader().read(output).get_captions("en-US")[0]
+        assert caption.get_text() == f"x{char}y"
+
+    def test_extended_character_opening_a_line(self):
+        srt = "1\n00:00:01,000 --> 00:00:02,000\nÓtimo\nÉ isso\n"
+
+        output = SCCWriter().write(SRTReader().read(srt))
+
+        caption = SCCReader().read(output).get_captions("en-US")[0]
+        assert caption.get_text() == "Ótimo\nÉ isso"

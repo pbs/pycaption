@@ -14,6 +14,7 @@ from pycaption.geometry import HorizontalAlignmentEnum, UnitEnum
 
 from .constants import (
     CHARACTER_TO_CODE,
+    EXTENDED_CHARS,
     HEADER,
     MICROSECONDS_PER_CODEWORD,
     MID_ROW_ITALIC,
@@ -23,6 +24,7 @@ from .constants import (
     PAC_HIGH_BYTE_BY_ROW,
     PAC_LOW_BYTE_BY_ROW_RESTRICTED,
     SPECIAL_OR_EXTENDED_CHAR_TO_CODE,
+    SUBSTITUTE_CHARACTERS,
     TAB_OFFSET_CODES,
     WRITER_PAC_CODES,
 )
@@ -306,7 +308,10 @@ class SCCWriter(BaseWriter):
         Looks up the character in the standard table first, then
         special/extended characters. Falls back to the pound sign (£)
         for unmapped characters. Special/extended chars (4-byte codes)
-        are control-like and must be doubled per CEA-608."""
+        are control-like and must be doubled per CEA-608.
+        An extended char backspaces over the column before it, so its
+        standard substitute is sent first: a decoder replaces it with the
+        extended char, or shows it if it lacks the extended set."""
         try:
             char_code = CHARACTER_TO_CODE[char]
         except KeyError:
@@ -314,6 +319,9 @@ class SCCWriter(BaseWriter):
 
         if len(char_code) == 2:
             return code + char_code
+        if char_code in EXTENDED_CHARS:
+            substitute = SUBSTITUTE_CHARACTERS[char][0]
+            code = self._maybe_space(code + CHARACTER_TO_CODE[substitute])
         code = self._maybe_align(code)
         code += f"{char_code} {char_code} "
         return code
