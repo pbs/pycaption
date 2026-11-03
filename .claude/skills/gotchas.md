@@ -255,3 +255,13 @@ And: the samples decide the sensitivity. A plain-text sample reports "same" on a
 **Rule:** Before reporting TEST_REMOVED, look at the test file's diff. If the PR deletes the test and adds tests in the same class covering the same input with the new expected behavior, it is a replacement: say so, and don't count it toward the verdict. It stays HIGH only when the coverage is actually gone.
 
 **Applies to:** `check-last-pr`
+
+---
+
+## 22. The behavior gate runs the working tree, so an untracked file can hide a broken PR
+
+**What happened:** PR #449 head imported `pycaption/webvtt/cue_box.py`, which was never committed. Locally the file was there but untracked, so `pytest` passed (1150 tests) and the gate would have said "0 failing at HEAD". CI failed py310/py312 with `ModuleNotFoundError` and 18 collection errors.
+
+**Rule:** Before trusting a green local run, check `git status --short` for untracked files under `pycaption/` or `tests/`, or run the suite in a clean `git worktree` of the PR head. If CI is red and local is green, suspect uncommitted files first.
+
+**Applies to:** `check-last-pr`, any "tests pass" claim before pushing
