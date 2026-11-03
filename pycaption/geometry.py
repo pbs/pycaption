@@ -18,6 +18,12 @@ from .exceptions import CaptionReadSyntaxError, RelativizationError
 
 _UNIT_MISMATCH_MSG = "The sizes should have the same measure units."
 
+FIT_MIN_LINE = 90 / 15
+"""Depth of one line of text, in percent of the screen: a row of the 15
+rows in the band from 5% to 95% that Layout.fit_to_screen keeps boxes in
+(and that SCC rows are read into). fit_to_screen leaves no box shallower."""
+
+
 
 class UnitEnum(Enum):
     """Enumeration-like object, specifying the units of measure for length
@@ -604,6 +610,53 @@ class Padding:
         )
 
 
+def webvtt_cue_span(position, size, position_alignment):
+    """Return the (left, width) of a WebVTT cue box along its position axis.
+
+    This is WebVTT's "apply WebVTT cue settings" step: the box is no larger
+    than the room between the position and the screen edge it grows towards
+    (the maximum size: 100 - position for line-left, position for
+    line-right, twice the distance to the nearer edge for center), and is
+    then placed by its line-left edge. All values are percentages along the
+    axis WebVTT's position and size run on (x for horizontal text, y for
+    vertical text).
+
+    A size of None is WebVTT's default, 100%, and the width returned is then
+    None when the box reaches the far edge, so it needs no extent of its
+    own. A box with no room (the maximum size is 0, or the position is off
+    the screen) keeps its size and is only kept from starting before the
+    screen, or stays where it is if it has no size.
+
+    :param position: The computed position, in percent.
+    :param size: The size, in percent, or None.
+    :param position_alignment: The computed PositionAlignmentEnum.
+    :returns: (left, width), width None when the box needs no extent.
+    """
+    if position_alignment == PositionAlignmentEnum.CENTER:
+        max_size = 2 * min(position, 100 - position)
+    elif position_alignment == PositionAlignmentEnum.LINE_RIGHT:
+        max_size = position
+    else:
+        max_size = 100 - position
+
+    if max_size > 0:
+        width = min(100 if size is None else size, max_size)
+    elif size is None:
+        return position, None
+    else:
+        width = size
+
+    if position_alignment == PositionAlignmentEnum.CENTER:
+        left = max(0, position - width / 2)
+    elif position_alignment == PositionAlignmentEnum.LINE_RIGHT:
+        left = max(0, position - width)
+    else:
+        left = position
+    if size is None and left + width >= 100:
+        return left, None
+    return left, width
+
+
 class Layout:
     """Should encapsulate all the information needed to determine (as correctly
     as possible) the layout (positioning) of elements on the screen.
@@ -648,8 +701,11 @@ class Layout:
         :param writing_direction: WebVTT vertical writing direction (rl or lr).
 
         :type position_alignment: PositionAlignmentEnum
-        :param position_alignment: Which edge of the cue box the position
-            percentage anchors to (line-left, center, or line-right).
+        :param position_alignment: Which edge of the cue box the origin's
+            position anchors to (line-left, center, or line-right), for a
+            layout built with a WebVTT position. fit_to_screen places such a
+            box by its line-left edge. The WebVTT reader resolves the box
+            itself, so its layouts leave this None.
 
         :type line_alignment: LineAlignmentEnum
         :param line_alignment: How the cue box is vertically aligned relative
@@ -773,9 +829,12 @@ class Layout:
         technically valid but contain inconsistent settings that may cause
         long captions to be cut out of the screen.
 
-        When position_alignment is set, the origin is first adjusted so that
-        origin.x represents the true left edge of the cue box (the W3C spec
-        allows the position to anchor to center or right edge).
+        When position_alignment is set, the box is first placed by its
+        line-left edge, as WebVTT does (see webvtt_cue_span), even when it
+        is too close to the edge for the extent to be fit. Fitting never
+        leaves a box less than a line (FIT_MIN_LINE) deep across its lines,
+        unless it already was: a box that starts too near the bottom keeps a
+        line, reaching past 95%.
 
         ATTENTION: This must be called on relativized objects (such as the one
         returned by as_percentage_of). All units are presumed to be percentages.
@@ -789,57 +848,113 @@ class Layout:
         ):
             return self
 
-        origin = self._resolve_position_alignment()
+        placed = self._placed_by_its_left_edge()
+        origin, extent = placed.origin, placed.extent
 
         if origin.x.value >= 90 or origin.y.value >= 95:
-            return self
+            return placed
 
         diff_horizontal = Size(90 - origin.x.value, UnitEnum.PERCENT)
         diff_vertical = Size(95 - origin.y.value, UnitEnum.PERCENT)
 
-        if not self.extent:
+        if not extent:
             new_extent = Stretch(diff_horizontal, diff_vertical)
         else:
             new_extent = self._corrected_extent_from(
-                origin, diff_horizontal, diff_vertical
+                origin, extent, diff_horizontal, diff_vertical
             )
 
         return Layout(
             origin=origin,
-            extent=new_extent,
+            extent=self._keeping_a_line(origin, extent, new_extent),
             padding=self.padding,
             alignment=self.alignment,
             writing_direction=self.writing_direction,
             line_alignment=self.line_alignment,
         )
 
-    def _resolve_position_alignment(self):
-        """Adjust origin.x based on position_alignment and extent width.
+    def is_vertical(self):
+        """Whether the text runs down the screen (WebVTT ``vertical``).
 
-        The VTT reader always stores the ``position`` setting in origin.x
-        and ``size`` in extent.horizontal, regardless of writing direction.
-        This method adjusts origin.x so it represents the true left edge
-        of the cue box.
-
-        Returns a new Point (or self.origin unchanged for LINE_LEFT/None).
+        Lines then stack across the width, and WebVTT's position and size
+        run along the height.
         """
-        if not self.position_alignment or not self.extent:
-            return self.origin
+        return self.writing_direction in (
+            WritingDirectionEnum.VERTICAL_RL,
+            WritingDirectionEnum.VERTICAL_LR,
+        )
 
-        width = self.extent.horizontal.value
+    def _keeping_a_line(self, origin, extent, fitted):
+        """Return the fitted extent, at least a line deep across the lines.
 
-        if self.position_alignment == PositionAlignmentEnum.CENTER:
-            adjusted_x = max(0, self.origin.x.value - width / 2)
-        elif self.position_alignment == PositionAlignmentEnum.LINE_RIGHT:
-            adjusted_x = max(0, self.origin.x.value - width)
+        That is its height for horizontal text and its width for vertical
+        text. Where fitting left less than FIT_MIN_LINE, the box gets back
+        what it had (the room to the screen edge if it had no extent), up to
+        a line and never past the screen.
+        """
+        vertical = self.is_vertical()
+        start = (origin.x if vertical else origin.y).value
+        if extent:
+            before = (extent.horizontal if vertical else extent.vertical).value
         else:
-            return self.origin
+            before = 100 - start
+        after = (fitted.horizontal if vertical else fitted.vertical).value
+        if after >= min(before, FIT_MIN_LINE):
+            return fitted
+        depth = Size(min(before, FIT_MIN_LINE, 100 - start), UnitEnum.PERCENT)
+        if vertical:
+            return Stretch(depth, fitted.vertical)
+        return Stretch(fitted.horizontal, depth)
 
-        return Point(Size(adjusted_x, UnitEnum.PERCENT), self.origin.y)
+    def _placed_by_its_left_edge(self):
+        """Return this layout with its origin at the box's line-left edge.
 
-    def _corrected_extent_from(self, origin, diff_horizontal, diff_vertical):
+        For a layout whose origin is a WebVTT position anchored elsewhere
+        (position_alignment). That edge is the left one for horizontal
+        text and the top one for vertical text, which WebVTT's position and
+        size run along. Returns self when there is nothing to place: no
+        position_alignment, or a position or size not in percent.
+        """
+        if not self.position_alignment:
+            return self
+        vertical = self.is_vertical()
+        position = self.origin.y if vertical else self.origin.x
+        size = None
+        if self.extent:
+            size = self.extent.vertical if vertical else self.extent.horizontal
+        if position.unit != UnitEnum.PERCENT:
+            return self
+        if size and size.unit != UnitEnum.PERCENT:
+            return self
+
+        left, width = webvtt_cue_span(
+            position.value, size.value if size else None, self.position_alignment
+        )
+        origin, extent = self.origin, self.extent
+        if left != position.value:
+            left = Size(left, UnitEnum.PERCENT)
+            origin = Point(origin.x, left) if vertical else Point(left, origin.y)
+        if width is not None and (not size or width != size.value):
+            # Across the lines, the box keeps its depth, or the whole screen
+            full = Size(100, UnitEnum.PERCENT)
+            width = Size(width, UnitEnum.PERCENT)
+            if vertical:
+                extent = Stretch(extent.horizontal if extent else full, width)
+            else:
+                extent = Stretch(width, extent.vertical if extent else full)
+        return Layout(
+            origin=origin,
+            extent=extent,
+            padding=self.padding,
+            alignment=self.alignment,
+            writing_direction=self.writing_direction,
+            line_alignment=self.line_alignment,
+        )
+
+    @staticmethod
+    def _corrected_extent_from(origin, extent, diff_horizontal, diff_vertical):
         """Return extent clamped so origin + extent doesn't exceed the screen."""
-        bottom_right = origin.add_stretch(self.extent)
+        bottom_right = origin.add_stretch(extent)
 
         if (
             bottom_right.x.unit != UnitEnum.PERCENT
@@ -850,8 +965,8 @@ class Layout:
                 "can be calculated based on origin."
             )
 
-        new_horizontal = self.extent.horizontal
-        new_vertical = self.extent.vertical
+        new_horizontal = extent.horizontal
+        new_vertical = extent.vertical
         if bottom_right.x.value > 90:
             new_horizontal = diff_horizontal
         if bottom_right.y.value > 95:

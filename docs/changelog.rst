@@ -2,57 +2,29 @@ Changelog
 ---------
 2.3.15
 ^^^^^^
-  - Fix ``DFXPReader`` keeping only the last division when several share a
-    language, and adding a nested division's paragraphs to its parent's
-    language as well as its own. Each division's paragraphs are now read
-    once, into its own language, and captions merged from several divisions
-    are sorted by start time, keeping document order for equal starts. A
-    language whose captions all come from one division, including one
-    inside a wrapper division, keeps their document order. A division
-    without ``xml:lang`` now takes its language from the nearest enclosing
-    division, ``<body>`` or ``<tt>`` that sets one, instead of always from
-    ``<tt>``.
+  - Fix ``DFXPReader`` keeping only the last division of a language and
+    reading nested divisions twice. Merged captions are sorted by start time,
+    and a division without ``xml:lang`` inherits it from its nearest ancestor.
   - Fix ``SRTReader`` silently dropping every caption after a line that is
-    not a caption number, such as text left after a blank line inside a cue.
-    The reader stopped at that line and returned only the captions before
-    it. It now raises ``CaptionReadSyntaxError`` naming the line, as it
-    already does for a number with no timing line after it. Text after the
-    last caption is still ignored, and input that already raised is
-    unchanged.
+    not a caption number; it now raises ``CaptionReadSyntaxError``.
   - Fix ``SCCReader(simulate_roll_up=True)``, which never built the roll-up
-    window. Each roll-up caption now holds the rows on screen, the last 2, 3
-    or 4, one per line, oldest on top and the newest on the base row its PAC
-    set. A roll-up command sent again before each row, as production files
-    do, no longer restarts the window, rows are no longer joined by spaces
-    (doubled at times) onto one line that could fail the 32-character
-    check, and the row cleared by EDM rolls in with the others. A change of
-    depth keeps the rows the new depth holds; EDM or a switch to pop-on or
-    paint-on empties the window. The option can now be given to the
-    constructor, so it reaches the reader through ``CaptionConverter``;
-    passing it to ``read()`` still overrides it. A window lines its rows up
-    by column as pop-on does, so a row starting too far right for its text
-    is rejected on any line of the window, the top one included (pop-on
-    does not check its first line's indentation), and named once rather
-    than in each window it rolls through. A row that a PAC moves to another
-    row before its carriage return has no one base row to roll up from: it
-    is read as without the option, and the rows after it start a new window.
-    The default is still ``False``, and its output changes only where a row
-    of spaces follows a row: that row was left with no end, so WebVTT, SRT
-    and DFXP wrote it ending before it started, and it now ends at the next
-    row, or at the EDM that erases the row of spaces.
-  - Fix ``SCCReader.read(offset=...)`` showing captions that end before the
-    offset from ``00:00:00.000``. As with
-    ``WebVTTReader(time_shift_milliseconds=...)``, they are now dropped, a
-    caption crossing the offset starts at ``00:00:00.000``, and
-    ``CaptionReadNoCaptions`` is raised if none are left. Zero and negative
-    offsets are unchanged.
+    window. Each caption now holds the 2-4 rows on screen, one per line, and
+    the option can be passed to the constructor (and ``CaptionConverter``).
+  - Fix ``SCCReader.read(offset=...)`` keeping captions that end before the
+    offset; they are dropped, as with ``WebVTTReader``'s time shift.
   - Fix ``SCCWriter`` erasing the character before each extended character
-    (such as ã, õ, Ê, ß, curly quotes and the em dash), so "ação" was read
-    back as "aão". An extended character backspaces over the column before
-    it, and the writer now sends its standard substitute there first, which
-    a decoder without the extended set shows instead. The substitutes come
-    from ``SUBSTITUTE_CHARACTERS``, which gains the 8 extended characters it
-    lacked, and Ô now falls back to "O" instead of ")".
+    ("ação" read back as "aão"); a standard substitute is now sent first.
+  - Fix ``WebVTTWriter`` positioning non-left-aligned cues from the wrong
+    edge (now ``position:N%,line-left``), always write ``align``, and write
+    vertical cues along their own axes.
+  - Fix ``WebVTTReader`` cue placement to match WebVTT: unqualified and
+    computed positions, ``size``-only cues, vertical cues and regions. Invalid
+    cue settings are now ignored instead of kept.
+  - Fix ``DFXPWriter``, ``SAMIWriter`` and ``SCCWriter`` placing WebVTT cues
+    by their anchor instead of their left edge, and not shrinking a cue too
+    wide for the screen.
+  - Fix ``Layout.fit_to_screen`` squeezing a box near the bottom to 1.67% of
+    the screen height; boxes are now at least one 6% row deep.
 
 2.3.14
 ^^^^^^

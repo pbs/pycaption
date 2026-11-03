@@ -245,3 +245,23 @@ And: the samples decide the sensitivity. A plain-text sample reports "same" on a
 **Rule:** When a PR changes a reader/writer parameter, sweep the fixtures with non-default values of that parameter, base vs PR, and check results against an independent expectation (e.g. the offset-0 output shifted by hand), not only against base. To review a PR other than the current branch, run the script from a detached worktree of the PR.
 
 **Applies to:** `check-last-pr`
+
+---
+
+## 21. TEST_REMOVED fires on a test that was deliberately replaced
+
+**What happened:** PR #449 review returned one HIGH, TEST_REMOVED for `test_position_alignment_none_when_unspecified`, which alone flipped the verdict to NEEDS WORK. The PR changed the behavior that test pinned, on purpose and per spec, and replaced it in the same hunk with a parametrized `test_unqualified_position_anchors_where_align_puts_the_text` plus `test_position_alignment_none_without_position`.
+
+**Rule:** Before reporting TEST_REMOVED, look at the test file's diff. If the PR deletes the test and adds tests in the same class covering the same input with the new expected behavior, it is a replacement: say so, and don't count it toward the verdict. It stays HIGH only when the coverage is actually gone.
+
+**Applies to:** `check-last-pr`
+
+---
+
+## 22. The behavior gate runs the working tree, so an untracked file can hide a broken PR
+
+**What happened:** PR #449 head imported `pycaption/webvtt/cue_box.py`, which was never committed. Locally the file was there but untracked, so `pytest` passed (1150 tests) and the gate would have said "0 failing at HEAD". CI failed py310/py312 with `ModuleNotFoundError` and 18 collection errors.
+
+**Rule:** Before trusting a green local run, check `git status --short` for untracked files under `pycaption/` or `tests/`, or run the suite in a clean `git worktree` of the PR head. If CI is red and local is green, suspect uncommitted files first.
+
+**Applies to:** `check-last-pr`, any "tests pass" claim before pushing
