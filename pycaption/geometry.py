@@ -24,7 +24,6 @@ rows in the band from 5% to 95% that Layout.fit_to_screen keeps boxes in
 (and that SCC rows are read into). fit_to_screen leaves no box shallower."""
 
 
-
 class UnitEnum(Enum):
     """Enumeration-like object, specifying the units of measure for length
 

@@ -43,6 +43,7 @@ from .constants import (
 )
 from .cue_box import CueSettings, cue_box
 
+
 LINE_AUTO, LINE_SET, LINE_REGION = "auto", "set", "region"
 """How a cue's line is placed: WebVTT's auto line (the last row, lifted for
 a multi-line cue), its own valid line setting, or the region it is laid

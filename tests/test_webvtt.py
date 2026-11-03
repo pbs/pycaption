@@ -710,9 +710,7 @@ class TestWebVTTRegionParsing:
 
     @pytest.mark.parametrize("viewport_y", ["90%", "100%"])
     @pytest.mark.parametrize("settings", ["region:r1", "line:80% region:r1"])
-    def test_multiline_cue_in_a_region_keeps_the_region_box(
-        self, settings, viewport_y
-    ):
+    def test_multiline_cue_in_a_region_keeps_the_region_box(self, settings, viewport_y):
         # The region places the cue: it is neither lifted like a cue on the
         # auto line nor checked for overflow like one placed by its line
         region = self.REGION_R1.replace(
@@ -1153,8 +1151,7 @@ class TestWebVTTCueSettingsParsing:
         # its three lines on screen, and no overflow is reported
         def layout_of(settings):
             vtt = (
-                "WEBVTT\n\n00:00:01.000 --> 00:00:03.000 "
-                f"{settings}\none\ntwo\nthree\n"
+                f"WEBVTT\n\n00:00:01.000 --> 00:00:03.000 {settings}\none\ntwo\nthree\n"
             )
             layout = self.reader.read(vtt).get_captions("en-US")[0].layout_info
             layout.webvtt_positioning = None
