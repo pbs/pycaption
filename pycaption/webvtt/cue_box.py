@@ -10,6 +10,7 @@ top) edge, as it is for every other format.
 
 import math
 import re
+
 from dataclasses import dataclass
 
 from ..geometry import (
@@ -32,6 +33,7 @@ from .constants import (
     POSITION_ALIGN_MAP,
     VERTICAL_SETTING_MAP,
 )
+
 
 _AUTO_POSITION_FOR = {"left": 0.0, "right": 100.0}
 """WebVTT's computed position, by align, for a cue with no position: 0% for
