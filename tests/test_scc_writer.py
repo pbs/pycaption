@@ -1,5 +1,7 @@
 import re
 
+import pytest
+
 from pycaption import SCCReader, SCCWriter, SRTReader, WebVTTReader
 
 
@@ -325,6 +327,26 @@ class TestSCCWriterPositioning:
         output = SCCWriter().write(captions)
         pac_row_9 = WRITER_PAC_CODES[(9, 0, "plain")]
         assert pac_row_9 in output
+
+    @pytest.mark.parametrize(
+        "settings, left_edge",
+        [
+            # Centered on 50%, 40% wide: the box starts at 30%, column 8
+            ("align:center position:50% size:40%", 30),
+            ("position:50% size:40%", 30),
+            # Right edge at 90%: starts at 50%, column 16
+            ("align:right position:90% size:40%", 50),
+            # No position: WebVTT centers the box, here 30-70%
+            ("line:80% size:40%", 30),
+            ("align:left position:50% size:40%", 50),
+        ],
+    )
+    def test_vtt_column_is_the_cue_box_left_edge(self, settings, left_edge):
+        vtt = f"WEBVTT\n\n00:00:01.000 --> 00:00:03.000 {settings}\nHello\n"
+        output = SCCWriter().write(WebVTTReader().read(vtt))
+
+        layout = SCCReader().read(output).get_captions("en-US")[0].layout_info
+        assert layout.origin.x.value == pytest.approx(left_edge)
 
     def test_vtt_no_position_defaults_to_bottom(self):
         vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\nDefault position\n"

@@ -192,9 +192,6 @@ class BaseWriter:
             if self.fit_to_screen:
                 # Make sure origin + extent <= 100%
                 layout_info = layout_info.fit_to_screen()
-            else:
-                # Still place the box by its left edge, as fit_to_screen does
-                layout_info = layout_info.resolve_position_alignment()
         return layout_info
 
     def write(self, caption_set, **kwargs):

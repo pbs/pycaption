@@ -21,7 +21,6 @@ from ..geometry import (
     HorizontalAlignmentEnum,
     Layout,
     Point,
-    PositionAlignmentEnum,
     Size,
     Stretch,
     UnitEnum,
@@ -29,13 +28,9 @@ from ..geometry import (
 )
 from .constants import (
     ALIGN_SETTING_MAP,
-    CUE_SETTING_PATTERN,
-    DEFAULT_POSITION_ALIGN_FOR,
     KNOWN_TAGS,
-    LINE_ALIGN_MAP,
     LINE_GRID_SIZE,
     LINE_HEIGHT_VH,
-    POSITION_ALIGN_MAP,
     REGION_ANCHOR_PATTERN,
     REGION_SETTING_PATTERN,
     STYLE_SELECTOR_PATTERN,
@@ -46,6 +41,12 @@ from .constants import (
     _is_note_start,
     microseconds,
 )
+from .cue_box import CueSettings, cue_box
+
+LINE_AUTO, LINE_SET, LINE_REGION = "auto", "set", "region"
+"""How a cue's line is placed: WebVTT's auto line (the last row, lifted for
+a multi-line cue), its own valid line setting, or the region it is laid
+out in, which sets the line itself."""
 
 
 def _flush_css_block(css_lines, blocks):
@@ -77,6 +78,7 @@ class _ParseState:
         "nodes",
         "open_tags",
         "layout_info",
+        "line_placement",
         "found_timing",
         "drop_cue",
         "in_note_block",
@@ -92,6 +94,7 @@ class _ParseState:
         self.nodes = []
         self.open_tags = []
         self.layout_info = None
+        self.line_placement = None
         self.found_timing = False
         self.drop_cue = False
         self.in_note_block = False
@@ -246,9 +249,12 @@ class WebVTTReader(BaseReader):
             self._consume_pending_id(state, line_index)
             state.found_timing = True
             last_start_time = captions[-1].start if captions else 0
-            state.start, state.end, state.layout_info = self._read_timing(
-                line, line_index, last_start_time
-            )
+            (
+                state.start,
+                state.end,
+                state.layout_info,
+                state.line_placement,
+            ) = self._read_timing(line, line_index, last_start_time)
             state.drop_cue = state.start is None
             return
 
@@ -328,6 +334,7 @@ class WebVTTReader(BaseReader):
                     state.start,
                     state.end,
                     state.layout_info,
+                    state.line_placement,
                 )
             )
         state.drop_cue = False
@@ -337,7 +344,8 @@ class WebVTTReader(BaseReader):
     def _read_timing(self, line, line_index, last_start_time):
         """Parse a timing line, re-raising errors with line number context.
 
-        :returns: Tuple of (start_us, end_us, Layout or None).
+        :returns: Tuple of (start_us, end_us, Layout or None, line placement
+            or None); see _parse_timing_line.
         """
         try:
             return self._parse_timing_line(line, last_start_time)
@@ -346,59 +354,70 @@ class WebVTTReader(BaseReader):
             tb = sys.exc_info()[2]
             raise type(e)(new_msg).with_traceback(tb) from None
 
-    def _build_cue(self, nodes, open_tags, start, end, layout_info):
+    def _build_cue(self, nodes, open_tags, start, end, layout_info, line_placement):
         """Assemble a Caption from accumulated nodes.
 
         Closes any unclosed tags and checks for viewport overflow.
 
+        :param line_placement: How the cue's line is placed (see
+            _parse_cue_settings), or None for a cue without settings.
         :returns: Caption instance.
         """
         self._close_unclosed_tags(nodes, open_tags)
-        self._adjust_default_line_position(nodes, layout_info)
+        self._adjust_default_line_position(nodes, layout_info, line_placement)
         caption = Caption(start, end, nodes, layout_info=layout_info)
-        self._check_line_overflow(caption)
+        self._check_line_overflow(caption, line_placement)
         return caption
 
     @staticmethod
-    def _adjust_default_line_position(nodes, layout_info):
-        """Adjust the default origin.y for multi-line cues.
+    def _adjust_default_line_position(nodes, layout_info, line_placement):
+        """Adjust the default line position for multi-line cues.
 
-        When position: is set but line: is absent, origin.y defaults to
-        the last grid row. For multi-line cues this would extend beyond
-        the viewport. Push the top edge up by one row per extra line so
-        the bottom line stays at the viewport bottom.
+        When the cue box is set but has no valid line (nor a region), the
+        line defaults to the last grid row. For multi-line cues this would
+        extend beyond the viewport. Push the top edge up by one row per
+        extra line so the bottom line stays at the viewport bottom.
+        Vertical cues do the same across the width; ``vertical:rl``
+        defaults to the leftmost column, so its lines already stay on
+        screen.
         """
         if not layout_info or not layout_info.origin:
             return
-        if not layout_info.webvtt_positioning:
+        if line_placement != LINE_AUTO:
             return
-        if "line:" in layout_info.webvtt_positioning:
+        if layout_info.writing_direction == WritingDirectionEnum.VERTICAL_RL:
             return
         num_lines = sum(1 for n in nodes if n.type_ == CaptionNode.BREAK) + 1
         if num_lines <= 1:
             return
-        adjusted_y = (LINE_GRID_SIZE - num_lines) / LINE_GRID_SIZE * 100
-        layout_info.origin = Point(
-            layout_info.origin.x,
-            Size(max(0, adjusted_y), UnitEnum.PERCENT),
+        adjusted = Size(
+            max(0, (LINE_GRID_SIZE - num_lines) / LINE_GRID_SIZE * 100),
+            UnitEnum.PERCENT,
         )
+        if layout_info.writing_direction == WritingDirectionEnum.VERTICAL_LR:
+            layout_info.origin = Point(adjusted, layout_info.origin.y)
+        else:
+            layout_info.origin = Point(layout_info.origin.x, adjusted)
 
     @staticmethod
-    def _check_line_overflow(caption):
+    def _check_line_overflow(caption, line_placement):
         """Emit a CaptionReadWarning if a multiline cue's line:%
         positioning would place text partially outside the viewport.
 
+        Only a cue placed by its own line is checked: a region places the
+        cue itself and hides what overflows it.
         Estimates using WebVTT's 15-line grid (~6.67vh per line).
         """
         layout = caption.layout_info
         if not layout or not layout.origin:
             return
-        if not layout.webvtt_positioning or "line:" not in layout.webvtt_positioning:
+        if line_placement != LINE_SET:
             return
-        origin_y = layout.origin.y
-        if origin_y is None or origin_y.unit != UnitEnum.PERCENT:
+        # The line is x for vertical cues, y otherwise
+        line_offset = layout.origin.x if layout.is_vertical() else layout.origin.y
+        if line_offset is None or line_offset.unit != UnitEnum.PERCENT:
             return
-        line_pct = origin_y.value
+        line_pct = line_offset.value
         if line_pct <= 0:
             return
         num_lines = sum(1 for n in caption.nodes if n.type_ == CaptionNode.BREAK) + 1
@@ -437,9 +456,10 @@ class WebVTTReader(BaseReader):
         :param line: Raw timing line, e.g.
             "00:00:01.000 --> 00:00:05.000 line:80%"
         :param last_start_time: Start time of previous cue (for validation).
-        :returns: Tuple of (start_us, end_us, Layout or None). start_us and
-            end_us are None when a negative time shift puts the cue end at
-            or before 0, meaning the cue is dropped.
+        :returns: Tuple of (start_us, end_us, Layout or None, line placement
+            or None), the line placement as _parse_cue_settings returns it.
+            start_us and end_us are None when a negative time shift puts the
+            cue end at or before 0, meaning the cue is dropped.
         :raises CaptionReadSyntaxError: On unparseable timing format.
         """
         m = TIMING_LINE_PATTERN.search(line)
@@ -456,19 +476,19 @@ class WebVTTReader(BaseReader):
                 # timings; ordering is moot since the cue is not kept.
                 if not self.ignore_timing_errors:
                     self._validate_timings(start, end, start)
-                return None, None, None
+                return None, None, None, None
             start = max(start, 0)
 
         if not self.ignore_timing_errors:
             self._validate_timings(start, end, last_start_time)
 
-        layout_info = None
+        layout_info = line_placement = None
         if cue_settings:
-            region_id = self._extract_region_id(cue_settings)
-            region = self._regions.get(region_id) if region_id else None
-            layout_info = self._parse_cue_settings(cue_settings, inherit_from=region)
+            layout_info, line_placement = self._parse_cue_settings(
+                cue_settings, self._regions
+            )
 
-        return start, end, layout_info
+        return start, end, layout_info, line_placement
 
     @staticmethod
     def _parse_timestamp(timestamp):
@@ -795,174 +815,44 @@ class WebVTTReader(BaseReader):
         return Layout(origin=origin, extent=extent)
 
     @staticmethod
-    def _extract_region_id(cue_settings):
-        """Extract the region:id value from a cue settings string.
-
-        :returns: Region id string, or None if not present.
-        """
-        for setting in cue_settings.split():
-            if setting.startswith("region:"):
-                return setting[7:]
-        return None
-
-    @staticmethod
-    def _parse_percent_value(value):
-        """Parse a percentage string (e.g. "50%") into a Size.
-
-        :returns: Size with UnitEnum.PERCENT, or None if invalid.
-        """
-        if not value.endswith("%"):
-            return None
-        try:
-            return Size(float(value[:-1]), UnitEnum.PERCENT)
-        except ValueError:
-            return None
-
-    @staticmethod
-    def _line_number_to_percent(value):
-        """Convert an integer line number to viewport percentage.
-
-        Uses a 15-line grid. Positive values count from top (0=0%),
-        negative values count from bottom (-1=last line).
-
-        :param value: String representation of an integer line number.
-        :returns: Float percentage (0-100), or None if not a valid int.
-        """
-        try:
-            line_num = int(value)
-        except ValueError:
-            return None
-
-        if line_num >= 0:
-            return min(line_num / LINE_GRID_SIZE * 100, 100.0)
-        return max(
-            (LINE_GRID_SIZE + line_num) / LINE_GRID_SIZE * 100,
-            0.0,
-        )
-
-    @staticmethod
-    def _parse_cue_settings(cue_settings, inherit_from=None):
+    def _parse_cue_settings(cue_settings, regions=None):
         """Parse a cue settings string into a Layout object.
 
-        Handles: line, position, size, align, vertical, region.
+        The settings are read as WebVTT reads them, and the cue box resolved
+        as WebVTT renders it (see cue_box), so the origin is the box's left
+        edge (top for vertical text). A cue whose settings leave the box in
+        its default place, the whole width of the last line, gets none.
         Preserves the raw settings string in webvtt_positioning for
         lossless VTT→VTT round-trip.
 
         :param cue_settings: Raw settings string after the timing arrow.
-        :param inherit_from: Layout from a referenced REGION to inherit.
-        :returns: Layout with parsed positioning values.
+        :param regions: {id: Layout} of the REGION blocks, if any.
+        :returns: (Layout, line placement): LINE_REGION for a cue laid out in
+            its region, LINE_SET for one placed by a valid line, otherwise
+            LINE_AUTO (WebVTT's auto line).
         """
-        parsed = {}
-        for match in CUE_SETTING_PATTERN.finditer(cue_settings):
-            name, value = match.group(1), match.group(2)
-            parsed[name] = value
-
-        position_value, position_align = WebVTTReader._split_alignment(
-            parsed.get("position", "")
-        )
-        line_value, line_align = WebVTTReader._split_alignment(parsed.get("line", ""))
-
-        origin_x = WebVTTReader._parse_percent_value(position_value)
-        origin_y = WebVTTReader._parse_line_value(line_value)
-        extent_horizontal = WebVTTReader._parse_percent_value(parsed.get("size", ""))
-        alignment = WebVTTReader._parse_align_value(parsed.get("align", ""))
-        writing_direction = WebVTTReader._parse_vertical_value(
-            parsed.get("vertical", "")
-        )
-        if position_align:
-            pos_alignment = POSITION_ALIGN_MAP.get(position_align)
-        elif origin_x is not None:
-            # An unqualified position anchors where align puts the text
-            # (an invalid align is ignored, leaving center)
-            pos_alignment = DEFAULT_POSITION_ALIGN_FOR.get(
-                parsed.get("align"), PositionAlignmentEnum.CENTER
-            )
+        regions = regions or {}
+        settings = CueSettings.parse(cue_settings, region_ids=regions)
+        region = regions.get(settings.region) if settings.stays_in_region() else None
+        origin, extent = cue_box(settings, region=region)
+        alignment = None
+        if settings.align:
+            alignment = Alignment(ALIGN_SETTING_MAP[settings.align], None)
+        if region:
+            line_placement = LINE_REGION
+        elif settings.line is not None:
+            line_placement = LINE_SET
         else:
-            pos_alignment = None
-        ln_alignment = LINE_ALIGN_MAP.get(line_align) if line_align else None
-
-        origin = None
-        if origin_y is not None or origin_x is not None:
-            x = origin_x if origin_x is not None else Size(0, UnitEnum.PERCENT)
-            y = (
-                origin_y
-                if origin_y is not None
-                else Size((LINE_GRID_SIZE - 1) / LINE_GRID_SIZE * 100, UnitEnum.PERCENT)
-            )
-            origin = Point(x, y)
-
-        extent = None
-        if extent_horizontal is not None:
-            extent = Stretch(extent_horizontal, Size(100, UnitEnum.PERCENT))
-
-        return Layout(
+            line_placement = LINE_AUTO
+        layout = Layout(
             origin=origin,
             extent=extent,
             alignment=alignment,
-            writing_direction=writing_direction,
-            position_alignment=pos_alignment,
-            line_alignment=ln_alignment,
+            writing_direction=settings.vertical,
+            line_alignment=settings.line_align if settings.line is not None else None,
             webvtt_positioning=cue_settings,
-            inherit_from=inherit_from,
         )
-
-    @staticmethod
-    def _split_alignment(value):
-        """Split a cue setting value from its optional alignment qualifier.
-
-        Per W3C WebVTT spec, position and line settings may include a
-        comma-separated alignment qualifier (e.g. "50%,line-left").
-
-        :returns: Tuple of (numeric_value, alignment_qualifier_or_None).
-        """
-        if "," in value:
-            parts = value.split(",", 1)
-            return parts[0], parts[1] or None
-        return value, None
-
-    @staticmethod
-    def _parse_line_value(value):
-        """Parse the line setting as either a percentage or integer.
-
-        Tries percentage first (e.g. "80%"), then integer line number
-        (converted to percentage via the 15-line grid).
-
-        :returns: Size with UnitEnum.PERCENT, or None if invalid/empty.
-        """
-        if not value:
-            return None
-        result = WebVTTReader._parse_percent_value(value)
-        if result is not None:
-            return result
-        pct = WebVTTReader._line_number_to_percent(value)
-        if pct is not None:
-            return Size(pct, UnitEnum.PERCENT)
-        return None
-
-    @staticmethod
-    def _parse_align_value(value):
-        """Map an align setting string to an Alignment object.
-
-        :param value: One of "start", "center", "end", "left", "right".
-        :returns: Alignment, or None if value is unrecognized/empty.
-        """
-        if value in ALIGN_SETTING_MAP:
-            return Alignment(ALIGN_SETTING_MAP[value], None)
-        return None
-
-    _VERTICAL_MAP = {
-        "rl": WritingDirectionEnum.VERTICAL_RL,
-        "lr": WritingDirectionEnum.VERTICAL_LR,
-    }
-
-    @staticmethod
-    def _parse_vertical_value(value):
-        """Map a vertical setting to a WritingDirectionEnum.
-
-        :param value: "rl" (right-to-left) or "lr" (left-to-right).
-        :returns: WritingDirectionEnum, or None if not vertical.
-        """
-        return WebVTTReader._VERTICAL_MAP.get(value)
+        return layout, line_placement
 
     def _parse_style_blocks(self, lines):
         """Extract and parse all STYLE blocks from the header area.

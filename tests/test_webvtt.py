@@ -18,12 +18,20 @@ from pycaption.base import CaptionNode
 from pycaption.geometry import (
     HorizontalAlignmentEnum,
     LineAlignmentEnum,
-    PositionAlignmentEnum,
+    Point,
     Size,
+    Stretch,
     UnitEnum,
     WritingDirectionEnum,
 )
+from pycaption.webvtt.constants import LINE_HEIGHT_VH
 from tests.mixins import ReaderTestingMixIn
+
+
+def _box(layout):
+    """(left edge, width or None) of a horizontal cue box, in percent."""
+    width = layout.extent.horizontal.value if layout.extent else None
+    return round(layout.origin.x.value, 2), width
 
 
 class TestWebVTTReader(ReaderTestingMixIn):
@@ -411,6 +419,47 @@ class TestWebVTTWriter:
 
         assert "align:center position:30%,line-left line:93.33% size:40%" in results
 
+    @pytest.mark.parametrize(
+        "source_default, expected",
+        [
+            # WebVTT's own default, for a source without align
+            (HorizontalAlignmentEnum.CENTER, "align:center position:30%,line-left"),
+            # Each source format's default text alignment
+            (HorizontalAlignmentEnum.LEFT, "align:left position:30%"),
+            (HorizontalAlignmentEnum.START, "align:start position:30%,line-left"),
+            # A caption set that declares no default gets WebVTT's
+            (None, "align:center position:30%,line-left"),
+        ],
+    )
+    def test_layout_without_alignment_takes_the_source_default(
+        self, source_default, expected
+    ):
+        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:02.000 position:50% size:40%\nHi\n"
+        caption_set = WebVTTReader().read(vtt)
+        caption_set.get_captions("en-US")[0].layout_info.webvtt_positioning = None
+        caption_set.visual_alignment_default = source_default
+
+        results = WebVTTWriter().write(caption_set)
+
+        assert f"00:00:01.000 --> 00:00:02.000 {expected} " in results
+
+    @pytest.mark.parametrize("direction", ["rl", "lr"])
+    def test_vertical_cue_is_written_with_its_axes(self, direction):
+        # Position and size run down the screen, the line across it
+        vtt = (
+            "WEBVTT\n\n00:00:01.000 --> 00:00:02.000 "
+            f"vertical:{direction} position:50% line:20% size:40%\nHi\n"
+        )
+        caption_set = WebVTTReader().read(vtt)
+        caption_set.get_captions("en-US")[0].layout_info.webvtt_positioning = None
+
+        results = WebVTTWriter(fit_to_screen=False).write(caption_set)
+
+        assert (
+            f"vertical:{direction} align:center position:30%,line-left "
+            "line:20% size:40%"
+        ) in results
+
 
 class TestWebVTTRegionParsing:
     def setup_method(self):
@@ -575,6 +624,113 @@ class TestWebVTTRegionParsing:
         captions = self.reader.read(vtt)
         cue = captions.get_captions("en-US")[0]
         assert cue.layout_info.extent.horizontal.value == pytest.approx(40.0)
+
+    # Region r1 is 40% wide from x=10%, 3 lines tall ending at y=90%
+    REGION_R1 = (
+        "WEBVTT\n\nREGION\nid:r1\nwidth:40%\nlines:3\n"
+        "regionanchor:0%,100%\nviewportanchor:10%,90%\n\n"
+    )
+
+    def _region_cue_layout(self, settings):
+        vtt = self.REGION_R1 + f"00:00:01.000 --> 00:00:03.000 {settings}\nHi\n"
+        return self.reader.read(vtt).get_captions("en-US")[0].layout_info
+
+    @pytest.mark.parametrize(
+        "settings, left, width",
+        [
+            # The default anchors put the box on the region
+            ("region:r1", 10, 40),
+            ("region:r1 align:left", 10, 40),
+            ("region:r1 align:right", 10, 40),
+            ("region:r1 position:50%", 10, 40),
+            # offset = 30 * 40 / 100 - 40 / 2 = -8, i.e. -8% of the region
+            # width: the box starts 3.2% before the region, which hides it
+            ("region:r1 position:30%", 10, 36.8),
+            # offset = 30 * 40 / 100 = 12, so the box starts 4.8% in
+            ("region:r1 position:30%,line-left", 14.8, 35.2),
+            # size:100% keeps the cue in the region
+            ("region:r1 position:30%,line-left size:100%", 14.8, 35.2),
+        ],
+    )
+    def test_cue_in_a_region_is_placed_in_it(self, settings, left, width):
+        layout = self._region_cue_layout(settings)
+        region_top = 90 - 3 * LINE_HEIGHT_VH
+
+        assert layout.origin.x.value == pytest.approx(left)
+        assert layout.origin.y.value == pytest.approx(region_top)
+        assert layout.extent.horizontal.value == pytest.approx(width)
+        assert layout.extent.vertical.value == pytest.approx(3 * LINE_HEIGHT_VH)
+        assert layout.position_alignment is None
+
+    @pytest.mark.parametrize(
+        "settings, without_region",
+        [
+            ("region:r1 line:80%", "line:80%"),
+            ("region:r1 size:40%", "size:40%"),
+            ("region:r1 vertical:rl", "vertical:rl"),
+            ("region:r1 position:30% line:80%", "position:30% line:80%"),
+            # There are no vertical regions, whichever comes first
+            ("vertical:rl region:r1", "vertical:rl"),
+        ],
+    )
+    def test_cue_with_line_size_or_vertical_drops_out_of_its_region(
+        self, settings, without_region
+    ):
+        layout = self._region_cue_layout(settings)
+        expected = self._region_cue_layout(without_region)
+        layout.webvtt_positioning = expected.webvtt_positioning = None
+
+        assert layout == expected
+
+    @pytest.mark.parametrize("settings", ["region:r1 region:nope", "region:nope"])
+    def test_cue_naming_an_unknown_region_last_is_in_none(self, settings):
+        # The last region named counts, and an unknown id names none
+        layout = self._region_cue_layout(settings)
+
+        assert layout.origin is None
+        assert layout.extent is None
+
+    @pytest.mark.parametrize(
+        "settings",
+        [
+            # WebVTT reads the settings in order: a line or size set before
+            # the region is named doesn't take the cue out of it
+            "line:80% region:r1",
+            "size:40% region:r1",
+            "region:nope region:r1",
+        ],
+    )
+    def test_cue_naming_its_region_last_stays_in_it(self, settings):
+        layout = self._region_cue_layout(settings)
+        layout.webvtt_positioning = None
+        expected = self._region_cue_layout("region:r1")
+        expected.webvtt_positioning = None
+
+        assert layout == expected
+
+    @pytest.mark.parametrize("viewport_y", ["90%", "100%"])
+    @pytest.mark.parametrize("settings", ["region:r1", "line:80% region:r1"])
+    def test_multiline_cue_in_a_region_keeps_the_region_box(
+        self, settings, viewport_y
+    ):
+        # The region places the cue: it is neither lifted like a cue on the
+        # auto line nor checked for overflow like one placed by its line
+        region = self.REGION_R1.replace(
+            "viewportanchor:10%,90%", f"viewportanchor:10%,{viewport_y}"
+        )
+        cue = f"00:00:01.000 --> 00:00:03.000 {settings}\n"
+
+        def layout_of(text):
+            vtt = region + cue + text + "\n"
+            return self.reader.read(vtt).get_captions("en-US")[0].layout_info
+
+        expected = layout_of("one")
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", CaptionReadWarning)
+            layout = layout_of("one\ntwo\nthree")
+
+        assert layout.origin == expected.origin
+        assert layout.extent == expected.extent
 
     def test_cue_without_region_unaffected(self):
         vtt = (
@@ -906,9 +1062,11 @@ class TestWebVTTCueSettingsParsing:
         cue = captions.get_captions("en-US")[0]
         layout = cue.layout_info
 
+        # Centered on 50% with the default size: the whole width
         assert layout.origin is not None
-        assert layout.origin.x == Size(50, UnitEnum.PERCENT)
+        assert layout.origin.x == Size(0, UnitEnum.PERCENT)
         assert layout.origin.y == Size(75, UnitEnum.PERCENT)
+        assert layout.extent is None
 
     def test_line_integer_positive(self, sample_webvtt_with_line_integer):
         captions = self.reader.read(sample_webvtt_with_line_integer)
@@ -977,10 +1135,34 @@ class TestWebVTTCueSettingsParsing:
 
         expected_y = (15 - 1) / 15 * 100  # ~93.33%
         assert layout.origin is not None
-        assert layout.origin.x == Size(50, UnitEnum.PERCENT)
+        assert layout.origin.x == Size(0, UnitEnum.PERCENT)
         assert layout.origin.y.unit == UnitEnum.PERCENT
         assert abs(layout.origin.y.value - expected_y) < 0.01
         assert layout.webvtt_positioning == "position:50%"
+
+    @pytest.mark.parametrize(
+        "settings, without",
+        [
+            ("line:bogus position:30%", "position:30%"),
+            ("line:150% position:30%", "position:30%"),
+            ("vertical:lr line:x position:30%", "vertical:lr position:30%"),
+        ],
+    )
+    def test_ignored_line_still_lifts_a_multiline_cue(self, settings, without):
+        # An invalid line is WebVTT's auto line, so the cue is lifted to keep
+        # its three lines on screen, and no overflow is reported
+        def layout_of(settings):
+            vtt = (
+                "WEBVTT\n\n00:00:01.000 --> 00:00:03.000 "
+                f"{settings}\none\ntwo\nthree\n"
+            )
+            layout = self.reader.read(vtt).get_captions("en-US")[0].layout_info
+            layout.webvtt_positioning = None
+            return layout
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", CaptionReadWarning)
+            assert layout_of(settings) == layout_of(without)
 
     def test_region_with_cue_override(self):
         vtt = """\
@@ -1013,9 +1195,9 @@ Hello
         layout = cue.layout_info
 
         assert layout.origin.x == Size(50, UnitEnum.PERCENT)
-        assert layout.position_alignment == PositionAlignmentEnum.LINE_LEFT
+        assert layout.extent is None
 
-    def test_position_alignment_center_stored(self):
+    def test_position_alignment_center_places_the_box(self):
         vtt = (
             "WEBVTT\n\n"
             "00:00:01.000 --> 00:00:03.000 position:50%,center line:80%\n"
@@ -1025,10 +1207,11 @@ Hello
         cue = captions.get_captions("en-US")[0]
         layout = cue.layout_info
 
-        assert layout.position_alignment == PositionAlignmentEnum.CENTER
-        assert layout.origin.x == Size(50, UnitEnum.PERCENT)
+        # The box is resolved: the origin is its left edge, not the anchor
+        assert _box(layout) == (0, None)
+        assert layout.position_alignment is None
 
-    def test_position_alignment_line_right_stored(self):
+    def test_position_alignment_line_right_places_the_box(self):
         vtt = (
             "WEBVTT\n\n"
             "00:00:01.000 --> 00:00:03.000 position:70%,line-right line:10%\n"
@@ -1038,19 +1221,23 @@ Hello
         cue = captions.get_captions("en-US")[0]
         layout = cue.layout_info
 
-        assert layout.position_alignment == PositionAlignmentEnum.LINE_RIGHT
-        assert layout.origin.x == Size(70, UnitEnum.PERCENT)
+        # Right edge at 70%, as wide as the room to its left
+        assert _box(layout) == (0, 70)
+        assert layout.position_alignment is None
 
     @pytest.mark.parametrize(
         "align, expected",
         [
-            ("", PositionAlignmentEnum.CENTER),
-            (" align:center", PositionAlignmentEnum.CENTER),
-            (" align:middle", PositionAlignmentEnum.CENTER),
-            (" align:left", PositionAlignmentEnum.LINE_LEFT),
-            (" align:start", PositionAlignmentEnum.LINE_LEFT),
-            (" align:right", PositionAlignmentEnum.LINE_RIGHT),
-            (" align:end", PositionAlignmentEnum.LINE_RIGHT),
+            # Centered on 50%: the whole width
+            ("", (0, None)),
+            (" align:center", (0, None)),
+            (" align:middle", (0, None)),
+            # Left edge at 50%: the right half
+            (" align:left", (50, None)),
+            (" align:start", (50, None)),
+            # Right edge at 50%: the left half
+            (" align:right", (0, 50)),
+            (" align:end", (0, 50)),
         ],
     )
     def test_unqualified_position_anchors_where_align_puts_the_text(
@@ -1064,14 +1251,77 @@ Hello
         )
         layout = self.reader.read(vtt).get_captions("en-US")[0].layout_info
 
-        assert layout.position_alignment == expected
-        assert layout.origin.x == Size(50, UnitEnum.PERCENT)
+        assert _box(layout) == expected
 
-    def test_position_alignment_none_without_position(self):
-        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000 line:80% align:end\nHello\n"
+    @pytest.mark.parametrize("align", ["center", "left", "right"])
+    def test_no_box_for_an_align_that_keeps_the_full_width(self, align):
+        # Its computed box is the default one, 0-100% on the last line
+        vtt = f"WEBVTT\n\n00:00:01.000 --> 00:00:03.000 align:{align}\nHello\n"
         layout = self.reader.read(vtt).get_captions("en-US")[0].layout_info
 
+        assert layout.origin is None
+        assert layout.extent is None
         assert layout.position_alignment is None
+
+    @pytest.mark.parametrize(
+        "align, box",
+        [
+            # The computed position is 50%, so the box is the right half
+            # for start and the left half for end, as WebVTT renders them
+            ("start", (50, None)),
+            ("end", (0, 50)),
+        ],
+    )
+    def test_align_alone_narrows_the_box_for_start_and_end(self, align, box):
+        vtt = f"WEBVTT\n\n00:00:01.000 --> 00:00:03.000 align:{align}\nHello\n"
+        layout = self.reader.read(vtt).get_captions("en-US")[0].layout_info
+
+        assert _box(layout) == box
+
+    @pytest.mark.parametrize(
+        "settings, without",
+        [
+            ("position:20%,bogus line:80% size:40%", "line:80% size:40%"),
+            ("position:20%,auto line:80% size:40%", "line:80% size:40%"),
+            ("position:20%, line:80% size:40%", "line:80% size:40%"),
+            ("position:20% line:80%,bogus size:40%", "position:20% size:40%"),
+            ("position:20% line:80%, size:40%", "position:20% size:40%"),
+            ("position:20% line:80% size:40%,", "position:20% line:80%"),
+            ("position:20% line:80% align:right,", "position:20% line:80%"),
+            ("vertical:rl, position:20% line:80%", "position:20% line:80%"),
+            # Each setting is read whole, up to the next space
+            ("position:20%,line-left,center line:80%", "line:80%"),
+            ("position:20% line:80% size:40%;", "position:20% line:80%"),
+            ("vertical:rl; position:20% line:80%", "position:20% line:80%"),
+            ("position:20% line:80% align:right;", "position:20% line:80%"),
+            # Not a WebVTT percentage, or out of 0-100%
+            ("position:150% line:80%", "line:80%"),
+            ("position:nan% line:80%", "line:80%"),
+            ("position:inf% line:80%", "line:80%"),
+            ("position:1e1% line:80%", "line:80%"),
+            ("position:+20% line:80%", "line:80%"),
+            ("position:\u0662\u0660% line:80%", "line:80%"),
+            ("position:20% size:150%", "position:20%"),
+            ("position:20% size:-10%", "position:20%"),
+            ("position:20% line:nan%", "position:20%"),
+            ("position:20% line:+3", "position:20%"),
+            # A later invalid setting leaves an earlier valid one
+            ("position:20% position:bogus line:80%", "position:20% line:80%"),
+            # A no-break space doesn't separate settings
+            ("position:20%\u00a0size:40% line:80%", "line:80%"),
+        ],
+    )
+    def test_setting_with_invalid_value_or_qualifier_is_ignored(
+        self, settings, without
+    ):
+        # WebVTT drops the whole setting, as if it were not given
+        def layout_of(settings):
+            vtt = f"WEBVTT\n\n00:00:01.000 --> 00:00:03.000 {settings}\nHello\n"
+            layout = self.reader.read(vtt).get_captions("en-US")[0].layout_info
+            layout.webvtt_positioning = None
+            return layout
+
+        assert layout_of(settings) == layout_of(without)
 
     def test_position_alignment_center_adjusts_origin_in_dfxp(self):
         vtt = (
@@ -1115,30 +1365,21 @@ Hello
 
         assert cue.layout_info.origin.x == Size(0.0, UnitEnum.PERCENT)
 
-    def test_position_alignment_start_maps_to_line_left(self):
+    @pytest.mark.parametrize("qualifier", ["start", "middle", "end"])
+    def test_legacy_position_qualifier_is_ignored(self, qualifier):
+        # Earlier drafts' qualifiers aren't WebVTT: the position is dropped,
+        # leaving the computed one (0% and line-left for align:left)
         vtt = (
-            "WEBVTT\n\n"
-            "00:00:01.000 --> 00:00:03.000 position:40%,start line:10%\n"
-            "Hello\n"
+            "WEBVTT\n\n00:00:01.000 --> 00:00:03.000 "
+            f"align:left position:40%,{qualifier} line:10%\nHello\n"
         )
-        captions = self.reader.read(vtt)
-        cue = captions.get_captions("en-US")[0]
+        cue = self.reader.read(vtt).get_captions("en-US")[0]
 
-        assert cue.layout_info.position_alignment == PositionAlignmentEnum.LINE_LEFT
+        assert _box(cue.layout_info) == (0, None)
 
-    def test_position_alignment_middle_maps_to_center(self):
-        # Legacy qualifier, like start and end
-        vtt = (
-            "WEBVTT\n\n"
-            "00:00:01.000 --> 00:00:03.000 align:left position:40%,middle line:10%\n"
-            "Hello\n"
-        )
-        captions = self.reader.read(vtt)
-        cue = captions.get_captions("en-US")[0]
-
-        assert cue.layout_info.position_alignment == PositionAlignmentEnum.CENTER
-
-    def test_position_alignment_vertical_rl_adjusts_x(self):
+    def test_position_alignment_vertical_rl_adjusts_y(self):
+        # For vertical cues position and size run down the screen, and the
+        # line is the horizontal offset
         vtt = (
             "WEBVTT\n\n"
             "00:00:01.000 --> 00:00:03.000 "
@@ -1146,12 +1387,56 @@ Hello
             "Hello\n"
         )
         captions = self.reader.read(vtt)
-        output = DFXPWriter().write(captions)
+        output = DFXPWriter(relativize=False, fit_to_screen=False).write(captions)
         dfxp_captions = DFXPReader().read(output)
         cue = dfxp_captions.get_captions("en-US")[0]
 
-        assert cue.layout_info.origin.x == Size(30.0, UnitEnum.PERCENT)
-        assert cue.layout_info.origin.y == Size(20.0, UnitEnum.PERCENT)
+        assert cue.layout_info.origin == Point(
+            Size(20.0, UnitEnum.PERCENT), Size(30.0, UnitEnum.PERCENT)
+        )
+        assert cue.layout_info.extent == Stretch(
+            Size(100.0, UnitEnum.PERCENT), Size(40.0, UnitEnum.PERCENT)
+        )
+
+    @pytest.mark.parametrize(
+        "settings, origin, extent",
+        [
+            # line:N% is the left edge for either direction
+            (
+                "vertical:rl line:20% position:10%,line-left size:40%",
+                (20, 10),
+                (100, 40),
+            ),
+            (
+                "vertical:lr line:20% position:10%,line-left size:40%",
+                (20, 10),
+                (100, 40),
+            ),
+            # Line numbers count from the right for rl, from the left for lr
+            ("vertical:rl line:0 position:10%,line-left", (93.33, 10), None),
+            ("vertical:lr line:0 position:10%,line-left", (0, 10), None),
+            ("vertical:rl line:-1 position:10%,line-left", (0, 10), None),
+            ("vertical:lr line:-1 position:10%,line-left", (93.33, 10), None),
+            # No line: WebVTT's auto line, -1
+            ("vertical:rl position:10%,line-left size:40%", (0, 10), (100, 40)),
+            ("vertical:lr position:10%,line-left size:40%", (93.33, 10), (100, 40)),
+        ],
+    )
+    def test_vertical_cue_box_axes(self, settings, origin, extent):
+        vtt = f"WEBVTT\n\n00:00:01.000 --> 00:00:03.000 {settings}\nHello\n"
+        layout = self.reader.read(vtt).get_captions("en-US")[0].layout_info
+
+        assert (
+            round(layout.origin.x.value, 2),
+            round(layout.origin.y.value, 2),
+        ) == origin
+        if extent is None:
+            assert layout.extent is None
+        else:
+            assert (
+                layout.extent.horizontal.value,
+                layout.extent.vertical.value,
+            ) == extent
 
     def test_multiple_cues_with_different_position_alignments(self):
         vtt = (
@@ -1216,15 +1501,41 @@ Hello
 
         assert cue.layout_info.origin.y == Size((14 / 15) * 100, UnitEnum.PERCENT)
 
-    def test_line_only_origin_x_defaults_to_zero(self):
-        vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000 line:80%\nHello\n"
-        captions = self.reader.read(vtt)
-        cue = captions.get_captions("en-US")[0]
-        layout = cue.layout_info
+    @pytest.mark.parametrize(
+        "line, rounded", [("2.6", "3"), ("2.4", "2"), ("-1.4", "-1"), ("-1.6", "-2")]
+    )
+    def test_line_number_is_rounded_as_webvtt_does(self, line, rounded):
+        # Adding 0.5 and flooring, as WebVTT's snap-to-lines rendering does
+        def origin_of(line):
+            vtt = (
+                "WEBVTT\n\n00:00:01.000 --> 00:00:03.000 "
+                f"position:20% line:{line}\nHello\n"
+            )
+            return self.reader.read(vtt).get_captions("en-US")[0].layout_info.origin
 
-        assert layout.origin is not None
-        assert layout.origin.x == Size(0, UnitEnum.PERCENT)
-        assert layout.origin.y == Size(80, UnitEnum.PERCENT)
+        assert origin_of(line) == origin_of(rounded)
+
+    @pytest.mark.parametrize(
+        "settings, box",
+        [
+            # WebVTT's computed position: 0% for left, 100% for right,
+            # otherwise 50%, anchored where align puts the text
+            ("line:80%", (0, None)),
+            ("line:80% align:center", (0, None)),
+            ("line:80% align:left", (0, None)),
+            ("line:80% align:right", (0, None)),
+            ("line:80% align:start", (50, None)),
+            ("line:80% align:end", (0, 50)),
+            ("line:80% align:middle", (0, None)),
+            ("size:40% align:right", (60, 40)),
+            ("size:40%", (30, 40)),
+        ],
+    )
+    def test_cue_without_position_takes_the_computed_position(self, settings, box):
+        vtt = f"WEBVTT\n\n00:00:01.000 --> 00:00:03.000 {settings}\nHello\n"
+        layout = self.reader.read(vtt).get_captions("en-US")[0].layout_info
+
+        assert _box(layout) == box
 
     def test_neither_position_nor_line_origin_is_none(self):
         vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\nHello\n"
@@ -1235,12 +1546,12 @@ Hello
 
     def test_position_only_dfxp_output_has_horizontal(self):
         # Centered on 70% with the default size: the box is 40-100%, which
-        # fit_to_screen trims to 90%
+        # fit_to_screen trims to 90%, keeping a row (6%) of height
         vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000 position:70%\nHello\n"
         captions = self.reader.read(vtt)
         output = DFXPWriter().write(captions)
 
-        assert 'tts:extent="50% 1.67%" tts:origin="40% 93.33%"' in output
+        assert 'tts:extent="50% 6%" tts:origin="40% 93.33%"' in output
 
     def test_position_only_sami_output_has_margin_left(self):
         vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000 position:70%\nHello\n"

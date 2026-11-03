@@ -223,8 +223,9 @@ class TestDFXPtoWebVTT(WebVTTTestingMixIn):
         self, sample_dfxp_regions_with_each_text_align
     ):
         """WebVTT anchors an unqualified position where align puts the text:
-        the center for center, the right edge for right and end. The region's
-        left edge is written, so those cues say it is the line-left one, and
+        the center for center, the right edge for right and end, and for
+        start in right-to-left text. The region's left edge is written, so
+        every cue but the left-aligned one says it is the line-left one, and
         the same region reads back."""
         caption_set = DFXPReader().read(sample_dfxp_regions_with_each_text_align)
         results = WebVTTWriter().write(caption_set)
@@ -237,7 +238,8 @@ class TestDFXPtoWebVTT(WebVTTTestingMixIn):
             "00:00:03.000 --> 00:00:04.000 align:end position:10%,line-left "
             "line:80% size:80%",
             "00:00:04.000 --> 00:00:05.000 align:left position:10% line:80% size:80%",
-            "00:00:05.000 --> 00:00:06.000 align:start position:10% line:80% size:80%",
+            "00:00:05.000 --> 00:00:06.000 align:start position:10%,line-left "
+            "line:80% size:80%",
         ]
         assert [
             (
@@ -253,6 +255,32 @@ class TestDFXPtoWebVTT(WebVTTTestingMixIn):
             ("10%", "80%", "left"),
             ("10%", "80%", "start"),
         ]
+
+    def test_vertical_region_is_written_along_its_axes(self):
+        # A tbrl region 20-50% across and 10-50% down: WebVTT's position and
+        # size are the vertical ones, its line the left edge
+        dfxp = """\
+<?xml version="1.0" encoding="utf-8"?>
+<tt xml:lang="en" xmlns="http://www.w3.org/ns/ttml"
+    xmlns:tts="http://www.w3.org/ns/ttml#styling">
+ <head>
+  <layout>
+   <region xml:id="v" tts:origin="20% 10%" tts:extent="30% 40%"
+       tts:textAlign="center" tts:writingMode="tbrl"/>
+  </layout>
+ </head>
+ <body>
+  <div>
+   <p begin="00:00:01.000" end="00:00:02.000" region="v">vertical</p>
+  </div>
+ </body>
+</tt>"""
+        results = WebVTTWriter(fit_to_screen=False).write(DFXPReader().read(dfxp))
+
+        assert (
+            "00:00:01.000 --> 00:00:02.000 vertical:rl align:center "
+            "position:10%,line-left line:20% size:40%\n"
+        ) in results
 
     def test_centered_cue_without_region_states_align_center(
         self, sample_dfxp_centered_without_region

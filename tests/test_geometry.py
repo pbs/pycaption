@@ -12,6 +12,8 @@ from pycaption.geometry import (
     Stretch,
     UnitEnum,
     VerticalAlignmentEnum,
+    WritingDirectionEnum,
+    webvtt_cue_span,
 )
 
 
@@ -293,10 +295,70 @@ class TestFitToScreen:
         assert result.extent == extent
         assert result.position_alignment is None
 
-
-class TestResolvePositionAlignment:
     @pytest.mark.parametrize(
-        "x, size, position_alignment, left_edge, width",
+        "y, extent, depth",
+        [
+            # WebVTT's default line: 95% leaves 1.67%, the box keeps a row
+            (93.33, None, 6),
+            (93.33, (40, 100), 6),
+            # The bottom SCC row already fits a row: unchanged
+            (89, None, 6),
+            # Fitting leaves enough: unchanged
+            (80, (40, 100), 15),
+            # Already shallower than a row: keeps its own 3%, not 1.67%
+            (93.33, (40, 3), 3),
+        ],
+    )
+    def test_fitting_leaves_at_least_a_row_of_height(self, y, extent, depth):
+        layout = Layout(
+            origin=Point(Size(10, UnitEnum.PERCENT), Size(y, UnitEnum.PERCENT)),
+            extent=extent
+            and Stretch(
+                Size(extent[0], UnitEnum.PERCENT), Size(extent[1], UnitEnum.PERCENT)
+            ),
+        )
+
+        result = layout.fit_to_screen()
+
+        assert result.extent.vertical.value == pytest.approx(depth)
+
+    def test_fitting_a_vertical_box_leaves_at_least_a_row_of_width(self):
+        # For vertical text the lines run across the width
+        layout = Layout(
+            origin=Point(Size(87, UnitEnum.PERCENT), Size(10, UnitEnum.PERCENT)),
+            extent=Stretch(Size(100, UnitEnum.PERCENT), Size(40, UnitEnum.PERCENT)),
+            writing_direction=WritingDirectionEnum.VERTICAL_RL,
+        )
+
+        result = layout.fit_to_screen()
+
+        assert result.extent == Stretch(
+            Size(6, UnitEnum.PERCENT), Size(40, UnitEnum.PERCENT)
+        )
+
+    @pytest.mark.parametrize(
+        "extent",
+        [
+            Stretch(Size(400, UnitEnum.PIXEL), Size(10, UnitEnum.PERCENT)),
+            Stretch(Size(40, UnitEnum.PERCENT), Size(10, UnitEnum.PIXEL)),
+        ],
+    )
+    def test_extent_in_other_units_is_not_taken_as_percent(self, extent):
+        # As fit_to_screen requires relativized layouts, it refuses this
+        # rather than reading 400px as 400%
+        layout = Layout(
+            origin=Point(Size(50, UnitEnum.PERCENT), Size(80, UnitEnum.PERCENT)),
+            extent=extent,
+            position_alignment=PositionAlignmentEnum.CENTER,
+        )
+
+        with pytest.raises(ValueError):
+            layout.fit_to_screen()
+
+
+class TestWebVTTCueSpan:
+    @pytest.mark.parametrize(
+        "position, size, position_alignment, left, width",
         [
             # W3C maximum size: room between the position and the edge the
             # box grows towards
@@ -305,102 +367,66 @@ class TestResolvePositionAlignment:
             (10, 40, PositionAlignmentEnum.CENTER, 0, 20),
             (90, 40, PositionAlignmentEnum.CENTER, 80, 20),
             (90, 40, PositionAlignmentEnum.LINE_LEFT, 90, 10),
-            # A box that fits keeps its width; only the origin moves
+            # A box that fits keeps its width; only the left edge moves
             (50, 40, PositionAlignmentEnum.CENTER, 30, 40),
             (90, 40, PositionAlignmentEnum.LINE_RIGHT, 50, 40),
             (60, 40, PositionAlignmentEnum.LINE_RIGHT, 20, 40),
-            # A position off the screen leaves no room: the width is kept
+            # No room: the width is kept, and the box starts on the screen
+            (100, 40, PositionAlignmentEnum.CENTER, 80, 40),
+            (0, 40, PositionAlignmentEnum.LINE_RIGHT, 0, 40),
             (150, 40, PositionAlignmentEnum.CENTER, 130, 40),
             (-10, 40, PositionAlignmentEnum.LINE_RIGHT, 0, 40),
-            (120, 40, PositionAlignmentEnum.LINE_RIGHT, 80, 40),
         ],
     )
     def test_box_is_no_wider_than_the_room_webvtt_gives_it(
-        self, x, size, position_alignment, left_edge, width
+        self, position, size, position_alignment, left, width
     ):
-        layout = Layout(
-            origin=Point(Size(x, UnitEnum.PERCENT), Size(50, UnitEnum.PERCENT)),
-            extent=Stretch(Size(size, UnitEnum.PERCENT), Size(10, UnitEnum.PERCENT)),
-            position_alignment=position_alignment,
-        )
-
-        result = layout.resolve_position_alignment()
-
-        assert result.origin == Point(
-            Size(left_edge, UnitEnum.PERCENT), Size(50, UnitEnum.PERCENT)
-        )
-        assert result.extent == Stretch(
-            Size(width, UnitEnum.PERCENT), Size(10, UnitEnum.PERCENT)
-        )
-        assert result.position_alignment is None
+        assert webvtt_cue_span(position, size, position_alignment) == (left, width)
 
     @pytest.mark.parametrize(
-        "x, position_alignment, left_edge, width",
+        "position, position_alignment, left, width",
         [
             # No size is WebVTT's default 100%, cut to the maximum size
-            (50, PositionAlignmentEnum.CENTER, 0, 100),
-            (70, PositionAlignmentEnum.CENTER, 40, 60),
             (20, PositionAlignmentEnum.CENTER, 0, 40),
             (50, PositionAlignmentEnum.LINE_RIGHT, 0, 50),
             (90, PositionAlignmentEnum.LINE_RIGHT, 0, 90),
+            # A box that reaches the right edge needs no extent
+            (50, PositionAlignmentEnum.CENTER, 0, None),
+            (70, PositionAlignmentEnum.CENTER, 40, None),
+            (30, PositionAlignmentEnum.LINE_LEFT, 30, None),
+            # No room and no size: the box stays where it is
+            (100, PositionAlignmentEnum.CENTER, 100, None),
+            (0, PositionAlignmentEnum.CENTER, 0, None),
+            (0, PositionAlignmentEnum.LINE_RIGHT, 0, None),
         ],
     )
-    def test_box_without_extent_takes_the_default_size(
-        self, x, position_alignment, left_edge, width
+    def test_box_without_size_takes_the_default_one(
+        self, position, position_alignment, left, width
     ):
+        assert webvtt_cue_span(position, None, position_alignment) == (left, width)
+
+    @pytest.mark.parametrize(
+        "writing_direction",
+        [WritingDirectionEnum.VERTICAL_RL, WritingDirectionEnum.VERTICAL_LR],
+    )
+    def test_fit_to_screen_places_a_vertical_box_along_y(self, writing_direction):
+        # Position and size run down the screen; x (the line) is untouched
         layout = Layout(
-            origin=Point(Size(x, UnitEnum.PERCENT), Size(50, UnitEnum.PERCENT)),
-            position_alignment=position_alignment,
+            origin=Point(Size(20, UnitEnum.PERCENT), Size(10, UnitEnum.PERCENT)),
+            extent=Stretch(Size(50, UnitEnum.PERCENT), Size(40, UnitEnum.PERCENT)),
+            writing_direction=writing_direction,
+            position_alignment=PositionAlignmentEnum.CENTER,
         )
 
-        result = layout.resolve_position_alignment()
+        result = layout.fit_to_screen()
 
         assert result.origin == Point(
-            Size(left_edge, UnitEnum.PERCENT), Size(50, UnitEnum.PERCENT)
+            Size(20, UnitEnum.PERCENT), Size(0, UnitEnum.PERCENT)
         )
         assert result.extent == Stretch(
-            Size(width, UnitEnum.PERCENT), Size(100, UnitEnum.PERCENT)
+            Size(50, UnitEnum.PERCENT), Size(20, UnitEnum.PERCENT)
         )
         assert result.position_alignment is None
-
-    @pytest.mark.parametrize(
-        "position_alignment, has_extent, unit",
-        [
-            (None, True, UnitEnum.PERCENT),
-            (PositionAlignmentEnum.LINE_LEFT, True, UnitEnum.PERCENT),
-            # Already reaches the right edge, as the default size would
-            (PositionAlignmentEnum.LINE_LEFT, False, UnitEnum.PERCENT),
-            (PositionAlignmentEnum.CENTER, True, UnitEnum.PIXEL),
-            (PositionAlignmentEnum.CENTER, False, UnitEnum.PIXEL),
-        ],
-    )
-    def test_nothing_to_resolve_returns_self(
-        self, position_alignment, has_extent, unit
-    ):
-        extent = Stretch(Size(40, unit), Size(10, unit)) if has_extent else None
-        layout = Layout(
-            origin=Point(Size(50, unit), Size(50, unit)),
-            extent=extent,
-            position_alignment=position_alignment,
-        )
-
-        assert layout.resolve_position_alignment() is layout
-
-    @pytest.mark.parametrize(
-        "x, position_alignment",
-        [
-            (100, PositionAlignmentEnum.CENTER),
-            (0, PositionAlignmentEnum.CENTER),
-            (0, PositionAlignmentEnum.LINE_RIGHT),
-        ],
-    )
-    def test_box_without_extent_or_room_is_left_as_it_is(self, x, position_alignment):
-        layout = Layout(
-            origin=Point(Size(x, UnitEnum.PERCENT), Size(50, UnitEnum.PERCENT)),
-            position_alignment=position_alignment,
-        )
-
-        assert layout.resolve_position_alignment() is layout
 
 
 class TestViewportUnitConversion:

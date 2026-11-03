@@ -204,7 +204,7 @@ class TestWebVTTtoDFXP(DFXPTestingMixIn):
             ),
             (
                 "align:start position:30% size:40%",
-                "align:start position:30% line:93.33% size:40%",
+                "align:start position:30%,line-left line:93.33% size:40%",
             ),
             (
                 "line:96% position:50% size:40%",
@@ -245,8 +245,9 @@ class TestWebVTTtoDFXP(DFXPTestingMixIn):
             # No size is WebVTT's 100%: 40-100% and 0-50%
             ("position:70%", "40%"),
             ("align:right position:50%", "0%"),
-            # Legacy middle qualifier is center
-            ("align:left position:50%,middle size:40%", "30%"),
+            # Legacy middle qualifier isn't WebVTT: the position is ignored,
+            # leaving the computed 0% for align:left
+            ("align:left position:50%,middle size:40%", "0%"),
         ],
     )
     def test_position_gives_the_left_edge_without_fit_to_screen(
@@ -259,6 +260,40 @@ class TestWebVTTtoDFXP(DFXPTestingMixIn):
 
         assert f'tts:origin="{left_edge} 93.33%"' in dfxp
         assert f"position:{left_edge}" in results
+
+    @pytest.mark.parametrize(
+        "settings, origin, extent",
+        [
+            # No position is WebVTT's computed one: 50% for center (or no
+            # align), start and end, 0% for left, 100% for right
+            ("line:80% size:40%", "30% 80%", "40% 100%"),
+            ("align:left line:80% size:40%", "0% 80%", "40% 100%"),
+            ("align:right line:80% size:40%", "60% 80%", "40% 100%"),
+            ("align:start line:80%", "50% 80%", None),
+            ("align:end line:80%", "0% 80%", "50% 100%"),
+            # A box spanning the whole width keeps no extent
+            ("line:80%", "0% 80%", None),
+            # A position WebVTT ignores is computed the same way
+            ("position:10%,bogus line:80% size:40%", "30% 80%", "40% 100%"),
+            # align alone narrows the box for start and end
+            ("align:start", "50% 93.33%", None),
+            ("align:end", "0% 93.33%", "50% 100%"),
+        ],
+    )
+    def test_cue_without_position_is_placed_by_the_computed_one(
+        self, settings, origin, extent
+    ):
+        vtt = f"WEBVTT\n\n00:00:01.000 --> 00:00:02.000 {settings}\nHello\n"
+        dfxp = DFXPWriter(relativize=False, fit_to_screen=False).write(
+            WebVTTReader().read(vtt)
+        )
+
+        region = re.search(r'<region [^>]*xml:id="r0"[^>]*>', dfxp).group(0)
+        assert f'tts:origin="{origin}"' in region
+        if extent is None:
+            assert "tts:extent" not in region
+        else:
+            assert f'tts:extent="{extent}"' in region
 
 
 class TestWebVTTtoMicroDVD(MicroDVDTestingMixIn):

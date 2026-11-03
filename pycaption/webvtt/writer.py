@@ -24,10 +24,6 @@ _SIMPLE_STRUCTURAL_TAGS = {
 """Maps style content keys to their open/close WebVTT tag pairs for
 structural tags that need no special logic."""
 
-_ANCHORED_AWAY_FROM_LEFT = frozenset({"center", "right", "end"})
-"""``align`` values whose default position alignment is not the cue box's
-left edge (center, or line-right for right and end in left-to-right text)."""
-
 
 class WebVTTWriter(BaseWriter):
     """Writer that serializes a CaptionSet into WebVTT format.
@@ -37,6 +33,10 @@ class WebVTTWriter(BaseWriter):
     """
 
     HEADER = "WEBVTT\n\n"
+
+    _default_align = DEFAULT_ALIGN
+    """WebVTT align for a caption with no alignment; write() sets it to the
+    source format's default."""
 
     _INTERNAL_STYLE_KEYS = frozenset(
         {
@@ -98,6 +98,10 @@ class WebVTTWriter(BaseWriter):
             output += region_blocks
 
         self.global_layout = caption_set.get_layout_info(lang)
+        # A caption with no alignment of its own has its source's default
+        self._default_align = WEBVTT_VERSION_OF.get(
+            self._get_visual_alignment_default(caption_set), DEFAULT_ALIGN
+        )
 
         # A caption with nothing to render contributes no cue at all, and
         # must not contribute a separator either — it would leave a second
@@ -392,15 +396,25 @@ class WebVTTWriter(BaseWriter):
         if resolved is None:
             return ""
 
-        left_offset = resolved.origin.x if resolved.origin else None
-        top_offset = resolved.origin.y if resolved.origin else None
-        cue_width = resolved.extent.horizontal if resolved.extent else None
+        left = resolved.origin.x if resolved.origin else None
+        top = resolved.origin.y if resolved.origin else None
+        width = resolved.extent.horizontal if resolved.extent else None
+        height = resolved.extent.vertical if resolved.extent else None
 
-        left_offset, top_offset, cue_width = self._apply_padding(
-            resolved.padding, left_offset, top_offset, cue_width
+        left, top, width, height = self._apply_padding(
+            resolved.padding, left, top, width, height
         )
 
-        return self._format_cue_settings(resolved, left_offset, top_offset, cue_width)
+        # WebVTT's position and size run along the text line: down for
+        # vertical cues, whose line is then the horizontal offset
+        if resolved.is_vertical():
+            position, line, size = top, left, height
+        else:
+            position, line, size = left, top, width
+
+        return self._format_cue_settings(
+            resolved, position, line, size, self._default_align
+        )
 
     def _resolve_layout(self, layout):
         """Normalize a Layout to relative percentages for cue settings.
@@ -420,63 +434,65 @@ class WebVTTWriter(BaseWriter):
 
         if self.fit_to_screen:
             layout = layout.fit_to_screen()
-        else:
-            # The position written is the left edge (see _format_cue_settings)
-            layout = layout.resolve_position_alignment()
 
         return layout
 
     @staticmethod
-    def _apply_padding(padding, left_offset, top_offset, cue_width):
-        """Fold padding into position/size values.
+    def _apply_padding(padding, left, top, width, height):
+        """Fold padding into the box's origin and size.
 
         WebVTT has no padding concept, so padding is absorbed by
-        adjusting the origin offset and shrinking the cue width.
+        moving the origin in and shrinking the box by the same amount.
 
         :param padding: Padding object (or None).
-        :param left_offset: Horizontal origin (Size or None).
-        :param top_offset: Vertical origin (Size or None).
-        :param cue_width: Cue width (Size or None).
-        :returns: Tuple of (left_offset, top_offset, cue_width) adjusted.
+        :returns: Tuple of (left, top, width, height) Sizes (or None) adjusted.
         """
         if not padding:
-            return left_offset, top_offset, cue_width
+            return left, top, width, height
 
-        if padding.start and left_offset is not None:
-            left_offset += padding.start
-            if cue_width is not None:
-                cue_width -= padding.start
+        if padding.start and left is not None:
+            left += padding.start
+            if width is not None:
+                width -= padding.start
 
-        if padding.end and cue_width is not None:
-            cue_width -= padding.end
+        if padding.end and width is not None:
+            width -= padding.end
 
-        if padding.before and top_offset is not None:
-            top_offset += padding.before
+        if padding.before and top is not None:
+            top += padding.before
+            if height is not None:
+                height -= padding.before
 
-        return left_offset, top_offset, cue_width
+        if padding.after and height is not None:
+            height -= padding.after
+
+        return left, top, width, height
 
     @staticmethod
-    def _format_cue_settings(layout, left_offset, top_offset, cue_width):
+    def _format_cue_settings(layout, position, line, size, default_align):
         """Build the cue settings string from resolved positioning values.
 
         Emits vertical (if not horizontal), align, position, line, size.
         align is written even when center, the WebVTT default, so a centered
-        source states it. The position is the cue box's left edge, so where
-        align would anchor it elsewhere (the center for center, the right
-        edge for right and end), it is qualified with line-left.
+        source states it; a layout with no alignment takes default_align,
+        its source format's. The position is the cue box's line-left edge,
+        so unless align is left, which always anchors it there, it is
+        qualified with line-left: center anchors the center, right and end
+        the line-right edge, and start the line-right edge in right-to-left
+        text.
 
         :param layout: Resolved Layout (for alignment and writing direction).
-        :param left_offset: Horizontal position (Size or None).
-        :param top_offset: Vertical line position (Size or None).
-        :param cue_width: Cue width (Size or None).
+        :param position: WebVTT position (Size or None).
+        :param line: WebVTT line (Size or None).
+        :param size: WebVTT size (Size or None).
+        :param default_align: WebVTT align value for a layout without one.
         :returns: Cue settings string with leading space, or empty string.
         """
+        alignment = default_align
         if layout.alignment:
             alignment = WEBVTT_VERSION_OF.get(
-                layout.alignment.horizontal, DEFAULT_ALIGN
+                layout.alignment.horizontal, default_align
             )
-        else:
-            alignment = DEFAULT_ALIGN
 
         cue_settings = ""
         if (
@@ -484,20 +500,18 @@ class WebVTTWriter(BaseWriter):
             and layout.writing_direction != WritingDirectionEnum.HORIZONTAL
         ):
             cue_settings += f" vertical:{layout.writing_direction.value}"
-        anchor_left = left_offset is not None and alignment in _ANCHORED_AWAY_FROM_LEFT
-        if alignment:
-            cue_settings += f" align:{alignment}"
-        if left_offset is not None:
-            cue_settings += f" position:{left_offset}"
-            if anchor_left:
+        cue_settings += f" align:{alignment}"
+        if position is not None:
+            cue_settings += f" position:{position}"
+            if alignment != "left":
                 cue_settings += f",{PositionAlignmentEnum.LINE_LEFT.value}"
-        if top_offset is not None:
-            line_part = f" line:{top_offset}"
+        if line is not None:
+            line_part = f" line:{line}"
             if layout.line_alignment:
                 line_part += f",{layout.line_alignment.value}"
             cue_settings += line_part
-        if cue_width is not None:
-            cue_settings += f" size:{cue_width}"
+        if size is not None:
+            cue_settings += f" size:{size}"
 
         return cue_settings
 

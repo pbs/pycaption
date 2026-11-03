@@ -3,43 +3,91 @@ Changelog
 2.3.15
 ^^^^^^
   - Fix ``DFXPReader`` keeping only the last division when several share a
-    language, and reading a nested division's paragraphs twice. Merged
-    captions are sorted by start time (document order for ties), and a
-    division without ``xml:lang`` inherits it from the nearest ancestor
-    that sets one rather than always from ``<tt>``.
-  - Fix ``SRTReader`` silently dropping every caption after a stray line
-    that is not a caption number; it now raises ``CaptionReadSyntaxError``
-    naming the line. Text after the last caption is still ignored.
+    language, and adding a nested division's paragraphs to its parent's
+    language as well as its own. Each division's paragraphs are now read
+    once, into its own language, and captions merged from several divisions
+    are sorted by start time, keeping document order for equal starts. A
+    language whose captions all come from one division, including one
+    inside a wrapper division, keeps their document order. A division
+    without ``xml:lang`` now takes its language from the nearest enclosing
+    division, ``<body>`` or ``<tt>`` that sets one, instead of always from
+    ``<tt>``.
+  - Fix ``SRTReader`` silently dropping every caption after a line that is
+    not a caption number, such as text left after a blank line inside a cue.
+    The reader stopped at that line and returned only the captions before
+    it. It now raises ``CaptionReadSyntaxError`` naming the line, as it
+    already does for a number with no timing line after it. Text after the
+    last caption is still ignored, and input that already raised is
+    unchanged.
   - Fix ``SCCReader(simulate_roll_up=True)``, which never built the roll-up
-    window. Each caption now holds the 2, 3 or 4 on-screen rows, one per
-    line, newest on the PAC's base row; repeated roll-up commands no longer
-    restart the window, and EDM or a switch to pop-on/paint-on empties it.
-    The option can now be passed to the constructor (and so through
-    ``CaptionConverter``). With the default ``False``, a row followed by a
-    row of spaces now ends at the next row instead of before it started.
-  - Fix ``SCCReader.read(offset=...)`` keeping captions that end before the
-    offset. As with ``WebVTTReader(time_shift_milliseconds=...)``, they are
-    dropped, a caption crossing the offset starts at ``00:00:00.000``, and
-    ``CaptionReadNoCaptions`` is raised if none are left.
-  - Fix ``WebVTTWriter`` positioning centered, right- and end-aligned cues
-    from the wrong edge. Such cues now get ``position:N%,line-left``, and
-    centered ones also get ``align:center``. Left- and start-aligned cues
-    are unchanged.
-  - Fix ``WebVTTReader`` reading a ``position`` without a qualifier as the
-    cue box's left edge. As in WebVTT, it now anchors where ``align`` puts
-    the text: the center for center or no ``align``, the right edge for
-    right and end.
-  - Fix ``DFXPWriter`` and ``SAMIWriter`` placing a WebVTT cue anchored at
-    its center or right edge by that anchor instead of its left edge when
-    the cue is too near the bottom or right edge to be fit, or when
-    ``fit_to_screen=False``. This includes explicit qualifiers such as
-    ``position:50%,center``.
-  - Fix ``DFXPWriter`` and ``SAMIWriter`` keeping the full ``size`` of a
-    WebVTT cue too wide for the room between its position and the screen
-    edge it grows towards, so a centered or right-anchored cue near the left
-    edge ended further right than its anchor. As in WebVTT, the box now
-    shrinks to fit: ``align:right position:25% size:50%`` is ``0-25%``
-    instead of ``0-50%``. A position off the screen keeps its width.
+    window. Each roll-up caption now holds the rows on screen, the last 2, 3
+    or 4, one per line, oldest on top and the newest on the base row its PAC
+    set. A roll-up command sent again before each row, as production files
+    do, no longer restarts the window, rows are no longer joined by spaces
+    (doubled at times) onto one line that could fail the 32-character
+    check, and the row cleared by EDM rolls in with the others. A change of
+    depth keeps the rows the new depth holds; EDM or a switch to pop-on or
+    paint-on empties the window. The option can now be given to the
+    constructor, so it reaches the reader through ``CaptionConverter``;
+    passing it to ``read()`` still overrides it. A window lines its rows up
+    by column as pop-on does, so a row starting too far right for its text
+    is rejected on any line of the window, the top one included (pop-on
+    does not check its first line's indentation), and named once rather
+    than in each window it rolls through. A row that a PAC moves to another
+    row before its carriage return has no one base row to roll up from: it
+    is read as without the option, and the rows after it start a new window.
+    The default is still ``False``, and its output changes only where a row
+    of spaces follows a row: that row was left with no end, so WebVTT, SRT
+    and DFXP wrote it ending before it started, and it now ends at the next
+    row, or at the EDM that erases the row of spaces.
+  - Fix ``SCCReader.read(offset=...)`` showing captions that end before the
+    offset from ``00:00:00.000``. As with
+    ``WebVTTReader(time_shift_milliseconds=...)``, they are now dropped, a
+    caption crossing the offset starts at ``00:00:00.000``, and
+    ``CaptionReadNoCaptions`` is raised if none are left. Zero and negative
+    offsets are unchanged.
+  - Fix ``WebVTTWriter`` placing centered, right-, end- and start-aligned
+    cues from the wrong edge. Their position is the cue box's left edge, so
+    it is now written as ``position:N%,line-left``; only ``align:left``,
+    which always anchors there, keeps a bare position. ``align`` is always
+    written, ``center`` included, and a caption with no alignment of its
+    own takes its source format's default (``center`` for WebVTT, SRT and
+    SCC, ``start`` for DFXP, ``left`` for SAMI) instead of ``start``.
+    Vertical cues are written along their own axes: ``position`` and
+    ``size`` run down the screen and ``line`` is the left edge.
+  - Fix ``WebVTTReader`` placing cue boxes as WebVTT does not. A
+    ``position`` without a qualifier now anchors where ``align`` puts the
+    text (the center for center or no ``align``, the right edge for right
+    and end), and a cue with no ``position`` takes WebVTT's computed one,
+    0% for left, 100% for right and 50% otherwise, instead of 0%. A cue
+    with only ``size``, or only ``align:start`` or ``align:end``, now gets
+    the box WebVTT gives it, e.g. the right half of the screen for
+    ``align:start``. Vertical cues put ``position`` and ``size`` on the
+    vertical axis and ``line`` on the horizontal one, with ``vertical:rl``
+    line numbers counted from the right. A cue in a ``REGION`` is placed in
+    the region. As in WebVTT, the last ``region`` it names counts, and a
+    ``line`` or a ``size`` other than 100% takes it out of a region named
+    before it, not after; a ``vertical`` cue is never in a region.
+  - Fix ``WebVTTReader`` keeping cue settings that WebVTT ignores. Each
+    setting is now read whole, up to the next ASCII space (a no-break
+    space no longer separates settings), and dropped if any
+    part of it is invalid: an unknown or empty qualifier (``,bogus``,
+    ``,``, and the ``start``/``middle``/``end`` of early drafts), a
+    percentage outside 0-100% or not written as digits (``150%``,
+    ``1e1%``, ``nan%``), or trailing characters (``size:40%;``). A later
+    invalid setting no longer overrides an earlier valid one, an ignored
+    ``line`` no longer stops a multi-line cue being lifted onto the screen,
+    and a fractional line number is rounded instead of ignored.
+  - Fix ``DFXPWriter``, ``SAMIWriter`` and ``SCCWriter`` placing a WebVTT
+    cue by its anchor rather than its left edge when the cue is near the
+    screen edge or ``fit_to_screen=False``, and keeping the full ``size``
+    of a cue too wide for the room between its position and the edge it
+    grows towards. As in WebVTT, the box now shrinks to fit:
+    ``align:right position:25% size:50%`` is ``0-25%`` instead of
+    ``25-75%``.
+  - Fix ``Layout.fit_to_screen`` squeezing a box that starts near the
+    bottom, such as a WebVTT cue on its default line, to 1.67% of the
+    screen height. A box is no longer fitted shallower than one 6% row.
 
 2.3.14
 ^^^^^^

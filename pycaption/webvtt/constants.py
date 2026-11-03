@@ -6,7 +6,12 @@ docstrings below each pattern explain what they capture and give examples.
 
 import re
 
-from ..geometry import HorizontalAlignmentEnum, LineAlignmentEnum, PositionAlignmentEnum
+from ..geometry import (
+    HorizontalAlignmentEnum,
+    LineAlignmentEnum,
+    PositionAlignmentEnum,
+    WritingDirectionEnum,
+)
 
 
 TIMING_LINE_PATTERN = re.compile(r"^(\S+)\s+-->\s+(\S+)(?:\s+(.*?))?\s*$")
@@ -53,13 +58,17 @@ Matches two percentage values (integer or decimal) separated by a comma:
 0%,0%
 100%,100%
 """
-CUE_SETTING_PATTERN = re.compile(
-    r"(position|line|size|align|vertical):([\w.%-]+(?:,[\w.%-]+)?)"
-)
+PERCENTAGE_PATTERN = re.compile(r"([0-9]+(?:\.[0-9]+)?)%")
 """
-Matches individual cue settings from the timing line, including optional
-comma-separated alignment qualifiers per W3C WebVTT spec:
-position:50%  position:50%,line-left  line:80%,center  align:center
+The WebVTT percentage syntax, to be fullmatched: ASCII digits, an optional
+fraction, then %. A sign, an exponent, or nan/inf does not match:
+50%  33.33%  (not: +50%  1e1%  nan%)
+"""
+LINE_NUMBER_PATTERN = re.compile(r"-?[0-9]+(?:\.[0-9]+)?")
+"""
+A WebVTT line number, to be fullmatched: an optional leading minus, ASCII digits, and an
+optional fraction:
+3  -1  2.5  (not: +3  1-  .5)
 """
 STYLE_SELECTOR_PATTERN = re.compile(
     r"::cue(?:\((\.[\w-]+(?:\.[\w-]+)*|[\w-]+)\))?\s*\{([^}]*)\}"
@@ -91,9 +100,13 @@ WEBVTT_VERSION_OF = {
 """Maps internal HorizontalAlignmentEnum values to their WebVTT
 ``align`` cue setting string equivalents."""
 
-# Fallback for captions with no alignment info
-# (not the WebVTT spec default, which is "center")
-DEFAULT_ALIGN = "start"
+DEFAULT_LINE_PERCENT = (LINE_GRID_SIZE - 1) / LINE_GRID_SIZE * 100
+"""Where a cue with no ``line`` goes: the last line of the grid, as WebVTT's
+auto line (-1) puts it."""
+
+DEFAULT_ALIGN = "center"
+"""The WebVTT ``align`` default, written for a caption whose source format
+declares no default of its own."""
 
 ALIGN_SETTING_MAP = {
     "start": HorizontalAlignmentEnum.START,
@@ -109,23 +122,16 @@ POSITION_ALIGN_MAP = {
     "line-left": PositionAlignmentEnum.LINE_LEFT,
     "center": PositionAlignmentEnum.CENTER,
     "line-right": PositionAlignmentEnum.LINE_RIGHT,
-    "start": PositionAlignmentEnum.LINE_LEFT,
-    "middle": PositionAlignmentEnum.CENTER,
-    "end": PositionAlignmentEnum.LINE_RIGHT,
 }
-"""Maps WebVTT positionAlign qualifier strings to PositionAlignmentEnum,
-including the legacy ``start``/``middle``/``end`` of earlier WebVTT drafts."""
+"""Maps WebVTT positionAlign qualifier strings to PositionAlignmentEnum.
+The ``start``/``middle``/``end`` of earlier drafts are not valid WebVTT, so
+a position qualified with them is ignored."""
 
-DEFAULT_POSITION_ALIGN_FOR = {
-    "left": PositionAlignmentEnum.LINE_LEFT,
-    "start": PositionAlignmentEnum.LINE_LEFT,
-    "center": PositionAlignmentEnum.CENTER,
-    "right": PositionAlignmentEnum.LINE_RIGHT,
-    "end": PositionAlignmentEnum.LINE_RIGHT,
+VERTICAL_SETTING_MAP = {
+    "rl": WritingDirectionEnum.VERTICAL_RL,
+    "lr": WritingDirectionEnum.VERTICAL_LR,
 }
-"""Edge of the cue box an unqualified ``position`` anchors to, by ``align``
-value (WebVTT's "auto" position alignment). ``start`` and ``end`` assume
-left-to-right text; a missing ``align`` means center."""
+"""Maps WebVTT ``vertical`` setting strings to WritingDirectionEnum."""
 
 LINE_ALIGN_MAP = {
     "start": LineAlignmentEnum.START,
