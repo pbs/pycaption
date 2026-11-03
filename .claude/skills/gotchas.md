@@ -265,3 +265,13 @@ And: the samples decide the sensitivity. A plain-text sample reports "same" on a
 **Rule:** Before trusting a green local run, check `git status --short` for untracked files under `pycaption/` or `tests/`, or run the suite in a clean `git worktree` of the PR head. If CI is red and local is green, suspect uncommitted files first.
 
 **Applies to:** `check-last-pr`, any "tests pass" claim before pushing
+
+---
+
+## 23. Multi-language output order depends on the hash seed, so base-vs-PR diffs show phantom changes
+
+**What happened:** Reviewing PR #449, a fixture sweep (every fixture read and written, base vs PR, in separate processes) showed `sample_sami_with_multi_lang` changing its SAMI, SRT, DFXP and VTT output: languages swapped order, and VTT picked a different language. The PR touched neither SAMI nor language handling. The same tree gave different output for `PYTHONHASHSEED=1/2/3`: language iteration comes from a set.
+
+**Rule:** In any base-vs-PR output comparison run as separate processes, pin `PYTHONHASHSEED` (e.g. `0`) for both sides. Before reporting a multi-language diff, rerun one side under two seeds; if its output moves, the diff is noise.
+
+**Applies to:** `check-last-pr`, any manual base-vs-PR sweep
