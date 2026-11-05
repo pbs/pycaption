@@ -13,6 +13,7 @@ from pycaption.geometry import (
     UnitEnum,
     VerticalAlignmentEnum,
     WritingDirectionEnum,
+    webvtt_anchor_position,
     webvtt_cue_span,
 )
 
@@ -404,6 +405,43 @@ class TestWebVTTCueSpan:
         self, position, position_alignment, left, width
     ):
         assert webvtt_cue_span(position, None, position_alignment) == (left, width)
+
+    @pytest.mark.parametrize(
+        "left, size, position_alignment, position, width",
+        [
+            (10, 80, PositionAlignmentEnum.CENTER, 50, 80),
+            (10, 80, PositionAlignmentEnum.LINE_RIGHT, 90, 80),
+            # No size: the box reaches the far edge, with that width stated
+            (10, None, PositionAlignmentEnum.CENTER, 55, 90),
+            # Past the far edge: cut at it, so the position stays in 100%
+            (92, 20, PositionAlignmentEnum.CENTER, 96, 8),
+            (92, 20, PositionAlignmentEnum.LINE_RIGHT, 100, 8),
+            # Line-left: WebVTT cuts the box itself
+            (92, 20, PositionAlignmentEnum.LINE_LEFT, 92, 20),
+            (10, None, PositionAlignmentEnum.LINE_LEFT, 10, None),
+        ],
+    )
+    def test_position_is_the_point_its_alignment_anchors(
+        self, left, size, position_alignment, position, width
+    ):
+        assert webvtt_anchor_position(left, size, position_alignment) == (
+            position,
+            width,
+        )
+
+    @pytest.mark.parametrize("position_alignment", list(PositionAlignmentEnum))
+    @pytest.mark.parametrize("size", [None, 0, 1, 37.5, 50, 99, 100, 120])
+    @pytest.mark.parametrize("left", [0, 0.5, 10, 33.33, 50, 90, 92, 99.5])
+    def test_anchor_position_is_placed_back_at_its_left_edge(
+        self, left, size, position_alignment
+    ):
+        position, width = webvtt_anchor_position(left, size, position_alignment)
+        span_left, span_width = webvtt_cue_span(position, width, position_alignment)
+
+        assert 0 <= position <= 100
+        assert span_left == pytest.approx(left)
+        if size is not None:
+            assert span_width == pytest.approx(min(size, 100 - left))
 
     @pytest.mark.parametrize(
         "writing_direction",

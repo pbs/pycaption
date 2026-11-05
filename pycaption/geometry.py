@@ -76,6 +76,15 @@ class PositionAlignmentEnum(Enum):
     LINE_RIGHT = "line-right"
 
 
+POSITION_ALIGNMENT_SHARE = {
+    PositionAlignmentEnum.LINE_LEFT: 0,
+    PositionAlignmentEnum.CENTER: 0.5,
+    PositionAlignmentEnum.LINE_RIGHT: 1,
+}
+"""How far across a WebVTT cue box, from its line-left edge, the position
+its position alignment anchors lies, as a share of the box's width."""
+
+
 class LineAlignmentEnum(Enum):
     """WebVTT line alignment: how the cue box is positioned relative to
     the line setting value (start, center, or end of the cue box)."""
@@ -645,15 +654,35 @@ def webvtt_cue_span(position, size, position_alignment):
     else:
         width = size
 
-    if position_alignment == PositionAlignmentEnum.CENTER:
-        left = max(0, position - width / 2)
-    elif position_alignment == PositionAlignmentEnum.LINE_RIGHT:
-        left = max(0, position - width)
-    else:
-        left = position
+    share = POSITION_ALIGNMENT_SHARE[position_alignment]
+    left = max(0, position - share * width) if share else position
     if size is None and left + width >= 100:
         return left, None
     return left, width
+
+
+def webvtt_anchor_position(left, size, position_alignment):
+    """Return the (position, size) that webvtt_cue_span places at left.
+
+    Its inverse: the position is the point of the box position_alignment
+    anchors, and webvtt_cue_span gives back left and size. A box anchored
+    anywhere but its line-left edge is first cut at the far edge, as
+    webvtt_cue_span would cut it, or the position would pass 100%; with no
+    size it reaches that edge, so its width is the room left. A box
+    anchored at its line-left edge is returned as is, since WebVTT cuts it
+    there itself.
+
+    :param left: The box's line-left edge, in percent.
+    :param size: Its size, in percent, or None.
+    :param position_alignment: The PositionAlignmentEnum the position takes.
+    :returns: (position, size), size None only for a line-left box.
+    """
+    share = POSITION_ALIGNMENT_SHARE[position_alignment]
+    if not share:
+        return left, size
+    room = max(100 - left, 0)
+    width = room if size is None else min(size, room)
+    return left + share * width, width
 
 
 class Layout:

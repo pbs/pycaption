@@ -16,7 +16,9 @@ from pycaption import (
 )
 from pycaption.base import CaptionNode
 from pycaption.geometry import (
+    Alignment,
     HorizontalAlignmentEnum,
+    Layout,
     LineAlignmentEnum,
     Point,
     Size,
@@ -406,7 +408,7 @@ class TestWebVTTWriter:
         results = WebVTTWriter().write(caption_set, "en-US")
         assert sample_webvtt_multi_lang_en == results
 
-    def test_anchored_position_is_written_as_left_edge_without_fit_to_screen(self):
+    def test_anchored_position_is_written_at_its_anchor_without_fit_to_screen(self):
         # A layout with no raw cue settings left, still anchored at its center
         vtt = (
             "WEBVTT\n\n"
@@ -417,18 +419,18 @@ class TestWebVTTWriter:
 
         results = WebVTTWriter(fit_to_screen=False).write(caption_set)
 
-        assert "align:center position:30%,line-left line:93.33% size:40%" in results
+        assert "align:center position:50% line:93.33% size:40%" in results
 
     @pytest.mark.parametrize(
         "source_default, expected",
         [
             # WebVTT's own default, for a source without align
-            (HorizontalAlignmentEnum.CENTER, "align:center position:30%,line-left"),
+            (HorizontalAlignmentEnum.CENTER, "align:center position:50%"),
             # Each source format's default text alignment
             (HorizontalAlignmentEnum.LEFT, "align:left position:30%"),
             (HorizontalAlignmentEnum.START, "align:start position:30%,line-left"),
             # A caption set that declares no default gets WebVTT's
-            (None, "align:center position:30%,line-left"),
+            (None, "align:center position:50%"),
         ],
     )
     def test_layout_without_alignment_takes_the_source_default(
@@ -443,6 +445,59 @@ class TestWebVTTWriter:
 
         assert f"00:00:01.000 --> 00:00:02.000 {expected} " in results
 
+    @pytest.mark.parametrize(
+        "align, expected",
+        [
+            # The box reaches the screen edge, which an anchor elsewhere than
+            # its left edge only keeps with the width stated
+            (
+                HorizontalAlignmentEnum.CENTER,
+                "align:center position:55% line:80% size:90%",
+            ),
+            (
+                HorizontalAlignmentEnum.RIGHT,
+                "align:right position:100% line:80% size:90%",
+            ),
+            (
+                HorizontalAlignmentEnum.END,
+                "align:end position:100%,line-right line:80% size:90%",
+            ),
+        ],
+    )
+    def test_box_without_size_keeps_reaching_the_screen_edge(self, align, expected):
+        layout = Layout(alignment=Alignment(horizontal=align))
+        position, line = Size(10, UnitEnum.PERCENT), Size(80, UnitEnum.PERCENT)
+
+        settings = WebVTTWriter._format_cue_settings(
+            layout, position, line, None, "center"
+        )
+
+        assert settings == f" {expected}"
+
+    @pytest.mark.parametrize(
+        "align, expected",
+        [
+            # Cut at the screen edge, as main's position:92%,line-left was,
+            # so the position stays a valid percentage
+            (HorizontalAlignmentEnum.LEFT, "align:left position:92% size:20%"),
+            (HorizontalAlignmentEnum.CENTER, "align:center position:96% size:8%"),
+            (HorizontalAlignmentEnum.RIGHT, "align:right position:100% size:8%"),
+            (
+                HorizontalAlignmentEnum.END,
+                "align:end position:100%,line-right size:8%",
+            ),
+        ],
+    )
+    def test_box_past_the_screen_edge_is_cut_at_it(self, align, expected):
+        layout = Layout(alignment=Alignment(horizontal=align))
+        position, size = Size(92, UnitEnum.PERCENT), Size(20, UnitEnum.PERCENT)
+
+        settings = WebVTTWriter._format_cue_settings(
+            layout, position, None, size, "center"
+        )
+
+        assert settings == f" {expected}"
+
     @pytest.mark.parametrize("direction", ["rl", "lr"])
     def test_vertical_cue_is_written_with_its_axes(self, direction):
         # Position and size run down the screen, the line across it
@@ -456,8 +511,7 @@ class TestWebVTTWriter:
         results = WebVTTWriter(fit_to_screen=False).write(caption_set)
 
         assert (
-            f"vertical:{direction} align:center position:30%,line-left "
-            "line:20% size:40%"
+            f"vertical:{direction} align:center position:50% line:20% size:40%"
         ) in results
 
 

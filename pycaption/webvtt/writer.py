@@ -13,8 +13,14 @@ from copy import deepcopy
 from datetime import timedelta
 
 from ..base import BaseWriter, CaptionNode
-from ..geometry import PositionAlignmentEnum, WritingDirectionEnum
-from .constants import DEFAULT_ALIGN, WEBVTT_VERSION_OF
+from ..geometry import (
+    PositionAlignmentEnum,
+    Size,
+    UnitEnum,
+    WritingDirectionEnum,
+    webvtt_anchor_position,
+)
+from .constants import AUTO_POSITION_ALIGN_FOR, DEFAULT_ALIGN, WEBVTT_VERSION_OF
 
 
 _SIMPLE_STRUCTURAL_TAGS = {
@@ -475,14 +481,11 @@ class WebVTTWriter(BaseWriter):
         Emits vertical (if not horizontal), align, position, line, size.
         align is written even when center, the WebVTT default, so a centered
         source states it; a layout with no alignment takes default_align,
-        its source format's. The position is the cue box's line-left edge,
-        so unless align is left, which always anchors it there, it is
-        qualified with line-left: center anchors the center, right and end
-        the line-right edge, and start the line-right edge in right-to-left
-        text.
+        its source format's. The position is written at the point align
+        anchors the box at (see _anchor_position).
 
         :param layout: Resolved Layout (for alignment and writing direction).
-        :param position: WebVTT position (Size or None).
+        :param position: The cue box's line-left edge (Size or None).
         :param line: WebVTT line (Size or None).
         :param size: WebVTT size (Size or None).
         :param default_align: WebVTT align value for a layout without one.
@@ -502,9 +505,10 @@ class WebVTTWriter(BaseWriter):
             cue_settings += f" vertical:{layout.writing_direction.value}"
         cue_settings += f" align:{alignment}"
         if position is not None:
-            cue_settings += f" position:{position}"
-            if alignment != "left":
-                cue_settings += f",{PositionAlignmentEnum.LINE_LEFT.value}"
+            position, size, qualifier = WebVTTWriter._anchor_position(
+                alignment, position, size
+            )
+            cue_settings += f" position:{position}{qualifier}"
         if line is not None:
             line_part = f" line:{line}"
             if layout.line_alignment:
@@ -514,6 +518,33 @@ class WebVTTWriter(BaseWriter):
             cue_settings += f" size:{size}"
 
         return cue_settings
+
+    @staticmethod
+    def _anchor_position(alignment, left, size):
+        """Return the position, size and position alignment suffix for a box.
+
+        The position is the point align anchors the box at, as the reader
+        computes it (AUTO_POSITION_ALIGN_FOR), so players that drop a
+        position alignment (vtt.js does line-left and line-right) still
+        place the box: its left edge for left, its center for center, its
+        right edge for right (see webvtt_anchor_position, which also states
+        or cuts the width so the box keeps its place). start and end anchor
+        by text direction, which the cue does not record, so they name their
+        edge.
+
+        :param alignment: The WebVTT align value.
+        :param left: The box's line-left edge, a percentage Size.
+        :param size: The box's width, a percentage Size, or None.
+        :returns: (position, size, suffix), suffix "" or ",line-left" etc.
+        """
+        anchor = AUTO_POSITION_ALIGN_FOR.get(alignment, PositionAlignmentEnum.CENTER)
+        suffix = f",{anchor.value}" if alignment in ("start", "end") else ""
+        position, width = webvtt_anchor_position(
+            left.value, size.value if size else None, anchor
+        )
+        if width is not None:
+            size = Size(width, UnitEnum.PERCENT)
+        return Size(position, UnitEnum.PERCENT), size, suffix
 
     def _group_cues_by_layout(self, nodes, caption_set, fallback_layout):
         """Split a caption's nodes into groups sharing the same layout.

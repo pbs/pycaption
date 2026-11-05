@@ -1,5 +1,22 @@
 Changelog
 ---------
+2.3.16
+^^^^^^
+  - Fix ``WebVTTWriter`` cues that are centered or right-aligned rendering
+    off-center in players that do not support position alignment, such as
+    Video.js (vtt.js) and VLC. The position is now written at the point
+    ``align`` anchors the box at: ``align:center position:50% size:80%``
+    instead of ``position:10%,line-left``, and ``align:right position:90%``.
+    ``align:end`` is written at its right edge with ``,line-right``, and
+    ``align:left`` and ``align:start`` are unchanged. A box with no size
+    keeps reaching the screen edge, with its width now stated, and a box
+    past the screen edge is cut at it, so the position stays within 100%.
+  - Refactor the WebVTT position alignment math into ``geometry``:
+    ``webvtt_anchor_position``, the inverse of ``webvtt_cue_span``, places
+    a box for ``WebVTTWriter``, and both share one table with
+    ``WebVTTReader``'s region layout. Output is unchanged.
+  - Bump nltk (``transcript`` extra) from 3.10.3 to 3.10.4.
+
 2.3.15
 ^^^^^^
   - Fix ``DFXPReader`` keeping only the last division of a language and

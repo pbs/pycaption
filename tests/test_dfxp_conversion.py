@@ -219,23 +219,20 @@ class TestDFXPtoWebVTT(WebVTTTestingMixIn):
 
         assert sample_webvtt_output_long_cue == results
 
-    def test_region_position_is_anchored_to_its_left_edge(
+    def test_region_position_is_anchored_where_align_puts_the_text(
         self, sample_dfxp_regions_with_each_text_align
     ):
-        """WebVTT anchors an unqualified position where align puts the text:
-        the center for center, the right edge for right and end, and for
-        start in right-to-left text. The region's left edge is written, so
-        every cue but the left-aligned one says it is the line-left one, and
-        the same region reads back."""
+        """The position is the point align anchors the box at: the center for
+        center, the right edge for right, so players that ignore a position
+        alignment place it too. start and end anchor by text direction, so
+        they name their edge. The same region reads back."""
         caption_set = DFXPReader().read(sample_dfxp_regions_with_each_text_align)
         results = WebVTTWriter().write(caption_set)
 
         assert [line for line in results.splitlines() if "-->" in line] == [
-            "00:00:01.000 --> 00:00:02.000 align:center position:10%,line-left "
-            "line:80% size:80%",
-            "00:00:02.000 --> 00:00:03.000 align:right position:10%,line-left "
-            "line:80% size:80%",
-            "00:00:03.000 --> 00:00:04.000 align:end position:10%,line-left "
+            "00:00:01.000 --> 00:00:02.000 align:center position:50% line:80% size:80%",
+            "00:00:02.000 --> 00:00:03.000 align:right position:90% line:80% size:80%",
+            "00:00:03.000 --> 00:00:04.000 align:end position:90%,line-right "
             "line:80% size:80%",
             "00:00:04.000 --> 00:00:05.000 align:left position:10% line:80% size:80%",
             "00:00:05.000 --> 00:00:06.000 align:start position:10%,line-left "
@@ -279,7 +276,7 @@ class TestDFXPtoWebVTT(WebVTTTestingMixIn):
 
         assert (
             "00:00:01.000 --> 00:00:02.000 vertical:rl align:center "
-            "position:10%,line-left line:20% size:40%\n"
+            "position:30% line:20% size:40%\n"
         ) in results
 
     def test_centered_cue_without_region_states_align_center(

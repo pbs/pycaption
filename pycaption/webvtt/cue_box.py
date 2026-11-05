@@ -14,6 +14,7 @@ import re
 from dataclasses import dataclass
 
 from ..geometry import (
+    POSITION_ALIGNMENT_SHARE,
     LineAlignmentEnum,
     Point,
     PositionAlignmentEnum,
@@ -25,6 +26,7 @@ from ..geometry import (
 )
 from .constants import (
     ALIGN_SETTING_MAP,
+    AUTO_POSITION_ALIGN_FOR,
     DEFAULT_LINE_PERCENT,
     LINE_ALIGN_MAP,
     LINE_GRID_SIZE,
@@ -38,16 +40,6 @@ from .constants import (
 _AUTO_POSITION_FOR = {"left": 0.0, "right": 100.0}
 """WebVTT's computed position, by align, for a cue with no position: 0% for
 left, 100% for right, and 50% for every other align, or none."""
-
-_AUTO_POSITION_ALIGN_FOR = {
-    "left": PositionAlignmentEnum.LINE_LEFT,
-    "start": PositionAlignmentEnum.LINE_LEFT,
-    "right": PositionAlignmentEnum.LINE_RIGHT,
-    "end": PositionAlignmentEnum.LINE_RIGHT,
-}
-"""WebVTT's computed position alignment, by align, for a position without a
-qualifier: center for center, or no align. start and end assume
-left-to-right text."""
 
 _SPACES = re.compile(r"[ \t\n\f\r]+")
 """WebVTT splits the settings on ASCII whitespace only, so a no-break space
@@ -102,7 +94,7 @@ class CueSettings:
         """The position's qualifier, or where align puts the text."""
         if self.position_align:
             return self.position_align
-        return _AUTO_POSITION_ALIGN_FOR.get(self.align, PositionAlignmentEnum.CENTER)
+        return AUTO_POSITION_ALIGN_FOR.get(self.align, PositionAlignmentEnum.CENTER)
 
     def stays_in_region(self):
         """Whether a cue that names a region is laid out in it.
@@ -197,11 +189,8 @@ def _region_box(settings, region):
     """
     width = region.extent.horizontal.value
     offset = settings.computed_position() * width / 100
-    position_alignment = settings.computed_position_alignment()
-    if position_alignment == PositionAlignmentEnum.CENTER:
-        offset -= width / 2
-    elif position_alignment == PositionAlignmentEnum.LINE_RIGHT:
-        offset -= width
+    share = POSITION_ALIGNMENT_SHARE[settings.computed_position_alignment()]
+    offset -= share * width
     shift = offset * width / 100
     origin = Point(_percent(region.origin.x.value + max(shift, 0)), region.origin.y)
     extent = Stretch(_percent(width - abs(shift)), region.extent.vertical)

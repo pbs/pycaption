@@ -21,7 +21,7 @@ transcript_dependencies = ["nltk==3.10.4"]
 
 setup(
     name="pycaption",
-    version="2.3.15",
+    version="2.3.16.dev1",
     description="Closed caption converter",
     long_description=open(README_PATH).read(),
     author="Joe Norton",

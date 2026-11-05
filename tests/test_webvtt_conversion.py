@@ -192,15 +192,15 @@ class TestWebVTTtoDFXP(DFXPTestingMixIn):
         [
             (
                 "align:center position:30% size:40%",
-                "align:center position:10%,line-left line:93.33% size:40%",
+                "align:center position:30% line:93.33% size:40%",
             ),
             (
                 "align:end position:90% size:40%",
-                "align:end position:50%,line-left line:93.33% size:40%",
+                "align:end position:90%,line-right line:93.33% size:40%",
             ),
             (
                 "align:right position:90% size:40%",
-                "align:right position:50%,line-left line:93.33% size:40%",
+                "align:right position:90% line:93.33% size:40%",
             ),
             (
                 "align:start position:30% size:40%",
@@ -208,27 +208,27 @@ class TestWebVTTtoDFXP(DFXPTestingMixIn):
             ),
             (
                 "line:96% position:50% size:40%",
-                "align:center position:30%,line-left line:96% size:40%",
+                "align:center position:50% line:96% size:40%",
             ),
             (
                 "line:100% align:end position:90% size:40%",
-                "align:end position:50%,line-left line:100% size:40%",
+                "align:end position:90%,line-right line:100% size:40%",
             ),
             # Too wide for the room between the position and the screen edge:
             # as in WebVTT, the box shrinks to 0-25% and 0-20%
             (
                 "align:right position:25% size:50%",
-                "align:right position:0%,line-left line:93.33% size:25%",
+                "align:right position:25% line:93.33% size:25%",
             ),
             (
                 "position:10% size:40%",
-                "align:center position:0%,line-left line:93.33% size:20%",
+                "align:center position:10% line:93.33% size:20%",
             ),
         ],
     )
     def test_unqualified_position_keeps_its_box_through_dfxp(self, settings, expected):
         # The cue box is 10-50% (center) or 50-90% (end) in the source; the
-        # same box comes back, now as an explicit left edge
+        # same box comes back, anchored where its align puts the text
         vtt = f"WEBVTT\n\n00:00:01.000 --> 00:00:02.000 {settings}\nHello\n"
         dfxp = DFXPWriter().write(WebVTTReader().read(vtt))
         results = WebVTTWriter().write(DFXPReader().read(dfxp))
@@ -236,30 +236,32 @@ class TestWebVTTtoDFXP(DFXPTestingMixIn):
         assert f"00:00:01.000 --> 00:00:02.000 {expected}\n" in results
 
     @pytest.mark.parametrize(
-        "settings, left_edge",
+        "settings, left_edge, anchor",
         [
-            ("position:50% size:40%", "30%"),
-            ("align:end position:90% size:40%", "50%"),
-            ("position:50%,center size:40%", "30%"),
-            ("align:start position:30% size:40%", "30%"),
-            # No size is WebVTT's 100%: 40-100% and 0-50%
-            ("position:70%", "40%"),
-            ("align:right position:50%", "0%"),
+            ("position:50% size:40%", "30%", "50%"),
+            ("align:end position:90% size:40%", "50%", "90%,line-right"),
+            ("position:50%,center size:40%", "30%", "50%"),
+            ("align:start position:30% size:40%", "30%", "30%,line-left"),
+            # No size is WebVTT's 100%: 40-100% and 0-50%. Fitting the first
+            # to the screen on the way back trims it to 40-90%, centered at 65%
+            ("position:70%", "40%", "65%"),
+            ("align:right position:50%", "0%", "50%"),
             # Legacy middle qualifier isn't WebVTT: the position is ignored,
             # leaving the computed 0% for align:left
-            ("align:left position:50%,middle size:40%", "0%"),
+            ("align:left position:50%,middle size:40%", "0%", "0%"),
         ],
     )
     def test_position_gives_the_left_edge_without_fit_to_screen(
-        self, settings, left_edge
+        self, settings, left_edge, anchor
     ):
-        # Not fitting the box to the screen still places it by its left edge
+        # Not fitting the box to the screen still places it by its left edge,
+        # and WebVTT gets it back anchored where its align puts the text
         vtt = f"WEBVTT\n\n00:00:01.000 --> 00:00:02.000 {settings}\nHello\n"
         dfxp = DFXPWriter(fit_to_screen=False).write(WebVTTReader().read(vtt))
         results = WebVTTWriter().write(DFXPReader().read(dfxp))
 
         assert f'tts:origin="{left_edge} 93.33%"' in dfxp
-        assert f"position:{left_edge}" in results
+        assert f"position:{anchor} " in results
 
     @pytest.mark.parametrize(
         "settings, origin, extent",
