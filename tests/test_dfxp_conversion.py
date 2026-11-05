@@ -230,10 +230,8 @@ class TestDFXPtoWebVTT(WebVTTTestingMixIn):
         results = WebVTTWriter().write(caption_set)
 
         assert [line for line in results.splitlines() if "-->" in line] == [
-            "00:00:01.000 --> 00:00:02.000 align:center position:50% "
-            "line:80% size:80%",
-            "00:00:02.000 --> 00:00:03.000 align:right position:90% "
-            "line:80% size:80%",
+            "00:00:01.000 --> 00:00:02.000 align:center position:50% line:80% size:80%",
+            "00:00:02.000 --> 00:00:03.000 align:right position:90% line:80% size:80%",
             "00:00:03.000 --> 00:00:04.000 align:end position:90%,line-right "
             "line:80% size:80%",
             "00:00:04.000 --> 00:00:05.000 align:left position:10% line:80% size:80%",

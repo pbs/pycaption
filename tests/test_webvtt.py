@@ -474,6 +474,30 @@ class TestWebVTTWriter:
 
         assert settings == f" {expected}"
 
+    @pytest.mark.parametrize(
+        "align, expected",
+        [
+            # Cut at the screen edge, as main's position:92%,line-left was,
+            # so the position stays a valid percentage
+            (HorizontalAlignmentEnum.LEFT, "align:left position:92% size:20%"),
+            (HorizontalAlignmentEnum.CENTER, "align:center position:96% size:8%"),
+            (HorizontalAlignmentEnum.RIGHT, "align:right position:100% size:8%"),
+            (
+                HorizontalAlignmentEnum.END,
+                "align:end position:100%,line-right size:8%",
+            ),
+        ],
+    )
+    def test_box_past_the_screen_edge_is_cut_at_it(self, align, expected):
+        layout = Layout(alignment=Alignment(horizontal=align))
+        position, size = Size(92, UnitEnum.PERCENT), Size(20, UnitEnum.PERCENT)
+
+        settings = WebVTTWriter._format_cue_settings(
+            layout, position, None, size, "center"
+        )
+
+        assert settings == f" {expected}"
+
     @pytest.mark.parametrize("direction", ["rl", "lr"])
     def test_vertical_cue_is_written_with_its_axes(self, direction):
         # Position and size run down the screen, the line across it
@@ -487,8 +511,7 @@ class TestWebVTTWriter:
         results = WebVTTWriter(fit_to_screen=False).write(caption_set)
 
         assert (
-            f"vertical:{direction} align:center position:50% "
-            "line:20% size:40%"
+            f"vertical:{direction} align:center position:50% line:20% size:40%"
         ) in results
 
 

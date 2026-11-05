@@ -14,6 +14,7 @@ import re
 from dataclasses import dataclass
 
 from ..geometry import (
+    POSITION_ALIGNMENT_SHARE,
     LineAlignmentEnum,
     Point,
     PositionAlignmentEnum,
@@ -188,11 +189,8 @@ def _region_box(settings, region):
     """
     width = region.extent.horizontal.value
     offset = settings.computed_position() * width / 100
-    position_alignment = settings.computed_position_alignment()
-    if position_alignment == PositionAlignmentEnum.CENTER:
-        offset -= width / 2
-    elif position_alignment == PositionAlignmentEnum.LINE_RIGHT:
-        offset -= width
+    share = POSITION_ALIGNMENT_SHARE[settings.computed_position_alignment()]
+    offset -= share * width
     shift = offset * width / 100
     origin = Point(_percent(region.origin.x.value + max(shift, 0)), region.origin.y)
     extent = Stretch(_percent(width - abs(shift)), region.extent.vertical)

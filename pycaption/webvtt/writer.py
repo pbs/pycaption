@@ -13,7 +13,13 @@ from copy import deepcopy
 from datetime import timedelta
 
 from ..base import BaseWriter, CaptionNode
-from ..geometry import PositionAlignmentEnum, Size, UnitEnum, WritingDirectionEnum
+from ..geometry import (
+    PositionAlignmentEnum,
+    Size,
+    UnitEnum,
+    WritingDirectionEnum,
+    webvtt_anchor_position,
+)
 from .constants import AUTO_POSITION_ALIGN_FOR, DEFAULT_ALIGN, WEBVTT_VERSION_OF
 
 
@@ -521,10 +527,10 @@ class WebVTTWriter(BaseWriter):
         computes it (AUTO_POSITION_ALIGN_FOR), so players that drop a
         position alignment (vtt.js does line-left and line-right) still
         place the box: its left edge for left, its center for center, its
-        right edge for right. start and end anchor by text direction, which
-        the cue does not record, so they name their edge. A box with no size
-        reaches the screen edge, and keeps doing so anchored anywhere but
-        its left edge only with that width stated.
+        right edge for right (see webvtt_anchor_position, which also states
+        or cuts the width so the box keeps its place). start and end anchor
+        by text direction, which the cue does not record, so they name their
+        edge.
 
         :param alignment: The WebVTT align value.
         :param left: The box's line-left edge, a percentage Size.
@@ -533,14 +539,12 @@ class WebVTTWriter(BaseWriter):
         """
         anchor = AUTO_POSITION_ALIGN_FOR.get(alignment, PositionAlignmentEnum.CENTER)
         suffix = f",{anchor.value}" if alignment in ("start", "end") else ""
-        if anchor == PositionAlignmentEnum.LINE_LEFT:
-            return left, size, suffix
-
-        if size is None:
-            size = Size(max(100 - left.value, 0), UnitEnum.PERCENT)
-        share = 0.5 if anchor == PositionAlignmentEnum.CENTER else 1
-        position = Size(left.value + share * size.value, UnitEnum.PERCENT)
-        return position, size, suffix
+        position, width = webvtt_anchor_position(
+            left.value, size.value if size else None, anchor
+        )
+        if width is not None:
+            size = Size(width, UnitEnum.PERCENT)
+        return Size(position, UnitEnum.PERCENT), size, suffix
 
     def _group_cues_by_layout(self, nodes, caption_set, fallback_layout):
         """Split a caption's nodes into groups sharing the same layout.
