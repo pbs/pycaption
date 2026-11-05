@@ -127,6 +127,17 @@ POSITION_ALIGN_MAP = {
 The ``start``/``middle``/``end`` of earlier drafts are not valid WebVTT, so
 a position qualified with them is ignored."""
 
+AUTO_POSITION_ALIGN_FOR = {
+    "left": PositionAlignmentEnum.LINE_LEFT,
+    "start": PositionAlignmentEnum.LINE_LEFT,
+    "right": PositionAlignmentEnum.LINE_RIGHT,
+    "end": PositionAlignmentEnum.LINE_RIGHT,
+}
+"""WebVTT's computed position alignment, by align, for a position without a
+qualifier: center for center, or no align. start and end assume
+left-to-right text. The reader places a box by it and the writer anchors
+the position by it, so the two agree on where each align puts the box."""
+
 VERTICAL_SETTING_MAP = {
     "rl": WritingDirectionEnum.VERTICAL_RL,
     "lr": WritingDirectionEnum.VERTICAL_LR,

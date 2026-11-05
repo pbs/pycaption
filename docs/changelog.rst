@@ -1,5 +1,16 @@
 Changelog
 ---------
+2.3.16
+^^^^^^
+  - Fix ``WebVTTWriter`` cues that are centered or right-aligned rendering
+    off-center in players that do not support position alignment, such as
+    Video.js (vtt.js) and VLC. The position is now written at the point
+    ``align`` anchors the box at: ``align:center position:50% size:80%``
+    instead of ``position:10%,line-left``, and ``align:right position:90%``.
+    ``align:end`` is written at its right edge with ``,line-right``, and
+    ``align:left`` and ``align:start`` are unchanged. A box with no size
+    keeps reaching the screen edge, with its width now stated.
+
 2.3.15
 ^^^^^^
   - Fix ``DFXPReader`` keeping only the last division of a language and
