@@ -381,6 +381,14 @@ class TestWebVTTWriter:
     def setup_method(self):
         self.writer = WebVTTWriter()
 
+    def test_timestamps_over_24_hours_survive_round_trip(self):
+        """The reader accepts any number of hours, so a read-write round
+        trip must not wrap timestamps of recordings longer than a day
+        modulo 24 hours (#458)."""
+        vtt = "WEBVTT\n\n25:00:03.500 --> 26:00:04.500\nhello\n"
+        caption_set = WebVTTReader().read(vtt)
+        assert "25:00:03.500 --> 26:00:04.500" in WebVTTWriter().write(caption_set)
+
     def test_double_br(self, sample_webvtt_double_br, sample_sami_double_br):
         caption_set = SAMIReader().read(sample_sami_double_br)
         results = WebVTTWriter().write(caption_set)
