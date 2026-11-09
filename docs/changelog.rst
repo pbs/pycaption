@@ -1,5 +1,13 @@
 Changelog
 ---------
+
+2.3.17
+^^^^^^
+  - Fix caption timestamps of 24 hours or more wrapping around to the
+    time of day when written back through the SRT and DFXP writers.
+    ``Caption._format_timestamp`` used only ``timedelta.seconds`` and
+    dropped ``timedelta.days``, so a recording longer than a day lost
+    whole days on read-write round-trips (issue #458).
 2.3.16
 ^^^^^^
   - Fix ``WebVTTWriter`` cues that are centered or right-aligned rendering
