@@ -26,7 +26,18 @@ class TestCaption:
         assert self.caption.format_start() == "00:00:00.000"
 
     def test_format_end(self):
-        assert self.caption.format_end() == "13:46:39.999"
+        # 999999999999 us is 277:46:39.999; the old pinned value
+        # "13:46:39.999" was the timestamp wrapped modulo 24 hours.
+        assert self.caption.format_end() == "277:46:39.999"
+
+    def test_format_start_over_24_hours(self):
+        caption = Caption(24 * 3600 * 1_000_000, 25 * 3600 * 1_000_000, ["x"])
+        assert caption.format_start() == "24:00:00.000"
+        assert caption.format_end() == "25:00:00.000"
+
+    def test_format_start_over_100_hours(self):
+        caption = Caption(100 * 3600 * 1_000_000, 0, ["x"])
+        assert caption.format_start() == "100:00:00.000"
 
 
 class TestCaptionList:

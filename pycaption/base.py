@@ -357,7 +357,10 @@ class Caption:
     def _format_timestamp(microseconds, msec_separator=None):
         """Convert microseconds to HH:MM:SS{sep}mmm string."""
         duration = timedelta(microseconds=microseconds)
-        hours, rem = divmod(duration.seconds, 3600)
+        # Count the day component too: `duration.seconds` alone wraps around
+        # every 24 hours, corrupting timestamps of recordings longer
+        # than a day (issue #458).
+        hours, rem = divmod(duration.days * 86400 + duration.seconds, 3600)
         minutes, seconds = divmod(rem, 60)
         milliseconds = duration.microseconds // 1000
         return (
