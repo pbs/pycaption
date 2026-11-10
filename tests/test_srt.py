@@ -138,6 +138,13 @@ class TestSRTReader(ReaderTestingMixIn):
 
 
 class TestSRTWriter:
+    def test_timestamps_over_24_hours_survive_round_trip(self):
+        """Readers accept any number of hours, so recordings longer than
+        a day must round-trip without wrapping modulo 24 hours (issue #458).
+        """
+        srt = "1\n25:00:03,500 --> 26:00:04,500\nhello\n"
+        captions = SRTReader().read(srt)
+        assert "25:00:03,500 --> 26:00:04,500" in SRTWriter().write(captions)
     @staticmethod
     def _cue(*nodes):
         caption_set = CaptionSet(
