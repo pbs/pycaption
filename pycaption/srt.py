@@ -176,7 +176,7 @@ class SRTWriter(BaseWriter):
             start = caption.format_start(msec_separator=",")
             end = caption.format_end(msec_separator=",")
 
-            srt += f"{start[:12]} --> {end[:12]}\n"
+            srt += f"{start} --> {end}\n"
 
             new_content = ""
             for node in caption.nodes:
@@ -185,10 +185,11 @@ class SRTWriter(BaseWriter):
             # Eliminate excessive line breaks, and trailing space on each line
             # rather than only at the ends of the cue — a node's own content can
             # end with a space, which would otherwise dangle mid-cue. Leading
-            # non-breaking spaces are indentation, so they are kept.
-            new_content = "\n".join(
-                line.rstrip() for line in new_content.split("\n")
-            ).strip(" \t\r\n")
+            # non-breaking spaces are indentation, so they are kept. A line left
+            # empty (markup only, or a spacer) is dropped: in SRT an empty line
+            # ends the cue, and SRTReader then rejects the rest of the file.
+            lines = (line.rstrip() for line in new_content.split("\n"))
+            new_content = "\n".join(line for line in lines if line).strip(" \t\r\n")
 
             srt += f"{new_content}\n\n"
             count += 1

@@ -4,10 +4,19 @@ Changelog
 2.3.17
 ^^^^^^
   - Fix caption timestamps of 24 hours or more wrapping around to the
-    time of day when written back through the SRT and DFXP writers.
+    time of day when written through the SRT, DFXP and WebVTT writers.
     ``Caption._format_timestamp`` used only ``timedelta.seconds`` and
     dropped ``timedelta.days``, so a recording longer than a day lost
-    whole days on read-write round-trips (issue #458).
+    whole days on read-write round-trips (issue #458, PR #460).
+    ``WebVTTWriter`` had its own copy of the helper and now reuses it.
+  - Fix ``SRTWriter`` cutting timestamps to 12 characters, which dropped
+    the last millisecond digit from 100 hours on (``100:00:03,500`` was
+    written as ``100:00:03,50`` and read back as 3.050s).
+  - Fix ``SRTWriter`` writing an empty line inside a cue when a line held
+    only markup or a spacer (``<i></i>``, ``&nbsp;``). An empty line ends
+    an SRT cue, so the rest of the cue was lost on re-read, or the file
+    was rejected by ``SRTReader``. Such lines are now dropped.
+
 2.3.16
 ^^^^^^
   - Fix ``WebVTTWriter`` cues that are centered or right-aligned rendering

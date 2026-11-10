@@ -1,5 +1,7 @@
 import re
 
+import pytest
+
 from pycaption import (
     DFXPReader,
     SAMIReader,
@@ -98,3 +100,21 @@ class TestWebVTTtoSRT(SRTTestingMixIn):
 
         assert isinstance(results, str)
         self.assert_srt_equals(sample_srt, results)
+
+    @pytest.mark.parametrize(
+        "spacer", ["&nbsp;", "<i></i>"], ids=["nbsp", "empty-italic"]
+    )
+    def test_empty_line_inside_a_cue_is_dropped(self, spacer):
+        """A line left empty once markup and edge whitespace are removed ends
+        the cue in SRT, so SRTReader rejected everything after it.
+        """
+        vtt = (
+            "WEBVTT\n\n"
+            f"00:00:01.000 --> 00:00:02.000\none\n{spacer}\ntwo\n\n"
+            "00:00:03.000 --> 00:00:04.000\nthree\n"
+        )
+        results = SRTWriter().write(WebVTTReader().read(vtt))
+        assert "00:00:01,000 --> 00:00:02,000\none\ntwo\n" in results
+
+        captions = SRTReader().read(results).get_captions("en-US")
+        assert [c.get_text() for c in captions] == ["one\ntwo", "three"]
