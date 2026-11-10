@@ -122,7 +122,10 @@ class WebVTTWriter(BaseWriter):
         :returns: Formatted timestamp string.
         """
         td = timedelta(microseconds=ts)
-        mm, ss = divmod(td.seconds, 60)
+        # count the day component too: `td.seconds` alone wraps around every
+        # 24 hours, corrupting the timestamps of recordings longer than a day
+        # (the WebVTT reader accepts any number of hours)
+        mm, ss = divmod(td.days * 86400 + td.seconds, 60)
         hh, mm = divmod(mm, 60)
         return f"{hh:02}:{mm:02}:{ss:02}.{td.microseconds // 1000:03}"
 
