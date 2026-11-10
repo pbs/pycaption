@@ -10,9 +10,8 @@ except that a cue rendering to nothing — one holding only markup, such as
 import re
 
 from copy import deepcopy
-from datetime import timedelta
 
-from ..base import BaseWriter, CaptionNode
+from ..base import BaseWriter, Caption, CaptionNode
 from ..geometry import (
     PositionAlignmentEnum,
     Size,
@@ -121,13 +120,7 @@ class WebVTTWriter(BaseWriter):
         :param ts: Time in microseconds.
         :returns: Formatted timestamp string.
         """
-        td = timedelta(microseconds=ts)
-        # count the day component too: `td.seconds` alone wraps around every
-        # 24 hours, corrupting the timestamps of recordings longer than a day
-        # (the WebVTT reader accepts any number of hours)
-        mm, ss = divmod(td.days * 86400 + td.seconds, 60)
-        hh, mm = divmod(mm, 60)
-        return f"{hh:02}:{mm:02}:{ss:02}.{td.microseconds // 1000:03}"
+        return Caption._format_timestamp(ts)
 
     def _build_style_block(self, caption_set):
         """Build the STYLE section from the CaptionSet's styles.

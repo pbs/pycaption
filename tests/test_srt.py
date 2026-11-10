@@ -145,6 +145,29 @@ class TestSRTWriter:
         srt = "1\n25:00:03,500 --> 26:00:04,500\nhello\n"
         captions = SRTReader().read(srt)
         assert "25:00:03,500 --> 26:00:04,500" in SRTWriter().write(captions)
+
+    def test_timestamps_over_100_hours_keep_all_millisecond_digits(self):
+        """From 100 hours the timestamp is 13 characters long; cutting it to
+        12 dropped the last millisecond digit, which SRTReader then misread.
+        """
+        start = 100 * 3600 * 1_000_000 + 3_500_000
+        caption_set = CaptionSet(
+            {
+                "en-US": CaptionList(
+                    [
+                        Caption(
+                            start, start + 1_000_000, [CaptionNode.create_text("hello")]
+                        )
+                    ]
+                )
+            }
+        )
+        output = SRTWriter().write(caption_set)
+        assert "100:00:03,500 --> 100:00:04,500" in output
+
+        back = SRTReader().read(output).get_captions("en-US")[0]
+        assert (back.start, back.end) == (start, start + 1_000_000)
+
     @staticmethod
     def _cue(*nodes):
         caption_set = CaptionSet(
@@ -199,3 +222,14 @@ class TestSRTWriter:
         )
 
         assert cue == "\xa0\xa0MOLLY:\nThe story"
+
+    def test_consecutive_breaks_do_not_leave_an_empty_line(self):
+        cue = self._cue(
+            CaptionNode.create_text("abab"),
+            CaptionNode.create_break(),
+            CaptionNode.create_break(),
+            CaptionNode.create_break(),
+            CaptionNode.create_text("efef"),
+        )
+
+        assert cue == "abab\nefef"
