@@ -92,9 +92,9 @@ class TestSCCReader(ReaderTestingMixIn):
         captions_two = SCCReader().read(two_digit).get_captions("en-US")
         captions_one = SCCReader().read(one_digit).get_captions("en-US")
         assert len(captions_one) == len(captions_two)
-        assert [
-            (caption.start, caption.end) for caption in captions_one
-        ] == [(caption.start, caption.end) for caption in captions_two]
+        assert [(caption.start, caption.end) for caption in captions_one] == [
+            (caption.start, caption.end) for caption in captions_two
+        ]
 
     def test_empty_file(self, sample_scc_empty):
         with pytest.raises(CaptionReadNoCaptions):
