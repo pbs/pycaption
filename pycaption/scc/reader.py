@@ -707,9 +707,22 @@ class _SccTimeTranslator:
 
         :rtype: int
         """
-        base_frames = int(self._time[-2:])
+        # The frame count of a stored timestamp can be one or two digits
+        # (``_TIMECODE_RE`` accepts both), so it cannot simply be sliced off
+        # the end: ``self._time[-2:]`` is ``":1"`` for a one-digit frame
+        # count, and a truncated timestamp like ``00:0`` has no frame count
+        # at all. Validate the stored timestamp and read its frame count from
+        # the match instead.
+        match = _TIMECODE_RE.fullmatch(self._time)
+        if match is None:
+            raise CaptionReadTimingError(
+                "Timestamps should follow the hour:minute:seconds"
+                ";frames or hour:minute:seconds:frames format. Please correct "
+                f"the following time: {self._time}."
+            )
+        base_frames = int(match.group(1))
         total_frames = base_frames + self._frames
-        stamp = self._time[:-2] + str(total_frames)
+        stamp = self._time[: -len(match.group(1))] + str(total_frames)
         return self._translate_time(stamp)
 
     @staticmethod
