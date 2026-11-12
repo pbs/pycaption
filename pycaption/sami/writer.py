@@ -83,14 +83,14 @@ class SAMIWriter(BaseWriter):
     def _build_timeline(captions):
         """Return (start_ms, end_ms, caption) cues sorted by start.
 
-        Zero-length cues are never on screen, so they are dropped.
+        A cue that ends at or before its start (after truncation to ms) is
+        kept for 1 ms, so its text survives and the file always re-reads.
         """
         cues = []
         for caption in captions:
             start = int(caption.start // 1000)
-            end = int(caption.end // 1000)
-            if end > start:
-                cues.append((start, end, caption))
+            end = max(int(caption.end // 1000), start + 1)
+            cues.append((start, end, caption))
         cues.sort(key=lambda cue: cue[0])
         return cues
 

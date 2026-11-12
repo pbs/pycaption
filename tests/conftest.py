@@ -275,6 +275,7 @@ from tests.fixtures.webvtt import (  # noqa: F401
     sample_webvtt_from_scc_properly_writes_newlines_output,
     sample_webvtt_from_srt,
     sample_webvtt_from_webvtt,
+    sample_webvtt_inverted_cue,
     sample_webvtt_keeps_positioning,
     sample_webvtt_last_cue_zero_start,
     sample_webvtt_multi_lang_de,

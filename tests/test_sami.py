@@ -298,6 +298,14 @@ class TestSAMIWriterOverlappingCues(SAMITestingMixIn):
             )
         )
 
+    @staticmethod
+    def _read_back(sami, lang="en-US"):
+        """Return SAMIReader's (start_ms, end_ms, text) cues for a language."""
+        return [
+            (c.start // 1000, c.end // 1000, c.get_text())
+            for c in SAMIReader().read(sami).get_captions(lang)
+        ]
+
     def test_partial_overlap(self):
         sami = self._write(en_US=PARTIAL_OVERLAP)
 
@@ -378,7 +386,7 @@ class TestSAMIWriterOverlappingCues(SAMITestingMixIn):
             ],
         )
 
-    def test_zero_length_cue_is_dropped(self):
+    def test_zero_length_cue_is_kept_for_1ms(self):
         sami = self._write(en_US=[(0, 1000, "A"), (2000, 2000, "Z"), (3000, 4000, "B")])
 
         self.assert_sami_syncs_equal(
@@ -386,7 +394,83 @@ class TestSAMIWriterOverlappingCues(SAMITestingMixIn):
             [
                 (0, [("en-US", "A")]),
                 (1000, [("en-US", "")]),
+                (2000, [("en-US", "Z")]),
+                (2001, [("en-US", "")]),
                 (3000, [("en-US", "B")]),
                 (4000, [("en-US", "")]),
             ],
         )
+        assert self._read_back(sami)[1] == (2000, 2001, "Z")
+
+    def test_inverted_cue_is_kept_for_1ms_at_its_start(self):
+        sami = self._write(
+            en_US=[(1000, 2000, "one"), (5000, 3000, "two"), (6000, 7000, "three")]
+        )
+
+        self.assert_sami_syncs_equal(
+            sami,
+            [
+                (1000, [("en-US", "one")]),
+                (2000, [("en-US", "")]),
+                (5000, [("en-US", "two")]),
+                (5001, [("en-US", "")]),
+                (6000, [("en-US", "three")]),
+                (7000, [("en-US", "")]),
+            ],
+        )
+
+    def test_same_millisecond_cue_is_kept(self):
+        sami = self._write(
+            en_US=[(1000, 2000, "one"), (3000.2, 3000.8, "two"), (4000, 5000, "three")]
+        )
+
+        self.assert_sami_syncs_equal(
+            sami,
+            [
+                (1000, [("en-US", "one")]),
+                (2000, [("en-US", "")]),
+                (3000, [("en-US", "two")]),
+                (3001, [("en-US", "")]),
+                (4000, [("en-US", "three")]),
+                (5000, [("en-US", "")]),
+            ],
+        )
+        assert self._read_back(sami)[1] == (3000, 3001, "two")
+
+    def test_all_degenerate_language_reads_back(self):
+        sami = self._write(en_US=[(1000, 1000, "one"), (3000, 3000, "two")])
+
+        self.assert_sami_syncs_equal(
+            sami,
+            [
+                (1000, [("en-US", "one")]),
+                (1001, [("en-US", "")]),
+                (3000, [("en-US", "two")]),
+                (3001, [("en-US", "")]),
+            ],
+        )
+
+    def test_degenerate_cue_overlapping_cue_keeps_all_text(self):
+        sami = self._write(en_US=[(4000, 7000, "three"), (5000, 3000, "two")])
+
+        self.assert_sami_syncs_equal(
+            sami,
+            [
+                (4000, [("en-US", "three")]),
+                (5000, [("en-US", "three"), ("en-US", "two")]),
+                (5001, [("en-US", "three")]),
+                (7000, [("en-US", "")]),
+            ],
+        )
+        assert {text for _, _, text in self._read_back(sami)} == {"three", "two"}
+
+    def test_all_degenerate_language_beside_another_is_kept(self):
+        sami = self._write(
+            en_US=[(1000, 2000, "en")], de_DE=[(1500, 1500, "de"), (3500, 2000, "inv")]
+        )
+
+        assert self._read_back(sami, "de-DE") == [
+            (1500, 1501, "de"),
+            (3500, 3501, "inv"),
+        ]
+        assert self._read_back(sami, "en-US") == [(1000, 2000, "en")]

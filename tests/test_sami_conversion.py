@@ -147,6 +147,19 @@ class TestWebVTTtoSAMI(SAMITestingMixIn):
             rf"margin-left:{margin_left};margin-top:[\d.]+%;width:{width};", result
         )
 
+    def test_inverted_cue_survives_for_1ms(self, sample_webvtt_inverted_cue):
+        caption_set = WebVTTReader().read(sample_webvtt_inverted_cue)
+        result = SAMIReader().read(SAMIWriter().write(caption_set))
+
+        assert [
+            (c.start // 1000, c.end // 1000, c.get_text())
+            for c in result.get_captions("en-US")
+        ] == [
+            (1000, 2000, "one"),
+            (5000, 5001, "two"),
+            (6000, 7000, "three"),
+        ]
+
 
 class TestOverlappingCuesToSAMI(SAMITestingMixIn):
     def test_overlapping_webvtt_gives_in_order_syncs(
