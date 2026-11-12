@@ -738,3 +738,16 @@ def sample_webvtt_overlapping_cues():
         "00:00:03.000 --> 00:00:05.000\n"
         "C\n"
     )
+
+
+@pytest.fixture(scope="session")
+def sample_webvtt_inverted_cue():
+    return (
+        "WEBVTT\n\n"
+        "00:00:01.000 --> 00:00:02.000\n"
+        "one\n\n"
+        "00:00:05.000 --> 00:00:03.000\n"
+        "two\n\n"
+        "00:00:06.000 --> 00:00:07.000\n"
+        "three\n"
+    )

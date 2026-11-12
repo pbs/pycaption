@@ -16,6 +16,14 @@ Changelog
     only markup or a spacer (``<i></i>``, ``&nbsp;``). An empty line ends
     an SRT cue, so the rest of the cue was lost on re-read, or the file
     was rejected by ``SRTReader``. Such lines are now dropped.
+  - Fix ``SAMIWriter`` silently dropping cues that end at or before their
+    start once truncated to milliseconds (zero-length, inverted, or
+    starting and ending within the same millisecond), a regression in
+    2.3.14. Their text was lost from SAMI output only. A language made
+    only of such cues was left out of the body, so it vanished on re-read;
+    if it was the only language, the body was empty and ``SAMIReader``
+    rejected the file with ``CaptionReadNoCaptions``. Such cues are now
+    kept for 1 ms, so their text survives and the file always re-reads.
 
 2.3.16
 ^^^^^^
