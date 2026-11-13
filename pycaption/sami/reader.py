@@ -142,7 +142,14 @@ class SAMIReader(BaseReader):
         captions = CaptionList(layout_info=parent_layout)
         milliseconds = 0
 
-        for p in sami_soup.select(f"p[lang|={language}]"):
+        # The language comes from the document (or its stylesheet), so it can
+        # contain characters with a meaning in CSS selectors. Comparing the
+        # attribute directly avoids interpolating it into a selector string.
+        lang_lower = language.lower()
+        for p in sami_soup.find_all("p"):
+            p_lang = (p.get("lang") or "").lower()
+            if p_lang != lang_lower and not p_lang.startswith(f"{lang_lower}-"):
+                continue
             start_str = p.parent.get("start")
             if not start_str:
                 raise CaptionReadTimingError(
@@ -150,7 +157,7 @@ class SAMIReader(BaseReader):
                 )
             try:
                 milliseconds = int(float(start_str))
-            except ValueError:
+            except (ValueError, OverflowError):
                 raise CaptionReadTimingError(
                     f"Invalid start time {start_str!r} on the following "
                     f"line: {p.parent}."
