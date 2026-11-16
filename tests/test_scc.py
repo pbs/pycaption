@@ -61,6 +61,41 @@ class TestSCCReader(ReaderTestingMixIn):
             "time:"
         )
 
+    def test_truncated_timecode_raises_timing_error(self):
+        # found by fuzzing: a timestamp cut short (here by a stray character)
+        # reached the frame counter as "00:0" and crashed with a bare
+        # ValueError instead of the documented CaptionReadTimingError
+        scc = "Scenarist_1.0\n00:0&:00:01 9420 942f 942f\n"
+        with pytest.raises(CaptionReadTimingError) as exc_info:
+            SCCReader().read(scc)
+        assert exc_info.value.args[0].startswith(
+            "Timestamps should follow the hour:minute:seconds;frames or "
+            "hour:minute:seconds:frames format. Please correct the following "
+            "time: 00:0"
+        )
+
+    def test_timecode_without_frame_count_raises_timing_error(self):
+        scc = "Scenarist_1.0\n00:01:00: 9420 942f 942f\n"
+        with pytest.raises(CaptionReadTimingError) as exc_info:
+            SCCReader().read(scc)
+        assert exc_info.value.args[0].startswith(
+            "Timestamps should follow the hour:minute:seconds;frames or "
+            "hour:minute:seconds:frames format."
+        )
+
+    def test_single_digit_frame_counts_parse_like_two_digit_ones(self):
+        # _TIMECODE_RE accepts one or two frame digits, but the frame counter
+        # used to slice the frame count off the end of the timestamp, so a
+        # one-digit frame count crashed with a bare ValueError.
+        two_digit = "Scenarist_1.0\n00:01:00:01 9420 94ae 9131 4f75 7220 942f\n"
+        one_digit = "Scenarist_1.0\n00:01:00:1 9420 94ae 9131 4f75 7220 942f\n"
+        captions_two = SCCReader().read(two_digit).get_captions("en-US")
+        captions_one = SCCReader().read(one_digit).get_captions("en-US")
+        assert len(captions_one) == len(captions_two)
+        assert [(caption.start, caption.end) for caption in captions_one] == [
+            (caption.start, caption.end) for caption in captions_two
+        ]
+
     def test_empty_file(self, sample_scc_empty):
         with pytest.raises(CaptionReadNoCaptions):
             SCCReader().read(sample_scc_empty)
