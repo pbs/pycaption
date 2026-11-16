@@ -2330,6 +2330,22 @@ Scenarist_SCC V1.0
 """
 
 
+# "today is" on row 14, then row 15 opened with a space and Background
+# Transparent, Italics, a space and Background Green: two background cells on
+# one row. One Backspace takes back the second only, so "abc" lands on columns
+# 2-4 and a PAC to column 8 before "X" leaves columns 5-7 blank.
+@pytest.fixture(scope="session")
+def sample_scc_two_background_cells_on_a_row_then_a_backspace():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01;00\t9420 9420 94ae 94ae 9440 9440 f4ef 6461 7920 e973 94e0 94e0 2080 97ad 97ad 91ae 91ae 2080 10a2 10a2 94a1 94a1 6162 e380 94f4 94f4 5880 942f 942f
+
+00:00:04;00\t942c 942c
+
+"""
+
+
 # "today is" on row 14, then row 15 opened with a space, Background
 # Transparent and Background Green before "Now".
 @pytest.fixture(scope="session")

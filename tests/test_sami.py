@@ -56,17 +56,27 @@ class TestSAMIReader(ReaderTestingMixIn):
             "Missing start time on the following line: "
         )
 
-    @pytest.mark.parametrize(
-        "start", ["abc", "1rt=1000", "", "inf", "-inf", "1e400"]
-    )
+    @pytest.mark.parametrize("start", ["abc", "1rt=1000", "", "inf", "-inf", "1e400"])
     def test_non_numeric_start_raises_timing_error(self, start):
         content = f"<SAMI><BODY><SYNC Start={start}><P>hi</P></SYNC></BODY></SAMI>"
         with pytest.raises(CaptionReadTimingError):
             self.reader.read(content)
 
+    def test_charref_in_any_base_and_case_is_decoded(self):
+        # The hex marker may be an upper-case X, which used to raise a raw
+        # ValueError.
+        content = (
+            "<SAMI><BODY><SYNC Start=1000>"
+            "<P>&#65;&#x42;&#X43;&#xe9;&#XE9;</P>"
+            "</SYNC></BODY></SAMI>"
+        )
+        caption_set = self.reader.read(content)
+        langs = caption_set.get_languages()
+        assert caption_set.get_captions(langs[0])[0].get_text() == "ABCéé"
+
     @pytest.mark.parametrize(
         "charref",
-        ["&#1114112;", "&#x110000;", "&#xD800;", "&#xDFC8;"],
+        ["&#1114112;", "&#x110000;", "&#X110000;", "&#xD800;", "&#xDFC8;"],
     )
     def test_out_of_range_charref_raises_syntax_error(self, charref):
         # References that are not Unicode scalar values used to escape as raw
@@ -93,12 +103,38 @@ class TestSAMIReader(ReaderTestingMixIn):
         # A language containing CSS selector characters used to crash the
         # p[lang|=...] selector lookup with a raw SelectorSyntaxError.
         content = (
-            '<SAMI><BODY><SYNC Start=1000><P lang="e/">hi</P></SYNC></BODY>'
-            "</SAMI>"
+            '<SAMI><BODY><SYNC Start=1000><P lang="e/">hi</P></SYNC></BODY></SAMI>'
         )
         caption_set = self.reader.read(content)
         assert "e/" in caption_set.get_languages()
         assert caption_set.get_captions("e/")[0].get_text() == "hi"
+
+    @pytest.mark.parametrize("other_lang", ["en", "en-US"])
+    def test_lang_matching_is_case_sensitive(self, other_lang):
+        # Like the p[lang|=...] selector it replaced: languages differing only
+        # in case each keep their own captions instead of sharing all of them,
+        # through a subtag too.
+        content = (
+            "<SAMI><BODY>"
+            "<SYNC Start=1000><P lang='EN'>one</P></SYNC>"
+            f"<SYNC Start=2000><P lang='{other_lang}'>two</P></SYNC>"
+            "</BODY></SAMI>"
+        )
+        caption_set = self.reader.read(content)
+        assert sorted(caption_set.get_languages()) == ["EN", "en"]
+        assert [c.get_text() for c in caption_set.get_captions("EN")] == ["one"]
+        assert [c.get_text() for c in caption_set.get_captions("en")] == ["two"]
+
+    def test_lang_matches_its_subtags(self):
+        # The language is the first two letters of the lang attribute, which
+        # still matches the full value through its "-" subtag.
+        content = (
+            "<SAMI><BODY><SYNC Start=1000><P lang='fr-CA'>bonjour</P></SYNC>"
+            "</BODY></SAMI>"
+        )
+        caption_set = self.reader.read(content)
+        assert caption_set.get_languages() == ["fr"]
+        assert caption_set.get_captions("fr")[0].get_text() == "bonjour"
 
     def test_valueless_class_attribute_is_ignored(self):
         # A bare ``class`` attribute (no value) used to crash _find_lang with

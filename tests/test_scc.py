@@ -2166,6 +2166,16 @@ class TestSCCReaderBackgroundAttributes:
         """
         assert _texts(request.getfixturevalue(fixture_name)) == expected
 
+    def test_backspace_erases_only_the_last_of_two_background_cells(
+        self, sample_scc_two_background_cells_on_a_row_then_a_backspace
+    ):
+        """The cell before the italics code stays, so the cursor moves back
+        one column, not two.
+        """
+        assert _texts(sample_scc_two_background_cells_on_a_row_then_a_backspace) == [
+            "today is\nabc   X"
+        ]
+
     @pytest.mark.parametrize(
         "fixture_name, expected",
         [

@@ -233,6 +233,7 @@ from tests.fixtures.scc import (  # noqa: F401
     sample_scc_tab_offset_resolving_behind_the_cursor,
     sample_scc_text_before_its_pac_on_another_row,
     sample_scc_text_before_its_pac_on_the_same_row,
+    sample_scc_two_background_cells_on_a_row_then_a_backspace,
     sample_scc_two_background_codes_at_row_start,
     sample_scc_two_backspaces_after_a_repositioning,
     sample_scc_two_backspaces_at_row_start,
