@@ -536,13 +536,38 @@ class InstructionNodeCreator:
                 self._position_tracer.advance_cursor(1)
 
     def _handle_background_color(self):
-        """Strip trailing space before a background color code (CEA-608 rule)."""
+        """Apply a background attribute code to the space sent before it.
+
+        The code backspaces over that space and shows one of its own (CEA-608),
+        so mid-row the text keeps its space. At the start of a row the cell
+        only pads the row, so the space is taken out of the text. A code with
+        no space before it is out of spec and leaves the text as it is.
+        """
         if (
-            len(self._collection) > 0
-            and self._collection[-1].is_text_node()
-            and self._collection[-1].text[-1].isspace()
+            self._position_tracer.is_linebreak_required()
+            or self._position_tracer.is_repositioning_required()
         ):
-            self._collection[-1].text = self._collection[-1].text[:-1]
+            # The space, if any, ends a row the code is not on.
+            return
+
+        last = self._collection[-1] if self._collection else None
+        if not (
+            last is not None
+            and last.is_text_node()
+            and last.text
+            and last.text[-1].isspace()
+        ):
+            return
+
+        last.text = last.text[:-1]
+        row_has_text = not self.has_break_before(self._collection)
+        if row_has_text and self.get_previous_text_node():
+            # Text before it on the row: the code's own space takes the place
+            # of the one it backspaced over.
+            last.text += " "
+        else:
+            # The cell still takes its column, which a Backspace can erase.
+            last.blank_cells += 1
 
     def _handle_style_command(self, command):
         """Apply italics on/off based on the style-setting command."""
@@ -657,17 +682,20 @@ class InstructionNodeCreator:
 
     @staticmethod
     def has_break_before(collection):
-        """Check whether the last non-empty node in collection is a break.
+        """Check whether the last non-empty node in collection is a break or a
+        repositioning, i.e. nothing has been written on the current row yet.
+
+        A text node emptied by a Backspace or a background code is skipped:
+        the row it is on still has nothing on it.
 
         :type collection: list[_InstructionNode]
         :rtype: bool
         """
-        if len(collection) == 0:
-            return False
         for element in collection[::-1]:
-            if element._type == _InstructionNode.TEXT:
-                return False
-            elif element._type == _InstructionNode.BREAK:
+            if element.is_text_node():
+                if element.text:
+                    return False
+            elif element.is_explicit_break() or element.requires_repositioning():
                 return True
         return False
 
@@ -750,22 +778,19 @@ class InstructionNodeCreator:
         """
         Move cursor back one position and delete that character
         """
-        node = self.get_previous_text_node()
-        # in case of no previous text nodes or
-        # if the backspace is required while no character
-        # do nothing
-        if node is None:
-            return
         if (
-            self.has_break_before(self._collection)
-            or self._position_tracer.is_linebreak_required()
+            self._position_tracer.is_linebreak_required()
             or self._position_tracer.is_repositioning_required()
         ):
-            # The character is the first on its row, so there is nothing to its
-            # left to erase — reaching back past the break would eat the last
-            # character of the line above, or of another caption entirely. The
-            # break is only written out once text arrives, so a break still
-            # pending in the tracker counts just as much as one already there.
+            # The break is only written out once text arrives, so the row the
+            # cursor is on has nothing on it yet.
+            return
+        node = self.get_previous_text_node()
+        if node is None or self.has_break_before(self._collection):
+            # No character on its row to erase — reaching back past the break
+            # would eat the last character of the line above, or of another
+            # caption entirely. Only a background code's cell can be there.
+            self._erase_blank_cell()
             return
         last_char = node.text[-1]
         delete_previous_condition = (
@@ -776,6 +801,18 @@ class InstructionNodeCreator:
         if delete_previous_condition:
             node.text = node.text[:-1]
             self._position_tracer.advance_cursor(-1)
+
+    def _erase_blank_cell(self):
+        """Erase the background code's cell at the start of the row, if any,
+        moving the cursor back over it.
+        """
+        for node in reversed(self._collection):
+            if _ends_line(node):
+                return
+            if node.is_text_node() and node.blank_cells:
+                node.blank_cells -= 1
+                self._position_tracer.advance_cursor(-1)
+                return
 
     def get_previous_text_node(self):
         """Return the last non-empty text node in the collection, or None.
@@ -972,6 +1009,9 @@ class _InstructionNode:
         # PAC or row change of its own; for an overwrite, whether the text
         # after it did
         self.continues_row = False
+        # For text, columns it takes on screen that its text leaves out: the
+        # cell of a background code at the start of a row
+        self.blank_cells = 0
 
     def add_chars(self, *args):
         """This being a text node, add characters to it.

@@ -24,6 +24,20 @@ Changelog
     if it was the only language, the body was empty and ``SAMIReader``
     rejected the file with ``CaptionReadNoCaptions``. Such cues are now
     kept for 1 ms, so their text survives and the file always re-reads.
+  - Fix ``SCCReader`` erasing the last character of the row above when a
+    row opens with a space, a background attribute code and a Backspace
+    (``2080 97ad 94a1``), a common way to set a transparent background at
+    column 0: ``today is`` was read as ``today i``. A Backspace sent once
+    everything on its row had been erased, such as a second one after a
+    space, reached into the row above or into another caption region the
+    same way. Such a Backspace now erases no text. In a sample of 1000
+    production SCC files, 21 lost text this way, in 1046 caption lines.
+  - Fix ``SCCReader`` gluing words together around a background attribute
+    code sent mid-row (``a `` + Background Green + ``bg green`` was read as
+    ``abg green``). The code shows a space in place of the one sent before
+    it, so the space is now kept. At the start of a row the background
+    cell is still not written as text, and two background codes there in
+    a row no longer crash the reader with ``IndexError``.
 
 2.3.16
 ^^^^^^
