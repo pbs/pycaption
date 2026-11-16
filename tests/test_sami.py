@@ -56,11 +56,49 @@ class TestSAMIReader(ReaderTestingMixIn):
             "Missing start time on the following line: "
         )
 
-    @pytest.mark.parametrize("start", ["abc", "1rt=1000", ""])
+    @pytest.mark.parametrize(
+        "start", ["abc", "1rt=1000", "", "inf", "-inf", "1e400"]
+    )
     def test_non_numeric_start_raises_timing_error(self, start):
         content = f"<SAMI><BODY><SYNC Start={start}><P>hi</P></SYNC></BODY></SAMI>"
         with pytest.raises(CaptionReadTimingError):
             self.reader.read(content)
+
+    @pytest.mark.parametrize(
+        "charref",
+        ["&#1114112;", "&#x110000;", "&#xD800;", "&#xDFC8;"],
+    )
+    def test_out_of_range_charref_raises_syntax_error(self, charref):
+        # References that are not Unicode scalar values used to escape as raw
+        # ValueError (above U+10FFFF) or UnicodeEncodeError (lone surrogates).
+        content = (
+            "<SAMI><BODY><SYNC Start=1000>"
+            f"<P>hi {charref} there</P>"
+            "</SYNC></BODY></SAMI>"
+        )
+        with pytest.raises(CaptionReadSyntaxError):
+            self.reader.read(content)
+
+    def test_media_rule_in_style_is_ignored(self):
+        # @media rules have no selectorText; they used to raise AttributeError.
+        content = (
+            "<SAMI><HEAD><STYLE>@media screen { font-size: 2pt; }</STYLE></HEAD>"
+            "<BODY><SYNC Start=1000><P>hi</P></SYNC></BODY></SAMI>"
+        )
+        caption_set = self.reader.read(content)
+        langs = caption_set.get_languages()
+        assert caption_set.get_captions(langs[0])[0].get_text() == "hi"
+
+    def test_lang_with_selector_characters_is_parsed(self):
+        # A language containing CSS selector characters used to crash the
+        # p[lang|=...] selector lookup with a raw SelectorSyntaxError.
+        content = (
+            '<SAMI><BODY><SYNC Start=1000><P lang="e/">hi</P></SYNC></BODY>'
+            "</SAMI>"
+        )
+        caption_set = self.reader.read(content)
+        assert "e/" in caption_set.get_languages()
+        assert caption_set.get_captions("e/")[0].get_text() == "hi"
 
     def test_valueless_class_attribute_is_ignored(self):
         # A bare ``class`` attribute (no value) used to crash _find_lang with
