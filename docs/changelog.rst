@@ -24,6 +24,36 @@ Changelog
     if it was the only language, the body was empty and ``SAMIReader``
     rejected the file with ``CaptionReadNoCaptions``. Such cues are now
     kept for 1 ms, so their text survives and the file always re-reads.
+  - Fix ``SCCReader`` crashing with a bare ``ValueError`` on a timecode
+    with a one-digit frame count (``00:00:01;5``), which it otherwise
+    accepts, and on a malformed or missing one (issue #463, PR #464).
+    One-digit frame counts now read like two-digit ones, and malformed
+    timecodes raise ``CaptionReadTimingError``. A frame count of three
+    digits or more (``00:00:01;125``), which could be read as that many
+    frames, is now rejected the same way.
+  - Fix ``SAMIReader`` crashing with raw Python exceptions on malformed
+    input (issue #465, PR #466). A character reference above U+10FFFF or
+    to a lone surrogate (``&#xD800;``) and an infinite start time
+    (``Start=inf``) now raise ``CaptionReadSyntaxError`` and
+    ``CaptionReadTimingError``. ``@media``, ``@import`` and comment rules
+    in the stylesheet, and a language with CSS selector characters
+    (``lang="e/"``), no longer crash the reader: the rules are ignored and
+    the language is read. A hexadecimal reference with an upper-case
+    ``X`` (``&#XE9;``), which also crashed, is now decoded.
+  - Fix ``SCCReader`` erasing the last character of the row above when a
+    row opens with a space, a background attribute code and a Backspace
+    (``2080 97ad 94a1``), a common way to set a transparent background at
+    column 0: ``today is`` was read as ``today i``. A Backspace sent once
+    everything on its row had been erased, such as a second one after a
+    space, reached into the row above or into another caption region the
+    same way. Such a Backspace now erases no text. In a sample of 1000
+    production SCC files, 21 lost text this way, in 1046 caption lines.
+  - Fix ``SCCReader`` gluing words together around a background attribute
+    code sent mid-row (``a `` + Background Green + ``bg green`` was read as
+    ``abg green``). The code shows a space in place of the one sent before
+    it, so the space is now kept. At the start of a row the background
+    cell is still not written as text, and two background codes there in
+    a row no longer crash the reader with ``IndexError``.
 
 2.3.16
 ^^^^^^

@@ -145,10 +145,11 @@ class SAMIReader(BaseReader):
         # The language comes from the document (or its stylesheet), so it can
         # contain characters with a meaning in CSS selectors. Comparing the
         # attribute directly avoids interpolating it into a selector string.
-        lang_lower = language.lower()
+        # Case-sensitive, like the ``p[lang|=...]`` selector it replaces, so
+        # languages differing only in case keep their own captions.
         for p in sami_soup.find_all("p"):
-            p_lang = (p.get("lang") or "").lower()
-            if p_lang != lang_lower and not p_lang.startswith(f"{lang_lower}-"):
+            p_lang = p.get("lang") or ""
+            if p_lang != language and not p_lang.startswith(f"{language}-"):
                 continue
             start_str = p.parent.get("start")
             if not start_str:

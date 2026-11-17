@@ -2122,3 +2122,266 @@ Scenarist_SCC V1.0
 00:00:05;00\t942c 942c
 
 """
+
+
+# "today is" on row 14, then row 15 opened with a space, Background Transparent
+# and a Backspace before "Due south": the encoder's way of setting the
+# background at column 0. The Backspace has nothing on row 15 to its left.
+@pytest.fixture(scope="session")
+def sample_scc_background_code_and_backspace_at_row_start():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01;00\t9420 9420 94ae 94ae 9440 9440 f4ef 6461 7920 e973 94e0 94e0 2080 97ad 97ad 94a1 94a1 c475 e520 73ef 75f4 6880 942f 942f
+
+00:00:04;00\t942c 942c
+
+"""
+
+
+# The same opening on the first row of a caption, with no row above it.
+@pytest.fixture(scope="session")
+def sample_scc_background_code_and_backspace_on_a_first_row():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01;00\t9420 9420 94ae 94ae 94e0 94e0 2080 97ad 97ad 94a1 94a1 c475 e520 73ef 75f4 6880 942f 942f
+
+00:00:04;00\t942c 942c
+
+"""
+
+
+# "today is" on row 14, then row 15 opened with a space and a Backspace, with
+# no background code.
+@pytest.fixture(scope="session")
+def sample_scc_space_and_backspace_at_row_start():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01;00\t9420 9420 94ae 94ae 9440 9440 f4ef 6461 7920 e973 94e0 94e0 2080 94a1 94a1 c475 e520 73ef 75f4 6880 942f 942f
+
+00:00:04;00\t942c 942c
+
+"""
+
+
+# "today is" on row 14, then a Backspace at column 0 of row 15.
+@pytest.fixture(scope="session")
+def sample_scc_backspace_at_row_start():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01;00\t9420 9420 94ae 94ae 9440 9440 f4ef 6461 7920 e973 94e0 94e0 94a1 94a1 c475 e520 73ef 75f4 6880 942f 942f
+
+00:00:04;00\t942c 942c
+
+"""
+
+
+# "today is" on row 14, then row 15 opened with a space and two Backspaces:
+# the second has nothing on row 15 left to erase.
+@pytest.fixture(scope="session")
+def sample_scc_two_backspaces_at_row_start():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01;00\t9420 9420 94ae 94ae 9440 9440 f4ef 6461 7920 e973 94e0 94e0 2080 94a1 94a1 94a1 94a1 c475 e520 73ef 75f4 6880 942f 942f
+
+00:00:04;00\t942c 942c
+
+"""
+
+
+# "today is" on row 2, then the same two Backspaces after a PAC to row 15,
+# which the reader places as a caption of its own.
+@pytest.fixture(scope="session")
+def sample_scc_two_backspaces_after_a_repositioning():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01;00\t9420 9420 94ae 94ae 9240 9240 f4ef 6461 7920 e973 94e0 94e0 2080 94a1 94a1 94a1 94a1 c475 e520 73ef 75f4 6880 942f 942f
+
+00:00:04;00\t942c 942c
+
+"""
+
+
+# "today is" on row 14, then row 15 opened with a space and Background
+# Transparent before "Now", with no Backspace: the background cell pads the row.
+@pytest.fixture(scope="session")
+def sample_scc_background_code_at_row_start():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01;00\t9420 9420 94ae 94ae 9440 9440 f4ef 6461 7920 e973 94e0 94e0 2080 97ad 97ad ceef f780 942f 942f
+
+00:00:04;00\t942c 942c
+
+"""
+
+
+# The same opening on the first row of a caption.
+@pytest.fixture(scope="session")
+def sample_scc_background_code_at_row_start_on_a_first_row():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01;00\t9420 9420 94ae 94ae 94e0 94e0 2080 97ad 97ad ceef f780 942f 942f
+
+00:00:04;00\t942c 942c
+
+"""
+
+
+# "a " then a background code ({code}) then "bg green", on one row.
+@pytest.fixture(scope="session")
+def sample_scc_background_code_mid_row_template():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01;00\t9420 9420 94ae 94ae 94e0 94e0 6120 {code} {code} 6267 2067 f2e5 e56e 942f 942f
+
+00:00:04;00\t942c 942c
+
+"""
+
+
+# "a" then Background Green with no space before it, then "bg green".
+@pytest.fixture(scope="session")
+def sample_scc_background_code_mid_row_without_a_space():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01;00\t9420 9420 94ae 94ae 94e0 94e0 6180 10a2 10a2 6267 2067 f2e5 e56e 942f 942f
+
+00:00:04;00\t942c 942c
+
+"""
+
+
+# "a ", Background Green, then 30 more characters: 32 columns in all.
+@pytest.fixture(scope="session")
+def sample_scc_background_code_in_a_full_row():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01;00\t9420 9420 94ae 94ae 94e0 94e0 6120 10a2 10a2 62e3 64e5 e667 68e9 ea6b ec6d 6eef 70f1 f273 f475 76f7 f879 7ac1 c243 c445 942f 942f
+
+00:00:04;00\t942c 942c
+
+"""
+
+
+# "today is" on row 14, then row 15 opened with a space, Background Transparent
+# and a Backspace, "abc", and a PAC to column 4 of row 15 before "X": column 3
+# is left blank.
+@pytest.fixture(scope="session")
+def sample_scc_background_cell_backspaced_then_a_pac():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01;00\t9420 9420 94ae 94ae 9440 9440 f4ef 6461 7920 e973 94e0 94e0 2080 97ad 97ad 94a1 94a1 6162 e380 94f2 94f2 5880 942f 942f
+
+00:00:04;00\t942c 942c
+
+"""
+
+
+# The same on the first row of a caption.
+@pytest.fixture(scope="session")
+def sample_scc_background_cell_backspaced_on_a_first_row_then_a_pac():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01;00\t9420 9420 94ae 94ae 94e0 94e0 2080 97ad 97ad 94a1 94a1 6162 e380 94f2 94f2 5880 942f 942f
+
+00:00:04;00\t942c 942c
+
+"""
+
+
+# As above after "today is", but with two Backspaces: the second has no cell
+# left on row 15 to move back over, so column 3 is still left blank.
+@pytest.fixture(scope="session")
+def sample_scc_background_cell_backspaced_twice_then_a_pac():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01;00\t9420 9420 94ae 94ae 9440 9440 f4ef 6461 7920 e973 94e0 94e0 2080 97ad 97ad 94a1 94a1 94a1 94a1 6162 e380 94f2 94f2 5880 942f 942f
+
+00:00:04;00\t942c 942c
+
+"""
+
+
+# Row 14 opened with a space and Background Transparent before "today is",
+# then "x" and two Backspaces on row 15: the background cell on row 14 is not
+# the second Backspace's to erase, so column 3 is still left blank.
+@pytest.fixture(scope="session")
+def sample_scc_background_cell_on_the_row_above_then_two_backspaces():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01;00\t9420 9420 94ae 94ae 9440 9440 2080 97ad 97ad f4ef 6461 7920 e973 94e0 94e0 f880 94a1 94a1 94a1 94a1 6162 e380 94f2 94f2 5880 942f 942f
+
+00:00:04;00\t942c 942c
+
+"""
+
+
+# "today is" on row 14, then row 15 opened with a space and Background
+# Transparent, Italics, a space and Background Green: two background cells on
+# one row. One Backspace takes back the second only, so "abc" lands on columns
+# 2-4 and a PAC to column 8 before "X" leaves columns 5-7 blank.
+@pytest.fixture(scope="session")
+def sample_scc_two_background_cells_on_a_row_then_a_backspace():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01;00\t9420 9420 94ae 94ae 9440 9440 f4ef 6461 7920 e973 94e0 94e0 2080 97ad 97ad 91ae 91ae 2080 10a2 10a2 94a1 94a1 6162 e380 94f4 94f4 5880 942f 942f
+
+00:00:04;00\t942c 942c
+
+"""
+
+
+# "today is" on row 14, then row 15 opened with a space, Background
+# Transparent and Background Green before "Now".
+@pytest.fixture(scope="session")
+def sample_scc_two_background_codes_at_row_start():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01;00\t9420 9420 94ae 94ae 9440 9440 f4ef 6461 7920 e973 94e0 94e0 2080 97ad 97ad 10a2 10a2 ceef f780 942f 942f
+
+00:00:04;00\t942c 942c
+
+"""
+
+
+# "today is" on row 14, then row 15 opened with {opening} and 32 characters.
+@pytest.fixture(scope="session")
+def sample_scc_full_row_after_a_row_start_template():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01;00\t9420 9420 94ae 94ae 9440 9440 f4ef 6461 7920 e973 94e0 94e0 {opening} c1c1 c1c1 c1c1 c1c1 c1c1 c1c1 c1c1 c1c1 c1c1 c1c1 c1c1 c1c1 c1c1 c1c1 c1c1 c1c1 942f 942f
+
+00:00:04;00\t942c 942c
+
+"""
+
+
+# Row 15 holding only a space, then a PAC to row 12 (another caption region)
+# and {code} before "Now": a background code, or a filler as the control.
+@pytest.fixture(scope="session")
+def sample_scc_background_code_after_a_pac_template():
+    return """\
+Scenarist_SCC V1.0
+
+00:00:01;00\t9420 9420 94ae 94ae 94e0 94e0 2080 1340 1340 {code} ceef f780 942f 942f
+
+00:00:04;00\t942c 942c
+
+"""

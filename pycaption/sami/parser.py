@@ -88,13 +88,12 @@ class SAMIParser(HTMLParser):
 
     def handle_charref(self, name):
         """Convert numeric character references (&#NNN; or &#xHHH;) to characters."""
-        codepoint = int(name[1:], 16) if name[0] == "x" else int(name)
+        codepoint = int(name[1:], 16) if name[0] in "xX" else int(name)
         if codepoint > 0x10FFFF or 0xD800 <= codepoint <= 0xDFFF:
             # chr() rejects values above U+10FFFF with a raw ValueError, and
             # lone surrogates crash later encoders with a UnicodeEncodeError.
             raise CaptionReadSyntaxError(
-                f"Invalid character reference: &#{name}; is not a Unicode scalar "
-                "value."
+                f"Invalid character reference: &#{name}; is not a Unicode scalar value."
             )
         self.sami += chr(codepoint)
 

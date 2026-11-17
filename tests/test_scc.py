@@ -3,7 +3,7 @@ import pytest
 from pycaption import CaptionConverter, CaptionNode, CaptionReadNoCaptions, SCCReader
 from pycaption.exceptions import CaptionLineLengthError, CaptionReadTimingError
 from pycaption.geometry import HorizontalAlignmentEnum, UnitEnum, VerticalAlignmentEnum
-from pycaption.scc.constants import MICROSECONDS_PER_CODEWORD
+from pycaption.scc.constants import BACKGROUND_COLOR_CODES, MICROSECONDS_PER_CODEWORD
 from pycaption.scc.specialized_collections import (
     InstructionNodeCreator,
     TimingCorrectingCaptionList,
@@ -2054,6 +2054,195 @@ class TestSCCReader(ReaderTestingMixIn):
     def test_offset_past_every_cue_raises_no_captions(self, sample_scc_two_pop_on_cues):
         with pytest.raises(CaptionReadNoCaptions):
             SCCReader().read(sample_scc_two_pop_on_cues, offset=8)
+
+
+def _texts(scc):
+    return [c.get_text() for c in SCCReader().read(scc).get_captions("en-US")]
+
+
+class TestSCCReaderBackgroundAttributes:
+    """A background attribute code backspaces over the space before it and
+    shows a space of its own, so text keeps exactly one space mid-row. At the
+    start of a row its cell pads the row and adds no text.
+    """
+
+    @pytest.mark.parametrize(
+        "fixture_name, expected",
+        [
+            pytest.param(
+                "sample_scc_background_code_and_backspace_at_row_start",
+                ["today is\nDue south"],
+                id="background-code-then-backspace",
+            ),
+            pytest.param(
+                "sample_scc_two_backspaces_at_row_start",
+                ["today is\nDue south"],
+                id="two-backspaces",
+            ),
+            pytest.param(
+                "sample_scc_two_backspaces_after_a_repositioning",
+                ["today is", "Due south"],
+                id="two-backspaces-after-a-repositioning",
+            ),
+            pytest.param(
+                "sample_scc_space_and_backspace_at_row_start",
+                ["today is\nDue south"],
+                id="space-then-backspace",
+            ),
+            pytest.param(
+                "sample_scc_backspace_at_row_start",
+                ["today is\nDue south"],
+                id="backspace-at-column-0",
+            ),
+            pytest.param(
+                "sample_scc_background_code_and_backspace_on_a_first_row",
+                ["Due south"],
+                id="first-row",
+            ),
+        ],
+    )
+    def test_backspace_at_row_start_leaves_earlier_rows_alone(
+        self, request, fixture_name, expected
+    ):
+        """A Backspace with nothing left of it on its row erases nothing, even
+        once the row's only character, a space, has been taken back.
+        """
+        assert _texts(request.getfixturevalue(fixture_name)) == expected
+
+    @pytest.mark.parametrize(
+        "opening",
+        [
+            pytest.param(
+                "2080 97ad 97ad 94a1 94a1", id="background-code-then-backspace"
+            ),
+            pytest.param("2080 94a1 94a1 94a1 94a1", id="two-backspaces"),
+            pytest.param(
+                "2080 97ad 97ad 94a1 94a1 94a1 94a1",
+                id="background-code-then-two-backspaces",
+            ),
+        ],
+    )
+    def test_full_row_fits_after_a_blocked_backspace(
+        self, sample_scc_full_row_after_a_row_start_template, opening
+    ):
+        """A blocked Backspace leaves the row at column 0, so 32 characters
+        still fit.
+        """
+        scc = sample_scc_full_row_after_a_row_start_template.format(opening=opening)
+
+        assert _texts(scc) == ["today is\n" + "A" * 32]
+
+    @pytest.mark.parametrize(
+        "fixture_name, expected",
+        [
+            pytest.param(
+                "sample_scc_background_cell_backspaced_then_a_pac",
+                ["today is\nabc X"],
+                id="after-a-row",
+            ),
+            pytest.param(
+                "sample_scc_background_cell_backspaced_on_a_first_row_then_a_pac",
+                ["abc X"],
+                id="first-row",
+            ),
+            pytest.param(
+                "sample_scc_background_cell_backspaced_twice_then_a_pac",
+                ["today is\nabc X"],
+                id="second-backspace-has-no-cell-left",
+            ),
+            pytest.param(
+                "sample_scc_background_cell_on_the_row_above_then_two_backspaces",
+                ["today is\nabc X"],
+                id="cell-on-the-row-above",
+            ),
+        ],
+    )
+    def test_backspace_at_row_start_erases_the_background_cell(
+        self, request, fixture_name, expected
+    ):
+        """The Backspace takes the cursor back over the background code's
+        cell, so a PAC to column 4 after "abc" leaves column 3 blank. It does
+        so once, and only for a cell on its own row.
+        """
+        assert _texts(request.getfixturevalue(fixture_name)) == expected
+
+    def test_backspace_erases_only_the_last_of_two_background_cells(
+        self, sample_scc_two_background_cells_on_a_row_then_a_backspace
+    ):
+        """The cell before the italics code stays, so the cursor moves back
+        one column, not two.
+        """
+        assert _texts(sample_scc_two_background_cells_on_a_row_then_a_backspace) == [
+            "today is\nabc   X"
+        ]
+
+    @pytest.mark.parametrize(
+        "fixture_name, expected",
+        [
+            pytest.param(
+                "sample_scc_background_code_at_row_start",
+                ["today is", "\n", "Now"],
+                id="after-a-row",
+            ),
+            pytest.param(
+                "sample_scc_background_code_at_row_start_on_a_first_row",
+                ["Now"],
+                id="first-row",
+            ),
+            pytest.param(
+                "sample_scc_two_background_codes_at_row_start",
+                ["today is", "\n", "Now"],
+                id="two-codes",
+            ),
+        ],
+    )
+    def test_background_code_at_row_start_adds_no_space(
+        self, request, fixture_name, expected
+    ):
+        """Checked on the nodes: get_text() would strip a leading space off."""
+        scc = request.getfixturevalue(fixture_name)
+        caption = SCCReader().read(scc).get_captions("en-US")[0]
+
+        assert caption.get_text_nodes() == expected
+
+    @pytest.mark.parametrize("code", BACKGROUND_COLOR_CODES)
+    def test_background_code_mid_row_keeps_one_space(
+        self, sample_scc_background_code_mid_row_template, code
+    ):
+        scc = sample_scc_background_code_mid_row_template.format(code=code)
+
+        assert _texts(scc) == ["a bg green"]
+
+    def test_background_code_after_a_pac_leaves_the_row_before_it_alone(
+        self, sample_scc_background_code_after_a_pac_template
+    ):
+        """The space before the PAC ends a row the code is not on, so the text
+        is the same as with a filler sent in the code's place.
+        """
+
+        def text_nodes(code):
+            scc = sample_scc_background_code_after_a_pac_template.format(code=code)
+            captions = SCCReader().read(scc).get_captions("en-US")
+            return [caption.get_text_nodes() for caption in captions]
+
+        assert text_nodes("97ad 97ad") == text_nodes("8080")
+
+    def test_background_code_mid_row_without_a_space_before_it_changes_nothing(
+        self, sample_scc_background_code_mid_row_without_a_space
+    ):
+        """Out of spec: a decoder's backspace would erase the "a". The text is
+        kept as sent, and no column is added that a full row could not hold.
+        """
+        assert _texts(sample_scc_background_code_mid_row_without_a_space) == [
+            "abg green"
+        ]
+
+    def test_background_code_takes_one_column(
+        self, sample_scc_background_code_in_a_full_row
+    ):
+        assert _texts(sample_scc_background_code_in_a_full_row) == [
+            "a bcdefghijklmnopqrstuvwxyzABCDE"
+        ]
 
 
 class TestCoverageOnly:
