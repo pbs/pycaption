@@ -1581,3 +1581,53 @@ class TestWebVTTNegativeTimeShiftConversion:
 
         assert timings
         assert all(start < end for start, end in timings)
+
+
+class TestInlineStyleSpacing:
+    """A styled word keeps the single spaces around it (issue #467)."""
+
+    CUE = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\nHello <b>world</b> end\n"
+
+    def test_sami_writer_does_not_double_spaces(self):
+        result = SAMIWriter().write(WebVTTReader().read(self.CUE))
+
+        assert "Hello <b>world</b> end" in result
+
+    def test_dfxp_writer_does_not_double_spaces(self):
+        result = DFXPWriter().write(WebVTTReader().read(self.CUE))
+
+        assert 'Hello <span tts:fontWeight="bold">world</span> end' in result
+
+    @pytest.mark.parametrize(
+        "reader, writer", [(SAMIReader, SAMIWriter), (DFXPReader, DFXPWriter)]
+    )
+    def test_spacing_is_stable_across_round_trips(self, reader, writer):
+        content = self.CUE
+        for _ in range(3):
+            converted = writer().write(WebVTTReader().read(content))
+            content = WebVTTWriter().write(reader().read(converted))
+
+        assert "Hello <b>world</b> end" in content
+
+    @pytest.mark.parametrize(
+        "writer, expected",
+        [
+            (SAMIWriter, "Hello <b>world</b> end"),
+            (DFXPWriter, 'Hello<span tts:fontWeight="bold">world</span> end'),
+        ],
+    )
+    def test_separator_is_still_added_between_unspaced_nodes(self, writer, expected):
+        # Nodes read without their own whitespace still rely on the writer
+        # for a separator, exactly as before.
+        nodes = [
+            CaptionNode.create_text("Hello"),
+            CaptionNode.create_style(True, {"bold": True}),
+            CaptionNode.create_text("world"),
+            CaptionNode.create_style(False, {"bold": True}),
+            CaptionNode.create_text("end"),
+        ]
+        caption_set = CaptionSet(
+            {"en-US": CaptionList([Caption(1000000, 3000000, nodes)])}
+        )
+
+        assert expected in writer().write(caption_set)

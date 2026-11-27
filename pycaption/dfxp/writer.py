@@ -57,6 +57,7 @@ class DFXPWriter(BaseWriter):
         """
         self.write_inline_positioning = kwargs.pop("write_inline_positioning", False)
         self._span_stack = []
+        self._separator_due = False
         self.region_creator = None
         super().__init__(*args, **kwargs)
 
@@ -233,6 +234,7 @@ class DFXPWriter(BaseWriter):
         """
         line = ""
         self._span_stack = []
+        self._separator_due = False
         paragraph = self.region_creator.get_positioning_info(lang, caption_set, caption)
         paragraph_region, _ = paragraph
 
@@ -249,14 +251,16 @@ class DFXPWriter(BaseWriter):
                 if self.write_inline_positioning:
                     attrs.update(region_attribs)
                 attr_str = " ".join(f'{k}="{v}"' for k, v in attrs.items())
-                line += f"<span {attr_str}>"
+                line = self._separate(line, "<") + f"<span {attr_str}>"
 
             for node in nodes:
                 if node.type_ == CaptionNode.TEXT:
-                    line += escape(node.content)
+                    content = escape(node.content)
+                    line = self._separate(line, content) + content
 
                 elif node.type_ == CaptionNode.BREAK:
                     line = line.rstrip() + "<br/>\n    "
+                    self._separator_due = False
 
                 elif node.type_ == CaptionNode.STYLE:
                     line = self._recreate_span(
@@ -264,14 +268,31 @@ class DFXPWriter(BaseWriter):
                     )
 
             if wrap:
-                line = line.rstrip() + "</span> "
+                line = line.rstrip() + "</span>"
+                self._separator_due = True
 
         while self._span_stack:
             emitted, _ = self._span_stack.pop()
             if emitted:
-                line = line.rstrip() + "</span> "
+                line = line.rstrip() + "</span>"
 
         return line.rstrip()
+
+    def _separate(self, line, upcoming):
+        """Add the space owed before `upcoming`, unless one side already has it.
+
+        Text nodes keep the whitespace they were read with, so adding a
+        separator on top of it doubled the space on every conversion.
+        """
+        if (
+            self._separator_due
+            and line
+            and not line[-1].isspace()
+            and not upcoming[:1].isspace()
+        ):
+            line += " "
+        self._separator_due = False
+        return line
 
     def _group_nodes_by_region(self, caption, paragraph, caption_set, lang):
         """Split a caption's nodes into consecutive runs sharing one region.
@@ -509,7 +530,7 @@ class DFXPWriter(BaseWriter):
 
             if attrs:
                 attr_str = " ".join(f'{k}="{v}"' for k, v in attrs.items())
-                line += f"<span {attr_str}>"
+                line = self._separate(line, "<") + f"<span {attr_str}>"
                 self._span_stack.append((True, region_id))
             else:
                 self._span_stack.append((False, None))
@@ -518,7 +539,8 @@ class DFXPWriter(BaseWriter):
             if self._span_stack:
                 had_span, _ = self._span_stack.pop()
                 if had_span:
-                    line = line.rstrip() + "</span> "
+                    line = line.rstrip() + "</span>"
+                    self._separator_due = True
 
         return line
 
