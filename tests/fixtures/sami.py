@@ -655,7 +655,7 @@ def sample_sami_from_dfxp_with_nested_spans():
  <body>
   <sync start="3209">
    <p class="en-US" style="text-align:center;">
-    That is  <span class="s3"><span class="s2"><span class="s1">nested</span></span></span> .
+    That is <span class="s3"><span class="s2"><span class="s1">nested</span></span></span> .
    </p>
   </sync>
  </body>

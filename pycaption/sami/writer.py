@@ -37,6 +37,7 @@ class SAMIWriter(BaseWriter):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._span_stack = []
+        self._separator_due = False
         self._promote_center = False
 
     def write(self, caption_set, **kwargs):
@@ -266,21 +267,41 @@ class SAMIWriter(BaseWriter):
         """Serialize caption nodes into an HTML text string with inline markup."""
         line = ""
         self._span_stack = []
+        self._separator_due = False
 
         for node in caption:
             if node.type_ == CaptionNode.TEXT:
-                line += escape(node.content) + " "
+                content = escape(node.content)
+                line = self._separate(line, content) + content
+                self._separator_due = True
             elif node.type_ == CaptionNode.BREAK:
                 line = line.rstrip() + "<br/>\n    "
+                self._separator_due = False
             elif node.type_ == CaptionNode.STYLE:
                 line = self._recreate_line_style(line, node)
 
         while self._span_stack:
             tag = self._span_stack.pop()
             if tag:
-                line = line.rstrip() + f"</{tag}> "
+                line = line.rstrip() + f"</{tag}>"
 
         return line.rstrip()
+
+    def _separate(self, line, upcoming):
+        """Add the space owed before `upcoming`, unless one side already has it.
+
+        Text nodes keep the whitespace they were read with, so adding a
+        separator on top of it doubled the space on every conversion.
+        """
+        if (
+            self._separator_due
+            and line
+            and not line[-1].isspace()
+            and not upcoming[:1].isspace()
+        ):
+            line += " "
+        self._separator_due = False
+        return line
 
     def _recreate_line_style(self, line, node):
         """Handle style node transitions, opening/closing inline markup."""
@@ -290,7 +311,8 @@ class SAMIWriter(BaseWriter):
             if self._span_stack:
                 tag = self._span_stack.pop()
                 if tag:
-                    line = line.rstrip() + f"</{tag}> "
+                    line = line.rstrip() + f"</{tag}>"
+                    self._separator_due = True
 
         return line
 
@@ -310,7 +332,7 @@ class SAMIWriter(BaseWriter):
         """Build an opening inline tag — semantic (<i>/<b>/<u>) when possible."""
         semantic = self._get_semantic_tag(content)
         if semantic:
-            line += f"<{semantic}>"
+            line = self._separate(line, "<") + f"<{semantic}>"
             self._span_stack.append(semantic)
             return line
 
@@ -327,7 +349,7 @@ class SAMIWriter(BaseWriter):
         if style or klass:
             if style:
                 style = f' style="{style}"'
-            line += f"<span{klass}{style}>"
+            line = self._separate(line, "<") + f"<span{klass}{style}>"
             self._span_stack.append("span")
         else:
             self._span_stack.append(None)
